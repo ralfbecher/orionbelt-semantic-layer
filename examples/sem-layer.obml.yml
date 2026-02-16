@@ -1,0 +1,436 @@
+---
+# yaml-language-server: $schema=../schema/obml-schema.json
+version: 1.0
+
+dataObjects:
+  # ── Dimension tables ───────────────────────────────────────────────
+
+  Calendar:
+    code: calendar
+    database: ANALYTICS
+    schema: PUBLIC
+    columns:
+      Calendar Date:
+        code: date
+        abstractType: date
+      Year Month:
+        code: ym
+        abstractType: string
+      Weekday:
+        code: weekday
+        abstractType: string
+      Public Holiday:
+        code: public_holiday
+        abstractType: boolean
+
+  Countries:
+    code: countries
+    database: ANALYTICS
+    schema: PUBLIC
+    columns:
+      Country ID:
+        code: country_id
+        abstractType: string
+      Country Name:
+        code: country_name
+        abstractType: string
+
+  Clients:
+    code: clients
+    database: ANALYTICS
+    schema: PUBLIC
+    columns:
+      Client ID:
+        code: client_id
+        abstractType: string
+      Client Name:
+        code: client_name
+        abstractType: string
+      Client Gender:
+        code: client_gender
+        abstractType: string
+      Client Country ID:
+        code: client_country_id
+        abstractType: string
+    joins:
+      - joinType: many-to-one
+        joinTo: Countries
+        columnsFrom:
+          - Client Country ID
+        columnsTo:
+          - Country ID
+
+  Suppliers:
+    code: suppliers
+    database: ANALYTICS
+    schema: PUBLIC
+    columns:
+      Supplier ID:
+        code: supplier_id
+        abstractType: string
+      Supplier Name:
+        code: supplier_name
+        abstractType: string
+      Supplier Country ID:
+        code: supplier_country_id
+        abstractType: string
+
+  Products:
+    code: products
+    database: ANALYTICS
+    schema: PUBLIC
+    columns:
+      Product ID:
+        code: product_id
+        abstractType: string
+      Product Name:
+        code: product_name
+        abstractType: string
+      Product Category:
+        code: product_cat
+        abstractType: string
+      Product Supplier:
+        code: product_suppl
+        abstractType: string
+      Unit Cost:
+        code: unit_cost
+        abstractType: float
+      Unit Price:
+        code: unit_price
+        abstractType: float
+    joins:
+      - joinType: many-to-one
+        joinTo: Suppliers
+        columnsFrom:
+          - Product Supplier
+        columnsTo:
+          - Supplier ID
+
+  Employees:
+    code: employees
+    database: ANALYTICS
+    schema: PUBLIC
+    columns:
+      Employee ID:
+        code: employee_id
+        abstractType: string
+      Employee Name:
+        code: employee_name
+        abstractType: string
+      Department Name:
+        code: department_name
+        abstractType: string
+
+  # ── Fact tables ────────────────────────────────────────────────────
+
+  Sales:
+    code: sales
+    database: ANALYTICS
+    schema: PUBLIC
+    columns:
+      Sales ID:
+        code:  sales_id
+        abstractType: string
+      Sales Date:
+        code:  sales_date
+        abstractType: date
+      Sales YM:
+        code:  sales_ym
+        abstractType: string
+      Sales Client:
+        code:  sales_client
+        abstractType: string
+      Sales Product:
+        code: product
+        abstractType: string
+      Sales Employee:
+        code:  sales_emp_id
+        abstractType: string
+      Sales Payment Type:
+        code:  sales_payment_type
+        abstractType: string
+      Sales Quantity:
+        code:  sales_quantity
+        abstractType: int
+      Sales Amount:
+        code:  sales_amount
+        abstractType: float
+      Sales Notes:
+        code: notes
+        abstractType: string
+    joins:
+      - joinType: many-to-one
+        joinTo: Clients
+        columnsFrom:
+          - Sales Client
+        columnsTo:
+          - Client ID
+      - joinType: many-to-one
+        joinTo: Products
+        columnsFrom:
+          - Sales Product
+        columnsTo:
+          - Product ID
+      - joinType: many-to-one
+        joinTo: Employees
+        columnsFrom:
+          - Sales Employee
+        columnsTo:
+          - Employee ID
+      - joinType: many-to-one
+        joinTo: Calendar
+        columnsFrom:
+          - Sales YM
+        columnsTo:
+          - Year Month
+
+  Returns:
+    code: returns
+    database: ANALYTICS
+    schema: PUBLIC
+    columns:
+      Return ID:
+        code: return_id
+        abstractType: string
+      Return Sales ID:
+        code: return_sales_id
+        abstractType: string
+      Return Date:
+        code: return_date
+        abstractType: date
+      Return YM:
+        code: return_ym
+        abstractType: string
+      Return Quantity:
+        code: return_quantity
+        abstractType: int
+      Return Amount:
+        code: return_amount
+        abstractType: float
+      Return Notes:
+        code: notes
+        abstractType: string
+    joins:
+      - joinType: many-to-one
+        joinTo: Sales
+        columnsFrom:
+          - Return Sales ID
+        columnsTo:
+          - Sales ID
+
+  Shipments:
+    code: shipments
+    database: ANALYTICS
+    schema: PUBLIC
+    columns:
+      Shipment ID:
+        code: shipment_id
+        abstractType: string
+      Shipment Sales ID:
+        code: shipment_sales_id
+        abstractType: string
+      Shipment Date:
+        code: shipment_date
+        abstractType: date
+      Shipment YM:
+        code: shipment_ym
+        abstractType: string
+      Shipment Product:
+        code: shipment_product
+        abstractType: string
+      Shipment Quantity:
+        code: shipment_quantity
+        abstractType: int
+      Shipment Amount:
+        code: shipment_amount
+        abstractType: float
+      Shipment Notes:
+        code: notes
+        abstractType: string
+    joins:
+      - joinType: many-to-one
+        joinTo: Sales
+        columnsFrom:
+          - Shipment Sales ID
+        columnsTo:
+          - Sales ID
+
+  Purchases:
+    code: purchases
+    database: ANALYTICS
+    schema: PUBLIC
+    columns:
+      Purchase ID:
+        code: purchase_id
+        abstractType: string
+      Purchase Date:
+        code: purchase_date
+        abstractType: date
+      Purchase YM:
+        code: purchase_ym
+        abstractType: string
+      Purchase Product ID:
+        code: purchase_product_id
+        abstractType: string
+      Purchase Employee:
+        code: purchase_emp_id
+        abstractType: string
+      Purchase Supplier:
+        code: purchase_supplier
+        abstractType: string
+      Purchase Quantity:
+        code: purchase_quantity
+        abstractType: float
+      Purchase Price:
+        code: purchase_price
+        abstractType: float
+    joins:
+      - joinType: many-to-one
+        joinTo: Products
+        columnsFrom:
+          - Purchase Product ID
+        columnsTo:
+          - Product ID
+      - joinType: many-to-one
+        joinTo: Employees
+        columnsFrom:
+          - Purchase Employee
+        columnsTo:
+          - Employee ID
+      - joinType: many-to-one
+        joinTo: Suppliers
+        columnsFrom:
+          - Purchase Supplier
+        columnsTo:
+          - Supplier ID
+
+# ── Dimensions ─────────────────────────────────────────────────────
+
+dimensions:
+  Product Name:
+    dataObject: Products
+    column: Product Name
+    resultType: string
+  Product Category:
+    dataObject: Products
+    column: Product Category
+    resultType: string
+  Client Name:
+    dataObject: Clients
+    column: Client Name
+    resultType: string
+  Client Gender:
+    dataObject: Clients
+    column: Client Gender
+    resultType: string
+  Country Name:
+    dataObject: Countries
+    column: Country Name
+    resultType: string
+  Employee Name:
+    dataObject: Employees
+    column: Employee Name
+    resultType: string
+  Department:
+    dataObject: Employees
+    column: Department Name
+    resultType: string
+  Supplier Name:
+    dataObject: Suppliers
+    column: Supplier Name
+    resultType: string
+  Sales Date:
+    dataObject: Sales
+    column: Sales Date
+    resultType: date
+  Year Month:
+    dataObject: Calendar
+    column: Year Month
+    resultType: string
+  Weekday:
+    dataObject: Calendar
+    column: Weekday
+    resultType: string
+  Payment Type:
+    dataObject: Sales
+    column: Sales Payment Type
+    resultType: string
+
+# ── Measures ───────────────────────────────────────────────────────
+
+measures:
+  Total Sales:
+    columns:
+      - dataObject: Sales
+        column: Sales Amount
+    resultType: float
+    aggregation: sum
+
+  Sales Count:
+    columns:
+      - dataObject: Sales
+        column: Sales ID
+    resultType: int
+    aggregation: count
+    distinct: true
+
+  Total Sales Qty:
+    columns:
+      - dataObject: Sales
+        column: Sales Quantity
+    resultType: int
+    aggregation: sum
+
+  Total Returns:
+    columns:
+      - dataObject: Returns
+        column: Return Amount
+    resultType: float
+    aggregation: sum
+
+  Return Count:
+    columns:
+      - dataObject: Sales
+        column: Sales ID
+      - dataObject: Returns
+        column: Return ID
+    resultType: int
+    aggregation: count
+    distinct: true
+
+  Total Shipments:
+    columns:
+      - dataObject: Shipments
+        column: Shipment Amount
+    resultType: float
+    aggregation: sum
+
+  Total Shipment Qty:
+    columns:
+      - dataObject: Shipments
+        column: Shipment Quantity
+    resultType: int
+    aggregation: sum
+
+  Total Purchases:
+    columns:
+      - dataObject: Purchases
+        column: Purchase Price
+    resultType: float
+    aggregation: sum
+
+  Total Purchase Qty:
+    columns:
+      - dataObject: Purchases
+        column: Purchase Quantity
+    resultType: float
+    aggregation: sum
+
+# ── Metrics (cross-fact) ───────────────────────────────────────────
+
+metrics:
+  Return Rate:
+    expression: "{[Total Returns]} / {[Total Sales]}"
+
+  Average Sale:
+    expression: "{[Total Sales]} / {[Sales Count]}"

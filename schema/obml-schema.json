@@ -1,0 +1,610 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "/obml/schema",
+  "title": "OBML",
+  "description": "A markup language to define the OrionBelt Semantic Layer",
+  "definitions": {
+"dataObject": {
+      "type": "object",
+      "description": "Unique Data Object Name in the OrionBelt Model",
+      "properties": {
+        "database": {
+          "type": "string",
+          "description": "Database Name"
+        },
+        "schema": {
+          "type": "string",
+          "description": "Schema Name in Database"
+        },
+        "code": {
+          "type": "string",
+          "description": "Database Table Name, View Name or SELECT statement"
+        },
+        "columns": {
+          "type": "object",
+          "description": "Selected Columns from Database Object to be used in OrionBelt. Column names must be globally unique across all data objects.",
+          "patternProperties": {
+            ".": {
+              "$ref": "#/definitions/column"
+            }
+          },
+          "additionalProperties": false,
+          "minProperties": 1
+        },
+        "joins": {
+          "type": "array",
+          "description": "Connect this Data Object with other Data Objects by defining Joins",
+          "items": {
+            "$ref": "#/definitions/join"
+          }
+        },
+        "comment": {
+          "type": "string"
+        }
+      },
+      "required": ["code", "database", "schema", "columns"],
+      "additionalProperties": false
+    },
+    "dataType": {
+      "description": "OrionBelt internal Data Type",
+      "enum": ["string", "json", "int", "float", "date", "time", "time_tz", "timestamp", "timestamp_tz", "boolean"]
+    },
+    "timeGrain": {
+      "description": "used to trunc the a date value to aggregate along a date hierarchy",
+      "enum": [
+        "year",
+        "year-end",
+        "quarter",
+        "quarter-end",
+        "month",
+        "month-end",
+        "week",
+        "week-end",
+        "day",
+        "hour",
+        "minute",
+        "second"
+      ]
+    },
+    "column": {
+      "type": "object",
+      "description": "Unique Column Name in that Data Object",
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "abstractType": {
+          "$ref": "#/definitions/dataType"
+        },
+        "sqlType": {
+          "type": "string",
+          "description": "Informational: the SQL data type of the column (e.g. VARCHAR, INTEGER, NUMERIC(10,2))"
+        },
+        "sqlPrecision": {
+          "type": "integer",
+          "description": "Informational: numeric precision",
+          "minimum": 1
+        },
+        "sqlScale": {
+          "type": "integer",
+          "description": "Informational: numeric scale",
+          "minimum": 0
+        },
+        "comment": {
+          "type": "string"
+        }
+      },
+      "required": ["code", "abstractType"],
+      "additionalProperties": false
+    },
+    "join": {
+      "type": "object",
+      "properties": {
+        "joinType": {
+          "description": "Join Cardinality",
+          "enum": ["many-to-one", "one-to-one"]
+        },
+        "joinTo": {
+          "type": "string",
+          "description": "Join-to Data Object Name"
+        },
+        "columnsFrom": {
+          "type": "array",
+          "contains": {
+            "type": "string"
+          },
+          "minItems": 1
+        },
+        "columnsTo": {
+          "type": "array",
+          "contains": {
+            "type": "string"
+          },
+          "minItems": 1
+        }
+      },
+      "required": ["joinType", "joinTo", "columnsFrom", "columnsTo"],
+      "additionalProperties": false
+    },
+    "queryColumn": {
+      "type": "object",
+      "description": "Column reference by dataObject + column pair",
+      "properties": {
+        "dataObject": {
+          "type": "string",
+          "description": "OrionBelt Data Object Name"
+        },
+        "column": {
+          "type": "string",
+          "description": "OrionBelt Column Name"
+        }
+      },
+      "required": ["dataObject", "column"],
+      "additionalProperties": false
+    },
+    "operator": {
+      "description": "Filter operation code",
+      "enum": [
+        "equals",
+        "notequals",
+        "inlist",
+        "notinlist",
+        "contains",
+        "notcontains",
+        "gt",
+        "gte",
+        "lt",
+        "lte",
+        "set",
+        "notset",
+        "between",
+        "notbetween",
+        "like",
+        "notlike"
+      ]
+    },
+    "parameterValue": {
+      "type": "object",
+      "description": "Value to apply for filtering",
+      "properties": {
+        "dataType": {
+          "description": "defines datatype of parameter value",
+          "$ref": "#/definitions/dataType"
+        },
+        "isNull": {
+          "description": "used to include NULL in inlist, notinlist, if set true other value properties are ignored",
+          "type": "boolean"
+        },
+        "valueString": { "type": "string" },
+        "valueInt": { "type": "integer" },
+        "valueFloat": { "type": "number" },
+        "valueDate": {
+          "description": "ISO 8601 date string YYYY-MM-DD (2021-02-18)",
+          "type": "string"
+        },
+        "valueTime": {
+          "description": "ISO 8601 time string HH:mm:ss.sss (10:44:23.000)",
+          "type": "string"
+        },
+        "valueTimeTZ": {
+          "description": "ISO 8601 time string with Timezone HH:mm:ss.sss±hh:mm (10:44:23.000+01:00)",
+          "type": "string"
+        },
+        "valueTimestamp": {
+          "description": "ISO 8601 timestamp string in UTC YYYY-MM-DDTHH:mm:ss.sss (2021-02-18T10:44:23.000)",
+          "type": "string"
+        },
+        "valueTimestampTZ": {
+          "description": "ISO 8601 timestamp string with Timezone YYYY-MM-DDTHH:mm:ss.sss±hh:mm (2021-02-18T10:44:23.000+01:00)",
+          "type": "string"
+        },
+        "valueMillis": {
+          "description": "can used for timestamp fields, millisec in UTC (e.g. in Snowflake: TO_TIMESTAMP('1604954053'))",
+          "type": "integer"
+        },
+        "valueBoolean": { "type": "boolean" }
+      },
+      "required": ["dataType"]
+    },
+    "dynamicDatePart": {
+      "enum": ["year", "month", "quarter", "week", "day", "hour", "minute", "second"]
+    },
+    "dynamicDateCalcType": {
+      "enum": [
+        "boy",
+        "bopy",
+        "bom",
+        "bopm",
+        "boq",
+        "bopq",
+        "bow",
+        "bopw",
+        "eoy",
+        "eom",
+        "eoq",
+        "eow",
+        "today",
+        "yesterday"
+      ]
+    },
+    "dynamicDateCalcRangeType": {
+      "enum": [
+        "eytd",
+        "ytd",
+        "emtd",
+        "mtd",
+        "qtd",
+        "wtd",
+        "pytd",
+        "pmtd",
+        "pqtd",
+        "pwtd",
+        "l12m",
+        "l90d",
+        "l30d",
+        "l7d",
+        "py",
+        "pm",
+        "pq",
+        "pw",
+        "today",
+        "yesterday"
+      ]
+    },
+    "filter": {
+      "type": "object",
+      "description": "Filter definition",
+      "properties": {
+        "column": {
+          "$ref": "#/definitions/queryColumn"
+        },
+        "operator": {
+          "$ref": "#/definitions/operator"
+        },
+        "values": {
+          "type": "array",
+          "description": "no value for set/notSet, one value for comparisons, two values for between/notBetween, list of values for contains/notContains",
+          "items": {
+            "$ref": "#/definitions/parameterValue"
+          }
+        },
+        "timeGrain": {
+          "$ref": "#/definitions/timeGrain"
+        },
+        "dynamicDate": {
+          "type": "object",
+          "properties": {
+            "part": {
+              "$ref": "#/definitions/dynamicDatePart"
+            },
+            "offset": {
+              "type": "integer"
+            }
+          },
+          "required": ["part", "offset"]
+        },
+        "dynamicDateRange": {
+          "type": "object",
+          "properties": {
+            "part": {
+              "$ref": "#/definitions/dynamicDatePart"
+            },
+            "offsetBegin": {
+              "type": "integer"
+            },
+            "offsetEnd": {
+              "type": "integer"
+            }
+          },
+          "required": ["part", "offsetBegin", "offsetEnd"]
+        },
+        "dynamicDateCalc": {
+          "type": "object",
+          "properties": {
+            "dynamicDateType": {
+              "$ref": "#/definitions/dynamicDateCalcType"
+            }
+          },
+          "required": ["dynamicDateType"]
+        },
+        "dynamicDateCalcRange": {
+          "type": "object",
+          "properties": {
+            "dynamicDateType": {
+              "$ref": "#/definitions/dynamicDateCalcRangeType"
+            }
+          },
+          "required": ["dynamicDateType"]
+        }
+      },
+      "required": ["column", "operator"]
+    },
+    "dimension": {
+      "type": "object",
+      "description": "Dimension definition",
+      "properties": {
+        "dataObject": {
+          "type": "string",
+          "description": "OrionBelt Data Object Name"
+        },
+        "column": {
+          "type": "string",
+          "description": "OrionBelt Column Name"
+        },
+        "resultType": {
+          "$ref": "#/definitions/dataType"
+        },
+        "label": {
+          "type": "string"
+        },
+        "timeGrain": {
+          "$ref": "#/definitions/timeGrain"
+        },
+        "format": {
+          "type": "string"
+        },
+        "group": {
+          "type": "array",
+          "description": "used in case of a dimension group, list of fields",
+          "items": {
+            "$ref": "#/definitions/queryColumn"
+          },
+          "minItems": 2
+        }
+      },
+      "required": ["dataObject", "column", "resultType"],
+      "additionalProperties": false
+    },
+    "measure": {
+      "type": "object",
+      "description": "Measure definition",
+      "properties": {
+        "columns": {
+          "type": "array",
+          "description": "Columns used in Measure for Aggregation",
+          "items": {
+            "$ref": "#/definitions/queryColumn"
+          }
+        },
+        "label": {
+          "type": "string"
+        },
+        "resultType": {
+          "$ref": "#/definitions/dataType"
+        },
+        "aggregation": {
+          "type": "string",
+          "description": "Aggregation Function (sum,min,max,listagg, etc.)"
+        },
+        "distinct": {
+          "type": "boolean",
+          "description": "DISTINCT clause"
+        },
+        "delimiter": {
+          "type": "string",
+          "description": "Delimiter Field for List Functions (LISTAGG)"
+        },
+        "withinGroup": {
+          "type": "object",
+          "description": "WITHIN GROUP clause to specify Field for ordering in Group",
+          "properties": {
+            "oneOf": {
+              "$ref": "#/definitions/queryColumn"
+            },
+            "order": {
+              "enum": ["ASC", "DESC"],
+              "default": "ASC"
+            }
+          },
+          "additionalProperties": false
+        },
+        "allowFanOut": {
+          "type": "boolean",
+          "description": "allow fan out for this measure, only applicable if measures can't reach dimensions but dimensions can reach measures for a specific grain"
+        },
+        "reduceToRelationDimensionality": {
+          "type": "boolean",
+          "description": "reduce to relation dimensionality, only applicable `AllowFanOut` is true and if measures can't reach dimensions but dimensions can reach measures for a specific grain"
+        },
+        "total": {
+          "type": "boolean",
+          "description": "will use the total value of the measure"
+        },
+        "expression": {
+          "type": "string",
+          "description": "template string with {[Column]} placeholders for measure expression (column names are globally unique)"
+        },
+        "functions": {
+          "type": "array",
+          "contains": {
+            "type": "string"
+          }
+        },
+        "format": {
+          "type": "string"
+        },
+        "filter": {
+          "$ref": "#/definitions/filter"
+        }
+      },
+      "required": ["resultType", "aggregation"],
+      "additionalProperties": false
+    },
+    "metric": {
+      "type": "object",
+      "description": "Metric definition. Expression references measures by name using {[Measure Name]} syntax.",
+      "properties": {
+        "label": {
+          "type": "string"
+        },
+        "expression": {
+          "type": "string",
+          "description": "template string with {[Measure Name]} placeholders referencing defined measures"
+        },
+        "format": {
+          "type": "string"
+        }
+      },
+      "required": ["expression"],
+      "additionalProperties": false
+    },
+    "locale": {
+      "type": "object",
+      "properties": {
+        "timezone": {
+          "type": "string",
+          "default": "Europe/London"
+        },
+        "number": {
+          "type": "object",
+          "properties": {
+            "deciamlSep": {
+              "type": "string",
+              "default": "."
+            },
+            "thousandSep": {
+              "type": "string",
+              "default": ","
+            }
+          }
+        },
+        "calendar": {
+          "type": "object",
+          "properties": {
+            "monthNames": {
+              "type": "array",
+              "contains": {
+                "type": "string"
+              },
+              "default": [
+                "January",
+                "February",
+                "March",
+                "April",
+                "May",
+                "June",
+                "July",
+                "August",
+                "September",
+                "October",
+                "November",
+                "December"
+              ],
+              "minItems": 12,
+              "maxItems": 12
+            },
+            "monthNamesAbbr": {
+              "type": "array",
+              "contains": {
+                "type": "string"
+              },
+              "default": ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+              "minItems": 12,
+              "maxItems": 12
+            },
+            "dayNames": {
+              "type": "array",
+              "contains": {
+                "type": "string"
+              },
+              "default": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+              "minItems": 7,
+              "maxItems": 7
+            },
+            "dayNamesAbbr": {
+              "type": "array",
+              "contains": {
+                "type": "string"
+              },
+              "default": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+              "minItems": 7,
+              "maxItems": 7
+            }
+          }
+        },
+        "formats": {
+          "type": "object",
+          "properties": {
+            "number": {
+              "type": "string",
+              "default": "#,##0.00"
+            },
+            "numberInt": {
+              "type": "string",
+              "default": "#,##0"
+            },
+            "money": {
+              "type": "string",
+              "default": "$#,###.00"
+            },
+            "date": {
+              "type": "string",
+              "default": "yyyy-mm-dd"
+            },
+            "dateTime": {
+              "type": "string",
+              "default": "yyyy-mm-dd hh:mm:ss"
+            },
+            "time": {
+              "type": "string",
+              "default": "hh:mm:ss"
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "type": "object",
+  "properties": {
+    "version": {
+      "enum": [1.0]
+    },
+"dataObjects": {
+      "type": "object",
+      "description": "Data Object Names in the OrionBelt Model",
+      "patternProperties": {
+        ".": {
+          "$ref": "#/definitions/dataObject"
+        }
+      },
+      "additionalProperties": false,
+      "minProperties": 1
+    },
+    "dimensions": {
+      "type": "object",
+      "description": "Dimensions for use in Queries",
+      "patternProperties": {
+        ".": {
+          "$ref": "#/definitions/dimension"
+        }
+      },
+      "additionalProperties": false
+    },
+    "measures": {
+      "type": "object",
+      "description": "Measures for use in Queries or referenced by Metrics",
+      "patternProperties": {
+        ".": {
+          "$ref": "#/definitions/measure"
+        }
+      },
+      "additionalProperties": false
+    },
+    "metrics": {
+      "type": "object",
+      "description": "Metrics for use in Queries",
+      "patternProperties": {
+        ".": {
+          "$ref": "#/definitions/metric"
+        }
+      },
+      "additionalProperties": false
+    },
+    "locale": {
+      "$ref": "#/definitions/locale"
+    },
+    "additionalProperties": false
+  },
+  "required": ["version", "dataObjects"]
+}

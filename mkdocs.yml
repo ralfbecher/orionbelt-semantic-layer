@@ -1,0 +1,99 @@
+site_name: OrionBelt Semantic Layer
+site_description: Compile YAML semantic models into analytical SQL across multiple database dialects.
+site_url: https://ralfbecher.github.io/orionbelt-semantic-layer/
+repo_url: https://github.com/ralfbecher/orionbelt-semantic-layer
+repo_name: orionbelt-semantic-layer
+copyright: Copyright &copy; 2025 RALFORION d.o.o. — Apache 2.0
+
+dev_addr: 127.0.0.1:8080
+
+theme:
+  name: material
+  logo: assets/logo w.png
+  favicon: assets/ORIONBELT Logo.png
+  palette:
+    - scheme: default
+      primary: deep purple
+      accent: amber
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: deep purple
+      accent: amber
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.tabs.link
+    - toc.follow
+  icon:
+    repo: fontawesome/brands/github
+
+plugins:
+  - search
+  - autorefs
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [src]
+          options:
+            show_source: true
+            show_root_heading: true
+            members_order: source
+            docstring_style: google
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.snippets
+  - tables
+  - toc:
+      permalink: true
+  - attr_list
+  - md_in_html
+  - def_list
+  - pymdownx.tasklist:
+      custom_checkbox: true
+
+nav:
+  - Home: index.md
+  - Getting Started:
+      - Installation: getting-started/installation.md
+      - Quick Start: getting-started/quickstart.md
+  - Guide:
+      - OBML Model Format: guide/model-format.md
+      - Query Language: guide/query-language.md
+      - SQL Dialects: guide/dialects.md
+      - Compilation Pipeline: guide/compilation.md
+  - API:
+      - Overview: api/overview.md
+      - Endpoints: api/endpoints.md
+      - MCP Server: api/mcp.md
+      - OpenAPI / Swagger: api/openapi.md
+  - Examples:
+      - Sales Model Walkthrough: examples/sales-model.md
+      - Multi-Dialect Output: examples/multi-dialect.md
+      - "Multi-Fact: Sales & Returns": examples/multi-fact.md
+      - TPC-DS Benchmark: examples/tpcds.md
+  - Reference:
+      - Python API: reference/python-api.md

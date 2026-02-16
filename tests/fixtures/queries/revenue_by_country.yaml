@@ -1,0 +1,18 @@
+---
+select:
+  dimensions:
+    - Customer Country
+    - Order Date
+  measures:
+    - Revenue
+    - Order Count
+where:
+  - field: Customer Segment
+    op: in
+    value:
+      - SMB
+      - MidMarket
+order_by:
+  - field: Revenue
+    direction: desc
+limit: 1000

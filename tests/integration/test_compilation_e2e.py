@@ -1,0 +1,241 @@
+"""End-to-end compilation tests using the sales model fixture."""
+
+from __future__ import annotations
+
+import pytest
+
+from orionbelt.compiler.pipeline import CompilationPipeline
+from orionbelt.models.query import (
+    FilterOperator,
+    QueryFilter,
+    QueryObject,
+    QueryOrderBy,
+    QuerySelect,
+    SortDirection,
+)
+from orionbelt.models.semantic import SemanticModel
+from orionbelt.parser.loader import TrackedLoader
+from orionbelt.parser.resolver import ReferenceResolver
+from tests.conftest import SALES_MODEL_DIR
+
+
+def _load_sales_model() -> SemanticModel:
+    loader = TrackedLoader()
+    resolver = ReferenceResolver()
+    raw, source_map = loader.load(SALES_MODEL_DIR / "model.yaml")
+    model, result = resolver.resolve(raw, source_map)
+    assert result.valid, f"Errors: {[e.message for e in result.errors]}"
+    return model
+
+
+class TestEndToEndCompilation:
+    @pytest.fixture
+    def model(self) -> SemanticModel:
+        return _load_sales_model()
+
+    @pytest.fixture
+    def pipeline(self) -> CompilationPipeline:
+        return CompilationPipeline()
+
+    def test_revenue_by_country_postgres(
+        self, model: SemanticModel, pipeline: CompilationPipeline
+    ) -> None:
+        query = QueryObject(
+            select=QuerySelect(
+                dimensions=["Customer Country"],
+                measures=["Revenue", "Order Count"],
+            ),
+            order_by=[QueryOrderBy(field="Revenue", direction=SortDirection.DESC)],
+            limit=1000,
+        )
+        result = pipeline.compile(query, model, "postgres")
+        assert "SELECT" in result.sql
+        assert "GROUP BY" in result.sql
+        assert "LIMIT 1000" in result.sql
+        assert result.dialect == "postgres"
+        assert "Customer Country" in result.resolved.dimensions
+        assert "Revenue" in result.resolved.measures
+        assert "Order Count" in result.resolved.measures
+
+    def test_revenue_by_country_snowflake(
+        self, model: SemanticModel, pipeline: CompilationPipeline
+    ) -> None:
+        query = QueryObject(
+            select=QuerySelect(
+                dimensions=["Customer Country"],
+                measures=["Revenue"],
+            ),
+        )
+        result = pipeline.compile(query, model, "snowflake")
+        assert "SELECT" in result.sql
+        assert result.dialect == "snowflake"
+
+    def test_product_dimension(self, model: SemanticModel, pipeline: CompilationPipeline) -> None:
+        query = QueryObject(
+            select=QuerySelect(
+                dimensions=["Product Name"],
+                measures=["Revenue"],
+            ),
+        )
+        result = pipeline.compile(query, model, "postgres")
+        assert "SELECT" in result.sql
+        assert "Product Name" in result.resolved.dimensions
+
+    def test_data_object_dimension(
+        self, model: SemanticModel, pipeline: CompilationPipeline
+    ) -> None:
+        """Test dimension defined with dataObject + field syntax."""
+        query = QueryObject(
+            select=QuerySelect(
+                dimensions=["Product Category"],
+                measures=["Revenue"],
+            ),
+        )
+        result = pipeline.compile(query, model, "postgres")
+        assert "SELECT" in result.sql
+        assert "Product Category" in result.resolved.dimensions
+
+    def test_with_where_filter(self, model: SemanticModel, pipeline: CompilationPipeline) -> None:
+        query = QueryObject(
+            select=QuerySelect(
+                dimensions=["Customer Country"],
+                measures=["Revenue"],
+            ),
+            where=[
+                QueryFilter(
+                    field="Customer Segment",
+                    op=FilterOperator.IN,
+                    value=["SMB", "MidMarket"],
+                ),
+            ],
+        )
+        result = pipeline.compile(query, model, "postgres")
+        assert "WHERE" in result.sql
+        assert "SELECT" in result.sql
+
+    @pytest.mark.parametrize(
+        "dialect", ["postgres", "snowflake", "clickhouse", "dremio", "databricks"]
+    )
+    def test_all_dialects(
+        self, model: SemanticModel, pipeline: CompilationPipeline, dialect: str
+    ) -> None:
+        query = QueryObject(
+            select=QuerySelect(
+                dimensions=["Customer Country"],
+                measures=["Revenue"],
+            ),
+        )
+        result = pipeline.compile(query, model, dialect)
+        assert "SELECT" in result.sql
+        assert result.dialect == dialect
+
+    @pytest.mark.parametrize(
+        "dialect", ["postgres", "snowflake", "clickhouse", "dremio", "databricks"]
+    )
+    def test_metric_revenue_per_order_all_dialects(
+        self, model: SemanticModel, pipeline: CompilationPipeline, dialect: str
+    ) -> None:
+        """Metric 'Revenue per Order' compiles to valid SQL across all dialects."""
+        query = QueryObject(
+            select=QuerySelect(
+                dimensions=["Customer Country"],
+                measures=["Revenue per Order"],
+            ),
+        )
+        result = pipeline.compile(query, model, dialect)
+        sql = result.sql
+        assert "SELECT" in sql
+        assert "GROUP BY" in sql
+        assert "_ref_" not in sql
+        assert "Revenue per Order" in sql
+        assert result.dialect == dialect
+
+    def test_metric_with_regular_measures(
+        self, model: SemanticModel, pipeline: CompilationPipeline
+    ) -> None:
+        """Metric combined with regular measures produces valid SQL."""
+        query = QueryObject(
+            select=QuerySelect(
+                dimensions=["Customer Country"],
+                measures=["Revenue", "Order Count", "Revenue per Order"],
+            ),
+        )
+        result = pipeline.compile(query, model, "postgres")
+        sql = result.sql
+        assert "Revenue per Order" in sql
+        assert "_ref_" not in sql
+
+    @pytest.mark.parametrize(
+        "dialect", ["postgres", "snowflake", "clickhouse", "dremio", "databricks"]
+    )
+    def test_total_measure_all_dialects(
+        self, model: SemanticModel, pipeline: CompilationPipeline, dialect: str
+    ) -> None:
+        """Total measure produces wrapper CTE with window function across all dialects."""
+        query = QueryObject(
+            select=QuerySelect(
+                dimensions=["Customer Country"],
+                measures=["Grand Total Revenue"],
+            ),
+        )
+        result = pipeline.compile(query, model, dialect)
+        sql = result.sql
+        assert "OVER ()" in sql
+        assert "Grand Total Revenue" in sql
+        assert result.dialect == dialect
+
+    @pytest.mark.parametrize(
+        "dialect", ["postgres", "snowflake", "clickhouse", "dremio", "databricks"]
+    )
+    def test_total_with_regular_measure_all_dialects(
+        self, model: SemanticModel, pipeline: CompilationPipeline, dialect: str
+    ) -> None:
+        """Total + regular measure in same query across all dialects."""
+        query = QueryObject(
+            select=QuerySelect(
+                dimensions=["Customer Country"],
+                measures=["Revenue", "Grand Total Revenue"],
+            ),
+        )
+        result = pipeline.compile(query, model, dialect)
+        sql = result.sql
+        assert "OVER ()" in sql
+        assert "Grand Total Revenue" in sql
+        assert "Revenue" in sql
+
+    @pytest.mark.parametrize(
+        "dialect", ["postgres", "snowflake", "clickhouse", "dremio", "databricks"]
+    )
+    def test_revenue_share_metric_all_dialects(
+        self, model: SemanticModel, pipeline: CompilationPipeline, dialect: str
+    ) -> None:
+        """Revenue Share metric (with total component) across all dialects."""
+        query = QueryObject(
+            select=QuerySelect(
+                dimensions=["Customer Country"],
+                measures=["Revenue Share"],
+            ),
+        )
+        result = pipeline.compile(query, model, dialect)
+        sql = result.sql
+        assert "OVER ()" in sql
+        assert "Revenue Share" in sql
+        assert result.dialect == dialect
+
+    def test_total_measure_with_limit_and_order(
+        self, model: SemanticModel, pipeline: CompilationPipeline
+    ) -> None:
+        """Total measure with ORDER BY and LIMIT — limit on outer, not base CTE."""
+        query = QueryObject(
+            select=QuerySelect(
+                dimensions=["Customer Country"],
+                measures=["Revenue", "Grand Total Revenue"],
+            ),
+            order_by=[QueryOrderBy(field="Revenue", direction=SortDirection.DESC)],
+            limit=10,
+        )
+        result = pipeline.compile(query, model, "postgres")
+        sql = result.sql
+        assert "OVER ()" in sql
+        assert "LIMIT 10" in sql
+        assert "ORDER BY" in sql

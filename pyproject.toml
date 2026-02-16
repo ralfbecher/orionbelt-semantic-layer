@@ -1,0 +1,109 @@
+[project]
+name = "orionbelt"
+version = "0.1.0"
+description = "OrionBelt Semantic Layer - Compiles YAML semantic models into analytical SQL"
+license = {text = "Apache-2.0"}
+authors = [{name = "Ralf Becher, RALFORION d.o.o.", email = "ralf.becher@web.de"}]
+requires-python = ">=3.12"
+readme = "README.md"
+keywords = [
+    "semantic-layer",
+    "analytics",
+    "sql",
+    "sql-generation",
+    "data-warehouse",
+    "mcp",
+    "yaml",
+    "obml",
+    "snowflake",
+    "postgres",
+    "clickhouse",
+    "dremio",
+    "databricks",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Framework :: FastAPI",
+    "Framework :: Pydantic :: 2",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Database",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+    "Topic :: Software Development :: Code Generators",
+    "Typing :: Typed",
+]
+dependencies = [
+    "fastapi>=0.128",
+    "uvicorn[standard]>=0.40",
+    "pydantic>=2.12",
+    "pydantic-settings>=2.12",
+    "pyyaml>=6.0",
+    "ruamel.yaml>=0.19",
+    "networkx>=3.6",
+    "sqlalchemy>=2.0",
+    "alembic>=1.18",
+    "structlog>=25.1",
+    "opentelemetry-api>=1.39",
+    "fastmcp>=2.14",
+    "httpx>=0.28",
+    "sqlparse>=0.5",
+    "sqlglot>=26.0",
+]
+
+[project.scripts]
+orionbelt-api = "orionbelt.api.app:main"
+orionbelt-mcp = "orionbelt.mcp.server:main"
+orionbelt-ui = "orionbelt.ui.app:main"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=9.0",
+    "pytest-asyncio>=1.3",
+    "pytest-cov>=7.0",
+    "httpx>=0.28",
+    "ruff>=0.15",
+    "mypy>=1.19",
+    "pre-commit>=4.5",
+]
+docs = [
+    "mkdocs-material>=9.7",
+    "mkdocs-autorefs>=1.4",
+    "mkdocstrings[python]>=1.0",
+]
+ui = [
+    "gradio>=5.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/orionbelt"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+src = ["src"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B", "A", "SIM"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+plugins = ["pydantic.mypy"]
+
+[dependency-groups]
+dev = [
+    "types-networkx>=3.6.1.20260210",
+    "types-PyYAML>=6.0",
+]

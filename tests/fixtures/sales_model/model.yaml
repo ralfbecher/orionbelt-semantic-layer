@@ -1,0 +1,128 @@
+---
+# yaml-language-server: $schema=../../../schema/obml-schema.json
+version: 1.0
+
+dataObjects:
+  Customers:
+    code: CUSTOMERS
+    database: WAREHOUSE
+    schema: PUBLIC
+    columns:
+      Customer ID:
+        code: CUSTOMER_ID
+        abstractType: string
+      Customer Name:
+        code: NAME
+        abstractType: string
+      Country:
+        code: COUNTRY
+        abstractType: string
+      Segment:
+        code: SEGMENT
+        abstractType: string
+
+  Products:
+    code: PRODUCTS
+    database: WAREHOUSE
+    schema: PUBLIC
+    columns:
+      Product ID:
+        code: PRODUCT_ID
+        abstractType: string
+      Product Name:
+        code: NAME
+        abstractType: string
+      Category:
+        code: CATEGORY
+        abstractType: string
+
+  Orders:
+    code: ORDERS
+    database: WAREHOUSE
+    schema: PUBLIC
+    columns:
+      Order ID:
+        code: ORDER_ID
+        abstractType: string
+      Order Date:
+        code: ORDER_DATE
+        abstractType: date
+      Order Customer ID:
+        code: CUSTOMER_ID
+        abstractType: string
+      Order Product ID:
+        code: PRODUCT_ID
+        abstractType: string
+      Quantity:
+        code: QUANTITY
+        abstractType: int
+      Price:
+        code: PRICE
+        abstractType: float
+    joins:
+      - joinType: many-to-one
+        joinTo: Customers
+        columnsFrom:
+          - Order Customer ID
+        columnsTo:
+          - Customer ID
+      - joinType: many-to-one
+        joinTo: Products
+        columnsFrom:
+          - Order Product ID
+        columnsTo:
+          - Product ID
+
+dimensions:
+  Customer Country:
+    dataObject: Customers
+    column: Country
+    resultType: string
+  Customer Segment:
+    dataObject: Customers
+    column: Segment
+    resultType: string
+  Product Name:
+    dataObject: Products
+    column: Product Name
+    resultType: string
+  Product Category:
+    dataObject: Products
+    column: Category
+    resultType: string
+  Order Date:
+    dataObject: Orders
+    column: Order Date
+    resultType: date
+    timeGrain: month
+
+measures:
+  Revenue:
+    resultType: float
+    aggregation: sum
+    expression: '{[Price]} * {[Quantity]}'
+
+  Order Count:
+    columns:
+      - dataObject: Orders
+        column: Order ID
+    resultType: int
+    aggregation: count
+
+  Average Order Value:
+    resultType: float
+    aggregation: avg
+    expression: '{[Price]} * {[Quantity]}'
+
+  Grand Total Revenue:
+    resultType: float
+    aggregation: sum
+    expression: '{[Price]} * {[Quantity]}'
+    total: true
+
+metrics:
+  Revenue per Order:
+    expression: '{[Revenue]} / {[Order Count]}'
+
+  Revenue Share:
+    expression: '{[Revenue]} / {[Grand Total Revenue]}'
