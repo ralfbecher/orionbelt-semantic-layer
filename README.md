@@ -33,7 +33,8 @@ OrionBelt Semantic Layer is an engine that transforms declarative YAML model def
 - **Vendor-Specific SQL Validation** — Post-generation syntax validation via sqlglot for each target dialect (non-blocking)
 - **Validation with Source Positions** — Precise error reporting with line/column numbers from YAML source, including join graph analysis (cycle and multipath detection, secondary join constraints)
 - **Session Management** — TTL-scoped sessions with per-client model stores for both REST API and MCP
-- **REST API** — FastAPI-powered session endpoints for model loading, validation, compilation, and management
+- **ER Diagram Generation** — Mermaid ER diagrams via API and Gradio UI with theme support, zoom, and secondary join visualization
+- **REST API** — FastAPI-powered session endpoints for model loading, validation, compilation, diagram generation, and management
 - **MCP Server** — 9 tools + 3 prompts for AI-assisted model development via Claude Desktop and other MCP clients
 - **Gradio UI** — Interactive web interface for model editing, query testing, and SQL compilation with live validation feedback
 - **Plugin Architecture** — Extensible dialect system with capability flags and registry
@@ -311,9 +312,21 @@ The UI provides:
 - **Dialect selector** — Switch between Postgres, Snowflake, ClickHouse, Dremio, and Databricks
 - **One-click compilation** — Compile button generates formatted SQL output
 - **SQL validation feedback** — Warnings and validation errors from sqlglot are displayed as comments above the generated SQL
-- **Dark / light mode** — Toggle via the header button
+- **ER Diagram tab** — Visualize the semantic model as a Mermaid ER diagram with left-to-right layout, FK annotations, dotted lines for secondary joins, and an adjustable zoom slider
+- **Dark / light mode** — Toggle via the header button; all inputs and UI state are persisted across mode switches
 
 The bundled example model (`examples/sem-layer.obml.yml`) is loaded automatically on startup.
+
+<p align="center">
+  <img src="docs/assets/er-diagram-dark.png" alt="ER Diagram in Gradio UI (dark mode)" width="900">
+</p>
+
+The ER diagram is also available via the REST API:
+
+```bash
+# Generate Mermaid ER diagram for a loaded model
+curl -s "http://127.0.0.1:8000/sessions/{session_id}/models/{model_id}/diagram/er?theme=default" | jq .mermaid
+```
 
 ## Configuration
 
