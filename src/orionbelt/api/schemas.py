@@ -137,3 +137,9 @@ class SessionQueryRequest(BaseModel):
     model_id: str
     query: QueryObject
     dialect: str = Field(default="postgres")
+
+
+class DiagramResponse(BaseModel):
+    """Response for GET /sessions/{session_id}/models/{model_id}/diagram/er."""
+
+    mermaid: str = Field(description="Mermaid ER diagram script")

@@ -1,0 +1,230 @@
+"""Tests for the diagram generation service."""
+
+from __future__ import annotations
+
+from orionbelt.models.semantic import (
+    Cardinality,
+    DataObject,
+    DataObjectColumn,
+    DataObjectJoin,
+    DataType,
+    Dimension,
+    SemanticModel,
+)
+from orionbelt.service.diagram import generate_mermaid_er
+
+
+def _sample_model() -> SemanticModel:
+    """Build a small model with two data objects and one join."""
+    return SemanticModel(
+        data_objects={
+            "Orders": DataObject(
+                label="Orders",
+                code="orders",
+                database="DB",
+                schema_name="PUBLIC",
+                columns={
+                    "Order ID": DataObjectColumn(
+                        label="Order ID", code="order_id", abstract_type=DataType.STRING
+                    ),
+                    "Customer ID": DataObjectColumn(
+                        label="Customer ID", code="customer_id", abstract_type=DataType.STRING
+                    ),
+                    "Amount": DataObjectColumn(
+                        label="Amount", code="amount", abstract_type=DataType.FLOAT
+                    ),
+                },
+                joins=[
+                    DataObjectJoin(
+                        join_type=Cardinality.MANY_TO_ONE,
+                        join_to="Customers",
+                        columns_from=["Customer ID"],
+                        columns_to=["Cust ID"],
+                    ),
+                ],
+            ),
+            "Customers": DataObject(
+                label="Customers",
+                code="customers",
+                database="DB",
+                schema_name="PUBLIC",
+                columns={
+                    "Cust ID": DataObjectColumn(
+                        label="Cust ID", code="cust_id", abstract_type=DataType.STRING
+                    ),
+                    "Name": DataObjectColumn(
+                        label="Name", code="name", abstract_type=DataType.STRING
+                    ),
+                },
+            ),
+        },
+        dimensions={
+            "Customer Name": Dimension(
+                label="Customer Name",
+                view="Customers",
+                column="Name",
+                result_type=DataType.STRING,
+            ),
+        },
+        measures={},
+    )
+
+
+class TestGenerateMermaidER:
+    def test_basic_output_contains_er_diagram(self) -> None:
+        model = _sample_model()
+        result = generate_mermaid_er(model)
+        assert "erDiagram" in result
+
+    def test_direction_lr(self) -> None:
+        model = _sample_model()
+        result = generate_mermaid_er(model)
+        assert "direction LR" in result
+
+    def test_default_theme(self) -> None:
+        model = _sample_model()
+        result = generate_mermaid_er(model)
+        assert "'theme': 'default'" in result
+
+    def test_custom_theme(self) -> None:
+        model = _sample_model()
+        result = generate_mermaid_er(model, theme="dark")
+        assert "'theme': 'dark'" in result
+
+    def test_entities_present(self) -> None:
+        model = _sample_model()
+        result = generate_mermaid_er(model)
+        assert "Orders {" in result
+        assert "Customers {" in result
+
+    def test_columns_present(self) -> None:
+        model = _sample_model()
+        result = generate_mermaid_er(model)
+        assert "string Order_ID" in result
+        assert "float Amount" in result
+        assert "string Cust_ID" in result
+
+    def test_fk_annotation(self) -> None:
+        model = _sample_model()
+        result = generate_mermaid_er(model)
+        assert "string Customer_ID FK" in result
+        # Non-FK columns should NOT have FK marker
+        assert "string Order_ID FK" not in result
+
+    def test_relationship_present(self) -> None:
+        model = _sample_model()
+        result = generate_mermaid_er(model)
+        # many-to-one: }o--||
+        assert '}o--|| Customers : "Customer_ID"' in result
+
+    def test_show_columns_false(self) -> None:
+        model = _sample_model()
+        result = generate_mermaid_er(model, show_columns=False)
+        assert "erDiagram" in result
+        # Entities should be listed but without { }
+        assert "Orders {" not in result
+        assert "Customers {" not in result
+        # Relationships should still be there
+        assert "Customers" in result
+
+    def test_empty_model(self) -> None:
+        model = SemanticModel()
+        result = generate_mermaid_er(model)
+        assert "erDiagram" in result
+
+    def test_secondary_join_dotted_line(self) -> None:
+        model = SemanticModel(
+            data_objects={
+                "Sales": DataObject(
+                    label="Sales",
+                    code="sales",
+                    database="DB",
+                    schema_name="PUBLIC",
+                    columns={
+                        "Date": DataObjectColumn(
+                            label="Date", code="dt", abstract_type=DataType.DATE
+                        ),
+                    },
+                    joins=[
+                        DataObjectJoin(
+                            join_type=Cardinality.MANY_TO_ONE,
+                            join_to="Calendar",
+                            columns_from=["Date"],
+                            columns_to=["Cal Date"],
+                            secondary=True,
+                            path_name="sales_date",
+                        ),
+                    ],
+                ),
+                "Calendar": DataObject(
+                    label="Calendar",
+                    code="calendar",
+                    database="DB",
+                    schema_name="PUBLIC",
+                    columns={
+                        "Cal Date": DataObjectColumn(
+                            label="Cal Date", code="cal_date", abstract_type=DataType.DATE
+                        ),
+                    },
+                ),
+            },
+        )
+        result = generate_mermaid_er(model)
+        # Secondary uses dotted line (..) and path_name as label
+        assert '}o..|| Calendar : "sales_date"' in result
+
+    def test_one_to_one_cardinality(self) -> None:
+        model = SemanticModel(
+            data_objects={
+                "A": DataObject(
+                    label="A",
+                    code="a",
+                    database="DB",
+                    schema_name="PUBLIC",
+                    joins=[
+                        DataObjectJoin(
+                            join_type=Cardinality.ONE_TO_ONE,
+                            join_to="B",
+                            columns_from=["id"],
+                            columns_to=["id"],
+                        ),
+                    ],
+                ),
+                "B": DataObject(label="B", code="b", database="DB", schema_name="PUBLIC"),
+            },
+        )
+        result = generate_mermaid_er(model)
+        assert "||--||" in result
+
+    def test_sanitizes_spaces_in_names(self) -> None:
+        model = SemanticModel(
+            data_objects={
+                "Account Balances": DataObject(
+                    label="Account Balances",
+                    code="acct_bal",
+                    database="DB",
+                    schema_name="PUBLIC",
+                    columns={
+                        "Account ID": DataObjectColumn(
+                            label="Account ID",
+                            code="account_id",
+                            abstract_type=DataType.STRING,
+                        ),
+                    },
+                ),
+            },
+        )
+        result = generate_mermaid_er(model)
+        assert "Account_Balances {" in result
+        assert "string Account_ID" in result
+
+    def test_with_sales_fixture(self, sales_model: SemanticModel) -> None:
+        """Integration test with the full sales model fixture."""
+        result = generate_mermaid_er(sales_model)
+        assert "erDiagram" in result
+        # Check known entities from the fixture
+        assert "Orders {" in result
+        assert "Customers {" in result
+        assert "Products {" in result
+        # Check a known relationship
+        assert "}o--|| Customers" in result

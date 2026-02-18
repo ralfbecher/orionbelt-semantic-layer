@@ -209,6 +209,46 @@ class TestSessionModelFlow:
 # ---------------------------------------------------------------------------
 
 
+class TestDiagramEndpoint:
+    async def test_diagram_er(self, client: AsyncClient) -> None:
+        sid = (await client.post("/sessions")).json()["session_id"]
+        load = await client.post(f"/sessions/{sid}/models", json={"model_yaml": SAMPLE_MODEL_YAML})
+        mid = load.json()["model_id"]
+        response = await client.get(f"/sessions/{sid}/models/{mid}/diagram/er")
+        assert response.status_code == 200
+        data = response.json()
+        assert "mermaid" in data
+        mermaid = data["mermaid"]
+        assert "erDiagram" in mermaid
+        assert "Orders" in mermaid
+        assert "Customers" in mermaid
+        # Relationship line
+        assert "}o--||" in mermaid
+
+    async def test_diagram_er_hide_columns(self, client: AsyncClient) -> None:
+        sid = (await client.post("/sessions")).json()["session_id"]
+        load = await client.post(f"/sessions/{sid}/models", json={"model_yaml": SAMPLE_MODEL_YAML})
+        mid = load.json()["model_id"]
+        response = await client.get(
+            f"/sessions/{sid}/models/{mid}/diagram/er",
+            params={"show_columns": False},
+        )
+        assert response.status_code == 200
+        mermaid = response.json()["mermaid"]
+        # Should NOT contain column attribute blocks
+        assert "{" not in mermaid.split("\n", 1)[-1].split("}o")[0]
+
+    async def test_diagram_er_missing_model(self, client: AsyncClient) -> None:
+        sid = (await client.post("/sessions")).json()["session_id"]
+        response = await client.get(f"/sessions/{sid}/models/nonexist/diagram/er")
+        assert response.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Session isolation
+# ---------------------------------------------------------------------------
+
+
 class TestSessionIsolation:
     async def test_models_in_session_a_not_visible_in_b(self, client: AsyncClient) -> None:
         sid_a = (await client.post("/sessions")).json()["session_id"]

@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from orionbelt.api.deps import get_session_manager
 from orionbelt.api.schemas import (
+    DiagramResponse,
     ErrorDetail,
     ModelLoadRequest,
     ModelLoadResponse,
@@ -23,6 +24,7 @@ from orionbelt.api.schemas import (
 )
 from orionbelt.compiler.resolution import ResolutionError
 from orionbelt.dialect.registry import UnsupportedDialectError
+from orionbelt.service.diagram import generate_mermaid_er
 from orionbelt.service.model_store import ModelStore
 from orionbelt.service.session_manager import SessionInfo, SessionManager, SessionNotFoundError
 
@@ -155,6 +157,27 @@ async def describe_model(
     except KeyError:
         raise HTTPException(status_code=404, detail=f"Model '{model_id}' not found") from None
     return asdict(desc)
+
+
+@router.get(
+    "/{session_id}/models/{model_id}/diagram/er",
+    response_model=DiagramResponse,
+)
+async def model_diagram_er(
+    session_id: str,
+    model_id: str,
+    show_columns: bool = True,
+    theme: str = "default",
+    mgr: SessionManager = Depends(get_session_manager),  # noqa: B008
+) -> DiagramResponse:
+    """Generate a Mermaid ER diagram for a loaded model."""
+    store = _get_store(session_id, mgr)
+    try:
+        model = store.get_model(model_id)
+    except KeyError:
+        raise HTTPException(status_code=404, detail=f"Model '{model_id}' not found") from None
+    mermaid = generate_mermaid_er(model, show_columns=show_columns, theme=theme)
+    return DiagramResponse(mermaid=mermaid)
 
 
 @router.delete("/{session_id}/models/{model_id}", status_code=204)
