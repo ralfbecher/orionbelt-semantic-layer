@@ -90,6 +90,16 @@ class QuerySelect(BaseModel):
     measures: list[str] = []
 
 
+class UsePathName(BaseModel):
+    """Selects a named secondary join path for a specific (source, target) pair."""
+
+    source: str
+    target: str
+    path_name: str = Field(alias="pathName")
+
+    model_config = {"populate_by_name": True}
+
+
 class QueryObject(BaseModel):
     """A complete YAML analytical query."""
 
@@ -98,5 +108,6 @@ class QueryObject(BaseModel):
     having: list[QueryFilter] = []
     order_by: list[QueryOrderBy] = Field([], alias="order_by")
     limit: int | None = None
+    use_path_names: list[UsePathName] = Field([], alias="usePathNames")
 
     model_config = {"populate_by_name": True}

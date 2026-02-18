@@ -505,3 +505,364 @@ dataObjects:
         validator = SemanticValidator()
         errors = validator.validate(model)
         assert not any(e.code == "MULTIPATH_JOIN" for e in errors)
+
+
+class TestSecondaryJoinValidation:
+    """Tests for secondary join validation rules."""
+
+    def test_secondary_join_without_path_name_errors(self, resolver: ReferenceResolver) -> None:
+        yaml_content = """\
+version: 1.0
+dataObjects:
+  A:
+    code: A
+    database: DB
+    schema: SCH
+    columns:
+      a_id:
+        code: A_ID
+        abstractType: string
+      a_alt:
+        code: A_ALT
+        abstractType: string
+    joins:
+      - joinType: many-to-one
+        joinTo: B
+        columnsFrom: [a_id]
+        columnsTo: [b_id]
+      - joinType: many-to-one
+        joinTo: B
+        secondary: true
+        columnsFrom: [a_alt]
+        columnsTo: [b_id]
+  B:
+    code: B
+    database: DB
+    schema: SCH
+    columns:
+      b_id:
+        code: B_ID
+        abstractType: string
+"""
+        loader = TrackedLoader()
+        raw, source_map = loader.load_string(yaml_content)
+        model, result = resolver.resolve(raw, source_map)
+        validator = SemanticValidator()
+        errors = validator.validate(model)
+        assert any(e.code == "SECONDARY_JOIN_MISSING_PATH_NAME" for e in errors)
+
+    def test_secondary_join_with_path_name_ok(self, resolver: ReferenceResolver) -> None:
+        yaml_content = """\
+version: 1.0
+dataObjects:
+  A:
+    code: A
+    database: DB
+    schema: SCH
+    columns:
+      a_id:
+        code: A_ID
+        abstractType: string
+      a_alt:
+        code: A_ALT
+        abstractType: string
+    joins:
+      - joinType: many-to-one
+        joinTo: B
+        columnsFrom: [a_id]
+        columnsTo: [b_id]
+      - joinType: many-to-one
+        joinTo: B
+        secondary: true
+        pathName: alt_path
+        columnsFrom: [a_alt]
+        columnsTo: [b_id]
+  B:
+    code: B
+    database: DB
+    schema: SCH
+    columns:
+      b_id:
+        code: B_ID
+        abstractType: string
+"""
+        loader = TrackedLoader()
+        raw, source_map = loader.load_string(yaml_content)
+        model, result = resolver.resolve(raw, source_map)
+        validator = SemanticValidator()
+        errors = validator.validate(model)
+        assert not any(e.code == "SECONDARY_JOIN_MISSING_PATH_NAME" for e in errors)
+
+    def test_duplicate_path_name_for_same_pair_errors(self, resolver: ReferenceResolver) -> None:
+        yaml_content = """\
+version: 1.0
+dataObjects:
+  A:
+    code: A
+    database: DB
+    schema: SCH
+    columns:
+      a_id:
+        code: A_ID
+        abstractType: string
+      a_alt1:
+        code: A_ALT1
+        abstractType: string
+      a_alt2:
+        code: A_ALT2
+        abstractType: string
+    joins:
+      - joinType: many-to-one
+        joinTo: B
+        columnsFrom: [a_id]
+        columnsTo: [b_id]
+      - joinType: many-to-one
+        joinTo: B
+        secondary: true
+        pathName: dup_path
+        columnsFrom: [a_alt1]
+        columnsTo: [b_id]
+      - joinType: many-to-one
+        joinTo: B
+        secondary: true
+        pathName: dup_path
+        columnsFrom: [a_alt2]
+        columnsTo: [b_id]
+  B:
+    code: B
+    database: DB
+    schema: SCH
+    columns:
+      b_id:
+        code: B_ID
+        abstractType: string
+"""
+        loader = TrackedLoader()
+        raw, source_map = loader.load_string(yaml_content)
+        model, result = resolver.resolve(raw, source_map)
+        validator = SemanticValidator()
+        errors = validator.validate(model)
+        assert any(e.code == "DUPLICATE_JOIN_PATH_NAME" for e in errors)
+
+    def test_same_path_name_different_pairs_ok(self, resolver: ReferenceResolver) -> None:
+        """Same pathName on different (source, target) pairs is allowed."""
+        yaml_content = """\
+version: 1.0
+dataObjects:
+  A:
+    code: A
+    database: DB
+    schema: SCH
+    columns:
+      a_id:
+        code: A_ID
+        abstractType: string
+      a_alt:
+        code: A_ALT
+        abstractType: string
+    joins:
+      - joinType: many-to-one
+        joinTo: B
+        columnsFrom: [a_id]
+        columnsTo: [b_id]
+      - joinType: many-to-one
+        joinTo: B
+        secondary: true
+        pathName: alt
+        columnsFrom: [a_alt]
+        columnsTo: [b_id]
+  X:
+    code: X
+    database: DB
+    schema: SCH
+    columns:
+      x_id:
+        code: X_ID
+        abstractType: string
+      x_alt:
+        code: X_ALT
+        abstractType: string
+    joins:
+      - joinType: many-to-one
+        joinTo: Y
+        columnsFrom: [x_id]
+        columnsTo: [y_id]
+      - joinType: many-to-one
+        joinTo: Y
+        secondary: true
+        pathName: alt
+        columnsFrom: [x_alt]
+        columnsTo: [y_id]
+  B:
+    code: B
+    database: DB
+    schema: SCH
+    columns:
+      b_id:
+        code: B_ID
+        abstractType: string
+  Y:
+    code: Y
+    database: DB
+    schema: SCH
+    columns:
+      y_id:
+        code: Y_ID
+        abstractType: string
+"""
+        loader = TrackedLoader()
+        raw, source_map = loader.load_string(yaml_content)
+        model, result = resolver.resolve(raw, source_map)
+        validator = SemanticValidator()
+        errors = validator.validate(model)
+        assert not any(e.code == "DUPLICATE_JOIN_PATH_NAME" for e in errors)
+
+    def test_secondary_joins_excluded_from_cycle_detection(
+        self, resolver: ReferenceResolver
+    ) -> None:
+        """A secondary join that would create a cycle should NOT be flagged."""
+        yaml_content = """\
+version: 1.0
+dataObjects:
+  A:
+    code: A
+    database: DB
+    schema: SCH
+    columns:
+      a_id:
+        code: A_ID
+        abstractType: string
+      a_back:
+        code: A_BACK
+        abstractType: string
+    joins:
+      - joinType: many-to-one
+        joinTo: B
+        columnsFrom: [a_id]
+        columnsTo: [b_id]
+      - joinType: many-to-one
+        joinTo: B
+        secondary: true
+        pathName: back_path
+        columnsFrom: [a_back]
+        columnsTo: [b_id]
+  B:
+    code: B
+    database: DB
+    schema: SCH
+    columns:
+      b_id:
+        code: B_ID
+        abstractType: string
+    joins:
+      - joinType: many-to-one
+        joinTo: A
+        columnsFrom: [b_id]
+        columnsTo: [a_id]
+"""
+        loader = TrackedLoader()
+        raw, source_map = loader.load_string(yaml_content)
+        model, result = resolver.resolve(raw, source_map)
+        validator = SemanticValidator()
+        errors = validator.validate(model)
+        # The primary A→B + B→A creates a cycle, but the secondary should not add more
+        cycle_errors = [e for e in errors if e.code == "CYCLIC_JOIN"]
+        assert len(cycle_errors) == 1  # only the primary cycle
+
+    def test_secondary_joins_excluded_from_multipath_detection(
+        self, resolver: ReferenceResolver
+    ) -> None:
+        """Secondary joins should not trigger multipath errors."""
+        yaml_content = """\
+version: 1.0
+dataObjects:
+  Flights:
+    code: flights
+    database: DB
+    schema: SCH
+    columns:
+      flight_id:
+        code: FLIGHT_ID
+        abstractType: string
+      dep_airport:
+        code: DEP_AIRPORT
+        abstractType: string
+      arr_airport:
+        code: ARR_AIRPORT
+        abstractType: string
+    joins:
+      - joinType: many-to-one
+        joinTo: Airports
+        columnsFrom: [dep_airport]
+        columnsTo: [airport_id]
+      - joinType: many-to-one
+        joinTo: Airports
+        secondary: true
+        pathName: arrival
+        columnsFrom: [arr_airport]
+        columnsTo: [airport_id]
+  Airports:
+    code: airports
+    database: DB
+    schema: SCH
+    columns:
+      airport_id:
+        code: AIRPORT_ID
+        abstractType: string
+      airport_name:
+        code: AIRPORT_NAME
+        abstractType: string
+"""
+        loader = TrackedLoader()
+        raw, source_map = loader.load_string(yaml_content)
+        model, result = resolver.resolve(raw, source_map)
+        validator = SemanticValidator()
+        errors = validator.validate(model)
+        assert not any(e.code == "MULTIPATH_JOIN" for e in errors)
+
+    def test_parse_secondary_join_fields(self, resolver: ReferenceResolver) -> None:
+        """Verify secondary and pathName are parsed correctly."""
+        yaml_content = """\
+version: 1.0
+dataObjects:
+  A:
+    code: A
+    database: DB
+    schema: SCH
+    columns:
+      a_id:
+        code: A_ID
+        abstractType: string
+      a_alt:
+        code: A_ALT
+        abstractType: string
+    joins:
+      - joinType: many-to-one
+        joinTo: B
+        columnsFrom: [a_id]
+        columnsTo: [b_id]
+      - joinType: many-to-one
+        joinTo: B
+        secondary: true
+        pathName: alt_path
+        columnsFrom: [a_alt]
+        columnsTo: [b_id]
+  B:
+    code: B
+    database: DB
+    schema: SCH
+    columns:
+      b_id:
+        code: B_ID
+        abstractType: string
+"""
+        loader = TrackedLoader()
+        raw, source_map = loader.load_string(yaml_content)
+        model, result = resolver.resolve(raw, source_map)
+        assert result.valid
+        joins = model.data_objects["A"].joins
+        assert len(joins) == 2
+        assert joins[0].secondary is False
+        assert joins[0].path_name is None
+        assert joins[1].secondary is True
+        assert joins[1].path_name == "alt_path"

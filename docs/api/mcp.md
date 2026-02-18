@@ -129,12 +129,13 @@ compile_query(model_id="abc12345", query_json='{"select": {"dimensions": ["Count
 
 | Parameter    | Type         | Required | Description                                        |
 | ------------ | ------------ | -------- | -------------------------------------------------- |
-| `model_id`   | string       | Yes      | ID returned by `load_model`                        |
-| `dialect`    | string       | No       | Target dialect (default: `postgres`)               |
-| `dimensions` | list[string] | No       | Dimension names (simple mode)                      |
-| `measures`   | list[string] | No       | Measure names (simple mode)                        |
-| `query_json` | string       | No       | Full query as JSON (full mode)                     |
-| `session_id` | string       | No       | Session holding the model (optional in stdio mode) |
+| `model_id`       | string             | Yes      | ID returned by `load_model`                                                     |
+| `dialect`        | string             | No       | Target dialect (default: `postgres`)                                            |
+| `dimensions`     | list[string]       | No       | Dimension names (simple mode)                                                   |
+| `measures`       | list[string]       | No       | Measure names (simple mode)                                                     |
+| `query_json`     | string             | No       | Full query as JSON (full mode)                                                  |
+| `session_id`     | string             | No       | Session holding the model (optional in stdio mode)                              |
+| `use_path_names` | list[object]       | No       | Secondary join overrides (simple mode): `[{source, target, pathName}]` |
 
 ### Information
 

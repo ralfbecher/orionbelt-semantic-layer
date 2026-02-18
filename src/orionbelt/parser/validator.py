@@ -15,6 +15,7 @@ class SemanticValidator:
         errors: list[SemanticError] = []
         errors.extend(self._check_unique_identifiers(model))
         errors.extend(self._check_unique_column_names(model))
+        errors.extend(self._check_secondary_joins(model))
         errors.extend(self._check_no_cyclic_joins(model))
         errors.extend(self._check_no_multipath_joins(model))
         errors.extend(self._check_measures_resolve(model))
@@ -34,8 +35,7 @@ class SemanticValidator:
                     SemanticError(
                         code="DUPLICATE_IDENTIFIER",
                         message=(
-                            f"{kind.title()} '{name}' conflicts with existing "
-                            f"{existing} '{name}'"
+                            f"{kind.title()} '{name}' conflicts with existing {existing} '{name}'"
                         ),
                         path=path,
                     )
@@ -80,17 +80,61 @@ class SemanticValidator:
 
         return errors
 
+    def _check_secondary_joins(self, model: SemanticModel) -> list[SemanticError]:
+        """Validate secondary join constraints.
+
+        - Every secondary join MUST have a pathName.
+        - pathName must be unique per (source, target) pair.
+        """
+        errors: list[SemanticError] = []
+        # Track pathName per (source, target) pair
+        path_names: dict[tuple[str, str], set[str]] = {}
+
+        for obj_name, obj in model.data_objects.items():
+            for i, join in enumerate(obj.joins):
+                if join.secondary and not join.path_name:
+                    errors.append(
+                        SemanticError(
+                            code="SECONDARY_JOIN_MISSING_PATH_NAME",
+                            message=(
+                                f"Data object '{obj_name}' join[{i}] is secondary "
+                                f"but has no pathName"
+                            ),
+                            path=f"dataObjects.{obj_name}.joins[{i}]",
+                        )
+                    )
+                if join.path_name:
+                    pair = (obj_name, join.join_to)
+                    if pair not in path_names:
+                        path_names[pair] = set()
+                    if join.path_name in path_names[pair]:
+                        errors.append(
+                            SemanticError(
+                                code="DUPLICATE_JOIN_PATH_NAME",
+                                message=(
+                                    f"Data object '{obj_name}' join[{i}] has duplicate "
+                                    f"pathName '{join.path_name}' for target '{join.join_to}'"
+                                ),
+                                path=f"dataObjects.{obj_name}.joins[{i}]",
+                            )
+                        )
+                    else:
+                        path_names[pair].add(join.path_name)
+
+        return errors
+
     def _check_no_cyclic_joins(self, model: SemanticModel) -> list[SemanticError]:
         """Detect cyclic join paths."""
         errors: list[SemanticError] = []
 
-        # Build adjacency list from joins
+        # Build adjacency list from joins (skip secondary joins)
         adj: dict[str, set[str]] = {}
         for obj_name, obj in model.data_objects.items():
             if obj_name not in adj:
                 adj[obj_name] = set()
             for join in obj.joins:
-                adj[obj_name].add(join.join_to)
+                if not join.secondary:
+                    adj[obj_name].add(join.join_to)
 
         # DFS cycle detection
         visited: set[str] = set()
@@ -132,13 +176,14 @@ class SemanticValidator:
         """
         errors: list[SemanticError] = []
 
-        # Build adjacency list from joins
+        # Build adjacency list from joins (skip secondary joins)
         adj: dict[str, list[str]] = {}
         for obj_name, obj in model.data_objects.items():
             if obj_name not in adj:
                 adj[obj_name] = []
             for join in obj.joins:
-                adj[obj_name].append(join.join_to)
+                if not join.secondary:
+                    adj[obj_name].append(join.join_to)
 
         reported: set[tuple[str, str]] = set()
 

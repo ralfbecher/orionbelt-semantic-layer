@@ -84,9 +84,52 @@ Joins define relationships between data objects. The data object that declares t
 | `joinTo` | string | Yes | Target data object name |
 | `columnsFrom` | list | Yes | Column names in this data object (join keys) |
 | `columnsTo` | list | Yes | Column names in the target data object (join keys) |
+| `secondary` | bool | No | Mark as a secondary (alternative) join path (default: `false`) |
+| `pathName` | string | No | Unique name for this join path (required when `secondary: true`) |
 
 !!! note "Fact tables declare joins"
     By convention, fact tables (e.g., `Orders`) declare joins to dimension tables (e.g., `Customers`, `Products`). The compiler uses this to identify fact tables — data objects with joins are preferred as base objects during query resolution.
+
+### Secondary Joins
+
+When a data object has multiple relationships to the same target (e.g., a `Flights` table joining to `Airports` via both departure and arrival), mark the additional joins as `secondary` with a unique `pathName`:
+
+```yaml
+dataObjects:
+  Flights:
+    code: FLIGHTS
+    database: WAREHOUSE
+    schema: PUBLIC
+    columns:
+      Departure Airport:
+        code: DEP_AIRPORT
+        abstractType: string
+      Arrival Airport:
+        code: ARR_AIRPORT
+        abstractType: string
+    joins:
+      - joinType: many-to-one
+        joinTo: Airports
+        columnsFrom:
+          - Departure Airport
+        columnsTo:
+          - Airport ID
+      - joinType: many-to-one
+        joinTo: Airports
+        secondary: true
+        pathName: arrival
+        columnsFrom:
+          - Arrival Airport
+        columnsTo:
+          - Airport ID
+```
+
+Rules:
+
+- Every secondary join **must** have a `pathName`
+- `pathName` must be unique per `(source, target)` pair (not globally)
+- Secondary joins are excluded from cycle detection and multipath validation
+- Queries use `usePathNames` to select a secondary join instead of the default primary — see [Query Language](query-language.md#secondary-join-paths)
 
 ## Column References
 
@@ -269,10 +312,12 @@ All artefacts (data objects, dimensions, measures, metrics) have unique names. T
 OrionBelt validates models against these rules:
 
 1. **Unique identifiers** — No duplicate names across data objects, dimensions, measures, and metrics
-2. **No cyclic joins** — Join graph must be acyclic (unless explicitly overridden)
-3. **Measures resolve** — All column references in measures must point to existing data object columns
-4. **Join targets exist** — All `joinTo` targets must be defined data objects
-5. **References resolve** — All dimension references (dataObject/column) must resolve
+2. **No cyclic joins** — Join graph must be acyclic (secondary joins are excluded)
+3. **No multipath joins** — No ambiguous diamond patterns (secondary joins are excluded). A **canonical join exception** applies: when a data object has a direct join to a target AND also an indirect path through intermediaries, the direct join is treated as canonical and no error is raised. Only true diamonds (two indirect paths to the same target) are flagged.
+4. **Secondary join constraints** — Every secondary join must have a `pathName`; `pathName` must be unique per `(source, target)` pair
+5. **Measures resolve** — All column references in measures must point to existing data object columns
+6. **Join targets exist** — All `joinTo` targets must be defined data objects
+7. **References resolve** — All dimension references (dataObject/column) must resolve
 
 Validation errors include source positions (line/column) when available.
 

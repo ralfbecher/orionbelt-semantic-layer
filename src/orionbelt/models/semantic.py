@@ -84,6 +84,8 @@ class DataObjectJoin(BaseModel):
     join_to: str = Field(alias="joinTo")
     columns_from: list[str] = Field(alias="columnsFrom")
     columns_to: list[str] = Field(alias="columnsTo")
+    secondary: bool = False
+    path_name: str | None = Field(None, alias="pathName")
 
     model_config = {"populate_by_name": True}
 

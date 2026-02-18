@@ -97,6 +97,56 @@ select:
     - Revenue per Order    # metric
 ```
 
+## Secondary Join Paths
+
+When a model defines secondary joins (e.g., `Flights` → `Airports` via departure and arrival), use `usePathNames` to select which join path to use:
+
+```yaml
+select:
+  dimensions:
+    - Airport Name
+  measures:
+    - Total Ticket Price
+usePathNames:
+  - source: Flights
+    target: Airports
+    pathName: arrival
+```
+
+Each entry specifies a `(source, target, pathName)` triple. The `pathName` must match a secondary join defined in the model. When active, the secondary join replaces the primary join for that pair.
+
+### In Python
+
+```python
+from orionbelt.models.query import QueryObject, QuerySelect, UsePathName
+
+query = QueryObject(
+    select=QuerySelect(
+        dimensions=["Airport Name"],
+        measures=["Total Ticket Price"],
+    ),
+    use_path_names=[
+        UsePathName(source="Flights", target="Airports", path_name="arrival"),
+    ],
+)
+```
+
+### In JSON (full mode)
+
+```json
+{
+  "select": {
+    "dimensions": ["Airport Name"],
+    "measures": ["Total Ticket Price"]
+  },
+  "usePathNames": [
+    {"source": "Flights", "target": "Airports", "pathName": "arrival"}
+  ]
+}
+```
+
+If a `usePathNames` entry references a non-existent data object or pathName, the query will return a resolution error.
+
 ## Filters
 
 Filters restrict the result set. **Dimension filters** go in `where` (become SQL `WHERE`), and **measure filters** go in `having` (become SQL `HAVING`).

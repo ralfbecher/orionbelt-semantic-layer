@@ -44,7 +44,7 @@ class StarSchemaPlanner:
 
     def plan(self, resolved: ResolvedQuery, model: SemanticModel) -> QueryPlan:
         builder = QueryBuilder()
-        graph = JoinGraph(model)
+        graph = JoinGraph(model, use_path_names=resolved.use_path_names or None)
 
         base_object = model.data_objects.get(resolved.base_object)
         if not base_object:

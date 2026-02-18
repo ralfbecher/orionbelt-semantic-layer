@@ -13,7 +13,13 @@ from orionbelt.compiler.resolution import (
     _tokenize_formula,
 )
 from orionbelt.compiler.star import StarSchemaPlanner
-from orionbelt.models.query import FilterOperator, QueryFilter, QueryObject, QuerySelect
+from orionbelt.models.query import (
+    FilterOperator,
+    QueryFilter,
+    QueryObject,
+    QuerySelect,
+    UsePathName,
+)
 from orionbelt.models.semantic import SemanticModel
 from orionbelt.parser.loader import TrackedLoader
 from orionbelt.parser.resolver import ReferenceResolver
@@ -414,3 +420,228 @@ class TestStarSchemaMetric:
         assert "Total Revenue" in sql
         assert "Revenue per Order" in sql
         assert "_ref_" not in sql
+
+
+# ---------------------------------------------------------------------------
+# Secondary join / usePathNames tests
+# ---------------------------------------------------------------------------
+
+SECONDARY_JOIN_MODEL_YAML = """\
+version: 1.0
+
+dataObjects:
+  Flights:
+    code: FLIGHTS
+    database: WAREHOUSE
+    schema: PUBLIC
+    columns:
+      Flight ID:
+        code: FLIGHT_ID
+        abstractType: string
+      Departure Airport:
+        code: DEP_AIRPORT
+        abstractType: string
+      Arrival Airport:
+        code: ARR_AIRPORT
+        abstractType: string
+      Ticket Price:
+        code: TICKET_PRICE
+        abstractType: float
+    joins:
+      - joinType: many-to-one
+        joinTo: Airports
+        columnsFrom:
+          - Departure Airport
+        columnsTo:
+          - Airport ID
+      - joinType: many-to-one
+        joinTo: Airports
+        secondary: true
+        pathName: arrival
+        columnsFrom:
+          - Arrival Airport
+        columnsTo:
+          - Airport ID
+
+  Airports:
+    code: AIRPORTS
+    database: WAREHOUSE
+    schema: PUBLIC
+    columns:
+      Airport ID:
+        code: AIRPORT_ID
+        abstractType: string
+      Airport Name:
+        code: AIRPORT_NAME
+        abstractType: string
+
+dimensions:
+  Airport Name:
+    dataObject: Airports
+    column: Airport Name
+    resultType: string
+
+measures:
+  Total Ticket Price:
+    columns:
+      - dataObject: Flights
+        column: Ticket Price
+    resultType: float
+    aggregation: sum
+"""
+
+
+class TestSecondaryJoinResolution:
+    """Tests for query resolution with secondary joins / usePathNames."""
+
+    def test_default_uses_primary_join(self) -> None:
+        model = _load_model(SECONDARY_JOIN_MODEL_YAML)
+        resolver = QueryResolver()
+        query = QueryObject(
+            select=QuerySelect(
+                dimensions=["Airport Name"],
+                measures=["Total Ticket Price"],
+            ),
+        )
+        resolved = resolver.resolve(query, model)
+        # Default: should use the primary join (Departure Airport)
+        assert len(resolved.join_steps) >= 1
+        step = resolved.join_steps[0]
+        assert step.from_columns == ["Departure Airport"]
+
+    def test_use_path_name_selects_secondary(self) -> None:
+        model = _load_model(SECONDARY_JOIN_MODEL_YAML)
+        resolver = QueryResolver()
+        query = QueryObject(
+            select=QuerySelect(
+                dimensions=["Airport Name"],
+                measures=["Total Ticket Price"],
+            ),
+            use_path_names=[UsePathName(source="Flights", target="Airports", path_name="arrival")],
+        )
+        resolved = resolver.resolve(query, model)
+        # Should use the secondary join (Arrival Airport)
+        assert len(resolved.join_steps) >= 1
+        step = resolved.join_steps[0]
+        assert step.from_columns == ["Arrival Airport"]
+
+    def test_use_path_names_propagated_to_resolved(self) -> None:
+        model = _load_model(SECONDARY_JOIN_MODEL_YAML)
+        resolver = QueryResolver()
+        upn = UsePathName(source="Flights", target="Airports", path_name="arrival")
+        query = QueryObject(
+            select=QuerySelect(
+                dimensions=["Airport Name"],
+                measures=["Total Ticket Price"],
+            ),
+            use_path_names=[upn],
+        )
+        resolved = resolver.resolve(query, model)
+        assert len(resolved.use_path_names) == 1
+        assert resolved.use_path_names[0].path_name == "arrival"
+
+    def test_unknown_path_name_raises(self) -> None:
+        model = _load_model(SECONDARY_JOIN_MODEL_YAML)
+        resolver = QueryResolver()
+        query = QueryObject(
+            select=QuerySelect(
+                dimensions=["Airport Name"],
+                measures=["Total Ticket Price"],
+            ),
+            use_path_names=[
+                UsePathName(source="Flights", target="Airports", path_name="nonexistent")
+            ],
+        )
+        with pytest.raises(ResolutionError, match="No secondary join with pathName"):
+            resolver.resolve(query, model)
+
+    def test_unknown_source_in_use_path_names_raises(self) -> None:
+        model = _load_model(SECONDARY_JOIN_MODEL_YAML)
+        resolver = QueryResolver()
+        query = QueryObject(
+            select=QuerySelect(
+                dimensions=["Airport Name"],
+                measures=["Total Ticket Price"],
+            ),
+            use_path_names=[UsePathName(source="Missing", target="Airports", path_name="arrival")],
+        )
+        with pytest.raises(ResolutionError, match="unknown data object 'Missing'"):
+            resolver.resolve(query, model)
+
+    def test_unknown_target_in_use_path_names_raises(self) -> None:
+        model = _load_model(SECONDARY_JOIN_MODEL_YAML)
+        resolver = QueryResolver()
+        query = QueryObject(
+            select=QuerySelect(
+                dimensions=["Airport Name"],
+                measures=["Total Ticket Price"],
+            ),
+            use_path_names=[UsePathName(source="Flights", target="Missing", path_name="arrival")],
+        )
+        with pytest.raises(ResolutionError, match="unknown data object 'Missing'"):
+            resolver.resolve(query, model)
+
+    def test_irrelevant_use_path_names_silently_ignored(self) -> None:
+        """usePathNames for pairs not needed by the query should not cause errors."""
+        model = _load_model(SECONDARY_JOIN_MODEL_YAML)
+        resolver = QueryResolver()
+        query = QueryObject(
+            select=QuerySelect(
+                dimensions=["Airport Name"],
+                measures=["Total Ticket Price"],
+            ),
+            use_path_names=[UsePathName(source="Flights", target="Airports", path_name="arrival")],
+        )
+        # Should succeed — the override is valid even though it changes behavior
+        resolved = resolver.resolve(query, model)
+        assert len(resolved.join_steps) >= 1
+
+
+class TestSecondaryJoinCompilation:
+    """Integration tests: full pipeline with secondary joins."""
+
+    def test_compile_default_primary_join(self) -> None:
+        model = _load_model(SECONDARY_JOIN_MODEL_YAML)
+        pipeline = CompilationPipeline()
+        query = QueryObject(
+            select=QuerySelect(
+                dimensions=["Airport Name"],
+                measures=["Total Ticket Price"],
+            ),
+        )
+        result = pipeline.compile(query, model, "postgres")
+        sql = result.sql
+        assert "SELECT" in sql
+        assert "DEP_AIRPORT" in sql  # primary join column
+        assert "ARR_AIRPORT" not in sql
+
+    def test_compile_secondary_join_via_use_path_names(self) -> None:
+        model = _load_model(SECONDARY_JOIN_MODEL_YAML)
+        pipeline = CompilationPipeline()
+        query = QueryObject(
+            select=QuerySelect(
+                dimensions=["Airport Name"],
+                measures=["Total Ticket Price"],
+            ),
+            use_path_names=[UsePathName(source="Flights", target="Airports", path_name="arrival")],
+        )
+        result = pipeline.compile(query, model, "postgres")
+        sql = result.sql
+        assert "SELECT" in sql
+        assert "ARR_AIRPORT" in sql  # secondary join column
+        assert "DEP_AIRPORT" not in sql
+
+    def test_compile_secondary_join_snowflake(self) -> None:
+        model = _load_model(SECONDARY_JOIN_MODEL_YAML)
+        pipeline = CompilationPipeline()
+        query = QueryObject(
+            select=QuerySelect(
+                dimensions=["Airport Name"],
+                measures=["Total Ticket Price"],
+            ),
+            use_path_names=[UsePathName(source="Flights", target="Airports", path_name="arrival")],
+        )
+        result = pipeline.compile(query, model, "snowflake")
+        sql = result.sql
+        assert "SELECT" in sql
+        assert "ARR_AIRPORT" in sql

@@ -9,6 +9,7 @@ import networkx as nx
 from orionbelt.ast.nodes import BinaryOp, ColumnRef, Expr
 from orionbelt.ast.nodes import JoinType as ASTJoinType
 from orionbelt.models.errors import SemanticError
+from orionbelt.models.query import UsePathName
 from orionbelt.models.semantic import Cardinality, SemanticModel
 
 
@@ -27,36 +28,72 @@ class JoinStep:
 class JoinGraph:
     """Graph of data objects (nodes) and relationships (edges) for join path resolution."""
 
-    def __init__(self, model: SemanticModel) -> None:
+    def __init__(
+        self,
+        model: SemanticModel,
+        use_path_names: list[UsePathName] | None = None,
+    ) -> None:
         self._graph: nx.Graph[str] = nx.Graph()
         self._directed: nx.DiGraph[str] = nx.DiGraph()
         self._model = model
-        self._build(model)
+        self._build(model, use_path_names)
 
-    def _build(self, model: SemanticModel) -> None:
-        """Build the graph from the semantic model."""
+    def _build(
+        self,
+        model: SemanticModel,
+        use_path_names: list[UsePathName] | None = None,
+    ) -> None:
+        """Build the graph from the semantic model.
+
+        Secondary joins are only included when their pathName is requested
+        via *use_path_names*.  When a secondary override is active for a
+        ``(source, target)`` pair, the primary join for that pair is excluded.
+        """
         for name in model.data_objects:
             self._graph.add_node(name)
             self._directed.add_node(name)
 
+        # Build a lookup: (source, target) → pathName for active overrides
+        active_overrides: dict[tuple[str, str], str] = {}
+        if use_path_names:
+            for upn in use_path_names:
+                active_overrides[(upn.source, upn.target)] = upn.path_name
+
         for obj_name, obj in model.data_objects.items():
             for join in obj.joins:
-                if join.join_to in model.data_objects:
-                    self._graph.add_edge(
-                        obj_name,
-                        join.join_to,
-                        columns_from=join.columns_from,
-                        columns_to=join.columns_to,
-                        cardinality=join.join_type,
-                        source_object=obj_name,
-                    )
-                    self._directed.add_edge(
-                        obj_name,
-                        join.join_to,
-                        columns_from=join.columns_from,
-                        columns_to=join.columns_to,
-                        cardinality=join.join_type,
-                    )
+                if join.join_to not in model.data_objects:
+                    continue
+                pair = (obj_name, join.join_to)
+
+                if join.secondary:
+                    # Only include if this secondary join's pathName is active
+                    if pair in active_overrides and active_overrides[pair] == join.path_name:
+                        self._add_edge(obj_name, join)
+                else:
+                    # Primary join: skip if an active override exists for this pair
+                    if pair not in active_overrides:
+                        self._add_edge(obj_name, join)
+
+    def _add_edge(self, obj_name: str, join: object) -> None:
+        """Add an edge to both the undirected and directed graphs."""
+        from orionbelt.models.semantic import DataObjectJoin
+
+        assert isinstance(join, DataObjectJoin)
+        self._graph.add_edge(
+            obj_name,
+            join.join_to,
+            columns_from=join.columns_from,
+            columns_to=join.columns_to,
+            cardinality=join.join_type,
+            source_object=obj_name,
+        )
+        self._directed.add_edge(
+            obj_name,
+            join.join_to,
+            columns_from=join.columns_from,
+            columns_to=join.columns_to,
+            cardinality=join.join_type,
+        )
 
     def find_join_path(self, from_objects: set[str], to_objects: set[str]) -> list[JoinStep]:
         """Find a minimal join path connecting all required data objects.

@@ -39,7 +39,7 @@ The system follows a multi-phase compilation pipeline:
 ## OBML Format
 
 The YAML model format uses these top-level sections:
-- **dataObjects** — Database tables/views with columns, data types, and join definitions (cardinality: many-to-one, one-to-one). Column names must be globally unique across all data objects.
+- **dataObjects** — Database tables/views with columns, data types, and join definitions (cardinality: many-to-one, one-to-one). Column names must be globally unique across all data objects. Joins support `secondary: true` with a `pathName` for multiple join paths between the same pair.
 - **dimensions** — Named dimensions referencing data object columns via `dataObject` + `column` pair, with optional timeGrain
 - **measures** — Aggregations with expressions using `{[Column]}` syntax (column names are globally unique), plus optional filters
 - **metrics** — Composite metrics combining measures via `{[Measure Name]}` references in the expression
@@ -50,8 +50,9 @@ Columns are referenced by `dataObject` + `column` pair.
 
 The `SemanticValidator` (`parser/validator.py`) checks models for:
 - Duplicate identifiers and non-unique column names
-- Cyclic joins (DFS cycle detection on directed join graph)
-- Multipath joins (diamond patterns where two indirect paths reach the same target — direct + indirect snowflake paths are allowed)
+- Secondary join constraints (must have `pathName`; unique per source/target pair)
+- Cyclic joins (DFS cycle detection — secondary joins excluded)
+- Multipath joins (diamond patterns — secondary joins excluded; direct + indirect from same start node allowed as "canonical join" exception)
 - Unknown join targets, join columns, data object/column references
 - Unresolvable measure and dimension references
 

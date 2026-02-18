@@ -263,6 +263,164 @@ class TestListModels:
 # ---------------------------------------------------------------------------
 
 
+class TestCompileQueryWithUsePathNames:
+    def test_simple_mode_with_use_path_names(self) -> None:
+        secondary_yaml = """\
+version: 1.0
+
+dataObjects:
+  Flights:
+    code: FLIGHTS
+    database: WAREHOUSE
+    schema: PUBLIC
+    columns:
+      Flight ID:
+        code: FLIGHT_ID
+        abstractType: string
+      Departure Airport:
+        code: DEP_AIRPORT
+        abstractType: string
+      Arrival Airport:
+        code: ARR_AIRPORT
+        abstractType: string
+      Ticket Price:
+        code: TICKET_PRICE
+        abstractType: float
+    joins:
+      - joinType: many-to-one
+        joinTo: Airports
+        columnsFrom:
+          - Departure Airport
+        columnsTo:
+          - Airport ID
+      - joinType: many-to-one
+        joinTo: Airports
+        secondary: true
+        pathName: arrival
+        columnsFrom:
+          - Arrival Airport
+        columnsTo:
+          - Airport ID
+
+  Airports:
+    code: AIRPORTS
+    database: WAREHOUSE
+    schema: PUBLIC
+    columns:
+      Airport ID:
+        code: AIRPORT_ID
+        abstractType: string
+      Airport Name:
+        code: AIRPORT_NAME
+        abstractType: string
+
+dimensions:
+  Airport Name:
+    dataObject: Airports
+    column: Airport Name
+    resultType: string
+
+measures:
+  Total Ticket Price:
+    columns:
+      - dataObject: Flights
+        column: Ticket Price
+    resultType: float
+    aggregation: sum
+"""
+        load_result = _load_model(secondary_yaml)
+        model_id = _extract_model_id(load_result)
+        result = _compile_query(
+            model_id=model_id,
+            dialect="postgres",
+            dimensions=["Airport Name"],
+            measures=["Total Ticket Price"],
+            use_path_names=[{"source": "Flights", "target": "Airports", "pathName": "arrival"}],
+        )
+        assert "SELECT" in result
+        assert "ARR_AIRPORT" in result
+
+    def test_full_mode_with_use_path_names(self) -> None:
+        secondary_yaml = """\
+version: 1.0
+
+dataObjects:
+  Flights:
+    code: FLIGHTS
+    database: WAREHOUSE
+    schema: PUBLIC
+    columns:
+      Flight ID:
+        code: FLIGHT_ID
+        abstractType: string
+      Departure Airport:
+        code: DEP_AIRPORT
+        abstractType: string
+      Arrival Airport:
+        code: ARR_AIRPORT
+        abstractType: string
+      Ticket Price:
+        code: TICKET_PRICE
+        abstractType: float
+    joins:
+      - joinType: many-to-one
+        joinTo: Airports
+        columnsFrom:
+          - Departure Airport
+        columnsTo:
+          - Airport ID
+      - joinType: many-to-one
+        joinTo: Airports
+        secondary: true
+        pathName: arrival
+        columnsFrom:
+          - Arrival Airport
+        columnsTo:
+          - Airport ID
+
+  Airports:
+    code: AIRPORTS
+    database: WAREHOUSE
+    schema: PUBLIC
+    columns:
+      Airport ID:
+        code: AIRPORT_ID
+        abstractType: string
+      Airport Name:
+        code: AIRPORT_NAME
+        abstractType: string
+
+dimensions:
+  Airport Name:
+    dataObject: Airports
+    column: Airport Name
+    resultType: string
+
+measures:
+  Total Ticket Price:
+    columns:
+      - dataObject: Flights
+        column: Ticket Price
+    resultType: float
+    aggregation: sum
+"""
+        load_result = _load_model(secondary_yaml)
+        model_id = _extract_model_id(load_result)
+        q = {
+            "select": {
+                "dimensions": ["Airport Name"],
+                "measures": ["Total Ticket Price"],
+            },
+            "usePathNames": [{"source": "Flights", "target": "Airports", "pathName": "arrival"}],
+        }
+        result = _compile_query(
+            model_id=model_id,
+            query_json=json.dumps(q),
+        )
+        assert "SELECT" in result
+        assert "ARR_AIRPORT" in result
+
+
 class TestListDialects:
     def test_lists_all(self) -> None:
         result = _list_dialects()

@@ -121,6 +121,15 @@
             "type": "string"
           },
           "minItems": 1
+        },
+        "secondary": {
+          "type": "boolean",
+          "description": "Mark this join as a secondary (alternative) path. Secondary joins are excluded from multipath/cycle validation.",
+          "default": false
+        },
+        "pathName": {
+          "type": "string",
+          "description": "Unique name for this join path within the (source, target) pair. Required when secondary is true. Used in queries via usePathNames to select this join."
         }
       },
       "required": ["joinType", "joinTo", "columnsFrom", "columnsTo"],

@@ -15,7 +15,13 @@ from orionbelt.ast.nodes import (
 )
 from orionbelt.compiler.graph import JoinGraph, JoinStep
 from orionbelt.models.errors import SemanticError
-from orionbelt.models.query import DimensionRef, FilterOperator, QueryFilter, QueryObject
+from orionbelt.models.query import (
+    DimensionRef,
+    FilterOperator,
+    QueryFilter,
+    QueryObject,
+    UsePathName,
+)
 from orionbelt.models.semantic import Measure, Metric, SemanticModel, TimeGrain
 
 
@@ -67,6 +73,7 @@ class ResolvedQuery:
     requires_cfl: bool = False
     measure_source_objects: set[str] = field(default_factory=set)
     metric_components: dict[str, ResolvedMeasure] = field(default_factory=dict)
+    use_path_names: list[UsePathName] = field(default_factory=list)
 
     @property
     def fact_tables(self) -> list[str]:
@@ -194,7 +201,10 @@ class QueryResolver:
 
     def resolve(self, query: QueryObject, model: SemanticModel) -> ResolvedQuery:
         errors: list[SemanticError] = []
-        result = ResolvedQuery(limit=query.limit)
+        result = ResolvedQuery(
+            limit=query.limit,
+            use_path_names=list(query.use_path_names),
+        )
 
         # Build global column lookup: col_name → (object_name, source_column)
         global_columns: dict[str, tuple[str, str]] = {}
@@ -231,12 +241,55 @@ class QueryResolver:
         if len(result.measure_source_objects) > 1:
             result.requires_cfl = True
 
-        # 4. Resolve join paths
-        graph = JoinGraph(model)
+        # 4. Validate usePathNames before building join graph
+        for upn in query.use_path_names:
+            if upn.source not in model.data_objects:
+                errors.append(
+                    SemanticError(
+                        code="UNKNOWN_DATA_OBJECT",
+                        message=(f"usePathNames references unknown data object '{upn.source}'"),
+                        path="usePathNames",
+                    )
+                )
+                continue
+            if upn.target not in model.data_objects:
+                errors.append(
+                    SemanticError(
+                        code="UNKNOWN_DATA_OBJECT",
+                        message=(f"usePathNames references unknown data object '{upn.target}'"),
+                        path="usePathNames",
+                    )
+                )
+                continue
+            # Check that a secondary join with this pathName exists for the pair
+            source_obj = model.data_objects[upn.source]
+            found = False
+            for join in source_obj.joins:
+                if (
+                    join.join_to == upn.target
+                    and join.secondary
+                    and join.path_name == upn.path_name
+                ):
+                    found = True
+                    break
+            if not found:
+                errors.append(
+                    SemanticError(
+                        code="UNKNOWN_PATH_NAME",
+                        message=(
+                            f"No secondary join with pathName '{upn.path_name}' "
+                            f"from '{upn.source}' to '{upn.target}'"
+                        ),
+                        path="usePathNames",
+                    )
+                )
+
+        # 5. Resolve join paths
+        graph = JoinGraph(model, use_path_names=query.use_path_names or None)
         if result.base_object and len(result.required_objects) > 1:
             result.join_steps = graph.find_join_path({result.base_object}, result.required_objects)
 
-        # 5. Classify filters
+        # 6. Classify filters
         for qf in query.where:
             resolved_filter = self._resolve_filter(qf, model, is_having=False, errors=errors)
             if resolved_filter:
@@ -247,7 +300,7 @@ class QueryResolver:
             if resolved_filter:
                 result.having_filters.append(resolved_filter)
 
-        # 6. Resolve order by
+        # 7. Resolve order by
         for ob in query.order_by:
             expr = self._resolve_order_by_field(ob.field, result, model)
             if expr:
@@ -697,9 +750,7 @@ class QueryResolver:
             errors.append(
                 SemanticError(
                     code="INVALID_RELATIVE_FILTER",
-                    message=(
-                        f"Relative filter for '{field}' has invalid direction '{direction}'"
-                    ),
+                    message=(f"Relative filter for '{field}' has invalid direction '{direction}'"),
                     path="filters",
                 )
             )
@@ -708,9 +759,7 @@ class QueryResolver:
             errors.append(
                 SemanticError(
                     code="INVALID_RELATIVE_FILTER",
-                    message=(
-                        f"Relative filter for '{field}' has non-boolean include_current"
-                    ),
+                    message=(f"Relative filter for '{field}' has non-boolean include_current"),
                     path="filters",
                 )
             )

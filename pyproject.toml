@@ -1,6 +1,6 @@
 [project]
 name = "orionbelt"
-version = "0.1.0"
+version = "0.2.0"
 description = "OrionBelt Semantic Layer - Compiles YAML semantic models into analytical SQL"
 license = {text = "Apache-2.0"}
 authors = [{name = "Ralf Becher, RALFORION d.o.o.", email = "ralf.becher@web.de"}]

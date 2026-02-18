@@ -71,6 +71,8 @@ class ReferenceResolver:
                             join_to=jdata["joinTo"],
                             columns_from=jdata["columnsFrom"],
                             columns_to=jdata["columnsTo"],
+                            secondary=jdata.get("secondary", False),
+                            path_name=jdata.get("pathName"),
                         )
                     )
 

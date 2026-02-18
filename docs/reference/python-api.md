@@ -172,6 +172,10 @@ Auto-generated documentation from source code docstrings.
     options:
       show_source: true
 
+::: orionbelt.models.query.UsePathName
+    options:
+      show_source: true
+
 ::: orionbelt.models.query.DimensionRef
     options:
       show_source: true

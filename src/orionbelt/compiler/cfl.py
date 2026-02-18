@@ -219,7 +219,7 @@ class CFLPlanner:
         cross_fact: list[ResolvedMeasure] | None = None,
     ) -> QueryPlan:
         """UNION ALL strategy: stack fact legs with NULL padding, aggregate outside."""
-        graph = JoinGraph(model)
+        graph = JoinGraph(model, use_path_names=resolved.use_path_names or None)
 
         # Collect all measures across all objects + cross-fact measures
         all_measures: list[ResolvedMeasure] = []

@@ -74,6 +74,16 @@ dataObjects:
       Supplier Country ID:
         code: supplier_country_id
         abstractType: string
+    joins:
+      # Secondary: avoids multipath diamond (Countries reachable via Clients)
+      - joinType: many-to-one
+        joinTo: Countries
+        secondary: true
+        pathName: supplier_country
+        columnsFrom:
+          - Supplier Country ID
+        columnsTo:
+          - Country ID
 
   Products:
     code: products
@@ -120,6 +130,21 @@ dataObjects:
       Department Name:
         code: department_name
         abstractType: string
+
+  Account Balances:
+    code: acct_bal
+    database: ANALYTICS
+    schema: PUBLIC
+    columns:
+      Account ID:
+        code: account_id
+        abstractType: string
+      IBAN:
+        code: iban
+        abstractType: string
+      Balance:
+        code: balance
+        abstractType: float
 
   # ── Fact tables ────────────────────────────────────────────────────
 
@@ -183,6 +208,15 @@ dataObjects:
           - Sales YM
         columnsTo:
           - Year Month
+      # Secondary join: Sales → Calendar (by exact date)
+      - joinType: many-to-one
+        joinTo: Calendar
+        secondary: true
+        pathName: sales_date
+        columnsFrom:
+          - Sales Date
+        columnsTo:
+          - Calendar Date
 
   Returns:
     code: returns
@@ -254,6 +288,12 @@ dataObjects:
           - Shipment Sales ID
         columnsTo:
           - Sales ID
+      - joinType: many-to-one
+        joinTo: Products
+        columnsFrom:
+          - Shipment Product
+        columnsTo:
+          - Product ID
 
   Purchases:
     code: purchases

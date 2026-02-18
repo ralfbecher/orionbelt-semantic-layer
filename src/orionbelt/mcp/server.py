@@ -22,7 +22,7 @@ from fastmcp import FastMCP
 from fastmcp.exceptions import ToolError
 
 from orionbelt.dialect import DialectRegistry
-from orionbelt.models.query import QueryObject, QuerySelect
+from orionbelt.models.query import QueryObject, QuerySelect, UsePathName
 from orionbelt.service.model_store import ModelStore
 from orionbelt.service.session_manager import SessionManager, SessionNotFoundError
 from orionbelt.settings import Settings
@@ -483,6 +483,7 @@ def compile_query(
     measures: list[str] | None = None,
     query_json: str | None = None,
     session_id: str | None = None,
+    use_path_names: list[dict[str, str]] | None = None,
 ) -> str:
     """Compile a semantic query to SQL.
 
@@ -500,12 +501,16 @@ def compile_query(
         )
 
     The full query JSON supports: ``select`` (dimensions + measures), ``where``,
-    ``having``, ``order_by``, ``limit``.
+    ``having``, ``order_by``, ``limit``, ``usePathNames``.
 
     Use ``describe_model`` first to discover available dimension and measure
     names.  Filter operators: equals, notequals, gt, gte, lt, lte, in,
     not_in, contains, like, starts_with, ends_with, between, is_null,
     is_not_null.
+
+    For secondary joins, pass ``use_path_names`` (simple mode) or include
+    ``usePathNames`` in query_json (full mode). Each item has ``source``,
+    ``target``, and ``pathName`` keys.
 
     Args:
         model_id: The id returned by ``load_model``.
@@ -514,6 +519,8 @@ def compile_query(
         measures: List of measure names (simple mode).
         query_json: Full query object as JSON string (full mode).
         session_id: Session that holds the model (optional in stdio mode).
+        use_path_names: List of {source, target, pathName} dicts for
+            selecting secondary joins (simple mode).
     """
     logger.info("compile_query called (model_id=%s, dialect=%s)", model_id, dialect)
     store = _resolve_store(session_id)
@@ -526,11 +533,22 @@ def compile_query(
         except (json.JSONDecodeError, Exception) as exc:
             raise ToolError(f"Invalid query JSON: {exc}") from exc
     elif dimensions is not None or measures is not None:
+        upn_list: list[UsePathName] = []
+        if use_path_names:
+            for item in use_path_names:
+                upn_list.append(
+                    UsePathName(
+                        source=item["source"],
+                        target=item["target"],
+                        path_name=item["pathName"],
+                    )
+                )
         query = QueryObject(
             select=QuerySelect(
                 dimensions=dimensions or [],
                 measures=measures or [],
-            )
+            ),
+            use_path_names=upn_list,
         )
     else:
         raise ToolError(

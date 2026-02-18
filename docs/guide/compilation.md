@@ -58,6 +58,7 @@ The output of resolution contains everything the planner needs:
 | `order_by_exprs` | `list[tuple[Expr, bool]]` | (expression, is_descending) pairs |
 | `limit` | `int | None` | Row limit |
 | `requires_cfl` | `bool` | Whether multi-fact CFL planning is needed |
+| `use_path_names` | `list[UsePathName]` | Secondary join overrides from the query |
 
 ### Join Graph
 
@@ -69,6 +70,7 @@ The `JoinGraph` uses [networkx](https://networkx.org/) to model data object rela
 - **Directed graph** for cycle detection
 - `find_join_path(from_objects, to_objects)` returns the minimal `JoinStep` sequence
 - `build_join_condition(step)` generates equality conditions from field mappings
+- Accepts optional `use_path_names` to activate secondary joins — when a secondary override is active for a `(source, target)` pair, the primary join is replaced by the matching secondary join
 
 ```python
 # Example: Orders -> Customers join

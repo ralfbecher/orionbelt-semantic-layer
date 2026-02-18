@@ -31,7 +31,7 @@ OrionBelt Semantic Layer is an engine that transforms declarative YAML model def
 - **OrionBelt ML (OBML)** — YAML-based semantic models with data objects, dimensions, measures, metrics, and joins
 - **Star Schema & CFL Planning** — Automatic join path resolution with Composite Fact Layer support for multi-fact queries
 - **Vendor-Specific SQL Validation** — Post-generation syntax validation via sqlglot for each target dialect (non-blocking)
-- **Validation with Source Positions** — Precise error reporting with line/column numbers from YAML source, including join graph analysis (cycle and multipath detection)
+- **Validation with Source Positions** — Precise error reporting with line/column numbers from YAML source, including join graph analysis (cycle and multipath detection, secondary join constraints)
 - **Session Management** — TTL-scoped sessions with per-client model stores for both REST API and MCP
 - **REST API** — FastAPI-powered session endpoints for model loading, validation, compilation, and management
 - **MCP Server** — 9 tools + 3 prompts for AI-assisted model development via Claude Desktop and other MCP clients
