@@ -306,6 +306,10 @@ uv run orionbelt-api &
 uv run orionbelt-ui
 ```
 
+<p align="center">
+  <img src="docs/assets/er-sqlcompiler-dark.png" alt="SQL Compiler in Gradio UI (dark mode)" width="900">
+</p>
+
 The UI provides:
 
 - **Side-by-side editors** — OBML model (YAML) and query (YAML) with syntax highlighting
