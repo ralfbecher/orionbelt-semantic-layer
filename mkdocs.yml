@@ -7,11 +7,16 @@ copyright: Copyright &copy; 2025 RALFORION d.o.o. — Apache 2.0
 
 dev_addr: 127.0.0.1:8080
 
+extra:
+  obml_version: "1.0"
+  project_version: "0.3.0"
+
 extra_css:
   - stylesheets/extra.css
 
 theme:
   name: material
+  custom_dir: docs/overrides
   logo: assets/logo w.png
   favicon: assets/ORIONBELT Logo.png
   palette:

@@ -2,3 +2,13 @@
 td code {
   white-space: nowrap;
 }
+
+/* Version badge below TOC sidebar */
+.obml-version-badge {
+  margin-top: 1rem;
+  padding: 0.5rem 0.8rem;
+  font-size: 0.65rem;
+  color: var(--md-default-fg-color--light);
+  opacity: 0.7;
+  line-height: 1.6;
+}
