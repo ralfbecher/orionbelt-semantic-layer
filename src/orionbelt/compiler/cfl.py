@@ -15,18 +15,13 @@ from orionbelt.ast.nodes import (
     Select,
     UnionAll,
 )
+from orionbelt.compiler.fanout import FanoutError
 from orionbelt.compiler.graph import JoinGraph
 from orionbelt.compiler.resolution import ResolvedMeasure, ResolvedQuery
 from orionbelt.compiler.star import QueryPlan
 from orionbelt.models.semantic import SemanticModel
 
-
-class FanoutError(Exception):
-    """Raised when CFL planning detects a grain incompatibility (fanout)."""
-
-    def __init__(self, message: str) -> None:
-        super().__init__(message)
-        self.message = message
+__all__ = ["CFLPlanner", "FanoutError"]
 
 
 class CFLPlanner:

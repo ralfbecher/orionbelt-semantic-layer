@@ -140,6 +140,56 @@ The `contains` filter operator is rendered per dialect:
     CAST(expr AS DateTime)
     ```
 
+## Aggregation Functions
+
+Most aggregations (`SUM`, `COUNT`, `AVG`, `MIN`, `MAX`) compile identically across dialects. The following aggregations require dialect-specific rendering:
+
+### ANY_VALUE
+
+| Dialect | SQL |
+|---------|-----|
+| Postgres | `ANY_VALUE(col)` |
+| Snowflake | `ANY_VALUE(col)` |
+| ClickHouse | `any(col)` |
+| Dremio | `ANY_VALUE(col)` |
+| Databricks | `ANY_VALUE(col)` |
+
+### MEDIAN
+
+| Dialect | SQL |
+|---------|-----|
+| Postgres | `PERCENTILE_DISC(0.5) WITHIN GROUP (ORDER BY col)` |
+| Snowflake | `MEDIAN(col)` |
+| ClickHouse | `MEDIAN(col)` |
+| Dremio | `MEDIAN(col)` |
+| Databricks | `MEDIAN(col)` |
+
+### MODE
+
+| Dialect | SQL |
+|---------|-----|
+| Postgres | `MODE() WITHIN GROUP (ORDER BY col)` |
+| Snowflake | `MODE(col)` |
+| ClickHouse | `topK(1)(col)[1]` |
+| Dremio | Not supported |
+| Databricks | `MODE(col)` |
+
+### LISTAGG
+
+| Dialect | Base | + DISTINCT | + ORDER BY |
+|---------|------|------------|------------|
+| Postgres | `STRING_AGG(col, sep)` | `STRING_AGG(DISTINCT col, sep)` | `STRING_AGG(col, sep ORDER BY col)` |
+| Snowflake | `LISTAGG(col, sep)` | `LISTAGG(DISTINCT col, sep)` | `LISTAGG(col, sep) WITHIN GROUP (ORDER BY col)` |
+| ClickHouse | `arrayStringConcat(groupArray(col), sep)` | `arrayStringConcat(groupUniqArray(col), sep)` | `arrayStringConcat(arraySort(groupArray(col)), sep)` |
+| Dremio | `LISTAGG(col, sep)` | `LISTAGG(DISTINCT col, sep)` | `LISTAGG(col, sep) WITHIN GROUP (ORDER BY col)` |
+| Databricks | `ARRAY_JOIN(COLLECT_LIST(col), sep)` | `ARRAY_JOIN(COLLECT_SET(col), sep)` | `ARRAY_JOIN(SORT_ARRAY(COLLECT_LIST(col)), sep)` |
+
+!!! warning "LISTAGG ordering limitations"
+    ClickHouse and Databricks only support self-ordering (sorting by the aggregated column). Ordering by a different column raises an error at compile time.
+
+!!! warning "Total not supported"
+    `MEDIAN`, `MODE`, `LISTAGG`, and `ANY_VALUE` do not support `total: true` because they cannot be meaningfully re-aggregated via window functions.
+
 ## Dialect Plugin Architecture
 
 Each dialect implements the abstract `Dialect` base class:

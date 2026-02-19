@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from orionbelt.ast.nodes import Cast, Expr, FunctionCall, Literal
+from orionbelt.ast.nodes import Cast, Expr, FunctionCall, Literal, OrderByItem
 from orionbelt.dialect.base import Dialect, DialectCapabilities
 from orionbelt.dialect.registry import DialectRegistry
 from orionbelt.models.semantic import TimeGrain
@@ -52,6 +52,35 @@ class DatabricksDialect(Dialect):
                 right=Literal.string("%"),
             ),
         )
+
+    def _compile_listagg(
+        self,
+        args: list[Expr],
+        distinct: bool,
+        order_by: list[OrderByItem],
+        separator: str | None,
+    ) -> str:
+        """Databricks: ARRAY_JOIN(COLLECT_LIST/COLLECT_SET(col), sep).
+
+        Databricks does not support ORDER BY inside COLLECT_LIST/COLLECT_SET.
+        Only self-ordering (sorting the aggregated column) is supported via SORT_ARRAY.
+        Cross-column ordering raises an error.
+        """
+        sep = separator if separator is not None else ","
+        col_sql = self.compile_expr(args[0]) if args else "''"
+        escaped_sep = sep.replace("'", "''")
+        collect_fn = "COLLECT_SET" if distinct else "COLLECT_LIST"
+        inner = f"{collect_fn}({col_sql})"
+        if order_by:
+            ob_expr = order_by[0]
+            ob_sql = self.compile_expr(ob_expr.expr)
+            if ob_sql != col_sql:
+                raise ValueError(
+                    f"Databricks LISTAGG does not support ORDER BY on a different column "
+                    f"(aggregated: {col_sql}, order by: {ob_sql})"
+                )
+            inner = f"SORT_ARRAY({inner}, false)" if ob_expr.desc else f"SORT_ARRAY({inner})"
+        return f"ARRAY_JOIN({inner}, '{escaped_sep}')"
 
     def current_date_sql(self) -> str:
         return "current_date()"

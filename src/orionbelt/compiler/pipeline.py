@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 
 from orionbelt.compiler.cfl import CFLPlanner
 from orionbelt.compiler.codegen import CodeGenerator
+from orionbelt.compiler.fanout import detect_fanout
 from orionbelt.compiler.resolution import QueryResolver
 from orionbelt.compiler.star import StarSchemaPlanner
 from orionbelt.compiler.total_wrap import wrap_with_totals
@@ -52,6 +53,9 @@ class CompilationPipeline:
         """Compile a query to SQL for the specified dialect."""
         # Phase 1: Resolution
         resolved = self._resolver.resolve(query, model)
+
+        # Phase 1.5: Fanout detection
+        detect_fanout(resolved, model)
 
         # Phase 2: Planning (star schema or CFL)
         if resolved.requires_cfl:

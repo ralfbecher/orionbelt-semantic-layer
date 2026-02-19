@@ -91,6 +91,50 @@ class Dialect(ABC):
             ),
         )
 
+    def _map_function_name(self, name: str) -> str:
+        """Map a function name to the dialect-specific equivalent.
+
+        Override in subclasses to remap names (e.g. ANY_VALUE → any in ClickHouse).
+        """
+        return name
+
+    def _compile_median(self, args: list[Expr]) -> str:
+        """Compile MEDIAN — default uses MEDIAN(col).
+
+        Works for Snowflake, ClickHouse, Databricks, and Dremio. Postgres overrides.
+        """
+        col_sql = self.compile_expr(args[0]) if args else "NULL"
+        return f"MEDIAN({col_sql})"
+
+    def _compile_mode(self, args: list[Expr]) -> str:
+        """Compile MODE — default uses MODE(col).
+
+        Works for Snowflake and Databricks. Postgres, ClickHouse, and Dremio override.
+        """
+        col_sql = self.compile_expr(args[0]) if args else "NULL"
+        return f"MODE({col_sql})"
+
+    def _compile_listagg(
+        self,
+        args: list[Expr],
+        distinct: bool,
+        order_by: list[OrderByItem],
+        separator: str | None,
+    ) -> str:
+        """Compile LISTAGG — default uses LISTAGG(col, sep) WITHIN GROUP (ORDER BY ...).
+
+        Works for Snowflake and Dremio. Postgres, ClickHouse, and Databricks override.
+        """
+        sep = separator if separator is not None else ","
+        col_sql = self.compile_expr(args[0]) if args else "''"
+        distinct_sql = "DISTINCT " if distinct else ""
+        escaped_sep = sep.replace("'", "''")
+        result = f"LISTAGG({distinct_sql}{col_sql}, '{escaped_sep}')"
+        if order_by:
+            ob = ", ".join(self.compile_order_by(o) for o in order_by)
+            result += f" WITHIN GROUP (ORDER BY {ob})"
+        return result
+
     def _compile_multi_field_count(self, args: list[Expr], distinct: bool) -> str:
         """Compile COUNT with multiple fields by concatenating with ``||``.
 
@@ -229,11 +273,27 @@ class Dialect(ABC):
                 return f"{self.quote_identifier(table)}.{self.quote_identifier(name)}"
             case AliasedExpr(expr=inner, alias=alias):
                 return f"{self.compile_expr(inner)} AS {self.quote_identifier(alias)}"
-            case FunctionCall(name=fname, args=args, distinct=distinct):
+            case FunctionCall(
+                name=fname,
+                args=args,
+                distinct=distinct,
+                order_by=order_by,
+                separator=separator,
+            ):
+                # LISTAGG: dialect-specific rendering
+                if fname.upper() == "LISTAGG":
+                    return self._compile_listagg(args, distinct, order_by, separator)
+                # MODE: dialect-specific rendering
+                if fname.upper() == "MODE":
+                    return self._compile_mode(args)
+                # MEDIAN: dialect-specific rendering
+                if fname.upper() == "MEDIAN":
+                    return self._compile_median(args)
                 # Multi-field COUNT: concatenate fields for portability
                 # (Snowflake overrides to use native multi-arg syntax)
                 if fname.upper() == "COUNT" and len(args) > 1:
                     return self._compile_multi_field_count(args, distinct)
+                fname = self._map_function_name(fname)
                 args_sql = ", ".join(self.compile_expr(a) for a in args)
                 if distinct:
                     return f"{fname}(DISTINCT {args_sql})"

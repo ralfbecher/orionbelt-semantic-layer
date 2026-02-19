@@ -53,6 +53,10 @@ class DremioDialect(Dialect):
             ),
         )
 
+    def _compile_mode(self, args: list[Expr]) -> str:
+        """Dremio does not support MODE aggregation."""
+        raise ValueError("Dremio does not support MODE aggregation")
+
     def current_date_sql(self) -> str:
         return "CURRENT_DATE"
 

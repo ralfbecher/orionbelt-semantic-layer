@@ -11,6 +11,7 @@ from orionbelt.ast.nodes import (
     Expr,
     FunctionCall,
     Literal,
+    OrderByItem,
     RelativeDateRange,
 )
 from orionbelt.compiler.graph import JoinGraph, JoinStep
@@ -414,10 +415,34 @@ class QueryResolver:
             agg = "COUNT"
             distinct = True
 
+        # LISTAGG: attach separator and optional ordering
+        separator: str | None = None
+        order_by: list[OrderByItem] = []
+        if agg == "LISTAGG":
+            separator = measure.delimiter if measure.delimiter is not None else ","
+            if measure.within_group:
+                wg = measure.within_group
+                wg_obj_name = wg.column.view or ""
+                wg_col_name = wg.column.column or ""
+                wg_obj = model.data_objects.get(wg_obj_name)
+                wg_source = (
+                    wg_obj.columns[wg_col_name].code
+                    if wg_obj and wg_col_name in wg_obj.columns
+                    else wg_col_name
+                )
+                order_by = [
+                    OrderByItem(
+                        expr=ColumnRef(name=wg_source, table=wg_obj_name),
+                        desc=wg.order.upper() == "DESC",
+                    )
+                ]
+
         return FunctionCall(
             name=agg,
             args=args,
             distinct=distinct,
+            order_by=order_by,
+            separator=separator,
         )
 
     def _expand_expression(

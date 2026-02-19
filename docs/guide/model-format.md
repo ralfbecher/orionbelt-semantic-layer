@@ -238,6 +238,8 @@ measures:
 | `expression` | string | No | Expression with `{[Column]}` placeholders |
 | `distinct` | bool | No | Apply DISTINCT to aggregation |
 | `total` | bool | No | Use the total (unfiltered) value when referenced in a metric |
+| `delimiter` | string | No | Separator for `listagg` aggregation (default: `","`) |
+| `withinGroup` | object | No | Ordering clause for `listagg` — specifies `column` and `order` (`ASC`/`DESC`) |
 | `filter` | object | No | Conditional filter applied to this measure |
 | `allowFanOut` | bool | No | Allow fan-out joins (default: false) |
 
@@ -251,7 +253,10 @@ measures:
 | `avg` | `AVG(expr)` | Average price |
 | `min` | `MIN(expr)` | Earliest date |
 | `max` | `MAX(expr)` | Latest date |
-| `listagg` | `LISTAGG(expr)` | Concatenated values |
+| `any_value` | `ANY_VALUE(expr)` | Any single value from the group (`any()` in ClickHouse) |
+| `median` | `MEDIAN(expr)` | Median value (`PERCENTILE_DISC(0.5) WITHIN GROUP (ORDER BY ...)` in Postgres) |
+| `mode` | `MODE(expr)` | Most frequent value (`MODE() WITHIN GROUP (ORDER BY ...)` in Postgres, `topK(1)(col)[1]` in ClickHouse; not supported in Dremio) |
+| `listagg` | `LISTAGG(expr, sep)` | Concatenated values (dialect-specific: `STRING_AGG` in Postgres, `ARRAY_JOIN(COLLECT_LIST(...))` in Databricks, `arrayStringConcat(groupArray(...))` in ClickHouse) |
 
 ### Expression Placeholders
 
@@ -277,6 +282,28 @@ measures:
         - dataType: float
           valueFloat: 100.00
 ```
+
+### LISTAGG Measures
+
+Use `listagg` to concatenate column values into a delimited string. OrionBelt renders the correct SQL for each database dialect automatically.
+
+```yaml
+measures:
+  Product Names:
+    columns:
+      - dataObject: Products
+        column: Product Name
+    resultType: string
+    aggregation: listagg
+    delimiter: ', '
+    withinGroup:
+      column:
+        dataObject: Products
+        column: Product Name
+      order: ASC
+```
+
+The `delimiter` defaults to `","` if omitted. The `withinGroup` clause is optional and specifies ordering of the concatenated values.
 
 ## Metrics
 

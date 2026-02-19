@@ -51,6 +51,23 @@ class TestJoinGraph:
         condition = graph.build_join_condition(steps[0])
         assert condition is not None
 
+    def test_find_join_path_forward_not_reversed(self) -> None:
+        """Forward traversal (same direction as declared) sets reversed=False."""
+        model = _load_model()
+        graph = JoinGraph(model)
+        steps = graph.find_join_path({"Orders"}, {"Orders", "Customers"})
+        assert len(steps) == 1
+        assert steps[0].reversed is False
+
+    def test_find_join_path_reverse_sets_reversed(self) -> None:
+        """Reverse traversal (against declared direction) sets reversed=True."""
+        model = _load_model()
+        graph = JoinGraph(model)
+        # Traverse from Customers to Orders — opposite of declared direction (Orders→Customers)
+        steps = graph.find_join_path({"Customers"}, {"Customers", "Orders"})
+        assert len(steps) == 1
+        assert steps[0].reversed is True
+
     def test_no_cycles_in_simple_model(self) -> None:
         model = _load_model()
         graph = JoinGraph(model)

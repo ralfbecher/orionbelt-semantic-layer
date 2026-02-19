@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from orionbelt.ast.nodes import (
     AliasedExpr,
     BinaryOp,
@@ -332,3 +334,15 @@ class TestReaggMapping:
         assert total_col.expr.left.func_name == "SUM"
         assert isinstance(total_col.expr.right, WindowFunction)
         assert total_col.expr.right.func_name == "SUM"
+
+    @pytest.mark.parametrize("agg", ["median", "mode", "listagg", "any_value"])
+    def test_unsupported_total_raises(self, agg: str) -> None:
+        """MODE, LISTAGG, and ANY_VALUE cannot be used with total: true."""
+        ast = _make_ast(measure_names=["Bad Total"])
+        resolved = ResolvedQuery(
+            dimensions=[_make_dim()],
+            measures=[_make_measure(name="Bad Total", aggregation=agg, total=True)],
+            base_object="Orders",
+        )
+        with pytest.raises(ValueError, match="does not support total"):
+            wrap_with_totals(ast, resolved)

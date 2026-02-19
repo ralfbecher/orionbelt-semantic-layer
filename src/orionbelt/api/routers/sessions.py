@@ -22,6 +22,7 @@ from orionbelt.api.schemas import (
     ValidateRequest,
     ValidateResponse,
 )
+from orionbelt.compiler.fanout import FanoutError
 from orionbelt.compiler.resolution import ResolutionError
 from orionbelt.dialect.registry import UnsupportedDialectError
 from orionbelt.service.diagram import generate_mermaid_er
@@ -230,6 +231,8 @@ async def compile_query(
     except UnsupportedDialectError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from None
     except ResolutionError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from None
+    except FanoutError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from None
     return QueryCompileResponse(
         sql=result.sql,

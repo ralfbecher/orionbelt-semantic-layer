@@ -23,6 +23,7 @@ class JoinStep:
     to_columns: list[str]
     join_type: ASTJoinType
     cardinality: Cardinality
+    reversed: bool = False
 
 
 class JoinGraph:
@@ -146,6 +147,7 @@ class JoinGraph:
                         to_columns=edge_data["columns_from"],
                         join_type=ASTJoinType.LEFT,
                         cardinality=edge_data["cardinality"],
+                        reversed=True,
                     )
                 steps.append(step)
 

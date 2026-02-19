@@ -7,6 +7,9 @@ copyright: Copyright &copy; 2025 RALFORION d.o.o. — Apache 2.0
 
 dev_addr: 127.0.0.1:8080
 
+extra_css:
+  - stylesheets/extra.css
+
 theme:
   name: material
   logo: assets/logo w.png

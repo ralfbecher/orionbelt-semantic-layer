@@ -27,6 +27,9 @@ class AggregationType(StrEnum):
     AVG = "avg"
     MIN = "min"
     MAX = "max"
+    ANY_VALUE = "any_value"
+    MEDIAN = "median"
+    MODE = "mode"
     LISTAGG = "listagg"
 
 
@@ -146,6 +149,15 @@ class MeasureFilter(BaseModel):
     model_config = {"populate_by_name": True}
 
 
+class WithinGroup(BaseModel):
+    """WITHIN GROUP ordering clause for LISTAGG measures."""
+
+    column: DataColumnRef
+    order: str = "ASC"
+
+    model_config = {"populate_by_name": True}
+
+
 class Measure(BaseModel):
     """An aggregation measure with optional expression template."""
 
@@ -159,6 +171,8 @@ class Measure(BaseModel):
     filter: MeasureFilter | None = None
     format: str | None = None
     allow_fan_out: bool = Field(False, alias="allowFanOut")
+    delimiter: str | None = None
+    within_group: WithinGroup | None = Field(None, alias="withinGroup")
 
     model_config = {"populate_by_name": True}
 

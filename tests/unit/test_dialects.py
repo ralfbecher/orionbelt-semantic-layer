@@ -393,3 +393,216 @@ def test_relative_date_range_compiles(
     assert "order_date" in sql
     assert expected_date_fn in sql
     assert expected_add_fn in sql
+
+
+class TestListaggRendering:
+    """Test LISTAGG rendering across all 5 dialects."""
+
+    @pytest.mark.parametrize(
+        ("dialect_name", "expected"),
+        [
+            ("postgres", "STRING_AGG"),
+            ("snowflake", "LISTAGG"),
+            ("clickhouse", "arrayStringConcat(groupArray("),
+            ("dremio", "LISTAGG"),
+            ("databricks", "ARRAY_JOIN(COLLECT_LIST("),
+        ],
+    )
+    def test_basic_listagg(self, dialect_name: str, expected: str) -> None:
+        """LISTAGG without DISTINCT or ORDER BY."""
+        dialect = DialectRegistry.get(dialect_name)
+        expr = FunctionCall(
+            name="LISTAGG",
+            args=[ColumnRef(name="product_name")],
+            separator=",",
+        )
+        sql = dialect.compile_expr(expr)
+        assert expected in sql
+        assert "','" in sql
+
+    @pytest.mark.parametrize(
+        ("dialect_name", "expected"),
+        [
+            ("postgres", "STRING_AGG(DISTINCT"),
+            ("snowflake", "LISTAGG(DISTINCT"),
+            ("clickhouse", "groupUniqArray("),
+            ("dremio", "LISTAGG(DISTINCT"),
+            ("databricks", "ARRAY_JOIN(COLLECT_SET("),
+        ],
+    )
+    def test_listagg_distinct(self, dialect_name: str, expected: str) -> None:
+        """LISTAGG with DISTINCT."""
+        dialect = DialectRegistry.get(dialect_name)
+        expr = FunctionCall(
+            name="LISTAGG",
+            args=[ColumnRef(name="product_name")],
+            distinct=True,
+            separator=",",
+        )
+        sql = dialect.compile_expr(expr)
+        assert expected in sql
+
+    @pytest.mark.parametrize(
+        ("dialect_name", "expected"),
+        [
+            ("postgres", "ORDER BY"),
+            ("snowflake", "WITHIN GROUP (ORDER BY"),
+            ("clickhouse", "arraySort(groupArray("),
+            ("dremio", "WITHIN GROUP (ORDER BY"),
+            ("databricks", "SORT_ARRAY(COLLECT_LIST("),
+        ],
+    )
+    def test_listagg_order_by(self, dialect_name: str, expected: str) -> None:
+        """LISTAGG with ORDER BY."""
+        dialect = DialectRegistry.get(dialect_name)
+        expr = FunctionCall(
+            name="LISTAGG",
+            args=[ColumnRef(name="product_name")],
+            order_by=[OrderByItem(expr=ColumnRef(name="product_name"))],
+            separator="; ",
+        )
+        sql = dialect.compile_expr(expr)
+        assert expected in sql
+        assert "'; '" in sql
+
+    @pytest.mark.parametrize(
+        ("dialect_name", "expected_distinct", "expected_order"),
+        [
+            ("postgres", "STRING_AGG(DISTINCT", "ORDER BY"),
+            ("snowflake", "LISTAGG(DISTINCT", "WITHIN GROUP (ORDER BY"),
+            ("clickhouse", "arrayReverseSort(groupUniqArray(", ""),
+            ("dremio", "LISTAGG(DISTINCT", "WITHIN GROUP (ORDER BY"),
+            ("databricks", "SORT_ARRAY(COLLECT_SET(", ""),
+        ],
+    )
+    def test_listagg_distinct_order_by(
+        self, dialect_name: str, expected_distinct: str, expected_order: str
+    ) -> None:
+        """LISTAGG with DISTINCT + ORDER BY."""
+        dialect = DialectRegistry.get(dialect_name)
+        expr = FunctionCall(
+            name="LISTAGG",
+            args=[ColumnRef(name="product_name")],
+            distinct=True,
+            order_by=[OrderByItem(expr=ColumnRef(name="product_name"), desc=True)],
+            separator=",",
+        )
+        sql = dialect.compile_expr(expr)
+        assert expected_distinct in sql
+        if expected_order:
+            assert expected_order in sql
+
+    def test_default_separator(self) -> None:
+        """When separator is None, default comma is used."""
+        dialect = DialectRegistry.get("postgres")
+        expr = FunctionCall(
+            name="LISTAGG",
+            args=[ColumnRef(name="val")],
+        )
+        sql = dialect.compile_expr(expr)
+        assert "STRING_AGG" in sql
+        assert "','" in sql
+
+    @pytest.mark.parametrize("dialect_name", ["clickhouse", "databricks"])
+    def test_cross_column_order_by_raises(self, dialect_name: str) -> None:
+        """ORDER BY on a different column than the aggregated one raises in ClickHouse/Databricks."""
+        dialect = DialectRegistry.get(dialect_name)
+        expr = FunctionCall(
+            name="LISTAGG",
+            args=[ColumnRef(name="product_name")],
+            order_by=[OrderByItem(expr=ColumnRef(name="created_at"))],
+            separator=",",
+        )
+        with pytest.raises(ValueError, match="does not support ORDER BY on a different column"):
+            dialect.compile_expr(expr)
+
+    def test_clickhouse_desc_uses_reverse_sort(self) -> None:
+        """ClickHouse uses arrayReverseSort for DESC ordering."""
+        dialect = DialectRegistry.get("clickhouse")
+        expr = FunctionCall(
+            name="LISTAGG",
+            args=[ColumnRef(name="val")],
+            order_by=[OrderByItem(expr=ColumnRef(name="val"), desc=True)],
+            separator=",",
+        )
+        sql = dialect.compile_expr(expr)
+        assert "arrayReverseSort(" in sql
+
+    def test_databricks_desc_uses_sort_array_false(self) -> None:
+        """Databricks uses SORT_ARRAY(arr, false) for DESC ordering."""
+        dialect = DialectRegistry.get("databricks")
+        expr = FunctionCall(
+            name="LISTAGG",
+            args=[ColumnRef(name="val")],
+            order_by=[OrderByItem(expr=ColumnRef(name="val"), desc=True)],
+            separator=",",
+        )
+        sql = dialect.compile_expr(expr)
+        assert "SORT_ARRAY(" in sql
+        assert "false)" in sql
+
+
+class TestAnyValueRendering:
+    """Test ANY_VALUE rendering across all 5 dialects."""
+
+    @pytest.mark.parametrize(
+        ("dialect_name", "expected"),
+        [
+            ("postgres", "ANY_VALUE("),
+            ("snowflake", "ANY_VALUE("),
+            ("clickhouse", "any("),
+            ("dremio", "ANY_VALUE("),
+            ("databricks", "ANY_VALUE("),
+        ],
+    )
+    def test_any_value(self, dialect_name: str, expected: str) -> None:
+        dialect = DialectRegistry.get(dialect_name)
+        expr = FunctionCall(name="ANY_VALUE", args=[ColumnRef(name="status")])
+        sql = dialect.compile_expr(expr)
+        assert expected in sql
+
+
+class TestModeRendering:
+    """Test MODE rendering across dialects."""
+
+    @pytest.mark.parametrize(
+        ("dialect_name", "expected"),
+        [
+            ("postgres", "MODE() WITHIN GROUP (ORDER BY"),
+            ("snowflake", "MODE("),
+            ("clickhouse", "topK(1)("),
+            ("databricks", "MODE("),
+        ],
+    )
+    def test_mode(self, dialect_name: str, expected: str) -> None:
+        dialect = DialectRegistry.get(dialect_name)
+        expr = FunctionCall(name="MODE", args=[ColumnRef(name="status")])
+        sql = dialect.compile_expr(expr)
+        assert expected in sql
+
+    def test_dremio_mode_raises(self) -> None:
+        """Dremio does not support MODE."""
+        dialect = DialectRegistry.get("dremio")
+        expr = FunctionCall(name="MODE", args=[ColumnRef(name="status")])
+        with pytest.raises(ValueError, match="Dremio does not support MODE"):
+            dialect.compile_expr(expr)
+
+
+class TestMedianRendering:
+    """Test MEDIAN rendering across all 5 dialects."""
+
+    @pytest.mark.parametrize(
+        ("dialect_name", "expected"),
+        [
+            ("postgres", "PERCENTILE_DISC(0.5) WITHIN GROUP (ORDER BY"),
+            ("snowflake", "MEDIAN("),
+            ("clickhouse", "MEDIAN("),
+            ("dremio", "MEDIAN("),
+            ("databricks", "MEDIAN("),
+        ],
+    )
+    def test_median(self, dialect_name: str, expected: str) -> None:
+        dialect = DialectRegistry.get(dialect_name)
+        expr = FunctionCall(name="MEDIAN", args=[ColumnRef(name="price")])
+        sql = dialect.compile_expr(expr)
+        assert expected in sql

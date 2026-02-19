@@ -383,7 +383,7 @@
         },
         "aggregation": {
           "type": "string",
-          "description": "Aggregation Function (sum,min,max,listagg, etc.)"
+          "description": "Aggregation Function (sum,min,max,any_value,median,mode,listagg, etc.)"
         },
         "distinct": {
           "type": "boolean",
@@ -395,9 +395,9 @@
         },
         "withinGroup": {
           "type": "object",
-          "description": "WITHIN GROUP clause to specify Field for ordering in Group",
+          "description": "WITHIN GROUP clause to specify column for ordering in LISTAGG",
           "properties": {
-            "oneOf": {
+            "column": {
               "$ref": "#/definitions/queryColumn"
             },
             "order": {
@@ -405,6 +405,7 @@
               "default": "ASC"
             }
           },
+          "required": ["column"],
           "additionalProperties": false
         },
         "allowFanOut": {

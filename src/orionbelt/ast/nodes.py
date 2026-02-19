@@ -71,6 +71,8 @@ class FunctionCall:
     name: str
     args: list[Expr] = field(default_factory=list)
     distinct: bool = False
+    order_by: list[OrderByItem] = field(default_factory=list)
+    separator: str | None = None
 
 
 @dataclass(frozen=True)

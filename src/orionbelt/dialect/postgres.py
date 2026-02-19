@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from orionbelt.ast.nodes import Cast, Expr, FunctionCall, Literal
+from orionbelt.ast.nodes import Cast, Expr, FunctionCall, Literal, OrderByItem
 from orionbelt.dialect.base import Dialect, DialectCapabilities
 from orionbelt.dialect.registry import DialectRegistry
 from orionbelt.models.semantic import TimeGrain
@@ -48,6 +48,34 @@ class PostgresDialect(Dialect):
                 right=Literal.string("%"),
             ),
         )
+
+    def _compile_median(self, args: list[Expr]) -> str:
+        """PostgreSQL: PERCENTILE_DISC(0.5) WITHIN GROUP (ORDER BY col)."""
+        col_sql = self.compile_expr(args[0]) if args else "NULL"
+        return f"PERCENTILE_DISC(0.5) WITHIN GROUP (ORDER BY {col_sql})"
+
+    def _compile_mode(self, args: list[Expr]) -> str:
+        """PostgreSQL: MODE() WITHIN GROUP (ORDER BY col)."""
+        col_sql = self.compile_expr(args[0]) if args else "NULL"
+        return f"MODE() WITHIN GROUP (ORDER BY {col_sql})"
+
+    def _compile_listagg(
+        self,
+        args: list[Expr],
+        distinct: bool,
+        order_by: list[OrderByItem],
+        separator: str | None,
+    ) -> str:
+        """PostgreSQL: STRING_AGG([DISTINCT] col, sep [ORDER BY ...])."""
+        sep = separator if separator is not None else ","
+        col_sql = self.compile_expr(args[0]) if args else "''"
+        distinct_sql = "DISTINCT " if distinct else ""
+        escaped_sep = sep.replace("'", "''")
+        inner = f"{distinct_sql}{col_sql}, '{escaped_sep}'"
+        if order_by:
+            ob = ", ".join(self.compile_order_by(o) for o in order_by)
+            inner += f" ORDER BY {ob}"
+        return f"STRING_AGG({inner})"
 
     def current_date_sql(self) -> str:
         return "CURRENT_DATE"

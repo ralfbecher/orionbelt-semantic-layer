@@ -33,10 +33,17 @@ from orionbelt.ast.nodes import (
 )
 from orionbelt.compiler.resolution import ResolvedMeasure, ResolvedQuery
 
+_UNSUPPORTED_TOTAL_AGGS = frozenset({"MEDIAN", "MODE", "LISTAGG", "ANY_VALUE"})
+
 
 def _reagg_func(aggregation: str) -> str:
     """Return the outer window function name for a given aggregation."""
     agg = aggregation.upper()
+    if agg in _UNSUPPORTED_TOTAL_AGGS:
+        raise ValueError(
+            f"Aggregation '{agg}' does not support total: true "
+            "(cannot be re-aggregated via window functions)"
+        )
     if agg in ("SUM", "COUNT", "COUNT_DISTINCT", "AVG"):
         return "SUM"
     if agg == "MIN":
