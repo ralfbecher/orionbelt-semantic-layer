@@ -22,7 +22,7 @@
 [![Dremio](https://img.shields.io/badge/Dremio-31B48D.svg)](https://www.dremio.com)
 [![Databricks](https://img.shields.io/badge/Databricks-FF3621.svg?logo=databricks&logoColor=white)](https://www.databricks.com)
 
-OrionBelt Semantic Layer is an engine that transforms declarative YAML model definitions into optimized SQL for Postgres, Snowflake, ClickHouse, Dremio, and Databricks. It provides a unified abstraction over your data warehouse, so analysts and applications can query using business concepts (dimensions, measures, metrics) instead of raw SQL.
+OrionBelt Semantic Layer is an **API-first** engine that transforms declarative YAML model definitions into optimized SQL for Postgres, Snowflake, ClickHouse, Dremio, and Databricks. It provides a unified abstraction over your data warehouse, so analysts and applications can query using business concepts (dimensions, measures, metrics) instead of raw SQL. Every capability — model loading, validation, query compilation, and diagram generation — is exposed through a REST API and an MCP server, making OrionBelt easy to integrate into any application, workflow, or AI assistant.
 
 ## Features
 
@@ -307,7 +307,7 @@ uv run orionbelt-ui
 ```
 
 <p align="center">
-  <img src="docs/assets/er-sqlcompiler-dark.png" alt="SQL Compiler in Gradio UI (dark mode)" width="900">
+  <img src="docs/assets/ui-sqlcompiler-dark.png" alt="SQL Compiler in Gradio UI (dark mode)" width="900">
 </p>
 
 The UI provides:
@@ -322,7 +322,7 @@ The UI provides:
 The bundled example model (`examples/sem-layer.obml.yml`) is loaded automatically on startup.
 
 <p align="center">
-  <img src="docs/assets/er-diagram-dark.png" alt="ER Diagram in Gradio UI (dark mode)" width="900">
+  <img src="docs/assets/ui-er-diagram-dark.png" alt="ER Diagram in Gradio UI (dark mode)" width="900">
 </p>
 
 The ER diagram is also available via the REST API:
