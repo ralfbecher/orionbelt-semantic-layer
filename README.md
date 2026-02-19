@@ -1,3 +1,4 @@
+<!-- mcp-name: io.github.ralfbecher/orionbelt-semantic-layer -->
 <p align="center">
   <img src="docs/assets/ORIONBELT Logo.png" alt="OrionBelt Logo" width="400">
 </p>

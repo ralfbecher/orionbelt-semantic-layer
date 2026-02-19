@@ -21,6 +21,7 @@ from dataclasses import asdict
 from fastmcp import FastMCP
 from fastmcp.exceptions import ToolError
 
+from orionbelt import __version__
 from orionbelt.dialect import DialectRegistry
 from orionbelt.models.query import QueryObject, QuerySelect, UsePathName
 from orionbelt.service.model_store import ModelStore
@@ -818,6 +819,10 @@ def main() -> None:
     settings = Settings()
 
     logging.basicConfig(level=settings.log_level.upper())
+    logger.info(
+        "OrionBelt MCP Server v%s starting (transport=%s)",
+        __version__, settings.mcp_transport,
+    )
 
     global _session_manager  # noqa: PLW0603
     _session_manager = SessionManager(

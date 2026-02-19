@@ -339,6 +339,8 @@ def create_ui() -> None:
     """Build and launch the Gradio interface."""
     import gradio as gr
 
+    from orionbelt import __version__
+
     example_model = _load_example_model()
     dialects = _fetch_dialects(_DEFAULT_API_URL)
     default_dialect = dialects[0] if dialects else "postgres"
@@ -356,7 +358,7 @@ def create_ui() -> None:
         active_tab = gr.State(0)
 
         with gr.Row(elem_classes=["header-row"]):
-            gr.Markdown("## OrionBelt Semantic Layer")
+            gr.Markdown(f"## OrionBelt Semantic Layer <small>v{__version__}</small>")
             dark_btn = gr.Button("Light / Dark", size="sm", scale=0, min_width=120)
 
         with gr.Tabs() as tabs:
