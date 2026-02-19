@@ -1,5 +1,5 @@
 [project]
-name = "orionbelt"
+name = "orionbelt-semantic-layer"
 version = "0.3.0"
 description = "OrionBelt Semantic Layer - Compiles YAML semantic models into analytical SQL"
 license = {text = "Apache-2.0"}
