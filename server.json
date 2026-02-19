@@ -1,0 +1,20 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-09-29/server.schema.json",
+  "name": "io.github.ralfbecher/orionbelt-semantic-layer",
+  "description": "API-first semantic layer MCP server compiling YAML models into dialect-specific SQL",
+  "version": "0.3.0",
+  "repository": {
+    "url": "https://github.com/ralfbecher/orionbelt-semantic-layer",
+    "source": "github"
+  },
+  "packages": [
+    {
+      "registryType": "pypi",
+      "identifier": "orionbelt-semantic-layer",
+      "version": "0.3.0",
+      "transport": {
+        "type": "stdio"
+      }
+    }
+  ]
+}
