@@ -359,9 +359,9 @@ Cloud Run injects the `PORT` environment variable automatically. The container l
 
 A public demo deployment is available at:
 
-> **https://orionbelt-semantic-layer-mw2bqg2mva-ew.a.run.app**
+> **http://35.187.174.102**
 
-Interactive API docs: [Swagger UI](https://orionbelt-semantic-layer-mw2bqg2mva-ew.a.run.app/docs) | [ReDoc](https://orionbelt-semantic-layer-mw2bqg2mva-ew.a.run.app/redoc)
+Interactive API docs: [Swagger UI](http://35.187.174.102/docs) | [ReDoc](http://35.187.174.102/redoc)
 
 ### Run Integration Tests
 

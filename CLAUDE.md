@@ -4,108 +4,174 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**OrionBelt Semantic Layer** is a SaaS semantic layer product. It contains the architectural specification, a YAML-based model format (OBML), a JSON Schema for validation, and a full Python implementation.
+**OrionBelt Semantic Layer** is a SaaS semantic layer engine that compiles YAML semantic models (OBML format) into analytical SQL across 5 database dialects: Postgres, Snowflake, ClickHouse, Dremio, Databricks SQL. It exposes all capabilities through a REST API (FastAPI) and an MCP server (FastMCP).
 
-The product compiles YAML semantic models into analytical SQL across multiple database dialects (Postgres, Snowflake, ClickHouse, Dremio, Databricks SQL).
+## Commands
 
-## Repository Structure
+```bash
+# Install
+uv sync                           # main deps only
+uv sync --all-extras --all-groups # all deps (dev, docs, ui, type stubs)
 
-- `semantic-layer-spec.md` — Full v1 draft specification defining the entire system: semantic models, query language, SQL planning/generation, REST API, dialects, and persistence
-- `examples/sem-layer.obml.yml` — Example OBML semantic model (data objects, dimensions, measures, metrics with joins)
-- `schema/obml-schema.json` — JSON Schema (Draft-07) for validating OBML documents
-- `examples/examples.txt` — References to related projects
-- `src/orionbelt/` — Python implementation
-  - `api/` — FastAPI REST layer (app, routers, schemas, middleware, deps)
-  - `ast/` — SQL AST nodes, builder, visitor
-  - `compiler/` — Resolution, star schema planner, CFL planner, codegen pipeline
-  - `dialect/` — 5 SQL dialect implementations with registry
-  - `mcp/` — MCP server (FastMCP, 9 tools + 3 prompts)
-  - `models/` — Pydantic models (semantic, query, errors)
-  - `parser/` — YAML loader, reference resolver, validator
-  - `service/` — ModelStore (in-memory registry), SessionManager (TTL-scoped sessions)
-  - `settings.py` — Shared settings (pydantic-settings, reads .env)
+# Run servers
+uv run orionbelt-api              # REST API on :8000
+uv run orionbelt-mcp              # MCP server (stdio)
+MCP_TRANSPORT=http uv run orionbelt-mcp  # MCP server (HTTP on :9000)
+uv run orionbelt-ui               # Gradio UI (requires --extra ui)
 
-## Architecture (from spec)
+# Tests
+uv run pytest                     # all tests
+uv run pytest tests/unit/test_compiler.py  # single file
+uv run pytest tests/unit/test_compiler.py::TestClass::test_method  # single test
+uv run pytest -k "test_revenue"   # by name pattern
 
-The system follows a multi-phase compilation pipeline:
+# Quality
+uv run ruff check src/            # lint
+uv run ruff format src/ tests/    # format
+uv run mypy src/                  # type check
 
-1. **YAML Semantic Models** — Artifacts organized as `model.yaml` + `facts/`, `dimensions/`, `measures/`, `macros/`, `policies/` directories. Versioned with draft/publish workflow.
-2. **Query Language** — YAML-based analytical queries selecting dimensions (with time grain) and measures, with WHERE/HAVING/ORDER BY/LIMIT.
-3. **Resolution Phase** — Resolves expressions, selects fact tables, determines join paths, classifies filters, normalizes time.
-4. **SQL Planning** — Star Schema (single fact + dimension joins) or CFL (Composite Fact Layer: conformed dimensions, fact stitching via UNION ALL with NULL padding, aggregation outside). Snowflake uses UNION ALL BY NAME. Fanout protection enforced.
-5. **SQL AST** — Custom AST nodes (Select, From, Join, Where, GroupBy, Having, OrderBy, CTE, UnionAll, Expression, Function, Cast, Case). All SQL generated from AST only.
-6. **Dialect Rendering** — Plugin architecture with capability flags (`supports_cte`, `supports_qualify`, `supports_arrays`, `supports_window_filters`). Each dialect implements `compile(ast) -> sql`, `normalize_identifier`, `render_time_grain`, `render_cast`.
+# Docs
+uv sync --extra docs && uv run mkdocs serve  # docs on :8080
+
+# Docker / Cloud Run
+docker build -t orionbelt-api . && docker run -p 8080:8080 orionbelt-api
+./tests/docker/test_docker.sh                    # 15 local Docker tests
+./tests/cloudrun/test_cloudrun.sh <CLOUD_RUN_URL> # 30 live API tests
+```
+
+## Architecture — Compilation Pipeline
+
+```
+QueryObject + SemanticModel
+        │
+        ▼
+  ┌─────────────┐
+  │  Resolution  │  compiler/resolution.py — selects base object (fact table),
+  │              │  resolves refs, determines join paths, classifies filters,
+  │              │  sets requires_cfl=True when measures span multiple facts
+  └──────┬──────┘
+         │
+         ▼
+  ┌─────────────┐
+  │   Fanout    │  compiler/fanout.py — raises FanoutError if reversed
+  │  Detection  │  many-to-one joins would cause row multiplication
+  └──────┬──────┘
+         │
+         ▼
+  ┌─────────────┐
+  │   Planner   │  compiler/star.py — single-fact star schema (LEFT JOINs)
+  │             │  compiler/cfl.py  — multi-fact CFL (UNION ALL + NULL padding)
+  └──────┬──────┘
+         │
+         ▼
+  ┌─────────────┐
+  │ Total Wrap  │  compiler/total_wrap.py — AGG(x) OVER () window CTEs
+  │  (optional) │  for measures with total=True
+  └──────┬──────┘
+         │
+         ▼
+    SQL AST (frozen dataclasses in ast/nodes.py)
+         │
+         ▼
+  ┌─────────────┐
+  │  Codegen    │  compiler/codegen.py + dialect/*.py — AST → SQL string
+  └──────┬──────┘
+         │
+         ▼
+  ┌─────────────┐
+  │  Validate   │  compiler/validator.py — sqlglot post-gen check (non-blocking)
+  └─────────────┘
+```
+
+The pipeline is orchestrated by `CompilationPipeline` in `compiler/pipeline.py`.
+
+## Key Subsystems
+
+### Dialect Registry (`dialect/`)
+Dialects self-register via `@DialectRegistry.register` decorator. `dialect/__init__.py` imports all 5 modules to trigger registration. `DialectRegistry.get(name)` returns a fresh instance. Each dialect implements `quote_identifier()`, `render_time_grain()`, `render_cast()`, `current_date_sql()`, `date_add_sql()`, and `compile_expr()` (uses `match` on AST nodes).
+
+### SQL AST (`ast/nodes.py`)
+All nodes are frozen dataclasses. Key types: `Select`, `From`, `Join`, `CTE`, `UnionAll`, `ColumnRef`, `AliasedExpr`, `FunctionCall`, `BinaryOp`, `WindowFunction`, `CaseExpr`, `Cast`, `Literal`, `RawSQL`. The union type `Expr` covers all expression nodes.
+
+### Session Management (`service/`)
+`SessionManager` holds TTL-scoped sessions, each with its own `ModelStore`. Thread-safe via `threading.Lock`. Background daemon thread purges expired sessions. Default session (`__default__`) is auto-created for MCP stdio mode. REST API uses `api/deps.py` singleton pattern with FastAPI `lifespan` context manager. **Important:** `httpx.ASGITransport` does NOT trigger lifespan — tests must manually call `init_session_manager()`.
+
+### Parser (`parser/`)
+Two distinct validators exist — don't confuse them:
+- `parser/validator.py` — **SemanticValidator**: validates the OBML model (cycles, duplicate names, invalid refs)
+- `compiler/validator.py` — **SQL validator**: post-generation sqlglot syntax check (non-blocking warnings)
+
+`TrackedLoader` uses ruamel.yaml for line-faithful source positions. `ReferenceResolver` converts raw dict → `SemanticModel` + `ValidationResult`.
+
+### MCP Server (`mcp/server.py`)
+10 tools + 3 prompts + 1 resource. Uses FastMCP 2.x. In stdio mode, `_resolve_store(session_id)` auto-creates a `__default__` session. `ToolError` is imported from `fastmcp.exceptions` (not top-level `fastmcp`).
+
+## Pydantic v2 Alias Convention
+
+All models use `Field(alias="camelCase")` with `populate_by_name=True`. YAML/JSON uses camelCase aliases; Python code uses snake_case field names. Mypy only sees the Python names.
+
+Key aliases: `data_objects` → `"dataObjects"`, `join_to` → `"joinTo"`, `columns_from` → `"columnsFrom"`, `columns_to` → `"columnsTo"`, `path_name` → `"pathName"`, `use_path_names` → `"usePathNames"`, `abstract_type` → `"abstractType"`, `result_type` → `"resultType"`, `join_type` → `"joinType"`, `time_grain` → `"timeGrain"`. `DataColumnRef.view` and `Dimension.view` both alias to `"dataObject"`.
+
+When constructing models in Python, always use the Python field names (e.g., `data_type=`, `view=`), not the aliases.
 
 ## OBML Format
 
-The YAML model format uses these top-level sections:
-- **dataObjects** — Database tables/views with columns, data types, and join definitions (cardinality: many-to-one, one-to-one). Column names must be globally unique across all data objects. Joins support `secondary: true` with a `pathName` for multiple join paths between the same pair.
-- **dimensions** — Named dimensions referencing data object columns via `dataObject` + `column` pair, with optional timeGrain
-- **measures** — Aggregations with expressions using `{[Column]}` syntax (column names are globally unique), plus optional filters
-- **metrics** — Composite metrics combining measures via `{[Measure Name]}` references in the expression
+Top-level YAML keys: `version`, `dataObjects`, `dimensions`, `measures`, `metrics`.
 
-Columns are referenced by `dataObject` + `column` pair.
+- **Column names are globally unique** across all data objects — enables `{[Column]}` syntax in measure expressions
+- **Measure expressions** reference columns by name: `{[Column Name]}`
+- **Metric expressions** reference measures by name: `{[Measure Name]}`
+- **Secondary joins**: `secondary: true` + `pathName` on `DataObjectJoin` — unique per (source, target) pair
+- **Queries** use `select: {dimensions: [...], measures: [...]}` structure with optional `where`, `having`, `order_by`, `limit`, `usePathNames`
 
-### Semantic Validation
+## Test Structure
 
-The `SemanticValidator` (`parser/validator.py`) checks models for:
-- Duplicate identifiers and non-unique column names
-- Secondary join constraints (must have `pathName`; unique per source/target pair)
-- Cyclic joins (DFS cycle detection — secondary joins excluded)
-- Multipath joins (diamond patterns — secondary joins excluded; direct + indirect from same start node allowed as "canonical join" exception)
-- Unknown join targets, join columns, data object/column references
-- Unresolvable measure and dimension references
-
-## Session Management
-
-Both the REST API and MCP server use session-scoped state:
-
-- **SessionManager** (`service/session_manager.py`) — Manages TTL-scoped sessions, each holding its own `ModelStore`. Thread-safe via `threading.Lock`. Background daemon thread purges expired sessions.
-- **REST API sessions** — 10 endpoints under `/sessions` prefix: CRUD (create, list, get, delete), model management (load, list, describe, remove), validate, and query compilation.
-- **MCP sessions** — 9 tools (3 session tools + 6 model/query tools with optional `session_id`). In stdio mode, a default session is used automatically.
-- **Settings** — `SESSION_TTL_SECONDS` (default 1800), `SESSION_CLEANUP_INTERVAL` (default 60)
-- **DI pattern** — `api/deps.py` provides `get_session_manager()` for FastAPI `Depends`, initialized via `lifespan` context manager.
+- `tests/conftest.py` — shared fixtures: `sales_model` (resolved SemanticModel), `SAMPLE_MODEL_YAML` (inline 2-table model)
+- `tests/unit/` — 14 files covering AST, compiler, dialects, fanout, graph, MCP, parser, validator, etc.
+- `tests/integration/` — `test_api.py` (FastAPI via httpx ASGI), `test_compilation_e2e.py`
+- `tests/fixtures/sales_model/model.yaml` — full multi-table model used by fixtures
+- `tests/docker/test_docker.sh` — 15 endpoint tests against local Docker container
+- `tests/cloudrun/test_cloudrun.sh` — 30 endpoint tests against live Cloud Run deployment
+- pytest config: `asyncio_mode = "auto"`, `testpaths = ["tests"]`
 
 ## REST API Endpoints
 
-### Session-scoped (under `/sessions`)
-
 | Method | Path | Description |
 |--------|------|-------------|
+| GET | `/health` | Health check (returns version) |
+| GET | `/dialects` | List 5 dialects with capabilities |
 | POST | `/sessions` | Create session |
 | GET | `/sessions` | List sessions |
 | GET | `/sessions/{id}` | Get session info |
 | DELETE | `/sessions/{id}` | Close session |
-| POST | `/sessions/{id}/models` | Load model |
+| POST | `/sessions/{id}/models` | Load model (field: `model_yaml`) |
 | GET | `/sessions/{id}/models` | List models |
 | GET | `/sessions/{id}/models/{mid}` | Describe model |
 | DELETE | `/sessions/{id}/models/{mid}` | Remove model |
 | POST | `/sessions/{id}/validate` | Validate YAML |
 | POST | `/sessions/{id}/query/sql` | Compile query |
+| GET | `/sessions/{id}/models/{mid}/diagram/er` | Mermaid ER diagram |
 
-### Other endpoints
+## Configuration
 
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/dialects` | List dialects |
-| GET | `/health` | Health check |
+Environment variables or `.env` file (via pydantic-settings):
 
-## MCP Server
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PORT` | — | Cloud Run override (takes precedence) |
+| `API_SERVER_HOST` | `localhost` | REST API bind host |
+| `API_SERVER_PORT` | `8000` | REST API port |
+| `MCP_TRANSPORT` | `stdio` | MCP transport: `stdio`, `http`, `sse` |
+| `MCP_SERVER_HOST` / `MCP_SERVER_PORT` | `localhost` / `9000` | MCP bind |
+| `SESSION_TTL_SECONDS` | `1800` | Session timeout |
+| `SESSION_CLEANUP_INTERVAL` | `60` | Cleanup sweep interval |
+| `LOG_LEVEL` | `INFO` | Logging level |
 
-Entry point: `orionbelt-mcp` (9 tools, 3 prompts)
+## Tooling Notes
 
-**Session tools**: `create_session`, `close_session`, `list_sessions`
-**Model tools** (with optional `session_id`): `load_model`, `validate_model`, `describe_model`, `compile_query`, `list_models`
-**Stateless**: `list_dialects`
-
-## Implementation Constraints (from spec)
-
-- Python backend with FastAPI
-- Pydantic for validation
-- YAML parser with line fidelity (for error reporting with source positions)
-- Custom SQL AST (not string concatenation)
-- Multi-tenant with RBAC, OAuth2/API keys
-
-## Related Projects
-
-- See `examples/examples.txt` for references to related open-source projects
+- Python 3.12+, `from __future__ import annotations` everywhere
+- Ruff rules: `["E", "F", "I", "N", "UP", "B", "A", "SIM"]`, line-length 100
+- mypy strict mode with `pydantic.mypy` plugin; needs `types-networkx` and `types-PyYAML` stubs
+- `list` is invariant in mypy: `list[Literal]` != `list[Expr]` — annotate with `list[Expr]`
+- ruamel.yaml: `data.lc.key(key)` is a method call (not dict access); always wrap in try/except
+- `uv sync` without `--all-extras --all-groups` skips dev/docs/ui deps
