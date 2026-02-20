@@ -54,8 +54,9 @@ class CompilationPipeline:
         # Phase 1: Resolution
         resolved = self._resolver.resolve(query, model)
 
-        # Phase 1.5: Fanout detection
-        detect_fanout(resolved, model)
+        # Phase 1.5: Fanout detection (skip for CFL — each fact queried independently)
+        if not resolved.requires_cfl:
+            detect_fanout(resolved, model)
 
         # Phase 2: Planning (star schema or CFL)
         if resolved.requires_cfl:
