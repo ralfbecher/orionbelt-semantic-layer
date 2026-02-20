@@ -1,0 +1,162 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "/obml/query-schema",
+  "title": "OBML Query",
+  "description": "Query format for the OrionBelt Semantic Layer",
+  "definitions": {
+    "filterOperator": {
+      "description": "Filter operation code",
+      "enum": [
+        "equals",
+        "notequals",
+        "inlist",
+        "notinlist",
+        "contains",
+        "notcontains",
+        "gt",
+        "gte",
+        "lt",
+        "lte",
+        "set",
+        "notset",
+        "between",
+        "notbetween",
+        "like",
+        "notlike",
+        "=",
+        "!=",
+        ">",
+        ">=",
+        "<",
+        "<=",
+        "in",
+        "not_in",
+        "is_null",
+        "is_not_null",
+        "starts_with",
+        "ends_with",
+        "relative"
+      ]
+    },
+    "sortDirection": {
+      "description": "Sort direction",
+      "enum": ["asc", "desc"]
+    },
+    "queryFilter": {
+      "type": "object",
+      "description": "A filter condition referencing a dimension or measure by name",
+      "properties": {
+        "field": {
+          "type": "string",
+          "description": "Dimension or measure name"
+        },
+        "op": {
+          "$ref": "#/definitions/filterOperator"
+        },
+        "value": {
+          "description": "Filter value (type depends on operator)"
+        }
+      },
+      "required": ["field", "op"],
+      "additionalProperties": false
+    },
+    "queryOrderBy": {
+      "type": "object",
+      "description": "Order-by clause",
+      "properties": {
+        "field": {
+          "type": "string",
+          "description": "Dimension or measure name"
+        },
+        "direction": {
+          "$ref": "#/definitions/sortDirection",
+          "default": "asc"
+        }
+      },
+      "required": ["field"],
+      "additionalProperties": false
+    },
+    "querySelect": {
+      "type": "object",
+      "description": "The SELECT part: dimensions and measures to retrieve",
+      "properties": {
+        "dimensions": {
+          "type": "array",
+          "description": "List of dimension names. Use 'name:grain' notation for time grain (e.g. 'Order Date:month').",
+          "items": {
+            "type": "string"
+          }
+        },
+        "measures": {
+          "type": "array",
+          "description": "List of measure or metric names",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "usePathName": {
+      "type": "object",
+      "description": "Selects a named secondary join path for a specific (source, target) pair",
+      "properties": {
+        "source": {
+          "type": "string",
+          "description": "Source data object name"
+        },
+        "target": {
+          "type": "string",
+          "description": "Target data object name"
+        },
+        "pathName": {
+          "type": "string",
+          "description": "Name of the secondary join path"
+        }
+      },
+      "required": ["source", "target", "pathName"],
+      "additionalProperties": false
+    }
+  },
+  "type": "object",
+  "properties": {
+    "select": {
+      "$ref": "#/definitions/querySelect"
+    },
+    "where": {
+      "type": "array",
+      "description": "Filters applied before aggregation (WHERE clause)",
+      "items": {
+        "$ref": "#/definitions/queryFilter"
+      }
+    },
+    "having": {
+      "type": "array",
+      "description": "Filters applied after aggregation (HAVING clause)",
+      "items": {
+        "$ref": "#/definitions/queryFilter"
+      }
+    },
+    "order_by": {
+      "type": "array",
+      "description": "Ordering specification",
+      "items": {
+        "$ref": "#/definitions/queryOrderBy"
+      }
+    },
+    "limit": {
+      "type": "integer",
+      "description": "Maximum number of rows to return",
+      "minimum": 1
+    },
+    "usePathNames": {
+      "type": "array",
+      "description": "Override default join paths with named secondary join paths",
+      "items": {
+        "$ref": "#/definitions/usePathName"
+      }
+    }
+  },
+  "required": ["select"],
+  "additionalProperties": false
+}

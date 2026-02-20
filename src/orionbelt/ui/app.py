@@ -23,78 +23,85 @@ select:
 limit: 100
 """
 
-_CHROME_PX = 160  # header + settings + button + gaps
-
-_CSS = f"""\
+_CSS = """\
 /* ── Layout: full-width, fit viewport ── */
-.gradio-container {{
+.gradio-container {
   max-width: 100% !important;
-  padding: 8px 16px !important;
-}}
+  padding: 4px 16px !important;
+}
 /* compact header */
-.header-row {{ min-height: 0 !important; padding: 0 !important; }}
-.header-row h2 {{ margin: 0 !important; }}
+.header-row { min-height: 0 !important; padding: 0 !important; }
+.header-row h2 { margin: 0 !important; }
 /* compact settings row */
-.settings-row {{ min-height: 0 !important; }}
+.settings-row { min-height: 0 !important; }
 
-/* Proportional editor heights — subtract fixed chrome, split remainder.
-   Editors (60 %) and SQL output (40 %) shrink together. */
-.code-editor .cm-editor {{
-  max-height: calc((100dvh - {_CHROME_PX}px) * 0.55) !important;
-}}
-.sql-output .cm-editor {{
-  max-height: calc((100dvh - {_CHROME_PX}px) * 0.38) !important;
-}}
+/* Code editors + SQL output: viewport-percentage heights */
+.code-editor .cm-editor { max-height: 45dvh !important; }
+.sql-output .cm-editor { max-height: 20dvh !important; }
 
-/* purple primary button */
-.purple-btn {{
+/* purple primary button — compact */
+.purple-btn {
   background: linear-gradient(135deg, #7c3aed, #9333ea) !important;
   border: none !important;
   color: white !important;
-}}
-.purple-btn:hover {{
+  padding-top: 6px !important;
+  padding-bottom: 6px !important;
+  margin: 0 !important;
+}
+.purple-btn:hover {
   background: linear-gradient(135deg, #6d28d9, #7c3aed) !important;
-}}
+}
 
-/* ── YAML / SQL syntax highlighting (dark-mode optimised) ──
-   Uses high-specificity selectors to override any built-in CM theme.
-   Class names from CodeMirror 5 legacy YAML mode bundled in Gradio:
-     cm-atom=keys  cm-string=values  cm-comment  cm-number
-     cm-keyword=booleans  cm-meta=structural  cm-def=doc-markers */
+/* ── YAML / SQL syntax highlighting (dark-mode optimised) ── */
+.cm-editor .cm-atom     { color: #7dcfff !important; }
+.cm-editor .cm-string   { color: #ce9178 !important; }
+.cm-editor .cm-comment  { color: #6a9955 !important; font-style: italic; }
+.cm-editor .cm-number   { color: #b5cea8 !important; }
+.cm-editor .cm-keyword  { color: #c586c0 !important; }
+.cm-editor .cm-meta     { color: #858585 !important; }
+.cm-editor .cm-def      { color: #9cdcfe !important; }
+.cm-editor .cm-variable { color: #4ec9b0 !important; }
+.sql-output .cm-editor .cm-keyword { color: #569cd6 !important; }
+.sql-output .cm-editor .cm-builtin { color: #4ec9b0 !important; }
 
-/* keys / property names — cyan */
-.cm-editor .cm-atom     {{ color: #7dcfff !important; }}
-/* string values (data types, source names) — warm orange */
-.cm-editor .cm-string   {{ color: #ce9178 !important; }}
-/* comments — bright green, italic */
-.cm-editor .cm-comment  {{ color: #6a9955 !important; font-style: italic; }}
-/* numbers — soft green */
-.cm-editor .cm-number   {{ color: #b5cea8 !important; }}
-/* booleans (true/false/yes/no) — purple */
-.cm-editor .cm-keyword  {{ color: #c586c0 !important; }}
-/* structural chars  :  -  |  >  [ ] — muted */
-.cm-editor .cm-meta     {{ color: #858585 !important; }}
-/* document markers --- ... — muted blue */
-.cm-editor .cm-def      {{ color: #9cdcfe !important; }}
-/* anchors & aliases — light teal */
-.cm-editor .cm-variable {{ color: #4ec9b0 !important; }}
+/* ── Upload icon button ── */
+.ob-upload-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--body-text-color, #fff);
+  padding: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.15s ease;
+}
+.ob-upload-btn:hover { opacity: 0.7; }
 
-/* SQL output: make keywords pop */
-.sql-output .cm-editor .cm-keyword {{ color: #569cd6 !important; }}
-.sql-output .cm-editor .cm-builtin {{ color: #4ec9b0 !important; }}
+/* Bridge textboxes: rendered but removed from layout flow */
+.ob-bridge {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  overflow: hidden !important;
+  clip: rect(0,0,0,0) !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  border: 0 !important;
+}
 
 /* ── ER Diagram tab ── */
-#er-diagram {{
+#er-diagram {
   overflow: auto;
   max-height: calc(100dvh - 220px);
   border: 1px solid var(--border-color-primary);
   border-radius: 8px;
   padding: 8px;
-}}
-#er-diagram svg {{
+}
+#er-diagram svg {
   transform-origin: top left;
   transition: transform 0.15s ease;
-}}
+}
 """
 
 _DARK_MODE_INIT_JS = """
@@ -129,6 +136,83 @@ _DETECT_THEME_JS = """
     return args;
 }
 """
+
+# SVG icon: upload (Lucide style, matches Gradio's 16x16 toolbar icons)
+_UPLOAD_SVG = (
+    '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"'
+    ' viewBox="0 0 24 24" fill="none" stroke="currentColor"'
+    ' stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+    '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>'
+    '<polyline points="17 8 12 3 7 8"/>'
+    '<line x1="12" y1="3" x2="12" y2="15"/></svg>'
+)
+
+_INJECT_UPLOAD_JS = (
+    """
+() => {
+    const SVG = '"""
+    + _UPLOAD_SVG.replace("'", "\\'")
+    + """';
+    function setBridge(bridgeId, content) {
+        var el = document.getElementById(bridgeId);
+        if (!el) return;
+        var ta = el.querySelector('textarea') || el.querySelector('input');
+        if (!ta) return;
+        ta.value = content;
+        ta.dispatchEvent(new Event('input', {bubbles: true}));
+        ta.dispatchEvent(new Event('change', {bubbles: true}));
+    }
+
+    function addUploadBtn(codeId, bridgeId) {
+        const root = document.getElementById(codeId);
+        if (!root || root.querySelector('.ob-upload-btn')) return;
+
+        /* Find the toolbar: locate an SVG-icon button (download/copy) */
+        /* and use its parent as the toolbar container.               */
+        var svgInBtn = root.querySelector('button svg');
+        if (!svgInBtn) return;
+        var toolbar = svgInBtn.closest('button').parentElement;
+
+        const btn = document.createElement('button');
+        btn.className = 'ob-upload-btn';
+        btn.title = 'Load YAML file';
+        btn.innerHTML = SVG;
+
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            var fi = document.createElement('input');
+            fi.type = 'file';
+            fi.accept = '.yaml,.yml';
+            fi.addEventListener('change', function() {
+                var f = fi.files[0];
+                if (!f) return;
+                var reader = new FileReader();
+                reader.addEventListener('load', function() {
+                    setBridge(bridgeId, reader.result);
+                });
+                reader.readAsText(f);
+            });
+            fi.click();
+        });
+
+        /* Prepend to toolbar — places it left of download/copy */
+        toolbar.style.display = 'flex';
+        toolbar.style.flexWrap = 'nowrap';
+        toolbar.style.alignItems = 'center';
+        toolbar.insertBefore(btn, toolbar.firstChild);
+    }
+
+    /* Retry a few times — components render asynchronously. */
+    var attempts = 0;
+    var iv = setInterval(function() {
+        addUploadBtn('ob-model', 'ob-model-bridge');
+        addUploadBtn('ob-query', 'ob-query-bridge');
+        if (++attempts >= 10) clearInterval(iv);
+    }, 300);
+}
+"""
+)
 
 
 def _format_sql(sql: str) -> str:
@@ -380,8 +464,8 @@ def create_ui() -> None:
                     model_input = gr.Code(
                         value=example_model,
                         language="yaml",
-                        label="OBML Model (YAML)",
-                        lines=15,
+                        label="OBML Model (YAML) \u2014 schema/obml-schema.json",
+                        lines=11,
                         scale=3,
                         interactive=True,
                         elem_classes=["code-editor"],
@@ -390,13 +474,36 @@ def create_ui() -> None:
                     query_input = gr.Code(
                         value=_DEFAULT_QUERY,
                         language="yaml",
-                        label="Query (YAML)",
-                        lines=15,
+                        label="Query (YAML) \u2014 schema/query-schema.json",
+                        lines=11,
                         scale=2,
                         interactive=True,
                         elem_classes=["code-editor"],
                         elem_id="ob-query",
                     )
+
+                # Hidden textboxes: JS writes file content here → Python
+                # forwards to Code editors (bridges JS↔Gradio state).
+                model_bridge = gr.Textbox(
+                    elem_id="ob-model-bridge",
+                    container=False,
+                    elem_classes=["ob-bridge"],
+                )
+                query_bridge = gr.Textbox(
+                    elem_id="ob-query-bridge",
+                    container=False,
+                    elem_classes=["ob-bridge"],
+                )
+                model_bridge.change(
+                    fn=lambda x: x,
+                    inputs=[model_bridge],
+                    outputs=[model_input],
+                )
+                query_bridge.change(
+                    fn=lambda x: x,
+                    inputs=[query_bridge],
+                    outputs=[query_input],
+                )
 
                 compile_btn = gr.Button(
                     "Compile SQL", variant="primary", elem_classes=["purple-btn"]
@@ -406,7 +513,7 @@ def create_ui() -> None:
                     language="sql",
                     label="Generated SQL",
                     interactive=False,
-                    lines=10,
+                    lines=3,
                     elem_classes=["sql-output"],
                 )
 
@@ -518,7 +625,7 @@ def create_ui() -> None:
             fn=_restore,
             inputs=[saved_model, saved_query, saved_api, saved_dialect, saved_tab, saved_zoom],
             outputs=[model_input, query_input, api_url, dialect, tabs, zoom_slider],
-        )
+        ).then(fn=None, js=_INJECT_UPLOAD_JS)
 
     demo.launch(css=_CSS, js=_DARK_MODE_INIT_JS)
 

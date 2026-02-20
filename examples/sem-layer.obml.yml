@@ -1,4 +1,3 @@
----
 # yaml-language-server: $schema=../schema/obml-schema.json
 version: 1.0
 
@@ -154,31 +153,31 @@ dataObjects:
     schema: PUBLIC
     columns:
       Sales ID:
-        code:  sales_id
+        code: sales_id
         abstractType: string
       Sales Date:
-        code:  sales_date
+        code: sales_date
         abstractType: date
       Sales YM:
-        code:  sales_ym
+        code: sales_ym
         abstractType: string
       Sales Client:
-        code:  sales_client
+        code: sales_client
         abstractType: string
       Sales Product:
         code: product
         abstractType: string
       Sales Employee:
-        code:  sales_emp_id
+        code: sales_emp_id
         abstractType: string
       Sales Payment Type:
-        code:  sales_payment_type
+        code: sales_payment_type
         abstractType: string
       Sales Quantity:
-        code:  sales_quantity
+        code: sales_quantity
         abstractType: int
       Sales Amount:
-        code:  sales_amount
+        code: sales_amount
         abstractType: float
       Sales Notes:
         code: notes

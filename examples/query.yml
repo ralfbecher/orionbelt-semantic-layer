@@ -1,0 +1,11 @@
+# yaml-language-server: $schema=../schema/query-schema.json
+
+select:
+  dimensions:
+    - Product Name
+    - Client Name
+  measures:
+    - Total Sales
+    - Total Returns
+    - Return Rate
+limit: 100
