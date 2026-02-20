@@ -26,6 +26,12 @@ class Settings(BaseSettings):
     # REST API
     api_server_host: str = "localhost"
     api_server_port: int = 8000
+    port: int | None = None  # Cloud Run injects PORT; takes precedence over api_server_port
+
+    @property
+    def effective_port(self) -> int:
+        """Return the port to listen on (Cloud Run PORT takes precedence)."""
+        return self.port if self.port is not None else self.api_server_port
 
     # MCP
     mcp_transport: Literal["stdio", "http", "sse"] = "stdio"

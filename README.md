@@ -14,6 +14,7 @@
 [![Gradio](https://img.shields.io/badge/Gradio-5.0+-F97316.svg?logo=gradio&logoColor=white)](https://www.gradio.app)
 [![FastMCP](https://img.shields.io/badge/FastMCP-2.14+-8A2BE2)](https://gofastmcp.com)
 [![sqlglot](https://img.shields.io/badge/sqlglot-26.0+-4B8BBE.svg)](https://github.com/tobymao/sqlglot)
+[![Docker](https://img.shields.io/badge/Docker-ready-2496ED.svg?logo=docker&logoColor=white)](https://docs.docker.com)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://docs.astral.sh/ruff/)
 [![mypy](https://img.shields.io/badge/type--checked-mypy-blue.svg)](https://mypy-lang.org)
 
@@ -333,6 +334,39 @@ The ER diagram is also available via the REST API:
 curl -s "http://127.0.0.1:8000/sessions/{session_id}/models/{model_id}/diagram/er?theme=default" | jq .mermaid
 ```
 
+## Docker
+
+### Build and Run
+
+```bash
+docker build -t orionbelt-api .
+docker run -p 8080:8080 orionbelt-api
+```
+
+The API is available at `http://localhost:8080`. Sessions are ephemeral (in-memory, lost on container restart).
+
+### Deploy to Google Cloud Run
+
+```bash
+gcloud builds submit --tag gcr.io/YOUR_PROJECT/orionbelt-api
+gcloud run deploy orionbelt-api \
+  --image gcr.io/YOUR_PROJECT/orionbelt-api \
+  --region europe-west1 \
+  --allow-unauthenticated
+```
+
+Cloud Run injects the `PORT` environment variable automatically. The container listens on it (default 8080).
+
+### Run Integration Tests
+
+```bash
+# Build image and run 15 endpoint tests
+./tests/docker/test_docker.sh
+
+# Skip build (use existing image)
+./tests/docker/test_docker.sh --no-build
+```
+
 ## Configuration
 
 Configuration is via environment variables or a `.env` file. See `.env.example` for all options:
@@ -342,6 +376,7 @@ Configuration is via environment variables or a `.env` file. See `.env.example` 
 | `LOG_LEVEL`                | `INFO`      | Logging level                          |
 | `API_SERVER_HOST`          | `localhost` | REST API bind host                     |
 | `API_SERVER_PORT`          | `8000`      | REST API bind port                     |
+| `PORT`                     | —           | Override port (Cloud Run sets this)    |
 | `MCP_TRANSPORT`            | `stdio`     | MCP transport (`stdio`, `http`, `sse`) |
 | `MCP_SERVER_HOST`          | `localhost` | MCP server host (http/sse only)        |
 | `MCP_SERVER_PORT`          | `9000`      | MCP server port (http/sse only)        |

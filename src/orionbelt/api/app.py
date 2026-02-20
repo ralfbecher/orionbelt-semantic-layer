@@ -71,13 +71,13 @@ def main() -> None:
     logger = logging.getLogger("orionbelt.api")
     logger.info(
         "OrionBelt API Server v%s starting (host=%s, port=%d)",
-        __version__, settings.api_server_host, settings.api_server_port,
+        __version__, settings.api_server_host, settings.effective_port,
     )
 
     uvicorn.run(
         "orionbelt.api.app:create_app",
         factory=True,
         host=settings.api_server_host,
-        port=settings.api_server_port,
+        port=settings.effective_port,
         log_level=settings.log_level.lower(),
     )

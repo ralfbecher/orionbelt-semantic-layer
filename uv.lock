@@ -1666,7 +1666,7 @@ wheels = [
 ]
 
 [[package]]
-name = "orionbelt"
+name = "orionbelt-semantic-layer"
 version = "0.3.0"
 source = { editable = "." }
 dependencies = [
