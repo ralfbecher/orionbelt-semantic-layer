@@ -9,12 +9,13 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
 # Install dependencies first (cached layer — only reruns when pyproject.toml/uv.lock change)
 COPY pyproject.toml uv.lock README.md ./
-RUN uv sync --no-dev --no-install-project --frozen
+RUN uv sync --no-dev --extra ui --no-install-project --frozen
 
 # Copy source and install the project itself
 COPY src/ src/
 COPY schema/ schema/
-RUN uv sync --no-dev --no-editable --frozen
+COPY examples/ examples/
+RUN uv sync --no-dev --extra ui --no-editable --frozen
 
 # --- Runtime stage: minimal image ---
 FROM python:3.12-slim
@@ -30,6 +31,9 @@ ENV PATH="/app/.venv/bin:$PATH"
 
 # Copy schema (needed at runtime for validation)
 COPY --from=builder /app/schema schema/
+
+# Copy examples (needed by Gradio UI for example model)
+COPY --from=builder /app/examples examples/
 
 # Cloud Run injects PORT (default 8080)
 ENV PORT=8080 \

@@ -65,12 +65,13 @@ uv run pytest
 ### Start the REST API Server
 
 ```bash
+uv sync --extra ui   # include Gradio UI (optional)
 uv run orionbelt-api
 # or with reload:
 uv run uvicorn orionbelt.api.app:create_app --factory --reload
 ```
 
-The API is available at `http://127.0.0.1:8000`. Interactive docs at `/docs` (Swagger UI) and `/redoc`.
+The API is available at `http://127.0.0.1:8000`. Interactive docs at `/docs` (Swagger UI) and `/redoc`. When the `ui` extra is installed, the Gradio UI is available at `/ui`.
 
 ### Start the MCP Server
 
@@ -297,14 +298,28 @@ In stdio mode (default), a shared default session is used automatically. In HTTP
 
 OrionBelt includes an interactive web UI built with [Gradio](https://www.gradio.app/) for exploring and testing the compilation pipeline visually.
 
+### Co-hosted with REST API (recommended)
+
+When the `ui` extra is installed, the Gradio UI is automatically mounted at `/ui` on the REST API server — no separate process needed:
+
 ```bash
-# Install UI dependencies
+uv sync --extra ui
+uv run orionbelt-api
+# → API at http://localhost:8000
+# → UI  at http://localhost:8000/ui
+```
+
+### Standalone mode
+
+You can also run the UI as a separate process (requires the REST API to be running):
+
+```bash
 uv sync --extra ui
 
 # Start the REST API (required backend)
 uv run orionbelt-api &
 
-# Launch the Gradio UI
+# Launch the Gradio UI (standalone on port 7860)
 uv run orionbelt-ui
 ```
 
@@ -343,7 +358,7 @@ docker build -t orionbelt-api .
 docker run -p 8080:8080 orionbelt-api
 ```
 
-The API is available at `http://localhost:8080`. Sessions are ephemeral (in-memory, lost on container restart).
+The API is available at `http://localhost:8080` and the Gradio UI at `http://localhost:8080/ui`. Sessions are ephemeral (in-memory, lost on container restart).
 
 ### Deploy to Google Cloud Run
 
@@ -361,7 +376,7 @@ A public demo deployment is available at:
 
 > **http://35.187.174.102**
 
-Interactive API docs: [Swagger UI](http://35.187.174.102/docs) | [ReDoc](http://35.187.174.102/redoc)
+Interactive API docs: [Swagger UI](http://35.187.174.102/docs) | [ReDoc](http://35.187.174.102/redoc) | [Gradio UI](http://35.187.174.102/ui)
 
 ### Run Integration Tests
 

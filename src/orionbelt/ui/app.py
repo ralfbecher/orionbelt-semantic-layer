@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import contextlib
+from typing import Any
 
 import httpx
 import sqlparse
@@ -419,14 +420,24 @@ def compile_sql(model_yaml: str, query_yaml: str, dialect: str, api_url: str) ->
                 httpx.Client(base_url=api_url, timeout=5).delete(f"/sessions/{session_id}")
 
 
-def create_ui() -> None:
-    """Build and launch the Gradio interface."""
+def create_blocks(default_api_url: str | None = None) -> Any:
+    """Build and return a ``gr.Blocks`` instance (without launching).
+
+    Parameters
+    ----------
+    default_api_url:
+        Override the default API URL shown in the UI.  When the UI is
+        co-hosted inside FastAPI (mounted at ``/ui``), this is set to the
+        local server address so the UI talks to the same process.
+    """
     import gradio as gr
 
     from orionbelt import __version__
 
+    cohosted = default_api_url is not None
+    api_base = default_api_url or _DEFAULT_API_URL
     example_model = _load_example_model()
-    dialects = _fetch_dialects(_DEFAULT_API_URL)
+    dialects = _fetch_dialects(api_base)
     default_dialect = dialects[0] if dialects else "postgres"
 
     with gr.Blocks(
@@ -435,7 +446,7 @@ def create_ui() -> None:
         # ── Browser-persisted state (localStorage via Gradio BrowserState) ──
         saved_model = gr.BrowserState("", storage_key="ob_model_yaml")
         saved_query = gr.BrowserState("", storage_key="ob_query_yaml")
-        saved_api = gr.BrowserState(_DEFAULT_API_URL, storage_key="ob_api_url")
+        saved_api = gr.BrowserState(api_base, storage_key="ob_api_url")
         saved_dialect = gr.BrowserState(default_dialect, storage_key="ob_dialect")
         saved_tab = gr.BrowserState(0, storage_key="ob_active_tab")
         saved_zoom = gr.BrowserState(100, storage_key="ob_zoom")
@@ -455,9 +466,10 @@ def create_ui() -> None:
                         scale=1,
                     )
                     api_url = gr.Textbox(
-                        value=_DEFAULT_API_URL,
+                        value=api_base,
                         label="API Base URL",
                         scale=2,
+                        visible=not cohosted,
                     )
 
                 with gr.Row(equal_height=True):
@@ -611,11 +623,11 @@ def create_ui() -> None:
         )
 
         # ── On page load: restore from BrowserState → visible components ──
-        def _restore(sm, sq, sa, sd, st, sz):
+        def _restore(sm, sq, sa, sd, st, sz):  # type: ignore[no-untyped-def]
             return (
                 sm if sm else example_model,
                 sq if sq else _DEFAULT_QUERY,
-                sa if sa else _DEFAULT_API_URL,
+                sa if sa else api_base,
                 sd if sd else default_dialect,
                 gr.Tabs(selected=st if st else 0),
                 sz if sz else 100,
@@ -627,7 +639,12 @@ def create_ui() -> None:
             outputs=[model_input, query_input, api_url, dialect, tabs, zoom_slider],
         ).then(fn=None, js=_INJECT_UPLOAD_JS)
 
-    demo.launch(css=_CSS, js=_DARK_MODE_INIT_JS)
+    return demo
+
+
+def create_ui() -> None:
+    """Build and launch the Gradio interface (standalone mode)."""
+    create_blocks().launch(css=_CSS, js=_DARK_MODE_INIT_JS)
 
 
 def main() -> None:

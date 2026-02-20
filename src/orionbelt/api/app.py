@@ -60,6 +60,20 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def health() -> HealthResponse:
         return HealthResponse(status="ok", version=__version__)
 
+    # Mount Gradio UI at /ui when the 'ui' extra is installed
+    try:
+        import gradio as gr
+
+        from orionbelt.ui.app import _CSS, _DARK_MODE_INIT_JS, create_blocks
+
+        api_url = f"http://localhost:{settings.effective_port}"
+        demo = create_blocks(default_api_url=api_url)
+        app = gr.mount_gradio_app(
+            app, demo, path="/ui", css=_CSS, js=_DARK_MODE_INIT_JS
+        )
+    except ImportError:
+        pass  # gradio not installed — skip UI mount
+
     return app
 
 

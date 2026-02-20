@@ -26,7 +26,6 @@ site/
 .github/
 tests/
 docs/
-examples/
 mkdocs.yml
 CLAUDE.md
 LICENSE
