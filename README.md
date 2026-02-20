@@ -357,6 +357,12 @@ gcloud run deploy orionbelt-api \
 
 Cloud Run injects the `PORT` environment variable automatically. The container listens on it (default 8080).
 
+A public demo deployment is available at:
+
+> **https://orionbelt-semantic-layer-mw2bqg2mva-ew.a.run.app**
+
+Interactive API docs: [Swagger UI](https://orionbelt-semantic-layer-mw2bqg2mva-ew.a.run.app/docs) | [ReDoc](https://orionbelt-semantic-layer-mw2bqg2mva-ew.a.run.app/redoc)
+
 ### Run Integration Tests
 
 ```bash
@@ -365,6 +371,9 @@ Cloud Run injects the `PORT` environment variable automatically. The container l
 
 # Skip build (use existing image)
 ./tests/docker/test_docker.sh --no-build
+
+# Run 30 tests against a live Cloud Run deployment
+./tests/cloudrun/test_cloudrun.sh https://orionbelt-semantic-layer-mw2bqg2mva-ew.a.run.app
 ```
 
 ## Configuration
