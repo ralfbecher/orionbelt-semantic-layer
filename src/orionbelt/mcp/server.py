@@ -76,7 +76,7 @@ dataObjects:
     columns:
       Order ID:                   # column name — must be unique within this data object
         code: ID                  # physical column name
-        abstractType: string      # string | int | float | date | timestamp | boolean
+        abstractType: string      # see abstractType values below
       Amount:
         code: AMOUNT
         abstractType: float
@@ -109,7 +109,7 @@ measures:
       - dataObject: Orders
         column: Amount
     resultType: float
-    aggregation: sum              # sum | count | count_distinct | avg | min | max
+    aggregation: sum              # see aggregation values below
     total: false                  # optional: use total (unfiltered) value in metrics
 
   Profit:                         # expression-based measure
@@ -141,13 +141,24 @@ metrics:
     expression: '{[Profit]} / {[Total Revenue]}'  # {[Measure Name]} syntax
 ```
 
+## abstractType Values
+
+string, int, float, date, time, time_tz, timestamp,
+timestamp_tz, boolean, json
+
+## Aggregation Values
+
+sum, count, count_distinct, avg, min, max,
+any_value, median, mode, listagg
+
 ## Key Rules
 
 1. **Column names are unique within each data object**.
    Dimensions, measures, and metrics must be unique across the model.
 2. Measure expressions use `{[DataObject].[Column]}` to reference columns.
 3. Metric expressions use `{[Measure Name]}` to reference measures by name.
-4. Joins are defined on fact tables pointing to dimension tables (many-to-one or one-to-one).
+4. Joins are defined on fact tables pointing to dimension tables \
+(many-to-one or one-to-one).
 5. A dimension references exactly one `dataObject` + `column` pair.
 
 ## Complete Minimal Example
@@ -329,7 +340,7 @@ def load_model(model_yaml: str, session_id: str | None = None) -> str:
             columns:
               <Column Name>:         # unique within this data object
                 code: <COLUMN>
-                abstractType: string # string|int|float|date|timestamp|boolean
+                abstractType: string # see OBML reference for all types
             joins:                   # optional, on fact tables
               - joinType: many-to-one
                 joinTo: <Target>
@@ -346,7 +357,7 @@ def load_model(model_yaml: str, session_id: str | None = None) -> str:
               - dataObject: <Name>
                 column: <Column Name>
             resultType: float
-            aggregation: sum         # sum|count|count_distinct|avg|min|max
+            aggregation: sum         # see OBML reference for all types
         metrics:
           <Metric Name>:
             expression: '{[Measure A]} / {[Measure B]}'
@@ -506,9 +517,10 @@ def compile_query(
     ``having``, ``order_by``, ``limit``, ``usePathNames``.
 
     Use ``describe_model`` first to discover available dimension and measure
-    names.  Filter operators: equals, notequals, gt, gte, lt, lte, in,
-    not_in, contains, like, starts_with, ends_with, between, is_null,
-    is_not_null.
+    names.  Filter operators: equals, notequals, gt, gte, lt, lte, inlist,
+    notinlist, in, not_in, contains, notcontains, like, notlike, starts_with,
+    ends_with, between, notbetween, set, notset, is_null, is_not_null,
+    relative.
 
     For secondary joins, pass ``use_path_names`` (simple mode) or include
     ``usePathNames`` in query_json (full mode). Each item has ``source``,
@@ -637,7 +649,7 @@ dataObjects:
     columns:
       <Column Name>:              # unique within this data object
         code: <COLUMN>            # physical column name
-        abstractType: string      # string | int | float | date | timestamp | boolean | ...
+        abstractType: string      # see abstractType values below
     joins:                        # optional — define on fact tables
       - joinType: many-to-one     # many-to-one | one-to-one
         joinTo: <TargetObject>
@@ -659,7 +671,7 @@ measures:
       - dataObject: <ObjectName>
         column: <Column Name>
     resultType: float
-    aggregation: sum               # sum | count | count_distinct | avg | min | max
+    aggregation: sum               # see aggregation values below
     expression: '{[Orders].[Amount]} - {[Orders].[Cost]}'  # {[DataObject].[Column]}
     filter:                        # optional measure-level filter
       column:
@@ -674,6 +686,16 @@ metrics:
   <Metric Name>:
     expression: '{[Measure A]} / {[Measure B]}'   # {[Measure Name]} syntax
 ```
+
+## abstractType Values
+
+string, int, float, date, time, time_tz, timestamp,
+timestamp_tz, boolean, json
+
+## Aggregation Values
+
+sum, count, count_distinct, avg, min, max,
+any_value, median, mode, listagg
 
 ## Key Rules
 
@@ -742,7 +764,7 @@ compile_query(
 - Set: `in`, `not_in`, `inlist`, `notinlist`
 - Null: `is_null`, `is_not_null`, `set`, `notset`
 - String: `contains`, `notcontains`, `like`, `notlike`, `starts_with`, `ends_with`
-- Range: `between`, `notbetween`
+- Range: `between`, `notbetween`, `relative`
 
 ## Supported Dialects
 
@@ -767,38 +789,67 @@ def debug_validation() -> str:
 - `YAML_PARSE_ERROR`: Invalid YAML syntax.
   Fix: Check indentation, quoting, colons.
 - `DATA_OBJECT_PARSE_ERROR`: Cannot parse a data object.
-  Fix: Check required fields (code, database, schema).
+  Fix: Check required fields (code, database, schema, columns).
+- `DIMENSION_PARSE_ERROR`: Cannot parse a dimension definition.
+  Fix: Check required fields (dataObject, column, resultType).
+- `MEASURE_PARSE_ERROR`: Cannot parse a measure definition.
+  Fix: Check required fields (aggregation, resultType) and either columns or expression.
+- `METRIC_PARSE_ERROR`: Cannot parse a metric definition.
+  Fix: Check required field (expression).
 
 ## Reference Errors
 
-- `UNKNOWN_DATA_OBJECT`: References non-existent object.
+- `UNKNOWN_DATA_OBJECT`: References non-existent data object.
   Fix: Check spelling; suggestions are included.
 - `UNKNOWN_COLUMN`: Column name not found in data object.
   Fix: Check column name spelling within the referenced data object.
-- `UNKNOWN_MEASURE`: Metric references missing measure.
-  Fix: Check `{[Measure Name]}` in metric expression.
+- `UNKNOWN_DATA_OBJECT_IN_EXPRESSION`: Measure expression `{[DataObject].[Column]}` \
+references unknown data object.
+  Fix: Check data object name in the expression.
+- `UNKNOWN_COLUMN_IN_EXPRESSION`: Measure expression `{[DataObject].[Column]}` \
+references unknown column.
+  Fix: Check column name in the expression.
+- `UNKNOWN_MEASURE_REF`: Metric expression `{[Measure Name]}` references unknown measure.
+  Fix: Check measure name in the expression.
+- `UNKNOWN_MEASURE`: Query references missing measure.
+  Fix: Check measure name in query select.
 - `UNKNOWN_DIMENSION`: Query references missing dimension.
   Fix: Check dimension name in query select.
+- `UNKNOWN_JOIN_TARGET`: `joinTo` references unknown data object.
+  Fix: Check `joinTo` value matches a data object name.
+- `UNKNOWN_JOIN_COLUMN`: Join column not found in data object.
+  Fix: Check `columnsFrom`/`columnsTo` column names exist.
+- `UNKNOWN_PATH_NAME`: `usePathNames` references non-existent path.
+  Fix: Check source, target, and pathName match a secondary join.
 
 ## Semantic Errors
 
-- `DUPLICATE_NAME`: Duplicate dimension/measure/metric name.
-  Fix: Dimensions, measures, and metrics must have unique names across the model.
+- `DUPLICATE_IDENTIFIER`: Duplicate name across data objects, dimensions, measures, or metrics.
+  Fix: All names must be unique across the model.
 - `CYCLIC_JOIN`: Join graph contains a cycle.
   Fix: Remove circular join references.
-- `INVALID_JOIN_TARGET`: joinTo points to unknown object.
-  Fix: Check `joinTo` value.
-- `INVALID_JOIN_COLUMNS`: Join columns don't match.
-  Fix: Check `columnsFrom`/`columnsTo` exist.
+- `MULTIPATH_JOIN`: Multiple join paths between two data objects.
+  Fix: Make join graph unambiguous, or use secondary joins with pathName.
+- `JOIN_COLUMN_COUNT_MISMATCH`: `columnsFrom` and `columnsTo` have different lengths.
+  Fix: Ensure both lists have the same number of entries.
+
+## Secondary Join Errors
+
+- `SECONDARY_JOIN_MISSING_PATH_NAME`: Secondary join has no `pathName`.
+  Fix: Add a `pathName` to the secondary join.
+- `DUPLICATE_JOIN_PATH_NAME`: Duplicate `pathName` for the same (source, target) pair.
+  Fix: Use a unique `pathName` per (source, target) pair.
 
 ## Resolution Errors (at query time)
 
-- `NO_FACT_TABLE`: No object with joins found.
-  Fix: Ensure at least one data object has joins.
-- `AMBIGUOUS_PATH`: Multiple join paths found.
-  Fix: Make join graph unambiguous.
-- `FANOUT_DETECTED`: many-to-many without allowFanOut.
-  Fix: Set `allowFanOut: true` on the measure.
+- `AMBIGUOUS_JOIN`: Multiple join paths found during query resolution.
+  Fix: Make join graph unambiguous or use `usePathNames`.
+- `INVALID_METRIC_EXPRESSION`: Metric expression could not be parsed.
+  Fix: Use `{[Measure Name]}` syntax in metric expressions.
+- `INVALID_FILTER_OPERATOR`: Unrecognised filter operator in query.
+  Fix: Use a supported operator (equals, gt, gte, lt, lte, inlist, etc.).
+- `INVALID_RELATIVE_FILTER`: Malformed relative time filter.
+  Fix: Check unit (day/week/month/year), count, direction, include_current.
 
 ## Debugging Steps
 
@@ -821,7 +872,8 @@ def main() -> None:
     logging.basicConfig(level=settings.log_level.upper())
     logger.info(
         "OrionBelt MCP Server v%s starting (transport=%s)",
-        __version__, settings.mcp_transport,
+        __version__,
+        settings.mcp_transport,
     )
 
     global _session_manager  # noqa: PLW0603
