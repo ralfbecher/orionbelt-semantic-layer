@@ -343,7 +343,8 @@
           "description": "OrionBelt Column Name"
         },
         "resultType": {
-          "$ref": "#/definitions/dataType"
+          "$ref": "#/definitions/dataType",
+          "description": "Data type of the result (informative only, not used for SQL generation)"
         },
         "label": {
           "type": "string"
@@ -381,7 +382,8 @@
           "type": "string"
         },
         "resultType": {
-          "$ref": "#/definitions/dataType"
+          "$ref": "#/definitions/dataType",
+          "description": "Data type of the result (informative only, not used for SQL generation)"
         },
         "aggregation": {
           "type": "string",

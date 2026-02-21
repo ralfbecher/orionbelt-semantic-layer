@@ -172,7 +172,7 @@ dimensions:
 |----------|------|----------|-------------|
 | `dataObject` | string | Yes | Source data object name |
 | `column` | string | Yes | Column name in the data object |
-| `resultType` | enum | Yes | Data type of the result |
+| `resultType` | enum | Yes | Data type of the result (informative only, not used for SQL generation) |
 | `label` | string | No | Display label |
 | `timeGrain` | enum | No | Time grain: `year`, `quarter`, `month`, `week`, `day`, `hour`, `minute`, `second` |
 | `format` | string | No | Display format |
@@ -236,7 +236,7 @@ measures:
 | Property | Type | Required | Description |
 |----------|------|----------|-------------|
 | `columns` | list | No | List of column references (`dataObject`+`column`) for simple single-column measures |
-| `resultType` | enum | Yes | Data type of the result |
+| `resultType` | enum | Yes | Data type of the result (informative only, not used for SQL generation) |
 | `aggregation` | enum | Yes | `sum`, `count`, `count_distinct`, `avg`, `min`, `max`, `listagg` |
 | `expression` | string | No | Expression with `{[DataObject].[Column]}` placeholders |
 | `distinct` | bool | No | Apply DISTINCT to aggregation |

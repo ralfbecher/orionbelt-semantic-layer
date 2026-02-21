@@ -96,7 +96,7 @@ dimensions:
   Customer Country:
     dataObject: Customers         # which data object owns this dimension
     column: Country               # column within that data object
-    resultType: string            # data type of the result
+    resultType: string            # data type of the result (informative only)
     timeGrain: month              # optional: year | quarter | month | week | day | hour
 ```
 
