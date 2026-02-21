@@ -114,7 +114,18 @@ Key aliases: `data_objects` → `"dataObjects"`, `join_to` → `"joinTo"`, `colu
 
 When constructing models in Python, always use the Python field names (e.g., `data_type=`, `view=`), not the aliases.
 
-## OBML Format
+## OBML Format — Single Source of Truth
+
+OBML defines all types, enums, error codes, operators, and semantics for the project. **When OBML changes, all dependents must be updated together:**
+
+1. **Python models** — `models/semantic.py`, `models/query.py`, `models/errors.py`
+2. **MCP server** — `mcp/server.py` (tool descriptions, prompts, `OBML_REFERENCE` resource)
+3. **REST API** — `api/` (endpoint docs, OpenAPI descriptions)
+4. **MkDocs** — `docs/` (guide pages, examples, reference)
+5. **JSON Schema** — `schema/obml-schema.json`, `schema/query-schema.json`
+6. **Tests & fixtures** — `tests/`, `tests/fixtures/`
+
+Never change any dependent without checking consistency with OBML and all other dependents.
 
 Top-level YAML keys: `version`, `dataObjects`, `dimensions`, `measures`, `metrics`.
 
