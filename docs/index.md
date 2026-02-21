@@ -110,7 +110,7 @@ Ready to dive in? Start with [Installation](getting-started/installation.md) and
 ---
 
 <p align="center">
-  <img src="assets/RALFORION doo Logo.png" alt="RALFORION d.o.o." width="200">
+  <a href="https://ralforion.com"><img src="assets/RALFORION doo Logo.png" alt="RALFORION d.o.o." width="200"></a>
   <br>
   Copyright 2025 RALFORION d.o.o. &mdash; Licensed under Apache 2.0
 </p>
