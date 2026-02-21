@@ -373,11 +373,11 @@ gcloud run deploy orionbelt-api \
 
 Cloud Run injects the `PORT` environment variable automatically. The container listens on it (default 8080).
 
-A public demo deployment is available at:
+A public demo UI is available at:
 
-> **http://35.187.174.102**
+> **http://35.187.174.102/ui**
 
-Interactive API docs: [Swagger UI](http://35.187.174.102/docs) | [ReDoc](http://35.187.174.102/redoc) | [Gradio UI](http://35.187.174.102/ui)
+API endpoint: `http://35.187.174.102` — Interactive docs: [Swagger UI](http://35.187.174.102/docs) | [ReDoc](http://35.187.174.102/redoc)
 
 ### Run Integration Tests
 
