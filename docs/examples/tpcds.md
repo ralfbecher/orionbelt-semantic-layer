@@ -226,7 +226,7 @@ measures:
   Sales Amount:
     resultType: float
     aggregation: sum
-    expression: '{[ss_sales_price]} * {[ss_quantity]}'
+    expression: '{[store_sales].[ss_sales_price]} * {[store_sales].[ss_quantity]}'
 
   Net Profit:
     columns:

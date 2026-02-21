@@ -99,7 +99,7 @@ Load an OBML semantic model into a session. The model is parsed, validated, and 
 
 ```json
 {
-  "model_yaml": "version: 1.0\ndataObjects:\n  Orders:\n    name: ORDERS\n    ..."
+  "model_yaml": "version: 1.0\ndataObjects:\n  Orders:\n    code: ORDERS\n    ..."
 }
 ```
 
@@ -149,9 +149,9 @@ Describe a model's contents — data objects (with fields and joins), dimensions
   "model_id": "abcd1234",
   "data_objects": [
     {
-      "name": "Orders",
-      "source": "WAREHOUSE.PUBLIC.ORDERS",
-      "fields": ["Order ID", "Price", "Quantity"],
+      "label": "Orders",
+      "code": "WAREHOUSE.PUBLIC.ORDERS",
+      "columns": ["Order ID", "Price", "Quantity"],
       "join_targets": ["Customers"]
     }
   ],
@@ -160,7 +160,7 @@ Describe a model's contents — data objects (with fields and joins), dimensions
       "name": "Country",
       "result_type": "string",
       "data_object": "Customers",
-      "field": "Country",
+      "column": "Country",
       "time_grain": null
     }
   ],

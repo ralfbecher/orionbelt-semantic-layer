@@ -443,7 +443,7 @@ class TestObmlResource:
         assert "dimensions" in text
         assert "measures" in text
         assert "metrics" in text
-        assert "globally unique" in text
+        assert "unique within" in text
 
     def test_resource_function_returns_reference(self) -> None:
         result = obml_reference.fn()

@@ -74,7 +74,7 @@ dataObjects:
     database: EDW                 # database
     schema: SALES_MART            # schema
     columns:
-      Order ID:                   # column name — MUST be globally unique across ALL data objects
+      Order ID:                   # column name — must be unique within this data object
         code: ID                  # physical column name
         abstractType: string      # string | int | float | date | timestamp | boolean
       Amount:
@@ -115,7 +115,7 @@ measures:
   Profit:                         # expression-based measure
     resultType: float
     aggregation: sum
-    expression: '{[Amount]} - {[Cost]}'  # {[Column Name]} references columns (globally unique)
+    expression: '{[Orders].[Amount]} - {[Orders].[Cost]}'  # {[DataObject].[Column]} syntax
 
   Filtered Measure:               # measure with a filter
     columns:
@@ -143,8 +143,9 @@ metrics:
 
 ## Key Rules
 
-1. **Column names are globally unique** across all data objects — enables `{[Column]}` syntax.
-2. Measure expressions use `{[Column Name]}` to reference columns by name.
+1. **Column names are unique within each data object**.
+   Dimensions, measures, and metrics must be unique across the model.
+2. Measure expressions use `{[DataObject].[Column]}` to reference columns.
 3. Metric expressions use `{[Measure Name]}` to reference measures by name.
 4. Joins are defined on fact tables pointing to dimension tables (many-to-one or one-to-one).
 5. A dimension references exactly one `dataObject` + `column` pair.
@@ -326,7 +327,7 @@ def load_model(model_yaml: str, session_id: str | None = None) -> str:
             database: <DB>
             schema: <SCHEMA>
             columns:
-              <Column Name>:         # globally unique across all objects
+              <Column Name>:         # unique within this data object
                 code: <COLUMN>
                 abstractType: string # string|int|float|date|timestamp|boolean
             joins:                   # optional, on fact tables
@@ -367,7 +368,7 @@ def load_model(model_yaml: str, session_id: str | None = None) -> str:
             "- dataObjects must be a YAML mapping (not a list)\n"
             "- Each data object needs: code, database, schema, "
             "columns (mapping of column name → {code, abstractType})\n"
-            "- Column names must be globally unique across ALL data objects\n"
+            "- Column names must be unique within each data object\n"
             "- dimensions need: dataObject, column, resultType\n"
             "- measures need: aggregation, resultType, and either "
             "columns or expression"
@@ -634,7 +635,7 @@ dataObjects:
     database: <DB>
     schema: <SCHEMA>
     columns:
-      <Column Name>:              # globally unique across ALL data objects
+      <Column Name>:              # unique within this data object
         code: <COLUMN>            # physical column name
         abstractType: string      # string | int | float | date | timestamp | boolean | ...
     joins:                        # optional — define on fact tables
@@ -659,7 +660,7 @@ measures:
         column: <Column Name>
     resultType: float
     aggregation: sum               # sum | count | count_distinct | avg | min | max
-    expression: '{[Column A]} - {[Column B]}'   # optional expression using {[Column]} syntax
+    expression: '{[Orders].[Amount]} - {[Orders].[Cost]}'  # {[DataObject].[Column]}
     filter:                        # optional measure-level filter
       column:
         dataObject: <ObjectName>
@@ -676,8 +677,9 @@ metrics:
 
 ## Key Rules
 
-1. **Column names are globally unique** across all data objects.
-2. Measure expressions use `{[Column Name]}` to reference columns.
+1. **Column names are unique within each data object**.
+   Dimensions, measures, and metrics must be unique across the model.
+2. Measure expressions use `{[DataObject].[Column]}` to reference columns.
 3. Metric expressions use `{[Measure Name]}` to reference measures.
 4. Joins are defined on fact tables pointing to dimension tables.
 5. A dimension references exactly one `dataObject` + `column` pair.
@@ -772,7 +774,7 @@ def debug_validation() -> str:
 - `UNKNOWN_DATA_OBJECT`: References non-existent object.
   Fix: Check spelling; suggestions are included.
 - `UNKNOWN_COLUMN`: Column name not found in data object.
-  Fix: Column names are globally unique — check spelling.
+  Fix: Check column name spelling within the referenced data object.
 - `UNKNOWN_MEASURE`: Metric references missing measure.
   Fix: Check `{[Measure Name]}` in metric expression.
 - `UNKNOWN_DIMENSION`: Query references missing dimension.
@@ -780,10 +782,8 @@ def debug_validation() -> str:
 
 ## Semantic Errors
 
-- `DUPLICATE_COLUMN`: Two objects define the same column.
-  Fix: Column names must be globally unique — rename one.
 - `DUPLICATE_NAME`: Duplicate dimension/measure/metric name.
-  Fix: Use unique names.
+  Fix: Dimensions, measures, and metrics must have unique names across the model.
 - `CYCLIC_JOIN`: Join graph contains a cycle.
   Fix: Remove circular join references.
 - `INVALID_JOIN_TARGET`: joinTo points to unknown object.

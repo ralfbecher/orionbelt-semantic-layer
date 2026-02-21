@@ -94,7 +94,7 @@ Validate an OBML model without storing it. Returns structured errors and warning
 
 #### `describe_model`
 
-Show the contents of a loaded model: data objects, fields, joins, dimensions, measures, and metrics.
+Show the contents of a loaded model: data objects, columns, joins, dimensions, measures, and metrics.
 
 | Parameter    | Type   | Required | Description                                        |
 | ------------ | ------ | -------- | -------------------------------------------------- |

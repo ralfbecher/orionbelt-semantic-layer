@@ -118,8 +118,8 @@ When constructing models in Python, always use the Python field names (e.g., `da
 
 Top-level YAML keys: `version`, `dataObjects`, `dimensions`, `measures`, `metrics`.
 
-- **Column names are globally unique** across all data objects — enables `{[Column]}` syntax in measure expressions
-- **Measure expressions** reference columns by name: `{[Column Name]}`
+- **Column names are unique within each data object** — dimensions, measures, and metrics must be unique across the whole model
+- **Measure expressions** reference columns by data object + column: `{[DataObject].[Column]}`
 - **Metric expressions** reference measures by name: `{[Measure Name]}`
 - **Secondary joins**: `secondary: true` + `pathName` on `DataObjectJoin` — unique per (source, target) pair
 - **Queries** use `select: {dimensions: [...], measures: [...]}` structure with optional `where`, `having`, `order_by`, `limit`, `usePathNames`

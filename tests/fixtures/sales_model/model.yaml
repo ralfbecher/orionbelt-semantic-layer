@@ -100,7 +100,7 @@ measures:
   Revenue:
     resultType: float
     aggregation: sum
-    expression: '{[Price]} * {[Quantity]}'
+    expression: '{[Orders].[Price]} * {[Orders].[Quantity]}'
 
   Order Count:
     columns:
@@ -112,12 +112,12 @@ measures:
   Average Order Value:
     resultType: float
     aggregation: avg
-    expression: '{[Price]} * {[Quantity]}'
+    expression: '{[Orders].[Price]} * {[Orders].[Quantity]}'
 
   Grand Total Revenue:
     resultType: float
     aggregation: sum
-    expression: '{[Price]} * {[Quantity]}'
+    expression: '{[Orders].[Price]} * {[Orders].[Quantity]}'
     total: true
 
 metrics:

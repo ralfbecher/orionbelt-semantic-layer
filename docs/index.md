@@ -40,17 +40,39 @@ Define a semantic model in YAML:
 version: 1.0
 
 dataObjects:
+  Customers:
+    code: CUSTOMERS
+    database: WAREHOUSE
+    schema: PUBLIC
+    columns:
+      Customer ID:
+        code: CUSTOMER_ID
+        abstractType: string
+      Country:
+        code: COUNTRY
+        abstractType: string
+
   Orders:
     code: ORDERS
     database: WAREHOUSE
     schema: PUBLIC
     columns:
+      Customer ID:
+        code: CUSTOMER_ID
+        abstractType: string
       Price:
         code: PRICE
         abstractType: float
       Quantity:
         code: QUANTITY
         abstractType: int
+    joins:
+      - joinType: many-to-one
+        joinTo: Customers
+        columnsFrom:
+          - Customer ID
+        columnsTo:
+          - Customer ID
 
 dimensions:
   Country:
@@ -62,7 +84,7 @@ measures:
   Revenue:
     resultType: float
     aggregation: sum
-    expression: '{[Price]} * {[Quantity]}'
+    expression: '{[Orders].[Price]} * {[Orders].[Quantity]}'
 ```
 
 Compile a query to SQL:

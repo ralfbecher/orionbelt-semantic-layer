@@ -453,18 +453,21 @@ class QueryResolver:
     ) -> Expr:
         """Expand a measure expression into AST nodes.
 
-        Handles {[Column]} placeholders — column names are globally unique.
+        Handles {[DataObject].[Column]} placeholders.
         """
 
         formula = measure.expression or ""
         agg = measure.aggregation.upper()
 
-        # Replace {[Column]} with column references
-        named_refs = re.findall(r"\{\[([^\]]+)\]\}", formula)
-        for col_name in named_refs:
-            if col_name in global_columns:
-                obj_name, source = global_columns[col_name]
-                formula = formula.replace(f"{{[{col_name}]}}", f"{obj_name}.{source}")
+        # Replace {[DataObject].[Column]} with column references
+        named_refs = re.findall(r"\{\[([^\]]+)\]\.\[([^\]]+)\]\}", formula)
+        for obj_name, col_name in named_refs:
+            obj = model.data_objects.get(obj_name)
+            if obj and col_name in obj.columns:
+                source = obj.columns[col_name].code
+                formula = formula.replace(
+                    f"{{[{obj_name}].[{col_name}]}}", f"{obj_name}.{source}"
+                )
 
         # Wrap the whole formula in the aggregation function as raw SQL
         from orionbelt.ast.nodes import RawSQL
@@ -542,13 +545,11 @@ class QueryResolver:
             for cref in measure.columns:
                 if cref.view:
                     result.add(cref.view)
-            # Expression-based measure: extract {[Column]} references
+            # Expression-based measure: extract {[DataObject].[Column]} references
             if measure.expression:
-                col_refs = re.findall(r"\{\[([^\]]+)\]\}", measure.expression)
-                for col_name in col_refs:
-                    if col_name in global_columns:
-                        obj_name, _ = global_columns[col_name]
-                        result.add(obj_name)
+                col_refs = re.findall(r"\{\[([^\]]+)\]\.\[([^\]]+)\]\}", measure.expression)
+                for obj_name, _col_name in col_refs:
+                    result.add(obj_name)
             return result
 
         # Check metrics: {[Measure Name]} references → recurse

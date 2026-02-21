@@ -139,7 +139,7 @@ measures:
   Revenue:
     resultType: float
     aggregation: sum
-    expression: "{[Price]} * {[Quantity]}"
+    expression: "{[Orders].[Price]} * {[Orders].[Quantity]}"
 ```
 
 The `yaml-language-server` comment enables schema validation in editors that support it (VS Code with YAML extension, IntelliJ, etc.). The JSON Schema is at [`schema/obml-schema.json`](schema/obml-schema.json).

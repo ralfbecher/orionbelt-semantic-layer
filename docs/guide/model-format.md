@@ -40,6 +40,9 @@ dataObjects:
       Order Date:
         code: ORDER_DATE
         abstractType: date
+      Customer ID:
+        code: CUSTOMER_ID
+        abstractType: string
       Price:
         code: PRICE
         abstractType: float
@@ -143,7 +146,7 @@ dimensions:
     resultType: string
 ```
 
-Column names are globally unique across the model.
+Column names must be unique within each data object. Dimensions, measures, and metrics must have unique names across the whole model.
 
 ## Dimensions
 
@@ -209,14 +212,14 @@ measures:
 
 ### Expression Measure (computed from columns)
 
-Reference columns directly in the expression using `{[Column]}`:
+Reference columns directly in the expression using `{[DataObject].[Column]}`:
 
 ```yaml
 measures:
   Revenue:
     resultType: float
     aggregation: sum
-    expression: '{[Price]} * {[Quantity]}'
+    expression: '{[Orders].[Price]} * {[Orders].[Quantity]}'
 ```
 
 ```yaml
@@ -224,7 +227,7 @@ measures:
   Profit:
     resultType: float
     aggregation: sum
-    expression: '{[Salesamount]} - {[Salescosts]}'
+    expression: '{[Sales].[Salesamount]} - {[Sales].[Salescosts]}'
     total: true
 ```
 
@@ -235,7 +238,7 @@ measures:
 | `columns` | list | No | List of column references (`dataObject`+`column`) for simple single-column measures |
 | `resultType` | enum | Yes | Data type of the result |
 | `aggregation` | enum | Yes | `sum`, `count`, `count_distinct`, `avg`, `min`, `max`, `listagg` |
-| `expression` | string | No | Expression with `{[Column]}` placeholders |
+| `expression` | string | No | Expression with `{[DataObject].[Column]}` placeholders |
 | `distinct` | bool | No | Apply DISTINCT to aggregation |
 | `total` | bool | No | Use the total (unfiltered) value when referenced in a metric |
 | `delimiter` | string | No | Separator for `listagg` aggregation (default: `","`) |
@@ -262,7 +265,7 @@ measures:
 
 | Placeholder | Resolves to |
 |-------------|-------------|
-| `{[Column]}` | Direct column reference by globally unique column name |
+| `{[DataObject].[Column]}` | Column reference by data object and column name |
 
 ### Measure Filters
 
@@ -273,10 +276,11 @@ measures:
   Sales Profit Ratio:
     resultType: float
     aggregation: sum
-    expression: '({[Salesamount]} / {[Salescosts]}) * 100'
+    expression: '({[Sales].[Salesamount]} / {[Sales].[Salescosts]}) * 100'
     filter:
-      dataObject: Sales
-      column: Salescosts
+      column:
+        dataObject: Sales
+        column: Salescosts
       operator: gt
       values:
         - dataType: float
@@ -338,7 +342,7 @@ All artefacts (data objects, dimensions, measures, metrics) have unique names. T
 
 OrionBelt validates models against these rules:
 
-1. **Unique identifiers** — No duplicate names across data objects, dimensions, measures, and metrics
+1. **Unique identifiers** — Column names unique within each data object; dimension, measure, and metric names unique across the model
 2. **No cyclic joins** — Join graph must be acyclic (secondary joins are excluded)
 3. **No multipath joins** — No ambiguous diamond patterns (secondary joins are excluded). A **canonical join exception** applies: when a data object has a direct join to a target AND also an indirect path through intermediaries, the direct join is treated as canonical and no error is raised. Only true diamonds (two indirect paths to the same target) are flagged.
 4. **Secondary join constraints** — Every secondary join must have a `pathName`; `pathName` must be unique per `(source, target)` pair

@@ -78,10 +78,9 @@ def detect_fanout(resolved: ResolvedQuery, model: SemanticModel) -> None:
             if cref.view:
                 source_objects.add(cref.view)
         if model_measure.expression:
-            col_refs = re.findall(r"\{\[([^\]]+)\]\}", model_measure.expression)
-            for col_name in col_refs:
-                if col_name in global_columns:
-                    source_objects.add(global_columns[col_name])
+            col_refs = re.findall(r"\{\[([^\]]+)\]\.\[([^\]]+)\]\}", model_measure.expression)
+            for obj_name, _col_name in col_refs:
+                source_objects.add(obj_name)
 
         if not source_objects:
             continue

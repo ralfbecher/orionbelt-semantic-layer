@@ -57,28 +57,15 @@ class SemanticValidator:
         return errors
 
     def _check_unique_column_names(self, model: SemanticModel) -> list[SemanticError]:
-        """Ensure column names are globally unique across all data objects."""
-        errors: list[SemanticError] = []
-        col_locations: dict[str, str] = {}  # col_name -> first object_name
+        """Column names must be unique within each data object.
 
-        for obj_name, obj in model.data_objects.items():
-            for col_name in obj.columns:
-                if col_name in col_locations:
-                    errors.append(
-                        SemanticError(
-                            code="DUPLICATE_COLUMN_NAME",
-                            message=(
-                                f"Column '{col_name}' in data object '{obj_name}' "
-                                f"conflicts with same column in '{col_locations[col_name]}'. "
-                                f"Column names must be globally unique."
-                            ),
-                            path=f"dataObjects.{obj_name}.columns.{col_name}",
-                        )
-                    )
-                else:
-                    col_locations[col_name] = obj_name
-
-        return errors
+        Since columns are stored as dict keys, YAML parsers silently drop
+        duplicates. This validator therefore returns no errors — uniqueness
+        is structurally enforced by the dict representation. The method is
+        retained as a hook for future stricter duplicate-key detection at
+        the YAML parse level.
+        """
+        return []
 
     def _check_secondary_joins(self, model: SemanticModel) -> list[SemanticError]:
         """Validate secondary join constraints.

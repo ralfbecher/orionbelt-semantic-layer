@@ -110,7 +110,7 @@ measures:
   Revenue:
     resultType: float
     aggregation: sum
-    expression: '{[Price]} * {[Quantity]}'
+    expression: '{[Orders].[Price]} * {[Orders].[Quantity]}'
 
   Order Count:
     columns:
@@ -122,7 +122,7 @@ measures:
   Average Order Value:
     resultType: float
     aggregation: avg
-    expression: '{[Price]} * {[Quantity]}'
+    expression: '{[Orders].[Price]} * {[Orders].[Quantity]}'
 
 metrics:
   Revenue per Order:
@@ -193,12 +193,12 @@ The `timeGrain: month` means queries using this dimension will apply `date_trunc
 Revenue:
   resultType: float
   aggregation: sum
-  expression: '{[Price]} * {[Quantity]}'
+  expression: '{[Orders].[Price]} * {[Orders].[Quantity]}'
 ```
 
 Compiles to: `SUM("Orders"."PRICE" * "Orders"."QUANTITY")`
 
-The expression references columns using `{[Column]}` syntax. The `sum` aggregation wraps the entire expression.
+The expression references columns using `{[DataObject].[Column]}` syntax. The `sum` aggregation wraps the entire expression.
 
 ### Simple Measure — Order Count
 
@@ -219,12 +219,12 @@ Compiles to: `COUNT("Orders"."ORDER_ID")`
 Average Order Value:
   resultType: float
   aggregation: avg
-  expression: '{[Price]} * {[Quantity]}'
+  expression: '{[Orders].[Price]} * {[Orders].[Quantity]}'
 ```
 
 Compiles to: `AVG("Orders"."PRICE" * "Orders"."QUANTITY")`
 
-Uses `{[Column]}` syntax to reference columns directly in the expression — no `columns` array needed.
+Uses `{[DataObject].[Column]}` syntax to reference columns directly in the expression — no `columns` array needed.
 
 ## Metrics Explained
 

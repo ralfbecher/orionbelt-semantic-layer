@@ -65,7 +65,7 @@ measures:
   Revenue:
     resultType: float
     aggregation: sum
-    expression: '{[Price]} * {[Quantity]}'
+    expression: '{[Orders].[Price]} * {[Orders].[Quantity]}'
 
   Order Count:
     columns:

@@ -180,7 +180,7 @@ OrionBelt supports two operator naming conventions — OBML style and SQL style.
 | OBML | SQL Style | SQL Output | Value Type |
 |-----------|-----------|------------|------------|
 | `equals` | `=`, `eq` | `= value` | scalar |
-| `not_equals` | `!=`, `neq` | `<> value` | scalar |
+| `notequals` | `!=`, `neq` | `<> value` | scalar |
 | `gt` | `>`, `greater` | `> value` | scalar |
 | `gte` | `>=`, `greater_eq` | `>= value` | scalar |
 | `lt` | `<`, `less` | `< value` | scalar |
@@ -190,33 +190,33 @@ OrionBelt supports two operator naming conventions — OBML style and SQL style.
 
 | OBML | SQL Style | SQL Output | Value Type |
 |-----------|-----------|------------|------------|
-| `in_list` | `in` | `IN (v1, v2, ...)` | list |
-| `not_in_list` | `not_in` | `NOT IN (v1, v2, ...)` | list |
+| `inlist` | `in` | `IN (v1, v2, ...)` | list |
+| `notinlist` | `not_in` | `NOT IN (v1, v2, ...)` | list |
 
 #### Null Operators
 
 | OBML | SQL Style | SQL Output | Value Type |
 |-----------|-----------|------------|------------|
 | `set` | `is_not_null` | `IS NOT NULL` | none |
-| `not_set` | `is_null` | `IS NULL` | none |
+| `notset` | `is_null` | `IS NULL` | none |
 
 #### String Operators
 
 | Operator | SQL Output | Value Type |
 |----------|------------|------------|
 | `contains` | `LIKE '%value%'` (dialect-specific) | string |
-| `not_contains` | `NOT LIKE '%value%'` | string |
+| `notcontains` | `NOT LIKE '%value%'` | string |
 | `starts_with` | `LIKE 'value%'` | string |
 | `ends_with` | `LIKE '%value'` | string |
 | `like` | `LIKE 'pattern'` | string |
-| `not_like` | `NOT LIKE 'pattern'` | string |
+| `notlike` | `NOT LIKE 'pattern'` | string |
 
 #### Range Operators
 
 | Operator | SQL Output | Value Type |
 |----------|------------|------------|
 | `between` | `BETWEEN low AND high` | list of 2 |
-| `not_between` | `NOT BETWEEN low AND high` | list of 2 |
+| `notbetween` | `NOT BETWEEN low AND high` | list of 2 |
 | `relative` | Relative time range | object |
 
 **Relative filter object**

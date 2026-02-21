@@ -22,7 +22,7 @@
         },
         "columns": {
           "type": "object",
-          "description": "Selected Columns from Database Object to be used in OrionBelt. Column names must be globally unique across all data objects.",
+          "description": "Selected Columns from Database Object to be used in OrionBelt. Column names must be unique within each data object.",
           "patternProperties": {
             ".": {
               "$ref": "#/definitions/column"
@@ -102,7 +102,7 @@
       "properties": {
         "joinType": {
           "description": "Join Cardinality",
-          "enum": ["many-to-one", "one-to-one"]
+          "enum": ["many-to-one", "one-to-one", "many-to-many"]
         },
         "joinTo": {
           "type": "string",
@@ -169,7 +169,9 @@
         "between",
         "notbetween",
         "like",
-        "notlike"
+        "notlike",
+        "starts_with",
+        "ends_with"
       ]
     },
     "parameterValue": {
@@ -422,7 +424,7 @@
         },
         "expression": {
           "type": "string",
-          "description": "template string with {[Column]} placeholders for measure expression (column names are globally unique)"
+          "description": "template string with {[DataObject].[Column]} placeholders for measure expression"
         },
         "functions": {
           "type": "array",

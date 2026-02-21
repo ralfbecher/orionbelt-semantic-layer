@@ -35,7 +35,7 @@ The resolver transforms a high-level `QueryObject` (business names) into a `Reso
 ### What Resolution Does
 
 1. **Resolve dimensions** — Look up each dimension name in the model, find the source data object and column, apply time grain if requested
-2. **Resolve measures** — Expand expression placeholders (`{[Column]}`) into column references, wrap in aggregation functions
+2. **Resolve measures** — Expand expression placeholders (`{[DataObject].[Column]}`) into column references, wrap in aggregation functions
 3. **Resolve metrics** — Expand measure references (`{[Measure Name]}`), compose expressions
 4. **Select base object** — Choose the primary fact table (prefers data objects with joins defined)
 5. **Find join paths** — Use the join graph to find the minimal set of joins connecting all required objects
@@ -77,8 +77,8 @@ The `JoinGraph` uses [networkx](https://networkx.org/) to model data object rela
 JoinStep(
     from_object="Orders",
     to_object="Customers",
-    from_fields=["Customer ID"],
-    to_fields=["Customer ID"],
+    from_columns=["Customer ID"],
+    to_columns=["Customer ID"],
     join_type=JoinType.LEFT,
     cardinality=Cardinality.MANY_TO_ONE,
 )

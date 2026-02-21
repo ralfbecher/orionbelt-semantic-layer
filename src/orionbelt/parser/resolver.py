@@ -96,12 +96,6 @@ class ReferenceResolver:
                     )
                 )
 
-        # Build global column lookup: column_name → (object_name, column)
-        global_columns: dict[str, tuple[str, DataObjectColumn]] = {}
-        for obj_name, obj in data_objects.items():
-            for col_name, col_obj in obj.columns.items():
-                global_columns[col_name] = (obj_name, col_obj)
-
         # Parse dimensions
         dimensions: dict[str, Dimension] = {}
         raw_dims = raw.get("dimensions", {})
@@ -203,7 +197,7 @@ class ReferenceResolver:
                 expression = raw_meas.get("expression")
                 if expression:
                     self._validate_expression_refs(
-                        name, expression, global_columns, errors, source_map
+                        name, expression, data_objects, errors, source_map
                     )
 
                 mfilter = None
@@ -313,22 +307,33 @@ class ReferenceResolver:
         self,
         measure_name: str,
         expression: str,
-        global_columns: dict[str, tuple[str, DataObjectColumn]],
+        data_objects: dict[str, DataObject],
         errors: list[SemanticError],
         source_map: SourceMap | None,
     ) -> None:
-        """Validate {[Column]} references in a measure expression."""
-        # Check column refs {[Column Name]}
-        named_refs = re.findall(r"\{\[([^\]]+)\]\}", expression)
-        for col_name in named_refs:
-            if col_name not in global_columns:
-                span = source_map.get(f"measures.{measure_name}.expression") if source_map else None
+        """Validate {[DataObject].[Column]} references in a measure expression."""
+        named_refs = re.findall(r"\{\[([^\]]+)\]\.\[([^\]]+)\]\}", expression)
+        for obj_name, col_name in named_refs:
+            span = source_map.get(f"measures.{measure_name}.expression") if source_map else None
+            if obj_name not in data_objects:
+                errors.append(
+                    SemanticError(
+                        code="UNKNOWN_DATA_OBJECT_IN_EXPRESSION",
+                        message=(
+                            f"Measure '{measure_name}' expression references unknown "
+                            f"data object '{obj_name}'"
+                        ),
+                        path=f"measures.{measure_name}.expression",
+                        span=span,
+                    )
+                )
+            elif col_name not in data_objects[obj_name].columns:
                 errors.append(
                     SemanticError(
                         code="UNKNOWN_COLUMN_IN_EXPRESSION",
                         message=(
                             f"Measure '{measure_name}' expression references unknown column "
-                            f"'{col_name}'"
+                            f"'{col_name}' in data object '{obj_name}'"
                         ),
                         path=f"measures.{measure_name}.expression",
                         span=span,
