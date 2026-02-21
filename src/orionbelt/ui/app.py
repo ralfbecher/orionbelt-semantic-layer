@@ -453,7 +453,10 @@ def create_blocks(default_api_url: str | None = None) -> Any:
         active_tab = gr.State(0)
 
         with gr.Row(elem_classes=["header-row"]):
-            gr.Markdown(f"## OrionBelt Semantic Layer <small>v{__version__}</small>")
+            gr.Markdown(
+                f"## OrionBelt Semantic Layer <small>v{__version__}</small>"
+                " &nbsp; [Docs](https://ralforion.com/orionbelt-semantic-layer/)"
+            )
             dark_btn = gr.Button("Light / Dark", size="sm", scale=0, min_width=120)
 
         with gr.Tabs() as tabs:
