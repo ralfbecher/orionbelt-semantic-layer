@@ -375,7 +375,7 @@ Cloud Run injects the `PORT` environment variable automatically. The container l
 
 A public demo UI is available at:
 
-> **http://35.187.174.102/ui**
+> **http://35.187.174.102/ui/?__theme=dark**
 
 API endpoint: `http://35.187.174.102` — Interactive docs: [Swagger UI](http://35.187.174.102/docs) | [ReDoc](http://35.187.174.102/redoc)
 
