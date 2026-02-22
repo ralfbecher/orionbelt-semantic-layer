@@ -364,7 +364,7 @@
           "minItems": 2
         }
       },
-      "required": ["dataObject", "column", "resultType"],
+      "required": ["dataObject", "column"],
       "additionalProperties": false
     },
     "measure": {
@@ -441,7 +441,7 @@
           "$ref": "#/definitions/filter"
         }
       },
-      "required": ["resultType", "aggregation"],
+      "required": ["aggregation"],
       "additionalProperties": false
     },
     "metric": {

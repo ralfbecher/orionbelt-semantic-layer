@@ -118,7 +118,7 @@ class Dimension(BaseModel):
     label: str
     view: str = Field(alias="dataObject")
     column: str = ""
-    result_type: DataType = Field(alias="resultType")
+    result_type: DataType = Field(DataType.STRING, alias="resultType")
     time_grain: TimeGrain | None = Field(None, alias="timeGrain")
     format: str | None = None
 
@@ -163,7 +163,7 @@ class Measure(BaseModel):
 
     label: str
     columns: list[DataColumnRef] = []
-    result_type: DataType = Field(alias="resultType")
+    result_type: DataType = Field(DataType.FLOAT, alias="resultType")
     aggregation: str
     expression: str | None = None
     distinct: bool = False
