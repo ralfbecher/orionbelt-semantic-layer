@@ -1,0 +1,18 @@
+/* Prevent code in table cells from wrapping */
+td code {
+  white-space: nowrap;
+}
+
+/* Version badge — only visible in the right (TOC) sidebar */
+.obml-version-badge {
+  display: none;
+}
+.md-sidebar--secondary .obml-version-badge {
+  display: block;
+  margin-top: 1rem;
+  padding: 0.5rem 0.8rem;
+  font-size: 0.65rem;
+  color: var(--md-default-fg-color--light);
+  opacity: 0.7;
+  line-height: 1.6;
+}
