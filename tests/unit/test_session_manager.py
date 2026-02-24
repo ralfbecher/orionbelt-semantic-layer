@@ -13,7 +13,7 @@ from orionbelt.service.session_manager import SessionManager, SessionNotFoundErr
 class TestSessionLifecycle:
     def test_create_session(self, session_manager: SessionManager) -> None:
         info = session_manager.create_session()
-        assert len(info.session_id) == 12
+        assert len(info.session_id) == 32
         assert info.model_count == 0
         assert info.metadata == {}
 

@@ -30,7 +30,9 @@ class QueryCompileResponse(BaseModel):
 class ValidateRequest(BaseModel):
     """Request body for POST /validate."""
 
-    model_yaml: str = Field(description="YAML semantic model content to validate")
+    model_yaml: str = Field(
+        description="YAML semantic model content to validate", max_length=5_000_000
+    )
 
 
 class ValidateResponse(BaseModel):
@@ -107,7 +109,7 @@ class SessionListResponse(BaseModel):
 class ModelLoadRequest(BaseModel):
     """Request body for POST /sessions/{session_id}/models."""
 
-    model_yaml: str = Field(description="OBML YAML content")
+    model_yaml: str = Field(description="OBML YAML content", max_length=5_000_000)
 
 
 class ModelLoadResponse(BaseModel):

@@ -5,12 +5,16 @@ from __future__ import annotations
 from orionbelt.service.session_manager import SessionManager
 
 _session_manager: SessionManager | None = None
+_disable_session_list: bool = False
 
 
-def init_session_manager(manager: SessionManager) -> None:
+def init_session_manager(
+    manager: SessionManager, *, disable_session_list: bool = False
+) -> None:
     """Set the global SessionManager (called at app startup)."""
-    global _session_manager  # noqa: PLW0603
+    global _session_manager, _disable_session_list  # noqa: PLW0603
     _session_manager = manager
+    _disable_session_list = disable_session_list
 
 
 def get_session_manager() -> SessionManager:
@@ -20,7 +24,13 @@ def get_session_manager() -> SessionManager:
     return _session_manager
 
 
+def is_session_list_disabled() -> bool:
+    """Return True when the GET /sessions endpoint is suppressed."""
+    return _disable_session_list
+
+
 def reset_session_manager() -> None:
     """Clear the global SessionManager (for tests)."""
-    global _session_manager  # noqa: PLW0603
+    global _session_manager, _disable_session_list  # noqa: PLW0603
     _session_manager = None
+    _disable_session_list = False

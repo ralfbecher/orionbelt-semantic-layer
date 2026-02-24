@@ -41,3 +41,4 @@ class Settings(BaseSettings):
     # Sessions
     session_ttl_seconds: int = 1800  # 30 min inactivity
     session_cleanup_interval: int = 60  # seconds between cleanup sweeps
+    disable_session_list: bool = False  # hide GET /sessions endpoint

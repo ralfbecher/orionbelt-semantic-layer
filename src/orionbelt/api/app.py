@@ -11,7 +11,11 @@ from fastapi import FastAPI
 
 from orionbelt import __version__
 from orionbelt.api.deps import init_session_manager, reset_session_manager
-from orionbelt.api.middleware import RequestTimingMiddleware
+from orionbelt.api.middleware import (
+    RequestBodyLimitMiddleware,
+    RequestTimingMiddleware,
+    SecurityHeadersMiddleware,
+)
 from orionbelt.api.routers import dialects, sessions
 from orionbelt.api.schemas import HealthResponse
 from orionbelt.service.session_manager import SessionManager
@@ -27,7 +31,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
         cleanup_interval=settings.session_cleanup_interval,
     )
     mgr.start()
-    init_session_manager(mgr)
+    init_session_manager(mgr, disable_session_list=settings.disable_session_list)
     try:
         yield
     finally:
@@ -48,8 +52,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     app.state.settings = settings
 
-    # Middleware
+    # Middleware (order matters: last added = first to execute)
     app.add_middleware(RequestTimingMiddleware)
+    app.add_middleware(SecurityHeadersMiddleware)
+    app.add_middleware(RequestBodyLimitMiddleware)
 
     # Session-scoped endpoints
     app.include_router(sessions.router, prefix="/sessions", tags=["sessions"])

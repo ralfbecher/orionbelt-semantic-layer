@@ -80,7 +80,7 @@ class SessionManager:
 
     def create_session(self, metadata: dict[str, str] | None = None) -> SessionInfo:
         """Create a new session and return its info."""
-        session_id = secrets.token_hex(6)  # 12-char hex
+        session_id = secrets.token_hex(16)  # 32-char hex (128-bit)
         now_mono = time.monotonic()
         now_wall = datetime.now(UTC)
         session = _Session(

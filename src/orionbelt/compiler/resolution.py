@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
+from typing import TypedDict
 
 from orionbelt.ast.nodes import (
     BinaryOp,
@@ -24,6 +25,13 @@ from orionbelt.models.query import (
     UsePathName,
 )
 from orionbelt.models.semantic import Measure, Metric, SemanticModel, TimeGrain
+
+
+class _RelativeFilterParsed(TypedDict):
+    unit: str
+    count: int
+    direction: str
+    include_current: bool
 
 
 @dataclass
@@ -725,7 +733,7 @@ class QueryResolver:
 
     def _parse_relative_filter(
         self, value: object, errors: list[SemanticError], field: str
-    ) -> dict[str, object] | None:
+    ) -> _RelativeFilterParsed | None:
         if not isinstance(value, dict):
             errors.append(
                 SemanticError(

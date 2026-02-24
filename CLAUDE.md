@@ -33,8 +33,16 @@ uv run mypy src/                  # type check
 # Docs
 uv sync --extra docs && uv run mkdocs serve  # docs on :8080
 
-# Docker / Cloud Run
-docker build -t orionbelt-api . && docker run -p 8080:8080 orionbelt-api
+# Docker (two separate images: API and UI)
+docker build -t orionbelt-api .                             # API-only image
+docker build -f Dockerfile.ui -t orionbelt-ui .             # UI image (Gradio)
+docker run -p 8080:8080 orionbelt-api                       # run API
+docker run -p 7860:7860 -e API_BASE_URL=http://host.docker.internal:8080 orionbelt-ui  # run UI
+
+# Cloud Run deployment (deploys both services)
+./scripts/deploy-gcloud.sh
+
+# Tests
 ./tests/docker/test_docker.sh                    # 15 local Docker tests
 ./tests/cloudrun/test_cloudrun.sh <CLOUD_RUN_URL> # 30 live API tests
 ```
@@ -172,11 +180,14 @@ Environment variables or `.env` file (via pydantic-settings):
 | `PORT` | — | Cloud Run override (takes precedence) |
 | `API_SERVER_HOST` | `localhost` | REST API bind host |
 | `API_SERVER_PORT` | `8000` | REST API port |
+| `DISABLE_SESSION_LIST` | `false` | Disable `GET /sessions` endpoint (security) |
 | `MCP_TRANSPORT` | `stdio` | MCP transport: `stdio`, `http`, `sse` |
 | `MCP_SERVER_HOST` / `MCP_SERVER_PORT` | `localhost` / `9000` | MCP bind |
 | `SESSION_TTL_SECONDS` | `1800` | Session timeout |
 | `SESSION_CLEANUP_INTERVAL` | `60` | Cleanup sweep interval |
 | `LOG_LEVEL` | `INFO` | Logging level |
+| `API_BASE_URL` | — | API URL for standalone UI |
+| `ROOT_PATH` | — | ASGI root path for UI behind load balancer |
 
 ## Tooling Notes
 

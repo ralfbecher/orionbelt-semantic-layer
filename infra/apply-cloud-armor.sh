@@ -49,6 +49,13 @@ apply_rule 104 \
   --action=deny-403 \
   --description="Block PUT/PATCH/TRACE/CONNECT methods"
 
+# --- Application allow rules (before OWASP) ---
+
+apply_rule 150 \
+  --expression='request.path.matches(".*/query/sql$")' \
+  --action=allow \
+  --description="Allow query compilation endpoint (OWASP falsely flags SQL-related body content)"
+
 # --- OWASP WAF rules ---
 
 apply_rule 200 \

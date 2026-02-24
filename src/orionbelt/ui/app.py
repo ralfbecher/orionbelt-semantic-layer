@@ -11,6 +11,7 @@ import yaml
 
 _DEFAULT_API_URL = "http://localhost:8000"
 _FALLBACK_DIALECTS = ["postgres", "snowflake", "clickhouse", "dremio", "databricks"]
+_API_HEADERS = {"User-Agent": "OrionBelt-UI/1.0"}
 
 _DEFAULT_QUERY = """\
 select:
@@ -255,7 +256,7 @@ def _fetch_diagram_er(
     session_id: str | None = None
 
     try:
-        client = httpx.Client(base_url=api_url, timeout=30)
+        client = httpx.Client(base_url=api_url, timeout=30, headers=_API_HEADERS)
 
         # 1. Create session
         resp = client.post("/sessions")
@@ -292,7 +293,9 @@ def _fetch_diagram_er(
     finally:
         if session_id is not None:
             with contextlib.suppress(Exception):
-                httpx.Client(base_url=api_url, timeout=5).delete(f"/sessions/{session_id}")
+                httpx.Client(base_url=api_url, timeout=5, headers=_API_HEADERS).delete(
+                    f"/sessions/{session_id}"
+                )
 
 
 def _generate_mermaid_er_local(
@@ -334,7 +337,7 @@ def _load_example_model() -> str:
 def _fetch_dialects(api_url: str) -> list[str]:
     """Fetch dialect names from the API, falling back to hardcoded list."""
     try:
-        resp = httpx.get(f"{api_url.rstrip('/')}/dialects", timeout=5)
+        resp = httpx.get(f"{api_url.rstrip('/')}/dialects", timeout=5, headers=_API_HEADERS)
         resp.raise_for_status()
         data = resp.json()
         names = [d["name"] for d in data.get("dialects", [])]
@@ -352,7 +355,7 @@ def compile_sql(model_yaml: str, query_yaml: str, dialect: str, api_url: str) ->
     session_id: str | None = None
 
     try:
-        client = httpx.Client(base_url=api_url, timeout=30)
+        client = httpx.Client(base_url=api_url, timeout=30, headers=_API_HEADERS)
 
         # 1. Create session
         resp = client.post("/sessions")
@@ -417,7 +420,9 @@ def compile_sql(model_yaml: str, query_yaml: str, dialect: str, api_url: str) ->
     finally:
         if session_id is not None:
             with contextlib.suppress(Exception):
-                httpx.Client(base_url=api_url, timeout=5).delete(f"/sessions/{session_id}")
+                httpx.Client(base_url=api_url, timeout=5, headers=_API_HEADERS).delete(
+                    f"/sessions/{session_id}"
+                )
 
 
 def create_blocks(default_api_url: str | None = None) -> Any:
@@ -646,8 +651,43 @@ def create_blocks(default_api_url: str | None = None) -> Any:
 
 
 def create_ui() -> None:
-    """Build and launch the Gradio interface (standalone mode)."""
-    create_blocks().launch(css=_CSS, js=_DARK_MODE_INIT_JS)
+    """Build and launch the Gradio interface (standalone mode).
+
+    When ``ROOT_PATH`` is set (e.g. ``/ui``), Gradio is mounted inside a
+    FastAPI wrapper at that path so the load balancer can forward
+    ``/ui/*`` without stripping the prefix.
+    """
+    import os
+
+    import uvicorn
+
+    api_url = os.environ.get("API_BASE_URL") or None
+    port = int(os.environ.get("PORT", "7860"))
+    root_path = os.environ.get("ROOT_PATH", "")
+    demo = create_blocks(default_api_url=api_url)
+
+    if root_path:
+        import gradio as gr
+        from fastapi import FastAPI
+
+        app = FastAPI()
+        app = gr.mount_gradio_app(app, demo, path=root_path, css=_CSS, js=_DARK_MODE_INIT_JS)
+        uvicorn.run(
+            app,
+            host="0.0.0.0",
+            port=port,
+            log_level="info",
+            proxy_headers=True,
+            forwarded_allow_ips="*",
+            access_log=False,
+        )
+    else:
+        demo.launch(
+            server_name="0.0.0.0",
+            server_port=port,
+            css=_CSS,
+            js=_DARK_MODE_INIT_JS,
+        )
 
 
 def main() -> None:

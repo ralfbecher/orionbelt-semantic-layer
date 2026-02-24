@@ -9,13 +9,12 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
 # Install dependencies first (cached layer — only reruns when pyproject.toml/uv.lock change)
 COPY pyproject.toml uv.lock README.md ./
-RUN uv sync --no-dev --extra ui --no-install-project --frozen
+RUN uv sync --no-dev --no-install-project --frozen
 
 # Copy source and install the project itself
 COPY src/ src/
 COPY schema/ schema/
-COPY examples/ examples/
-RUN uv sync --no-dev --extra ui --no-editable --frozen
+RUN uv sync --no-dev --no-editable --frozen
 
 # --- Runtime stage: minimal image ---
 FROM python:3.12-slim
@@ -32,13 +31,11 @@ ENV PATH="/app/.venv/bin:$PATH"
 # Copy schema (needed at runtime for validation)
 COPY --from=builder /app/schema schema/
 
-# Copy examples (needed by Gradio UI for example model)
-COPY --from=builder /app/examples examples/
-
 # Cloud Run injects PORT (default 8080)
 ENV PORT=8080 \
     API_SERVER_HOST=0.0.0.0 \
-    LOG_LEVEL=INFO
+    LOG_LEVEL=INFO \
+    DISABLE_SESSION_LIST=true
 
 EXPOSE ${PORT}
 
@@ -47,4 +44,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen(f'http://localhost:{__import__(\"os\").environ[\"PORT\"]}/health')"
 
 # Single worker — Cloud Run scales by adding container instances, not workers
-CMD ["sh", "-c", "uvicorn orionbelt.api.app:create_app --factory --host 0.0.0.0 --port $PORT --log-level info"]
+CMD ["sh", "-c", "uvicorn orionbelt.api.app:create_app --factory --host 0.0.0.0 --port $PORT --log-level info --proxy-headers --forwarded-allow-ips='*' --no-access-log"]

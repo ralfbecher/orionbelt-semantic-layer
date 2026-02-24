@@ -6,7 +6,7 @@ from dataclasses import asdict
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from orionbelt.api.deps import get_session_manager
+from orionbelt.api.deps import get_session_manager, is_session_list_disabled
 from orionbelt.api.schemas import (
     DiagramResponse,
     ErrorDetail,
@@ -68,6 +68,8 @@ async def list_sessions(
     mgr: SessionManager = Depends(get_session_manager),  # noqa: B008
 ) -> SessionListResponse:
     """List all active sessions."""
+    if is_session_list_disabled():
+        raise HTTPException(status_code=403, detail="Session listing is disabled")
     sessions = mgr.list_sessions()
     return SessionListResponse(sessions=[_session_response(s) for s in sessions])
 
@@ -114,8 +116,10 @@ async def load_model(
     store = _get_store(session_id, mgr)
     try:
         result = store.load_model(body.model_yaml)
-    except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from None
+    except ValueError:
+        raise HTTPException(
+            status_code=422, detail="Invalid OBML model: parsing or validation failed"
+        ) from None
     return ModelLoadResponse(
         model_id=result.model_id,
         data_objects=result.data_objects,
@@ -226,14 +230,23 @@ async def compile_query(
     store = _get_store(session_id, mgr)
     try:
         result = store.compile_query(body.model_id, body.query, body.dialect)
-    except KeyError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from None
-    except UnsupportedDialectError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from None
-    except ResolutionError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from None
-    except FanoutError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from None
+    except KeyError:
+        raise HTTPException(
+            status_code=404, detail=f"Model '{body.model_id}' not found"
+        ) from None
+    except UnsupportedDialectError:
+        raise HTTPException(
+            status_code=400, detail=f"Unsupported dialect: '{body.dialect}'"
+        ) from None
+    except ResolutionError:
+        raise HTTPException(
+            status_code=422,
+            detail="Query resolution failed: check dimensions, measures, and filters",
+        ) from None
+    except FanoutError:
+        raise HTTPException(
+            status_code=422, detail="Query would cause row fanout due to reversed many-to-one joins"
+        ) from None
     return QueryCompileResponse(
         sql=result.sql,
         dialect=result.dialect,

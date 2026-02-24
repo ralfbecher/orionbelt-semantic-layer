@@ -66,13 +66,12 @@ uv run pytest
 ### Start the REST API Server
 
 ```bash
-uv sync --extra ui   # include Gradio UI (optional)
 uv run orionbelt-api
 # or with reload:
 uv run uvicorn orionbelt.api.app:create_app --factory --reload
 ```
 
-The API is available at `http://127.0.0.1:8000`. Interactive docs at `/docs` (Swagger UI) and `/redoc`. When the `ui` extra is installed, the Gradio UI is available at `/ui`.
+The API is available at `http://127.0.0.1:8000`. Interactive docs at `/docs` (Swagger UI) and `/redoc`.
 
 ### Start the MCP Server
 
@@ -299,9 +298,9 @@ In stdio mode (default), a shared default session is used automatically. In HTTP
 
 OrionBelt includes an interactive web UI built with [Gradio](https://www.gradio.app/) for exploring and testing the compilation pipeline visually.
 
-### Co-hosted with REST API (recommended)
+### Local Development
 
-When the `ui` extra is installed, the Gradio UI is automatically mounted at `/ui` on the REST API server — no separate process needed:
+For local development, the Gradio UI is automatically mounted at `/ui` on the REST API server when the `ui` extra is installed:
 
 ```bash
 uv sync --extra ui
@@ -310,9 +309,9 @@ uv run orionbelt-api
 # → UI  at http://localhost:8000/ui
 ```
 
-### Standalone mode
+### Standalone Mode
 
-You can also run the UI as a separate process (requires the REST API to be running):
+The UI can also run as a separate process, connecting to the API via `API_BASE_URL`:
 
 ```bash
 uv sync --extra ui
@@ -321,7 +320,17 @@ uv sync --extra ui
 uv run orionbelt-api &
 
 # Launch the Gradio UI (standalone on port 7860)
-uv run orionbelt-ui
+API_BASE_URL=http://localhost:8000 uv run orionbelt-ui
+```
+
+### Production (Cloud Run)
+
+In production, the API and UI are deployed as **separate Cloud Run services** behind a shared load balancer. The API image (`Dockerfile`) excludes Gradio for faster cold starts (~2-3s vs ~12s), while the UI image (`Dockerfile.ui`) connects to the API via `API_BASE_URL`:
+
+```
+Load Balancer (single IP)
+  ├── /ui/*     → orionbelt-ui   (Gradio)
+  └── /*        → orionbelt-api  (FastAPI)
 ```
 
 <p align="center">
@@ -354,26 +363,33 @@ curl -s "http://127.0.0.1:8000/sessions/{session_id}/models/{model_id}/diagram/e
 
 ### Build and Run
 
+Two separate images — API-only (fast) and UI (with Gradio):
+
 ```bash
+# API image (no Gradio, fast cold starts)
 docker build -t orionbelt-api .
 docker run -p 8080:8080 orionbelt-api
+
+# UI image (Gradio, connects to API)
+docker build -f Dockerfile.ui -t orionbelt-ui .
+docker run -p 7860:7860 \
+  -e API_BASE_URL=http://host.docker.internal:8080 \
+  orionbelt-ui
 ```
 
-The API is available at `http://localhost:8080` and the Gradio UI at `http://localhost:8080/ui`. Sessions are ephemeral (in-memory, lost on container restart).
+The API is available at `http://localhost:8080`. The UI is at `http://localhost:7860`. Sessions are ephemeral (in-memory, lost on container restart).
 
 ### Deploy to Google Cloud Run
 
+The deploy script builds and pushes both images, then deploys them as separate Cloud Run services:
+
 ```bash
-gcloud builds submit --tag gcr.io/YOUR_PROJECT/orionbelt-api
-gcloud run deploy orionbelt-api \
-  --image gcr.io/YOUR_PROJECT/orionbelt-api \
-  --region europe-west1 \
-  --allow-unauthenticated
+./scripts/deploy-gcloud.sh
 ```
 
-Cloud Run injects the `PORT` environment variable automatically. The container listens on it (default 8080).
+The API and UI services share a single IP via a Google Cloud Application Load Balancer with path-based routing. Cloud Armor provides WAF protection.
 
-A public demo UI is available at:
+A public demo is available at:
 
 > **[http://35.187.174.102/ui](http://35.187.174.102/ui/?__theme=dark)**
 
@@ -402,11 +418,14 @@ Configuration is via environment variables or a `.env` file. See `.env.example` 
 | `API_SERVER_HOST`          | `localhost` | REST API bind host                     |
 | `API_SERVER_PORT`          | `8000`      | REST API bind port                     |
 | `PORT`                     | —           | Override port (Cloud Run sets this)    |
+| `DISABLE_SESSION_LIST`     | `false`     | Disable `GET /sessions` endpoint       |
 | `MCP_TRANSPORT`            | `stdio`     | MCP transport (`stdio`, `http`, `sse`) |
 | `MCP_SERVER_HOST`          | `localhost` | MCP server host (http/sse only)        |
 | `MCP_SERVER_PORT`          | `9000`      | MCP server port (http/sse only)        |
 | `SESSION_TTL_SECONDS`      | `1800`      | Session inactivity timeout (30 min)    |
 | `SESSION_CLEANUP_INTERVAL` | `60`        | Cleanup sweep interval (seconds)       |
+| `API_BASE_URL`             | —           | API URL for standalone UI              |
+| `ROOT_PATH`                | —           | ASGI root path for UI behind LB       |
 
 ## Development
 

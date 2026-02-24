@@ -21,6 +21,7 @@ htmlcov/
 *.log
 .DS_Store
 .claude/
+security/
 site/
 scripts/
 .mcpregistry_github_token
