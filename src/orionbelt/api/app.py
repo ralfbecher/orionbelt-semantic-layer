@@ -8,7 +8,7 @@ from contextlib import asynccontextmanager
 
 import uvicorn
 from fastapi import FastAPI
-from fastapi.responses import Response
+from fastapi.responses import RedirectResponse, Response
 
 from orionbelt import __version__
 from orionbelt.api.deps import init_session_manager, reset_session_manager
@@ -70,6 +70,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.get("/robots.txt", include_in_schema=False)
     async def robots_txt() -> Response:
         return Response("User-agent: *\nAllow: /\n", media_type="text/plain")
+
+    # Redirect /ui → /ui/ so load-balancer URLs work without trailing slash.
+    # On Cloud Run, /ui (no slash) hits the API service; this sends the
+    # browser to /ui/ which the load balancer routes to the UI service.
+    @app.get("/ui", include_in_schema=False)
+    async def redirect_ui() -> RedirectResponse:
+        return RedirectResponse(url="/ui/")
 
     # Mount Gradio UI at /ui when the 'ui' extra is installed
     try:
