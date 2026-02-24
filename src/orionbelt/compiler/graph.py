@@ -96,6 +96,74 @@ class JoinGraph:
             cardinality=join.join_type,
         )
 
+    def descendants(self, node: str) -> set[str]:
+        """Return all nodes reachable from *node* via directed join paths."""
+        if node not in self._directed:
+            return set()
+        return nx.descendants(self._directed, node)
+
+    def find_common_root(self, required_objects: set[str]) -> str:
+        """Find the common root for a set of required objects.
+
+        The join graph is a DAG (joins define direction: source → joinTo).
+        The common root is the **deepest** node that can reach ALL
+        *required_objects* via directed join paths.  "Deepest" = smallest
+        descendant set (most specific ancestor, closest to the required nodes).
+
+        In ``returns → sales → customer``, with required ``{customer, item}``,
+        the common root is ``sales`` (it can reach both).  With required
+        ``{customer, item, returns}``, the common root is ``returns`` (the
+        only node that can reach all three).
+        """
+        required = required_objects & set(self._directed.nodes)
+        if len(required) <= 1:
+            return next(iter(sorted(required))) if required else ""
+
+        # Find all nodes that can reach ALL required nodes via directed paths
+        candidates: list[tuple[str, int]] = []
+        for node in self._directed.nodes:
+            reachable = nx.descendants(self._directed, node) | {node}
+            if required <= reachable:
+                candidates.append((node, len(reachable)))
+
+        if not candidates:
+            # Fallback: no single directed ancestor covers all —
+            # use undirected shortest-path center
+            return self._find_center_undirected(required)
+
+        # Pick the deepest ancestor: smallest reachable set that still covers all
+        candidates.sort(key=lambda x: (x[1], x[0]))
+        return candidates[0][0]
+
+    def _find_center_undirected(self, required: set[str]) -> str:
+        """Fallback: center of the Steiner tree in the undirected graph."""
+        nodes = sorted(required)
+        if len(nodes) <= 1:
+            return nodes[0] if nodes else ""
+
+        steiner: set[str] = set()
+        for i in range(len(nodes)):
+            for j in range(i + 1, len(nodes)):
+                try:
+                    path: list[str] = nx.shortest_path(self._graph, nodes[i], nodes[j])
+                    steiner.update(path)
+                except nx.NetworkXNoPath:
+                    pass
+
+        if not steiner:
+            return nodes[0]
+
+        best: str = nodes[0]
+        best_max = len(self._graph.nodes) + 1
+        for node in sorted(steiner):
+            max_dist = max(
+                nx.shortest_path_length(self._graph, node, r) for r in nodes
+            )
+            if max_dist < best_max:
+                best_max = max_dist
+                best = node
+        return best
+
     def find_join_path(self, from_objects: set[str], to_objects: set[str]) -> list[JoinStep]:
         """Find a minimal join path connecting all required data objects.
 

@@ -16,7 +16,7 @@ OrionBelt is a semantic layer engine that transforms declarative YAML model defi
 - **Automatic join resolution** — Declare relationships between data objects; OrionBelt finds optimal join paths using graph algorithms
 - **Multi-fact support** — Composite Fact Layer (CFL) planning handles queries spanning multiple fact tables with UNION ALL and CTE-based aggregation
 - **Session management** — TTL-scoped sessions isolate model state per client, enabling iterative development workflows
-- **AI-native** — MCP server with 9 tools and 3 prompts lets AI assistants load, validate, and query models interactively
+- **AI-native** — MCP server with 10 tools and 3 prompts lets AI assistants load, validate, and query models interactively
 
 ## Key Features
 
@@ -27,7 +27,9 @@ OrionBelt is a semantic layer engine that transforms declarative YAML model defi
 | Star Schema & CFL | Automatic fact selection and join path resolution |
 | Session Management | TTL-scoped per-client sessions for REST API and MCP |
 | REST API | FastAPI endpoints for session-based model management, validation, and compilation |
-| MCP Server | 9 tools + 3 prompts for Claude Desktop, Cursor, and other MCP clients |
+| MCP Server | 10 tools + 3 prompts for Claude Desktop, Cursor, and other MCP clients |
+| Gradio UI | Interactive web interface for model editing, query testing, SQL compilation, ER diagrams, and OSI import/export |
+| Custom Extensions | Vendor-specific metadata at all model levels (model, data object, column, dimension, measure, metric) |
 | Plugin Architecture | Extensible dialect system with capability flags |
 | Source Tracking | Error messages with YAML line/column positions |
 

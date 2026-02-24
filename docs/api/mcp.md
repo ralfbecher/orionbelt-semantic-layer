@@ -46,7 +46,17 @@ In **stdio mode** (single-user), a default session is created automatically. All
 
 In **HTTP/SSE mode** (multi-client), clients must create sessions explicitly using `create_session` and pass the `session_id` to subsequent tool calls.
 
-## Tools (9)
+## Tools (10)
+
+### Reference
+
+#### `get_obml_reference`
+
+Get the full OBML format specification with examples. Call this tool before composing any OBML YAML to understand the correct syntax for data objects, dimensions, measures, metrics, joins, and expressions.
+
+No parameters required.
+
+**Returns:** The OBML format reference as text.
 
 ### Session Management
 

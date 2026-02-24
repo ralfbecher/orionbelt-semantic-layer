@@ -246,9 +246,17 @@ class QueryResolver:
         if result.base_object:
             result.required_objects.add(result.base_object)
 
-        # Detect multi-fact: if measures come from multiple source objects, use CFL
+        # Detect multi-fact: CFL is needed only when measure source objects
+        # span multiple independent fact tables.  If all measure sources are
+        # reachable from the base object via directed join paths (i.e. they
+        # are dimension tables joined from the same fact), a single star
+        # schema query suffices.
         if len(result.measure_source_objects) > 1:
-            result.requires_cfl = True
+            graph = JoinGraph(model, use_path_names=query.use_path_names or None)
+            reachable = graph.descendants(result.base_object)
+            unreachable = result.measure_source_objects - reachable - {result.base_object}
+            if unreachable:
+                result.requires_cfl = True
 
         # 4. Validate usePathNames before building join graph
         for upn in query.use_path_names:

@@ -205,16 +205,188 @@ _INJECT_UPLOAD_JS = (
         toolbar.insertBefore(btn, toolbar.firstChild);
     }
 
+    function patchDownloadBtn(codeId, filename) {
+        const root = document.getElementById(codeId);
+        if (!root) return;
+        /* Find download buttons (those with a download-icon SVG or title) */
+        var btns = root.querySelectorAll('button');
+        for (var b of btns) {
+            if (b._ob_patched) continue;
+            /* Detect download button by its SVG path (arrow-down + line) */
+            var svg = b.querySelector('svg');
+            if (!svg) continue;
+            var paths = svg.querySelectorAll('path, polyline, line');
+            var isDownload = false;
+            for (var p of paths) {
+                var d = p.getAttribute('d') || p.getAttribute('points') || '';
+                if (d.indexOf('21 15') >= 0 || d.indexOf('M21') >= 0) {
+                    isDownload = true;
+                    break;
+                }
+            }
+            if (!isDownload) continue;
+            b._ob_patched = true;
+            (function(btn, fname) {
+                btn.addEventListener('click', function(e) {
+                    /* Defer to let Gradio create the download, then rename */
+                    setTimeout(function() {
+                        var a = document.querySelector('a[download]');
+                        if (a) a.download = fname;
+                    }, 50);
+                }, true);
+            })(b, filename);
+        }
+    }
+
     /* Retry a few times — components render asynchronously. */
     var attempts = 0;
     var iv = setInterval(function() {
         addUploadBtn('ob-model', 'ob-model-bridge');
         addUploadBtn('ob-query', 'ob-query-bridge');
+        patchDownloadBtn('ob-model', 'obml.yml');
+        patchDownloadBtn('ob-query', 'query.yaml');
+        patchDownloadBtn('ob-sql', 'query.sql');
         if (++attempts >= 10) clearInterval(iv);
     }, 300);
 }
 """
 )
+
+
+_IMPORT_OSI_JS = """
+() => {
+    const fi = document.createElement('input');
+    fi.type = 'file';
+    fi.accept = '.yaml,.yml';
+    fi.addEventListener('change', function() {
+        const f = fi.files[0];
+        if (!f) return;
+        const reader = new FileReader();
+        reader.addEventListener('load', function() {
+            const el = document.getElementById('ob-osi-bridge');
+            if (!el) return;
+            const ta = el.querySelector('textarea') || el.querySelector('input');
+            if (!ta) return;
+            ta.value = reader.result;
+            ta.dispatchEvent(new Event('input', {bubbles: true}));
+            ta.dispatchEvent(new Event('change', {bubbles: true}));
+        });
+        reader.readAsText(f);
+    });
+    fi.click();
+}
+"""
+
+
+def _get_converter_module():  # type: ignore[no-untyped-def]
+    """Lazy-import the OSI ↔ OBML converter module from ``osi-obml/``."""
+    import importlib
+    import sys
+    from pathlib import Path
+
+    converter_dir = str(Path(__file__).resolve().parents[3] / "osi-obml")
+    if converter_dir not in sys.path:
+        sys.path.insert(0, converter_dir)
+    return importlib.import_module("osi_obml_converter")
+
+
+def _import_osi(osi_yaml: str) -> tuple[str, str]:
+    """Convert OSI YAML to OBML. Returns ``(obml_yaml, status_message)``."""
+    if not osi_yaml or not osi_yaml.strip():
+        return "", "-- Error: No OSI YAML content provided"
+
+    try:
+        data = yaml.safe_load(osi_yaml)
+    except yaml.YAMLError as exc:
+        return "", f"-- Error: Invalid YAML\n-- {exc}"
+
+    if not isinstance(data, dict):
+        return "", "-- Error: OSI YAML must be a mapping (dict), not a scalar or list"
+
+    mod = _get_converter_module()
+    try:
+        converter = mod.OSItoOBML(data)
+        result = converter.convert()
+        warnings = converter.warnings
+    except Exception as exc:
+        return "", f"-- Error: OSI → OBML conversion failed\n-- {exc}"
+
+    obml_yaml = yaml.dump(
+        result, default_flow_style=False, allow_unicode=True, sort_keys=False, width=120
+    )
+
+    # Build status lines
+    lines: list[str] = ["-- OSI → OBML Import"]
+    for w in warnings:
+        lines.append(f"-- WARNING: {w}")
+
+    # Validate the OBML output
+    try:
+        vr = mod.validate_obml(result)
+        schema_ok = "✓" if not vr.schema_errors else f"{len(vr.schema_errors)} error(s)"
+        sem_ok = "✓" if not vr.semantic_errors else f"{len(vr.semantic_errors)} error(s)"
+        lines.append(f"-- Validation: JSON Schema {schema_ok} | Semantic {sem_ok}")
+        for e in vr.schema_errors:
+            lines.append(f"-- Schema error: {e}")
+        for e in vr.semantic_errors:
+            lines.append(f"-- Semantic error: {e}")
+        for w in vr.semantic_warnings:
+            lines.append(f"-- Validation warning: {w}")
+    except Exception:
+        lines.append("-- Validation: skipped (validator unavailable)")
+
+    return obml_yaml, "\n".join(lines)
+
+
+def _export_to_osi(obml_yaml: str) -> str:
+    """Convert OBML YAML to OSI. Returns status + OSI YAML for ``sql_output``."""
+    if not obml_yaml or not obml_yaml.strip():
+        return "-- Error: No OBML model YAML to export"
+
+    try:
+        data = yaml.safe_load(obml_yaml)
+    except yaml.YAMLError as exc:
+        return f"-- Error: Invalid YAML\n-- {exc}"
+
+    if not isinstance(data, dict):
+        return "-- Error: OBML YAML must be a mapping (dict), not a scalar or list"
+
+    mod = _get_converter_module()
+    try:
+        converter = mod.OBMLtoOSI(data)
+        result = converter.convert()
+        warnings = converter.warnings
+    except Exception as exc:
+        return f"-- Error: OBML → OSI conversion failed\n-- {exc}"
+
+    osi_yaml = yaml.dump(
+        result, default_flow_style=False, allow_unicode=True, sort_keys=False, width=120
+    )
+
+    # Build header lines
+    lines: list[str] = ["-- OBML → OSI Export"]
+    for w in warnings:
+        lines.append(f"-- WARNING: {w}")
+
+    # Validate the OSI output
+    try:
+        vr = mod.validate_osi(result)
+        schema_ok = "✓" if not vr.schema_errors else f"{len(vr.schema_errors)} error(s)"
+        sem_ok = "✓" if not vr.semantic_errors else f"{len(vr.semantic_errors)} error(s)"
+        lines.append(f"-- Validation: JSON Schema {schema_ok} | Semantic {sem_ok}")
+        for e in vr.schema_errors:
+            lines.append(f"-- Schema error: {e}")
+        for e in vr.semantic_errors:
+            lines.append(f"-- Semantic error: {e}")
+        for w in vr.semantic_warnings:
+            lines.append(f"-- Validation warning: {w}")
+    except Exception:
+        lines.append("-- Validation: skipped (validator unavailable)")
+
+    lines.append("-- Copy the OSI YAML output below.")
+    lines.append("")
+
+    return "\n".join(lines) + "\n" + osi_yaml
 
 
 def _format_sql(sql: str) -> str:
@@ -479,6 +651,8 @@ def create_blocks(default_api_url: str | None = None) -> Any:
                         scale=2,
                         visible=not cohosted,
                     )
+                    import_osi_btn = gr.Button("Import OSI", size="sm", scale=0, min_width=100)
+                    export_osi_btn = gr.Button("Export to OSI", size="sm", scale=0, min_width=120)
 
                 with gr.Row(equal_height=True):
                     model_input = gr.Code(
@@ -525,6 +699,14 @@ def create_blocks(default_api_url: str | None = None) -> Any:
                     outputs=[query_input],
                 )
 
+                # OSI import bridge: JS file picker → bridge → Python converter
+                osi_bridge = gr.Textbox(
+                    elem_id="ob-osi-bridge",
+                    container=False,
+                    elem_classes=["ob-bridge"],
+                )
+                import_osi_btn.click(fn=None, js=_IMPORT_OSI_JS)
+
                 compile_btn = gr.Button(
                     "Compile SQL", variant="primary", elem_classes=["purple-btn"]
                 )
@@ -535,12 +717,25 @@ def create_blocks(default_api_url: str | None = None) -> Any:
                     interactive=False,
                     lines=3,
                     elem_classes=["sql-output"],
+                    elem_id="ob-sql",
                 )
 
                 compile_btn.click(
                     fn=compile_sql,
                     inputs=[model_input, query_input, dialect, api_url],
                     outputs=sql_output,
+                )
+
+                # Wire OSI bridge + export after sql_output exists
+                osi_bridge.change(
+                    fn=_import_osi,
+                    inputs=[osi_bridge],
+                    outputs=[model_input, sql_output],
+                )
+                export_osi_btn.click(
+                    fn=_export_to_osi,
+                    inputs=[model_input],
+                    outputs=[sql_output],
                 )
 
             with gr.Tab("ER Diagram", id=1) as er_tab:

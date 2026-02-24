@@ -67,8 +67,10 @@ The output of resolution contains everything the planner needs:
 The `JoinGraph` uses [networkx](https://networkx.org/) to model data object relationships:
 
 - **Undirected graph** for finding shortest paths between data objects
-- **Directed graph** for cycle detection
+- **Directed graph** for cycle detection, reachability checks, and common root computation
 - `find_join_path(from_objects, to_objects)` returns the minimal `JoinStep` sequence
+- `descendants(node)` returns all nodes reachable via directed join paths from the given node
+- `find_common_root(required_objects)` finds the deepest directed ancestor that can reach all required objects — used by the CFL planner to select the FROM base for each UNION ALL leg
 - `build_join_condition(step)` generates equality conditions from field mappings
 - Accepts optional `use_path_names` to activate secondary joins — when a secondary override is active for a `(source, target)` pair, the primary join is replaced by the matching secondary join
 
@@ -124,13 +126,17 @@ plan = QueryPlan(ast=builder.build())
 
 **Module:** `orionbelt.compiler.cfl`
 
-Used for multi-fact queries — when measures come from different fact tables. The CFL planner uses a **UNION ALL** strategy:
+Used for multi-fact queries — when measures come from truly independent fact tables that are not reachable from each other via directed join paths. The CFL planner uses a **UNION ALL** strategy:
 
 1. **Groups measures by source data object** — Identifies which measures belong to which fact table
-2. **Validates fanout** — Ensures dimensions are compatible across facts
-3. **Builds UNION ALL legs** — Each fact leg SELECTs conformed dimensions + its own measures (with NULL for the other facts' measures)
-4. **Combines into a CTE** — The legs are combined with `UNION ALL` into a single `composite_01` CTE
-5. **Outer aggregation** — The outer query aggregates over the union, grouping by conformed dimensions
+2. **Finds common root per leg** — Each leg uses `JoinGraph.find_common_root()` to find the deepest directed ancestor covering all required objects (dimension objects + measure source) for that leg
+3. **Validates fanout** — Ensures dimensions are compatible across facts
+4. **Builds UNION ALL legs** — Each fact leg starts FROM the common root, JOINs to reach all required objects, SELECTs conformed dimensions + its own measures (with NULL for the other facts' measures)
+5. **Combines into a CTE** — The legs are combined with `UNION ALL` into a single `composite_01` CTE
+6. **Outer aggregation** — The outer query aggregates over the union, grouping by conformed dimensions
+
+!!! note "CFL trigger"
+    CFL is only activated when measure source objects are truly unreachable from the base object via directed join paths. If all measure sources are reachable from a single fact table, the star schema planner is used instead — even when measures reference columns from different data objects.
 
 ```sql
 WITH composite_01 AS (

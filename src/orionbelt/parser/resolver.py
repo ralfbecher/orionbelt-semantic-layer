@@ -7,6 +7,7 @@ from typing import Any
 
 from orionbelt.models.errors import SemanticError, ValidationResult
 from orionbelt.models.semantic import (
+    CustomExtension,
     DataColumnRef,
     DataObject,
     DataObjectColumn,
@@ -19,6 +20,12 @@ from orionbelt.models.semantic import (
     SemanticModel,
 )
 from orionbelt.parser.loader import SourceMap
+
+
+def _parse_extensions(raw: dict[str, Any]) -> list[CustomExtension]:
+    """Extract customExtensions from a raw YAML dict."""
+    exts = raw.get("customExtensions", [])
+    return [CustomExtension(vendor=e.get("vendor", ""), data=e.get("data", "")) for e in exts]
 
 
 class ReferenceResolver:
@@ -61,6 +68,7 @@ class ReferenceResolver:
                         sql_precision=fdata.get("sqlPrecision"),
                         sql_scale=fdata.get("sqlScale"),
                         comment=fdata.get("comment"),
+                        custom_extensions=_parse_extensions(fdata),
                     )
 
                 obj_joins: list[DataObjectJoin] = []
@@ -84,6 +92,7 @@ class ReferenceResolver:
                     columns=obj_columns,
                     joins=obj_joins,
                     comment=raw_obj.get("comment"),
+                    custom_extensions=_parse_extensions(raw_obj),
                 )
             except Exception as e:
                 span = source_map.get(f"dataObjects.{name}") if source_map else None
@@ -158,6 +167,7 @@ class ReferenceResolver:
                     result_type=raw_dim.get("resultType", "string"),
                     time_grain=raw_dim.get("timeGrain"),
                     format=raw_dim.get("format"),
+                    custom_extensions=_parse_extensions(raw_dim),
                 )
             except Exception as e:
                 span = source_map.get(f"dimensions.{name}") if source_map else None
@@ -239,6 +249,7 @@ class ReferenceResolver:
                     filter=mfilter,
                     format=raw_meas.get("format"),
                     allow_fan_out=raw_meas.get("allowFanOut", False),
+                    custom_extensions=_parse_extensions(raw_meas),
                 )
             except Exception as e:
                 span = source_map.get(f"measures.{name}") if source_map else None
@@ -275,6 +286,7 @@ class ReferenceResolver:
                     label=name,
                     expression=expression,
                     format=raw_metric.get("format"),
+                    custom_extensions=_parse_extensions(raw_metric),
                 )
             except Exception as e:
                 span = source_map.get(f"metrics.{name}") if source_map else None
@@ -293,6 +305,7 @@ class ReferenceResolver:
             dimensions=dimensions,
             measures=measures,
             metrics=metrics,
+            custom_extensions=_parse_extensions(raw),
         )
 
         result = ValidationResult(

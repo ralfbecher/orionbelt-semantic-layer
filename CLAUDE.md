@@ -56,7 +56,8 @@ QueryObject + SemanticModel
   ┌─────────────┐
   │  Resolution  │  compiler/resolution.py — selects base object (fact table),
   │              │  resolves refs, determines join paths, classifies filters,
-  │              │  sets requires_cfl=True when measures span multiple facts
+  │              │  sets requires_cfl=True only when measures span truly
+  │              │  independent facts (directed reachability check via JoinGraph)
   └──────┬──────┘
          │
          ▼
@@ -69,6 +70,7 @@ QueryObject + SemanticModel
   ┌─────────────┐
   │   Planner   │  compiler/star.py — single-fact star schema (LEFT JOINs)
   │             │  compiler/cfl.py  — multi-fact CFL (UNION ALL + NULL padding)
+  │             │  CFL uses common root per leg via JoinGraph.find_common_root()
   └──────┬──────┘
          │
          ▼

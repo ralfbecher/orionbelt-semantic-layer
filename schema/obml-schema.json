@@ -4,7 +4,23 @@
   "title": "OBML",
   "description": "A markup language to define the OrionBelt Semantic Layer",
   "definitions": {
-"dataObject": {
+"customExtension": {
+      "type": "object",
+      "description": "Vendor-keyed extension data — opaque to OrionBelt",
+      "properties": {
+        "vendor": {
+          "type": "string",
+          "description": "Vendor or format identifier (e.g. OSI, GOVERNANCE)"
+        },
+        "data": {
+          "type": "string",
+          "description": "Opaque data payload (typically JSON string)"
+        }
+      },
+      "required": ["vendor", "data"],
+      "additionalProperties": false
+    },
+    "dataObject": {
       "type": "object",
       "description": "Unique Data Object Name in the OrionBelt Model",
       "properties": {
@@ -40,6 +56,11 @@
         },
         "comment": {
           "type": "string"
+        },
+        "customExtensions": {
+          "type": "array",
+          "description": "Vendor-keyed extension data",
+          "items": { "$ref": "#/definitions/customExtension" }
         }
       },
       "required": ["code", "database", "schema", "columns"],
@@ -92,6 +113,11 @@
         },
         "comment": {
           "type": "string"
+        },
+        "customExtensions": {
+          "type": "array",
+          "description": "Vendor-keyed extension data",
+          "items": { "$ref": "#/definitions/customExtension" }
         }
       },
       "required": ["code", "abstractType"],
@@ -362,6 +388,11 @@
             "$ref": "#/definitions/queryColumn"
           },
           "minItems": 2
+        },
+        "customExtensions": {
+          "type": "array",
+          "description": "Vendor-keyed extension data",
+          "items": { "$ref": "#/definitions/customExtension" }
         }
       },
       "required": ["dataObject", "column"],
@@ -439,6 +470,11 @@
         },
         "filter": {
           "$ref": "#/definitions/filter"
+        },
+        "customExtensions": {
+          "type": "array",
+          "description": "Vendor-keyed extension data",
+          "items": { "$ref": "#/definitions/customExtension" }
         }
       },
       "required": ["aggregation"],
@@ -457,6 +493,11 @@
         },
         "format": {
           "type": "string"
+        },
+        "customExtensions": {
+          "type": "array",
+          "description": "Vendor-keyed extension data",
+          "items": { "$ref": "#/definitions/customExtension" }
         }
       },
       "required": ["expression"],
@@ -617,6 +658,11 @@
     },
     "locale": {
       "$ref": "#/definitions/locale"
+    },
+    "customExtensions": {
+      "type": "array",
+      "description": "Vendor-keyed extension data at model level",
+      "items": { "$ref": "#/definitions/customExtension" }
     },
     "additionalProperties": false
   },

@@ -120,7 +120,7 @@ orionbelt-semantic-layer/
 │   ├── ast/            # SQL AST nodes, builder, visitor
 │   ├── compiler/       # Resolution, planning (star/CFL), codegen pipeline
 │   ├── dialect/        # 5 SQL dialect implementations
-│   ├── mcp/            # MCP server (9 tools, 3 prompts)
+│   ├── mcp/            # MCP server (10 tools, 3 prompts)
 │   ├── models/         # Pydantic models (semantic, query, errors)
 │   ├── parser/         # YAML loader, reference resolver, validator
 │   ├── service/        # ModelStore, SessionManager

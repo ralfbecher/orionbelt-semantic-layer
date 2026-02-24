@@ -507,6 +507,148 @@ dataObjects:
         assert not any(e.code == "MULTIPATH_JOIN" for e in errors)
 
 
+class TestCustomExtensions:
+    """Tests for customExtensions parsing at all 6 levels."""
+
+    EXTENSIONS_MODEL_YAML = """\
+version: 1.0
+customExtensions:
+  - vendor: GOVERNANCE
+    data: '{"owner": "data-team"}'
+dataObjects:
+  Orders:
+    code: ORDERS
+    database: DB
+    schema: SCH
+    columns:
+      Amount:
+        code: AMOUNT
+        abstractType: float
+        customExtensions:
+          - vendor: OSI
+            data: '{"synonyms": ["revenue"]}'
+      Order ID:
+        code: ORDER_ID
+        abstractType: string
+    customExtensions:
+      - vendor: OSI
+        data: '{"instructions": "Main fact table"}'
+dimensions:
+  Order Amount:
+    dataObject: Orders
+    column: Amount
+    resultType: float
+    customExtensions:
+      - vendor: OSI
+        data: '{"examples": ["100.0"]}'
+measures:
+  Total Revenue:
+    columns:
+      - dataObject: Orders
+        column: Amount
+    resultType: float
+    aggregation: sum
+    customExtensions:
+      - vendor: LINEAGE
+        data: '{"source": "ERP"}'
+metrics:
+  Revenue Doubled:
+    expression: '{[Total Revenue]} * 2'
+    customExtensions:
+      - vendor: GOVERNANCE
+        data: '{"classification": "internal"}'
+"""
+
+    def test_model_level_extensions(self, resolver: ReferenceResolver) -> None:
+        loader = TrackedLoader()
+        raw, source_map = loader.load_string(self.EXTENSIONS_MODEL_YAML)
+        model, result = resolver.resolve(raw, source_map)
+        assert result.valid, f"Errors: {[e.message for e in result.errors]}"
+        assert len(model.custom_extensions) == 1
+        assert model.custom_extensions[0].vendor == "GOVERNANCE"
+        assert '"owner"' in model.custom_extensions[0].data
+
+    def test_data_object_level_extensions(self, resolver: ReferenceResolver) -> None:
+        loader = TrackedLoader()
+        raw, source_map = loader.load_string(self.EXTENSIONS_MODEL_YAML)
+        model, result = resolver.resolve(raw, source_map)
+        assert result.valid
+        exts = model.data_objects["Orders"].custom_extensions
+        assert len(exts) == 1
+        assert exts[0].vendor == "OSI"
+        assert '"instructions"' in exts[0].data
+
+    def test_column_level_extensions(self, resolver: ReferenceResolver) -> None:
+        loader = TrackedLoader()
+        raw, source_map = loader.load_string(self.EXTENSIONS_MODEL_YAML)
+        model, result = resolver.resolve(raw, source_map)
+        assert result.valid
+        exts = model.data_objects["Orders"].columns["Amount"].custom_extensions
+        assert len(exts) == 1
+        assert exts[0].vendor == "OSI"
+        assert '"synonyms"' in exts[0].data
+
+    def test_dimension_level_extensions(self, resolver: ReferenceResolver) -> None:
+        loader = TrackedLoader()
+        raw, source_map = loader.load_string(self.EXTENSIONS_MODEL_YAML)
+        model, result = resolver.resolve(raw, source_map)
+        assert result.valid
+        exts = model.dimensions["Order Amount"].custom_extensions
+        assert len(exts) == 1
+        assert exts[0].vendor == "OSI"
+
+    def test_measure_level_extensions(self, resolver: ReferenceResolver) -> None:
+        loader = TrackedLoader()
+        raw, source_map = loader.load_string(self.EXTENSIONS_MODEL_YAML)
+        model, result = resolver.resolve(raw, source_map)
+        assert result.valid
+        exts = model.measures["Total Revenue"].custom_extensions
+        assert len(exts) == 1
+        assert exts[0].vendor == "LINEAGE"
+
+    def test_metric_level_extensions(self, resolver: ReferenceResolver) -> None:
+        loader = TrackedLoader()
+        raw, source_map = loader.load_string(self.EXTENSIONS_MODEL_YAML)
+        model, result = resolver.resolve(raw, source_map)
+        assert result.valid
+        exts = model.metrics["Revenue Doubled"].custom_extensions
+        assert len(exts) == 1
+        assert exts[0].vendor == "GOVERNANCE"
+
+    def test_empty_extensions_default(self, resolver: ReferenceResolver) -> None:
+        """Model without customExtensions should have empty lists."""
+        loader = TrackedLoader()
+        raw, source_map = loader.load_string(SAMPLE_MODEL_YAML)
+        model, result = resolver.resolve(raw, source_map)
+        assert result.valid
+        assert model.custom_extensions == []
+        assert model.data_objects["Orders"].custom_extensions == []
+        assert model.data_objects["Orders"].columns["Amount"].custom_extensions == []
+        assert model.dimensions["Customer Country"].custom_extensions == []
+        assert model.measures["Total Revenue"].custom_extensions == []
+
+    def test_extensions_do_not_affect_compilation(self) -> None:
+        """Model with customExtensions should compile normally."""
+        from orionbelt.compiler.pipeline import CompilationPipeline
+        from orionbelt.models.query import QueryObject, QuerySelect
+
+        loader = TrackedLoader()
+        resolver = ReferenceResolver()
+        raw, source_map = loader.load_string(self.EXTENSIONS_MODEL_YAML)
+        model, result = resolver.resolve(raw, source_map)
+        assert result.valid
+
+        pipeline = CompilationPipeline()
+        query = QueryObject(
+            select=QuerySelect(
+                dimensions=["Order Amount"],
+                measures=["Total Revenue"],
+            ),
+        )
+        compile_result = pipeline.compile(query, model, "postgres")
+        assert "SELECT" in compile_result.sql
+
+
 class TestSecondaryJoinValidation:
     """Tests for secondary join validation rules."""
 

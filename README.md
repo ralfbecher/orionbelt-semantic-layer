@@ -7,7 +7,7 @@
 
 <p align="center"><strong>Compile YAML semantic models into analytical SQL across multiple database dialects</strong></p>
 
-[![Version 0.4.0](https://img.shields.io/badge/version-0.4.0-purple.svg)](https://github.com/ralfbecher/orionbelt-semantic-layer/releases)
+[![Version 0.5.0](https://img.shields.io/badge/version-0.5.0-purple.svg)](https://github.com/ralfbecher/orionbelt-semantic-layer/releases)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://github.com/ralfbecher/orionbelt-semantic-layer/blob/main/LICENSE)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.128+-009688.svg?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
@@ -38,7 +38,7 @@ OrionBelt Semantic Layer is an **API-first** engine that transforms declarative 
 - **Session Management** — TTL-scoped sessions with per-client model stores for both REST API and MCP
 - **ER Diagram Generation** — Mermaid ER diagrams via API and Gradio UI with theme support, zoom, and secondary join visualization
 - **REST API** — FastAPI-powered session endpoints for model loading, validation, compilation, diagram generation, and management
-- **MCP Server** — 9 tools + 3 prompts for AI-assisted model development via Claude Desktop and other MCP clients
+- **MCP Server** — 10 tools + 3 prompts for AI-assisted model development via Claude Desktop and other MCP clients
 - **Gradio UI** — Interactive web interface for model editing, query testing, and SQL compilation with live validation feedback
 - **Plugin Architecture** — Extensible dialect system with capability flags and registry
 
@@ -287,6 +287,7 @@ YAML Model          Query Object
 
 The MCP server exposes OrionBelt as tools for AI assistants (Claude Desktop, Cursor, etc.):
 
+**Reference** (1): `get_obml_reference`
 **Session tools** (3): `create_session`, `close_session`, `list_sessions`
 **Model tools** (5): `load_model`, `validate_model`, `describe_model`, `compile_query`, `list_models`
 **Stateless** (1): `list_dialects`
@@ -344,6 +345,7 @@ The UI provides:
 - **One-click compilation** — Compile button generates formatted SQL output
 - **SQL validation feedback** — Warnings and validation errors from sqlglot are displayed as comments above the generated SQL
 - **ER Diagram tab** — Visualize the semantic model as a Mermaid ER diagram with left-to-right layout, FK annotations, dotted lines for secondary joins, and an adjustable zoom slider
+- **OSI Import / Export** — Import OSI format models (converted to OBML) and export OBML models to OSI format, with validation feedback
 - **Dark / light mode** — Toggle via the header button; all inputs and UI state are persisted across mode switches
 
 The bundled example model (`examples/sem-layer.obml.yml`) is loaded automatically on startup.
@@ -458,6 +460,12 @@ Full documentation is available at the [docs site](https://ralfbecher.github.io/
 uv sync --extra docs
 uv run mkdocs serve   # http://127.0.0.1:8080
 ```
+
+## OSI Interoperability
+
+OrionBelt includes a bidirectional converter between OBML and the [Open Semantic Interchange (OSI)](https://github.com/open-semantic-interchange/OSI) format. The converter handles the structural differences between the two formats — including metric decomposition, relationship restructuring, and lossless `ai_context` preservation via `customExtensions` — with built-in validation for both directions.
+
+See the [OSI ↔ OBML Mapping Analysis](osi-obml/osi_obml_mapping_analysis.md) for a detailed comparison and conversion reference.
 
 ## Companion Project
 

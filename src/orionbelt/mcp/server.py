@@ -151,6 +151,22 @@ timestamp_tz, boolean, json
 sum, count, count_distinct, avg, min, max,
 any_value, median, mode, listagg
 
+## 5. customExtensions — vendor-keyed metadata (optional)
+
+All six levels (model, dataObject, column, dimension, measure, metric) support
+an optional `customExtensions` array for vendor-specific metadata:
+
+```yaml
+customExtensions:
+  - vendor: OSI
+    data: '{"instructions": "Use for retail analytics", "synonyms": ["sales"]}'
+  - vendor: GOVERNANCE
+    data: '{"owner": "data-team", "classification": "internal"}'
+```
+
+Each entry has `vendor` (identifier string) and `data` (opaque JSON string).
+OrionBelt preserves these during parsing but does not interpret them.
+
 ## Key Rules
 
 1. **Column names are unique within each data object**.
@@ -685,6 +701,11 @@ measures:
 metrics:
   <Metric Name>:
     expression: '{[Measure A]} / {[Measure B]}'   # {[Measure Name]} syntax
+
+# Optional on any level: model, dataObject, column, dimension, measure, metric
+customExtensions:
+  - vendor: <VENDOR>
+    data: '<JSON string>'
 ```
 
 ## abstractType Values

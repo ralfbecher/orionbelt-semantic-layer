@@ -223,7 +223,10 @@ class CFLPlanner:
         if cross_fact:
             all_measures.extend(cross_fact)
 
-        # Build one SELECT per fact object
+        # Build one SELECT per fact object group.
+        # Each leg computes its own LCA (least common ancestor) as the lead
+        # table — the graph-central node that can reach all dimension objects
+        # and the measure's source object with minimal hops.
         union_legs: list[Select] = []
         for obj_name, measures in measures_by_object.items():
             leg_builder = QueryBuilder()
@@ -253,26 +256,32 @@ class CFLPlanner:
                 else:
                     leg_builder.select(AliasedExpr(expr=Literal.null(), alias=m.name))
 
-            # FROM fact object
-            obj = model.data_objects.get(obj_name)
-            if obj:
-                leg_builder.from_(obj.qualified_code, alias=obj_name)
+            # Determine the common root for this leg:
+            # the deepest directed ancestor that can reach all dimension
+            # objects and the measure's source object.
+            leg_required = {dim.object_name for dim in resolved.dimensions}
+            leg_required.add(obj_name)
+            lead = graph.find_common_root(leg_required)
+            lead_obj = model.data_objects.get(lead)
 
-            # JOINs for this fact's dimensions
-            required = {dim.object_name for dim in resolved.dimensions}
-            if obj_name in required:
-                required = required - {obj_name}
-            steps = graph.find_join_path({obj_name}, required | {obj_name})
-            for step in steps:
-                target_object = model.data_objects.get(step.to_object)
-                if target_object:
-                    on_expr = graph.build_join_condition(step)
-                    leg_builder.join(
-                        table=target_object.qualified_code,
-                        on=on_expr,
-                        join_type=step.join_type,
-                        alias=step.to_object,
-                    )
+            # FROM: the lead (LCA) table
+            if lead_obj:
+                leg_builder.from_(lead_obj.qualified_code, alias=lead)
+
+            # JOINs: all required objects reachable from the lead
+            join_targets = leg_required - {lead}
+            if join_targets:
+                steps = graph.find_join_path({lead}, leg_required)
+                for step in steps:
+                    target_object = model.data_objects.get(step.to_object)
+                    if target_object:
+                        on_expr = graph.build_join_condition(step)
+                        leg_builder.join(
+                            table=target_object.qualified_code,
+                            on=on_expr,
+                            join_type=step.join_type,
+                            alias=step.to_object,
+                        )
 
             union_legs.append(leg_builder.build())
 

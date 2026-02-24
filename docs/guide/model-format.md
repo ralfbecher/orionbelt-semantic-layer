@@ -338,6 +338,31 @@ All artefacts (data objects, dimensions, measures, metrics) have unique names. T
 |-------------|-------------|
 | `{[Measure Name]}` | Named reference to any defined measure |
 
+## Custom Extensions
+
+All six levels (model, data object, column, dimension, measure, metric) support an optional `customExtensions` array for vendor-specific metadata. OrionBelt preserves these during parsing and compilation but does not interpret them.
+
+```yaml
+customExtensions:
+  - vendor: OSI
+    data: '{"instructions": "Use for retail analytics", "synonyms": ["sales"]}'
+  - vendor: GOVERNANCE
+    data: '{"owner": "data-team", "classification": "internal"}'
+```
+
+### Custom Extension Properties
+
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| `vendor` | string | Yes | Vendor or format identifier (e.g. `OSI`, `GOVERNANCE`) |
+| `data` | string | Yes | Opaque data payload (typically a JSON string) |
+
+Use cases:
+
+- **OSI interoperability**: Preserving `ai_context` (instructions, synonyms, examples) from OSI models during conversion
+- **Governance tags**: Owner, classification, cost center, lineage information
+- **Vendor-specific metadata**: Any key-value data that OrionBelt should pass through without interpretation
+
 ## Validation Rules
 
 OrionBelt validates models against these rules:
