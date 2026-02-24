@@ -40,6 +40,7 @@ OrionBelt Semantic Layer is an **API-first** engine that transforms declarative 
 - **REST API** — FastAPI-powered session endpoints for model loading, validation, compilation, diagram generation, and management
 - **MCP Server** — 10 tools + 3 prompts for AI-assisted model development via Claude Desktop and other MCP clients
 - **Gradio UI** — Interactive web interface for model editing, query testing, and SQL compilation with live validation feedback
+- **[OSI](https://github.com/open-semantic-interchange/OSI) Interoperability** — Bidirectional import/export between OBML and the Open Semantic Interchange format, with validation for both directions
 - **Plugin Architecture** — Extensible dialect system with capability flags and registry
 
 ## Quick Start
