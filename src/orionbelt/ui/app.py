@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import contextlib
+import hashlib
 from typing import Any
 
 import httpx
@@ -52,6 +53,25 @@ _CSS = """\
 }
 .purple-btn:hover {
   background: linear-gradient(135deg, #6d28d9, #7c3aed) !important;
+}
+
+/* Custom upload button: match Gradio's native toolbar button style */
+.ob-upload-btn {
+  background: none !important;
+  border: none !important;
+  padding: 2px !important;
+  margin: 0 !important;
+  cursor: pointer;
+  color: var(--body-text-color) !important;
+  opacity: 0.7;
+  display: flex;
+  align-items: center;
+}
+.ob-upload-btn:hover { opacity: 1; }
+.ob-upload-btn svg {
+  width: 16px;
+  height: 16px;
+  stroke: currentColor !important;
 }
 
 /* ── YAML / SQL syntax highlighting (dark-mode optimised) ── */
@@ -206,67 +226,64 @@ _INJECT_UPLOAD_JS = (
     }
 
     /*
-     * MutationObserver to rename Gradio's temporary download files.
-     * Gradio creates a hidden <a download="tmpXXXX"> element when the
-     * download button is clicked.  We watch the whole document for it
-     * and rename it based on which Code component triggered it.
+     * Rename download files for each Code component.
+     * Gradio Code renders a persistent <a download="file.EXT" href="blob:...">
+     * inside the component DOM.  We simply find it and change the download attr.
+     * For ob-sql we also watch for OSI export content and rename to osi.yml.
      */
-    var _obDownloadMap = {
-        'ob-model': 'obml.yml',
-        'ob-query': 'query.yaml',
-        'ob-sql':   'query.sql'   /* default; overridden to osi.yml when content is OSI */
-    };
-
-    /* Track which component triggered the download */
-    var _obLastDownloadSource = null;
-    function hookDownloadBtns(codeId) {
+    function patchDownloads(codeId, filename) {
         var root = document.getElementById(codeId);
-        if (!root || root._ob_dl_hooked) return;
-        root._ob_dl_hooked = true;
-        root.addEventListener('click', function(e) {
-            var btn = e.target.closest('button');
-            if (btn) _obLastDownloadSource = codeId;
-        }, true);
+        if (!root) return;
+        var anchors = root.querySelectorAll('a[download]');
+        anchors.forEach(function(a) { a.download = filename; });
+
+        /* For SQL output: dynamically switch filename based on content */
+        if (codeId === 'ob-sql' && !root._ob_dl_observer) {
+            root._ob_dl_observer = true;
+            /* Re-check filename before each click */
+            root.addEventListener('click', function(e) {
+                var a = e.target.closest('a[download]');
+                if (!a) return;
+                var cm = root.querySelector('.cm-content');
+                var txt = cm ? cm.textContent || '' : '';
+                if (txt.indexOf('OBML') >= 0 && txt.indexOf('OSI') >= 0) {
+                    a.download = 'osi.yml';
+                } else {
+                    a.download = filename;
+                }
+            }, true);
+        }
+
+        /* Gradio may re-render and reset the download attr.
+         * Use MutationObserver to keep our filename. */
+        if (!root._ob_dl_mo) {
+            root._ob_dl_mo = true;
+            var mo = new MutationObserver(function() {
+                var aa = root.querySelectorAll('a[download]');
+                aa.forEach(function(a) {
+                    var desired = filename;
+                    if (codeId === 'ob-sql') {
+                        var cm = root.querySelector('.cm-content');
+                        var txt = cm ? cm.textContent || '' : '';
+                        if (txt.indexOf('OBML') >= 0 && txt.indexOf('OSI') >= 0)
+                            desired = 'osi.yml';
+                    }
+                    if (a.download !== desired) a.download = desired;
+                });
+            });
+            mo.observe(root, {childList: true, subtree: true,
+                attributes: true, attributeFilter: ['download']});
+        }
     }
 
-    /* Observe <a download> creation anywhere in the document */
-    var dlObserver = new MutationObserver(function(mutations) {
-        for (var m of mutations) {
-            for (var node of m.addedNodes) {
-                if (node.nodeType !== 1) continue;
-                var anchors = node.tagName === 'A' ? [node] :
-                    (node.querySelectorAll ? Array.from(node.querySelectorAll('a[download]')) : []);
-                for (var a of anchors) {
-                    if (!a.hasAttribute('download')) continue;
-                    var src = _obLastDownloadSource;
-                    if (!src) continue;
-                    var fname = _obDownloadMap[src];
-                    /* For sql output: detect OSI export by content prefix */
-                    if (src === 'ob-sql') {
-                        var sqlRoot = document.getElementById('ob-sql');
-                        if (sqlRoot) {
-                            var cm = sqlRoot.querySelector('.cm-content');
-                            var txt = cm ? cm.textContent || '' : '';
-                            if (txt.indexOf('OBML') >= 0 && txt.indexOf('OSI') >= 0) {
-                                fname = 'osi.yml';
-                            }
-                        }
-                    }
-                    a.download = fname;
-                }
-            }
-        }
-    });
-    dlObserver.observe(document.body, {childList: true, subtree: true});
-
-    /* Retry a few times — components render asynchronously. */
+    /* Retry — components render asynchronously. */
     var attempts = 0;
     var iv = setInterval(function() {
         addUploadBtn('ob-model', 'ob-model-bridge');
         addUploadBtn('ob-query', 'ob-query-bridge');
-        hookDownloadBtns('ob-model');
-        hookDownloadBtns('ob-query');
-        hookDownloadBtns('ob-sql');
+        patchDownloads('ob-model', 'obml.yml');
+        patchDownloads('ob-query', 'query.yml');
+        patchDownloads('ob-sql', 'query.sql');
         if (++attempts >= 10) clearInterval(iv);
     }, 300);
 }
@@ -439,62 +456,60 @@ def _format_sql(sql: str) -> str:
 
 
 def _fetch_diagram_er(
-    model_yaml: str, show_columns: bool, api_url: str, theme: str = "dark"
-) -> str:
+    model_yaml: str,
+    show_columns: bool,
+    api_url: str,
+    session_state: dict[str, str] | None,
+    model_state: dict[str, str] | None,
+    theme: str = "dark",
+) -> tuple[str, dict[str, str] | None, dict[str, str] | None]:
     """Fetch a Mermaid ER diagram via the REST API.
 
     Falls back to local generation (using ``service.diagram``) when the API
     is not reachable.  *theme* is the Mermaid theme name (``"dark"`` or
     ``"default"``), injected by JS based on the active Gradio colour scheme.
-    Returns a Markdown string with a ``mermaid`` code fence.
+    Returns ``(mermaid_md, updated_session_state, updated_model_state)``.
     """
     if not model_yaml or not model_yaml.strip():
-        return "*No model YAML provided.*"
-
-    api_url = api_url.rstrip("/") if api_url else _DEFAULT_API_URL
-    session_id: str | None = None
+        return "*No model YAML provided.*", session_state, model_state
 
     try:
-        client = httpx.Client(base_url=api_url, timeout=30, headers=_API_HEADERS)
-
-        # 1. Create session
-        resp = client.post("/sessions")
-        resp.raise_for_status()
-        session_id = resp.json()["session_id"]
-
-        # 2. Load model
-        resp = client.post(
-            f"/sessions/{session_id}/models",
-            json={"model_yaml": model_yaml},
+        client, session_id, model_id, session_state, model_state = (
+            _ensure_session_and_model(model_yaml, api_url, session_state, model_state)
         )
-        if resp.status_code == 422:
-            detail = resp.json().get("detail", resp.text)
-            return f"**Model validation failed:** {detail}"
-        resp.raise_for_status()
-        model_id = resp.json()["model_id"]
 
-        # 3. Fetch ER diagram
+        # Fetch ER diagram
         resp = client.get(
             f"/sessions/{session_id}/models/{model_id}/diagram/er",
             params={"show_columns": show_columns, "theme": theme},
         )
+        # Auto-recover from expired session (404)
+        if resp.status_code == 404:
+            client, session_id, model_id, session_state, model_state = (
+                _ensure_session_and_model(model_yaml, api_url, None, None)
+            )
+            resp = client.get(
+                f"/sessions/{session_id}/models/{model_id}/diagram/er",
+                params={"show_columns": show_columns, "theme": theme},
+            )
         resp.raise_for_status()
         mermaid: str = resp.json()["mermaid"]
-        return f"```mermaid\n{mermaid}\n```"
+        return f"```mermaid\n{mermaid}\n```", session_state, model_state
 
+    except _ModelValidationError as exc:
+        return f"**Model validation failed:** {exc}", session_state, model_state
     except httpx.ConnectError:
         # API not available — fall back to local generation
-        return _generate_mermaid_er_local(model_yaml, show_columns, theme=theme)
+        md = _generate_mermaid_er_local(model_yaml, show_columns, theme=theme)
+        return md, session_state, model_state
     except httpx.HTTPStatusError as exc:
-        return f"**Error:** HTTP {exc.response.status_code} — {exc.response.text}"
+        return (
+            f"**Error:** HTTP {exc.response.status_code} — {exc.response.text}",
+            session_state,
+            model_state,
+        )
     except Exception as exc:
-        return f"**Error:** {exc}"
-    finally:
-        if session_id is not None:
-            with contextlib.suppress(Exception):
-                httpx.Client(base_url=api_url, timeout=5, headers=_API_HEADERS).delete(
-                    f"/sessions/{session_id}"
-                )
+        return f"**Error:** {exc}", session_state, model_state
 
 
 def _generate_mermaid_er_local(
@@ -545,50 +560,131 @@ def _fetch_dialects(api_url: str) -> list[str]:
         return _FALLBACK_DIALECTS
 
 
-def compile_sql(model_yaml: str, query_yaml: str, dialect: str, api_url: str) -> str:
-    """Compile SQL by calling the OrionBelt REST API.
+def _ensure_session_and_model(
+    model_yaml: str,
+    api_url: str,
+    session_state: dict[str, str] | None,
+    model_state: dict[str, str] | None,
+) -> tuple[httpx.Client, str, str, dict[str, str], dict[str, str]]:
+    """Ensure a session and model exist, creating/uploading as needed.
 
-    Returns the generated SQL string, or an error message prefixed with ``-- Error:``.
+    Returns ``(client, session_id, model_id, session_state, model_state)``.
+    Creates a new session when *session_state* is ``None`` or the API URL
+    changed.  Uploads the model when *model_state* is ``None`` or the model
+    YAML changed (detected via MD5 hash).  Auto-recovers from expired
+    sessions (HTTP 404).
     """
     api_url = api_url.rstrip("/") if api_url else _DEFAULT_API_URL
-    session_id: str | None = None
+    model_hash = hashlib.md5(model_yaml.encode()).hexdigest()
 
-    try:
-        client = httpx.Client(base_url=api_url, timeout=30, headers=_API_HEADERS)
+    need_session = session_state is None or session_state.get("api_url") != api_url
+    client = httpx.Client(base_url=api_url, timeout=30, headers=_API_HEADERS)
 
-        # 1. Create session
+    # Create session if needed
+    if need_session:
         resp = client.post("/sessions")
         resp.raise_for_status()
-        session_id = resp.json()["session_id"]
+        session_id: str = resp.json()["session_id"]
+        session_state = {"session_id": session_id, "api_url": api_url}
+        model_state = None  # force model re-upload on new session
+    else:
+        assert session_state is not None  # for type narrowing
+        session_id = session_state["session_id"]
 
-        # 2. Load model
+    # Upload model if needed
+    need_model = model_state is None or model_state.get("model_hash") != model_hash
+
+    if need_model:
         resp = client.post(
             f"/sessions/{session_id}/models",
             json={"model_yaml": model_yaml},
         )
+        # Auto-recover from expired session (404)
+        if resp.status_code == 404:
+            resp = client.post("/sessions")
+            resp.raise_for_status()
+            session_id = resp.json()["session_id"]
+            session_state = {"session_id": session_id, "api_url": api_url}
+            resp = client.post(
+                f"/sessions/{session_id}/models",
+                json={"model_yaml": model_yaml},
+            )
         if resp.status_code == 422:
-            detail = resp.json().get("detail", resp.text)
-            return f"-- Error: Model validation failed\n-- {detail}"
+            raise _ModelValidationError(resp.json().get("detail", resp.text))
         resp.raise_for_status()
-        model_id = resp.json()["model_id"]
+        model_id: str = resp.json()["model_id"]
+        model_state = {"model_id": model_id, "model_hash": model_hash}
+    else:
+        assert model_state is not None  # for type narrowing
+        model_id = model_state["model_id"]
 
-        # 3. Parse query YAML
+    return client, session_id, model_id, session_state, model_state
+
+
+class _ModelValidationError(Exception):
+    """Raised when the API rejects a model with HTTP 422."""
+
+
+def _cleanup_session(session_state: dict[str, str] | None) -> None:
+    """Delete the API session on browser tab close."""
+    if session_state:
+        with contextlib.suppress(Exception):
+            httpx.Client(
+                base_url=session_state["api_url"], timeout=5, headers=_API_HEADERS
+            ).delete(f"/sessions/{session_state['session_id']}")
+
+
+def compile_sql(
+    model_yaml: str,
+    query_yaml: str,
+    dialect: str,
+    api_url: str,
+    session_state: dict[str, str] | None,
+    model_state: dict[str, str] | None,
+) -> tuple[str, dict[str, str] | None, dict[str, str] | None]:
+    """Compile SQL by calling the OrionBelt REST API.
+
+    Returns ``(sql_output, updated_session_state, updated_model_state)``.
+    """
+    try:
+        client, session_id, model_id, session_state, model_state = (
+            _ensure_session_and_model(model_yaml, api_url, session_state, model_state)
+        )
+
+        # Parse query YAML
         try:
             query_dict = yaml.safe_load(query_yaml)
         except yaml.YAMLError as exc:
-            return f"-- Error: Invalid query YAML\n-- {exc}"
+            return f"-- Error: Invalid query YAML\n-- {exc}", session_state, model_state
 
         if not isinstance(query_dict, dict):
-            return "-- Error: Query YAML must be a mapping (dict), not a scalar or list"
+            return (
+                "-- Error: Query YAML must be a mapping (dict), not a scalar or list",
+                session_state,
+                model_state,
+            )
 
-        # 4. Compile query
+        # Compile query
         resp = client.post(
             f"/sessions/{session_id}/query/sql",
             json={"model_id": model_id, "query": query_dict, "dialect": dialect},
         )
+        # Auto-recover from expired session on compile (404)
+        if resp.status_code == 404:
+            client, session_id, model_id, session_state, model_state = (
+                _ensure_session_and_model(model_yaml, api_url, None, None)
+            )
+            resp = client.post(
+                f"/sessions/{session_id}/query/sql",
+                json={"model_id": model_id, "query": query_dict, "dialect": dialect},
+            )
         if resp.status_code in (400, 422):
             detail = resp.json().get("detail", resp.text)
-            return f"-- Error: Query compilation failed\n-- {detail}"
+            return (
+                f"-- Error: Query compilation failed\n-- {detail}",
+                session_state,
+                model_state,
+            )
         resp.raise_for_status()
         data = resp.json()
         sql: str = data["sql"]
@@ -604,24 +700,27 @@ def compile_sql(model_yaml: str, query_yaml: str, dialect: str, api_url: str) ->
             header_lines.append(f"-- WARNING: {w}")
         if header_lines:
             header_lines.append("")  # blank line before SQL
-            return "\n".join(header_lines) + "\n" + formatted
-        return formatted
+            return "\n".join(header_lines) + "\n" + formatted, session_state, model_state
+        return formatted, session_state, model_state
 
+    except _ModelValidationError as exc:
+        return f"-- Error: Model validation failed\n-- {exc}", session_state, model_state
     except httpx.ConnectError:
+        api = (api_url.rstrip("/") if api_url else _DEFAULT_API_URL)
         return (
-            f"-- Error: Cannot connect to API at {api_url}\n"
-            "-- Make sure the server is running: uv run orionbelt-api"
+            f"-- Error: Cannot connect to API at {api}\n"
+            "-- Make sure the server is running: uv run orionbelt-api",
+            session_state,
+            model_state,
         )
     except httpx.HTTPStatusError as exc:
-        return f"-- Error: HTTP {exc.response.status_code}\n-- {exc.response.text}"
+        return (
+            f"-- Error: HTTP {exc.response.status_code}\n-- {exc.response.text}",
+            session_state,
+            model_state,
+        )
     except Exception as exc:
-        return f"-- Error: {exc}"
-    finally:
-        if session_id is not None:
-            with contextlib.suppress(Exception):
-                httpx.Client(base_url=api_url, timeout=5, headers=_API_HEADERS).delete(
-                    f"/sessions/{session_id}"
-                )
+        return f"-- Error: {exc}", session_state, model_state
 
 
 def create_blocks(default_api_url: str | None = None) -> Any:
@@ -655,6 +754,10 @@ def create_blocks(default_api_url: str | None = None) -> Any:
         saved_tab = gr.BrowserState(0, storage_key="ob_active_tab")
         saved_zoom = gr.BrowserState(100, storage_key="ob_zoom")
         active_tab = gr.State(0)
+
+        # ── Stateful API session (avoids re-creating per compile) ──
+        session_state = gr.State(None)  # {"session_id": str, "api_url": str}
+        model_state = gr.State(None)  # {"model_id": str, "model_hash": str}
 
         with gr.Row(elem_classes=["header-row"]):
             gr.Markdown(
@@ -749,8 +852,11 @@ def create_blocks(default_api_url: str | None = None) -> Any:
 
                 compile_btn.click(
                     fn=compile_sql,
-                    inputs=[model_input, query_input, dialect, api_url],
-                    outputs=sql_output,
+                    inputs=[
+                        model_input, query_input, dialect, api_url,
+                        session_state, model_state,
+                    ],
+                    outputs=[sql_output, session_state, model_state],
                 )
 
                 # Wire OSI bridge + export after sql_output exists
@@ -812,8 +918,11 @@ def create_blocks(default_api_url: str | None = None) -> Any:
 
                 er_btn.click(
                     fn=_fetch_diagram_er,
-                    inputs=[model_input, show_columns_cb, api_url, theme_input],
-                    outputs=mermaid_output,
+                    inputs=[
+                        model_input, show_columns_cb, api_url,
+                        session_state, model_state, theme_input,
+                    ],
+                    outputs=[mermaid_output, session_state, model_state],
                     js=_DETECT_THEME_JS,
                 ).then(
                     fn=None,
@@ -823,8 +932,11 @@ def create_blocks(default_api_url: str | None = None) -> Any:
 
                 er_tab.select(
                     fn=_fetch_diagram_er,
-                    inputs=[model_input, show_columns_cb, api_url, theme_input],
-                    outputs=mermaid_output,
+                    inputs=[
+                        model_input, show_columns_cb, api_url,
+                        session_state, model_state, theme_input,
+                    ],
+                    outputs=[mermaid_output, session_state, model_state],
                     js=_DETECT_THEME_JS,
                 ).then(
                     fn=None,
@@ -868,6 +980,10 @@ def create_blocks(default_api_url: str | None = None) -> Any:
             inputs=[saved_model, saved_query, saved_api, saved_dialect, saved_tab, saved_zoom],
             outputs=[model_input, query_input, api_url, dialect, tabs, zoom_slider],
         ).then(fn=None, js=_INJECT_UPLOAD_JS)
+
+        # Session cleanup: API sessions expire automatically via SESSION_TTL_SECONDS.
+        # Gradio's demo.unload() cannot access gr.State, so we rely on TTL expiry
+        # and auto-recovery in _ensure_session_and_model() for stale sessions.
 
     return demo
 

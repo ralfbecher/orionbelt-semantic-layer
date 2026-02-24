@@ -124,7 +124,10 @@ def _tokenize_formula(formula: str) -> list[_Token]:
             end = formula.find("]}", i + 2)
             if end == -1:
                 raise ValueError("Unclosed {[...]} reference in metric formula")
-            tokens.append(_Token(kind="ref", value=formula[i + 2 : end]))
+            ref_name = formula[i + 2 : end]
+            if "{[" in ref_name:
+                raise ValueError("Unclosed {[...]} reference in metric formula")
+            tokens.append(_Token(kind="ref", value=ref_name))
             i = end + 2
         elif ch in "0123456789" or (
             ch == "." and i + 1 < len(formula) and formula[i + 1].isdigit()
