@@ -8,6 +8,7 @@ from contextlib import asynccontextmanager
 
 import uvicorn
 from fastapi import FastAPI
+from fastapi.responses import Response
 
 from orionbelt import __version__
 from orionbelt.api.deps import init_session_manager, reset_session_manager
@@ -65,6 +66,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.get("/health", response_model=HealthResponse, tags=["health"])
     async def health() -> HealthResponse:
         return HealthResponse(status="ok", version=__version__)
+
+    @app.get("/robots.txt", include_in_schema=False)
+    async def robots_txt() -> Response:
+        return Response("User-agent: *\nAllow: /\n", media_type="text/plain")
 
     # Mount Gradio UI at /ui when the 'ui' extra is installed
     try:
