@@ -167,9 +167,20 @@ having:
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `field` | string | Dimension or measure name |
+| `field` | string | Dimension name (`where`) or measure name (`having`) |
 | `op` | string | Filter operator (see table below) |
 | `value` | any | Comparison value (string, number, list, etc.) |
+
+### Filter Reachability
+
+A `where` filter field must reference a **dimension** whose data object is reachable from the query's join graph. The data object can be:
+
+- Directly joined in the query (base object or any object in the join path)
+- A descendant — reachable via directed joins from any already-joined object
+
+If the data object is reachable but not yet in the join path, it is **auto-joined** automatically. If the data object is not reachable at all, the query returns an `UNREACHABLE_FILTER_FIELD` error.
+
+A `having` filter field must reference a **measure** name.
 
 ### Filter Operators
 
@@ -250,7 +261,7 @@ where:
 
 ## Ordering
 
-Sort results by dimension or measure names:
+Sort results by dimension or measure names from the query's SELECT, or by numeric position:
 
 ```yaml
 order_by:
@@ -258,12 +269,16 @@ order_by:
     direction: desc
   - field: Customer Country
     direction: asc       # default
+  - field: "1"           # numeric position (1-based)
+    direction: asc
 ```
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
-| `field` | string | — | Dimension or measure name |
+| `field` | string | — | Dimension or measure name from the query's SELECT, or a numeric position (e.g. `"1"`) |
 | `direction` | enum | `asc` | `asc` or `desc` |
+
+The `field` must reference a dimension or measure that appears in the query's `select`. It cannot reference fields outside the SELECT. Alternatively, use a numeric string to reference the SELECT column by position (1-based).
 
 ## Limit
 
@@ -277,12 +292,17 @@ limit: 1000
 
 Invalid queries return error responses:
 
-| Error | Status | Cause |
-|-------|--------|-------|
-| Unknown dimension/measure | 400 | Referenced name not in model |
-| Invalid operator | 400 | Unrecognized filter operator |
-| Invalid time grain | 400 | Unrecognized grain string |
-| Ambiguous joins | 422 | Multiple join paths possible |
+| Error Code | Status | Cause |
+|------------|--------|-------|
+| `UNKNOWN_DIMENSION` | 400 | Dimension name not in model |
+| `UNKNOWN_MEASURE` | 400 | Measure name not in model |
+| `UNKNOWN_FILTER_FIELD` | 400 | Filter field is not a dimension (WHERE) or measure (HAVING) |
+| `UNREACHABLE_FILTER_FIELD` | 400 | Filter dimension's data object is not reachable from join graph |
+| `UNKNOWN_ORDER_BY_FIELD` | 400 | ORDER BY field not in query's SELECT |
+| `INVALID_ORDER_BY_POSITION` | 400 | Numeric ORDER BY position out of range |
+| `INVALID_FILTER_OPERATOR` | 400 | Unrecognized filter operator |
+| `INVALID_RELATIVE_FILTER` | 400 | Malformed relative time filter |
+| `AMBIGUOUS_JOIN` | 422 | Multiple join paths possible |
 
 ## Semantics Summary
 

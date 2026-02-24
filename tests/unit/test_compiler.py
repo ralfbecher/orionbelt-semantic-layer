@@ -17,7 +17,9 @@ from orionbelt.models.query import (
     FilterOperator,
     QueryFilter,
     QueryObject,
+    QueryOrderBy,
     QuerySelect,
+    SortDirection,
     UsePathName,
 )
 from orionbelt.models.semantic import SemanticModel
@@ -645,3 +647,266 @@ class TestSecondaryJoinCompilation:
         sql = result.sql
         assert "SELECT" in sql
         assert "ARR_AIRPORT" in sql
+
+
+# ---------------------------------------------------------------------------
+# Order-by and filter field validation tests
+# ---------------------------------------------------------------------------
+
+# Model with 3 tables: Orders→Customers (joined), Suppliers (unjoined),
+# and Customers→Regions (child/descendant of joined table).
+VALIDATION_MODEL_YAML = """\
+version: 1.0
+
+dataObjects:
+  Customers:
+    code: CUSTOMERS
+    database: WAREHOUSE
+    schema: PUBLIC
+    columns:
+      Customer ID:
+        code: CUSTOMER_ID
+        abstractType: string
+      Country:
+        code: COUNTRY
+        abstractType: string
+      Region ID:
+        code: REGION_ID
+        abstractType: string
+    joins:
+      - joinType: many-to-one
+        joinTo: Regions
+        columnsFrom:
+          - Region ID
+        columnsTo:
+          - Region ID
+
+  Orders:
+    code: ORDERS
+    database: WAREHOUSE
+    schema: PUBLIC
+    columns:
+      Order ID:
+        code: ORDER_ID
+        abstractType: string
+      Order Customer ID:
+        code: CUSTOMER_ID
+        abstractType: string
+      Amount:
+        code: AMOUNT
+        abstractType: float
+    joins:
+      - joinType: many-to-one
+        joinTo: Customers
+        columnsFrom:
+          - Order Customer ID
+        columnsTo:
+          - Customer ID
+
+  Regions:
+    code: REGIONS
+    database: WAREHOUSE
+    schema: PUBLIC
+    columns:
+      Region ID:
+        code: REGION_ID
+        abstractType: string
+      Region Name:
+        code: REGION_NAME
+        abstractType: string
+
+  Suppliers:
+    code: SUPPLIERS
+    database: WAREHOUSE
+    schema: PUBLIC
+    columns:
+      Supplier ID:
+        code: SUPPLIER_ID
+        abstractType: string
+      Supplier Name:
+        code: SUPPLIER_NAME
+        abstractType: string
+
+dimensions:
+  Customer Country:
+    dataObject: Customers
+    column: Country
+    resultType: string
+  Region Name:
+    dataObject: Regions
+    column: Region Name
+    resultType: string
+  Supplier Name:
+    dataObject: Suppliers
+    column: Supplier Name
+    resultType: string
+
+measures:
+  Total Revenue:
+    columns:
+      - dataObject: Orders
+        column: Amount
+    resultType: float
+    aggregation: sum
+
+  Order Count:
+    columns:
+      - dataObject: Orders
+        column: Order ID
+    resultType: int
+    aggregation: count
+"""
+
+
+class TestOrderByValidation:
+    """Tests for ORDER BY field validation."""
+
+    def test_order_by_selected_dimension(self) -> None:
+        model = _load_model(VALIDATION_MODEL_YAML)
+        resolver = QueryResolver()
+        query = QueryObject(
+            select=QuerySelect(
+                dimensions=["Customer Country"],
+                measures=["Total Revenue"],
+            ),
+            order_by=[QueryOrderBy(field="Customer Country")],
+        )
+        resolved = resolver.resolve(query, model)
+        assert len(resolved.order_by_exprs) == 1
+
+    def test_order_by_selected_measure(self) -> None:
+        model = _load_model(VALIDATION_MODEL_YAML)
+        resolver = QueryResolver()
+        query = QueryObject(
+            select=QuerySelect(
+                dimensions=["Customer Country"],
+                measures=["Total Revenue"],
+            ),
+            order_by=[QueryOrderBy(field="Total Revenue", direction=SortDirection.DESC)],
+        )
+        resolved = resolver.resolve(query, model)
+        assert len(resolved.order_by_exprs) == 1
+
+    def test_order_by_numeric_position(self) -> None:
+        model = _load_model(VALIDATION_MODEL_YAML)
+        resolver = QueryResolver()
+        query = QueryObject(
+            select=QuerySelect(
+                dimensions=["Customer Country"],
+                measures=["Total Revenue"],
+            ),
+            order_by=[QueryOrderBy(field="1")],
+        )
+        resolved = resolver.resolve(query, model)
+        assert len(resolved.order_by_exprs) == 1
+        expr, _desc = resolved.order_by_exprs[0]
+        assert isinstance(expr, Literal) and expr.value == 1
+
+    def test_order_by_numeric_out_of_range(self) -> None:
+        model = _load_model(VALIDATION_MODEL_YAML)
+        resolver = QueryResolver()
+        query = QueryObject(
+            select=QuerySelect(
+                dimensions=["Customer Country"],
+                measures=["Total Revenue"],
+            ),
+            order_by=[QueryOrderBy(field="5")],
+        )
+        with pytest.raises(ResolutionError) as exc_info:
+            resolver.resolve(query, model)
+        assert any(e.code == "INVALID_ORDER_BY_POSITION" for e in exc_info.value.errors)
+
+    def test_order_by_unknown_field(self) -> None:
+        model = _load_model(VALIDATION_MODEL_YAML)
+        resolver = QueryResolver()
+        query = QueryObject(
+            select=QuerySelect(
+                dimensions=["Customer Country"],
+                measures=["Total Revenue"],
+            ),
+            order_by=[QueryOrderBy(field="NonExistent")],
+        )
+        with pytest.raises(ResolutionError) as exc_info:
+            resolver.resolve(query, model)
+        assert any(e.code == "UNKNOWN_ORDER_BY_FIELD" for e in exc_info.value.errors)
+
+    def test_order_by_dimension_not_in_select(self) -> None:
+        """A dimension in the model but not in SELECT cannot be used in ORDER BY."""
+        model = _load_model(VALIDATION_MODEL_YAML)
+        resolver = QueryResolver()
+        query = QueryObject(
+            select=QuerySelect(
+                dimensions=["Customer Country"],
+                measures=["Total Revenue"],
+            ),
+            # Region Name is a valid dimension but not in SELECT
+            order_by=[QueryOrderBy(field="Region Name")],
+        )
+        with pytest.raises(ResolutionError) as exc_info:
+            resolver.resolve(query, model)
+        assert any(e.code == "UNKNOWN_ORDER_BY_FIELD" for e in exc_info.value.errors)
+
+
+class TestFilterValidation:
+    """Tests for WHERE/HAVING filter field validation."""
+
+    def test_filter_on_joined_dimension(self) -> None:
+        model = _load_model(VALIDATION_MODEL_YAML)
+        resolver = QueryResolver()
+        query = QueryObject(
+            select=QuerySelect(
+                dimensions=["Customer Country"],
+                measures=["Total Revenue"],
+            ),
+            where=[QueryFilter(field="Customer Country", op=FilterOperator.EQ, value="US")],
+        )
+        resolved = resolver.resolve(query, model)
+        assert len(resolved.where_filters) == 1
+
+    def test_filter_on_reachable_descendant(self) -> None:
+        """Filter on a dimension whose data object is a descendant of a joined table."""
+        model = _load_model(VALIDATION_MODEL_YAML)
+        resolver = QueryResolver()
+        query = QueryObject(
+            select=QuerySelect(
+                dimensions=["Customer Country"],
+                measures=["Total Revenue"],
+            ),
+            # Region Name is on Regions, reachable via Customers→Regions
+            where=[QueryFilter(field="Region Name", op=FilterOperator.EQ, value="EMEA")],
+        )
+        resolved = resolver.resolve(query, model)
+        assert len(resolved.where_filters) == 1
+        # Regions should be auto-joined
+        joined = {s.to_object for s in resolved.join_steps}
+        assert "Regions" in joined
+
+    def test_filter_unknown_field(self) -> None:
+        model = _load_model(VALIDATION_MODEL_YAML)
+        resolver = QueryResolver()
+        query = QueryObject(
+            select=QuerySelect(
+                dimensions=["Customer Country"],
+                measures=["Total Revenue"],
+            ),
+            where=[QueryFilter(field="NonExistent", op=FilterOperator.EQ, value="X")],
+        )
+        with pytest.raises(ResolutionError) as exc_info:
+            resolver.resolve(query, model)
+        assert any(e.code == "UNKNOWN_FILTER_FIELD" for e in exc_info.value.errors)
+
+    def test_filter_unreachable_dimension(self) -> None:
+        """Filter on a dimension whose data object is not reachable."""
+        model = _load_model(VALIDATION_MODEL_YAML)
+        resolver = QueryResolver()
+        query = QueryObject(
+            select=QuerySelect(
+                dimensions=["Customer Country"],
+                measures=["Total Revenue"],
+            ),
+            # Supplier Name is on Suppliers, which has no join path from Orders
+            where=[QueryFilter(field="Supplier Name", op=FilterOperator.EQ, value="Acme")],
+        )
+        with pytest.raises(ResolutionError) as exc_info:
+            resolver.resolve(query, model)
+        assert any(e.code == "UNREACHABLE_FILTER_FIELD" for e in exc_info.value.errors)

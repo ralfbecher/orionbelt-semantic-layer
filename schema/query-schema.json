@@ -44,11 +44,11 @@
     },
     "queryFilter": {
       "type": "object",
-      "description": "A filter condition referencing a dimension or measure by name",
+      "description": "A filter condition. WHERE filters reference a dimension name; HAVING filters reference a measure name. The dimension's data object must be reachable from the query's join graph (auto-joined if needed).",
       "properties": {
         "field": {
           "type": "string",
-          "description": "Dimension or measure name"
+          "description": "Dimension name (for WHERE) or measure name (for HAVING)"
         },
         "op": {
           "$ref": "#/definitions/filterOperator"
@@ -62,11 +62,11 @@
     },
     "queryOrderBy": {
       "type": "object",
-      "description": "Order-by clause",
+      "description": "Order-by clause. Field must reference a dimension or measure in the query's SELECT, or a numeric position (1-based).",
       "properties": {
         "field": {
           "type": "string",
-          "description": "Dimension or measure name"
+          "description": "Dimension or measure name from the query's SELECT, or a numeric position (e.g. \"1\")"
         },
         "direction": {
           "$ref": "#/definitions/sortDirection",

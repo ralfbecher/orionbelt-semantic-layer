@@ -871,6 +871,15 @@ references unknown column.
   Fix: Use a supported operator (equals, gt, gte, lt, lte, inlist, etc.).
 - `INVALID_RELATIVE_FILTER`: Malformed relative time filter.
   Fix: Check unit (day/week/month/year), count, direction, include_current.
+- `UNKNOWN_FILTER_FIELD`: Filter field is not a dimension (WHERE) or measure (HAVING).
+  Fix: Check field name matches a dimension or measure in the model.
+- `UNREACHABLE_FILTER_FIELD`: Filter dimension's data object is not reachable \
+from the query's join graph.
+  Fix: Ensure the data object is connected via joins to the queried tables.
+- `UNKNOWN_ORDER_BY_FIELD`: ORDER BY field is not a dimension or measure in the query's SELECT.
+  Fix: Use a field name from `select.dimensions` or `select.measures`, or a numeric position.
+- `INVALID_ORDER_BY_POSITION`: Numeric ORDER BY position is out of range.
+  Fix: Use a position between 1 and the number of SELECT columns.
 
 ## Debugging Steps
 

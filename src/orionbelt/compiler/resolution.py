@@ -309,20 +309,49 @@ class QueryResolver:
         if result.base_object and len(result.required_objects) > 1:
             result.join_steps = graph.find_join_path({result.base_object}, result.required_objects)
 
-        # 6. Classify filters
+        # Build set of all objects present in the query's join graph
+        joined_objects: set[str] = set()
+        if result.base_object:
+            joined_objects.add(result.base_object)
+        for step in result.join_steps:
+            joined_objects.add(step.to_object)
+
+        # 6. Classify filters — filters may auto-extend the join path
         for qf in query.where:
-            resolved_filter = self._resolve_filter(qf, model, is_having=False, errors=errors)
+            resolved_filter = self._resolve_filter(
+                qf,
+                model,
+                is_having=False,
+                errors=errors,
+                joined_objects=joined_objects,
+                graph=graph,
+                result=result,
+            )
             if resolved_filter:
                 result.where_filters.append(resolved_filter)
 
         for qf in query.having:
-            resolved_filter = self._resolve_filter(qf, model, is_having=True, errors=errors)
+            resolved_filter = self._resolve_filter(
+                qf,
+                model,
+                is_having=True,
+                errors=errors,
+                joined_objects=joined_objects,
+                graph=graph,
+                result=result,
+            )
             if resolved_filter:
                 result.having_filters.append(resolved_filter)
 
-        # 7. Resolve order by
+        # 7. Resolve order by — must reference a dimension or measure in SELECT
+        select_count = len(result.dimensions) + len(result.measures)
         for ob in query.order_by:
-            expr = self._resolve_order_by_field(ob.field, result, model)
+            expr = self._resolve_order_by_field(
+                ob.field,
+                result,
+                errors=errors,
+                select_count=select_count,
+            )
             if expr:
                 result.order_by_exprs.append((expr, ob.direction == "desc"))
 
@@ -484,9 +513,7 @@ class QueryResolver:
             obj = model.data_objects.get(obj_name)
             if obj and col_name in obj.columns:
                 source = obj.columns[col_name].code
-                formula = formula.replace(
-                    f"{{[{obj_name}].[{col_name}]}}", f"{obj_name}.{source}"
-                )
+                formula = formula.replace(f"{{[{obj_name}].[{col_name}]}}", f"{obj_name}.{source}")
 
         # Wrap the whole formula in the aggregation function as raw SQL
         from orionbelt.ast.nodes import RawSQL
@@ -614,18 +641,70 @@ class QueryResolver:
         model: SemanticModel,
         is_having: bool,
         errors: list[SemanticError],
+        joined_objects: set[str] | None = None,
+        graph: JoinGraph | None = None,
+        result: ResolvedQuery | None = None,
     ) -> ResolvedFilter | None:
-        """Resolve a query filter to a physical expression."""
+        """Resolve a query filter to a physical expression.
+
+        Filter fields can reference any dimension whose data object is
+        reachable from the query's join graph (including descendants).
+        If the object is reachable but not yet joined, the join path is
+        auto-extended.
+        """
+        filter_path = "having" if is_having else "where"
+
         # Try to find the field in dimensions first
         dim = model.dimensions.get(qf.field)
         if dim:
             obj_name = dim.view
+            # Check reachability: in join graph or reachable via descendants
+            if joined_objects is not None and obj_name not in joined_objects:
+                # Check if reachable via directed joins from any joined object
+                reachable = False
+                if graph is not None:
+                    for joined_obj in list(joined_objects):
+                        if obj_name in graph.descendants(joined_obj):
+                            reachable = True
+                            break
+                if not reachable:
+                    errors.append(
+                        SemanticError(
+                            code="UNREACHABLE_FILTER_FIELD",
+                            message=(
+                                f"Filter field '{qf.field}' references data object "
+                                f"'{obj_name}' which is not reachable from "
+                                f"the query's join graph"
+                            ),
+                            path=filter_path,
+                        )
+                    )
+                    return None
+                # Auto-extend the join path to include this object
+                if graph is not None and result is not None:
+                    new_steps = graph.find_join_path(joined_objects, {obj_name})
+                    for step in new_steps:
+                        if step.to_object not in joined_objects:
+                            result.join_steps.append(step)
+                            joined_objects.add(step.to_object)
+                            result.required_objects.add(step.to_object)
+
             col_name = dim.column
             obj = model.data_objects.get(obj_name)
             source = obj.columns[col_name].code if obj and col_name in obj.columns else col_name
             col_expr: Expr = ColumnRef(name=source, table=obj_name)
-        else:
+        elif is_having and qf.field in model.measures:
+            # HAVING filter on a measure — valid
             col_expr = ColumnRef(name=qf.field)
+        else:
+            errors.append(
+                SemanticError(
+                    code="UNKNOWN_FILTER_FIELD",
+                    message=f"Unknown filter field '{qf.field}'",
+                    path=filter_path,
+                )
+            )
+            return None
 
         filter_expr = self._build_filter_expr(col_expr, qf, errors)
         if filter_expr is None:
@@ -821,20 +900,52 @@ class QueryResolver:
         self,
         field_name: str,
         result: ResolvedQuery,
-        model: SemanticModel,
+        errors: list[SemanticError],
+        select_count: int,
     ) -> Expr | None:
-        """Resolve an order-by field to its expression."""
-        # Check if it's a resolved dimension
+        """Resolve an order-by field to its expression.
+
+        Must reference a dimension or measure already in the query's SELECT,
+        or be a numeric positional reference (1-based).
+        """
+        # Check if it's a resolved dimension in SELECT
         for dim in result.dimensions:
             if dim.name == field_name:
                 return ColumnRef(name=dim.source_column, table=dim.object_name)
 
-        # Check if it's a resolved measure
+        # Check if it's a resolved measure in SELECT
         for meas in result.measures:
             if meas.name == field_name:
                 return meas.expression
 
-        return ColumnRef(name=field_name)
+        # Check if it's a numeric positional reference (e.g. "1", "2")
+        if field_name.isdigit():
+            pos = int(field_name)
+            if 1 <= pos <= select_count:
+                return Literal.number(pos)
+            errors.append(
+                SemanticError(
+                    code="INVALID_ORDER_BY_POSITION",
+                    message=(
+                        f"ORDER BY position {pos} is out of range "
+                        f"(SELECT has {select_count} columns)"
+                    ),
+                    path="order_by",
+                )
+            )
+            return None
+
+        errors.append(
+            SemanticError(
+                code="UNKNOWN_ORDER_BY_FIELD",
+                message=(
+                    f"ORDER BY field '{field_name}' is not a dimension "
+                    f"or measure in the query's SELECT"
+                ),
+                path="order_by",
+            )
+        )
+        return None
 
 
 class ResolutionError(Exception):

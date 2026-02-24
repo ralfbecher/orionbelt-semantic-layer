@@ -23,6 +23,13 @@ select:
     - Total Sales
     - Total Returns
     - Return Rate
+where:
+  - field: Country Name
+    op: in
+    value: [Germany, France, Italy]
+order_by:
+  - field: Total Sales
+    direction: desc
 limit: 100
 """
 

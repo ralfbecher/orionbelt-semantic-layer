@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 
 from orionbelt.compiler.pipeline import CompilationPipeline
+from orionbelt.compiler.resolution import QueryResolver
 from orionbelt.models.query import (
     FilterOperator,
     QueryFilter,
@@ -239,3 +240,169 @@ class TestEndToEndCompilation:
         assert "OVER ()" in sql
         assert "LIMIT 10" in sql
         assert "ORDER BY" in sql
+
+
+# ---------------------------------------------------------------------------
+# CFL (Composite Fact Layer) with filter tests
+# ---------------------------------------------------------------------------
+
+CFL_MODEL_YAML = """\
+version: 1.0
+
+dataObjects:
+  Customers:
+    code: CUSTOMERS
+    database: WAREHOUSE
+    schema: PUBLIC
+    columns:
+      Customer ID:
+        code: CUSTOMER_ID
+        abstractType: string
+      Country:
+        code: COUNTRY
+        abstractType: string
+
+  Orders:
+    code: ORDERS
+    database: WAREHOUSE
+    schema: PUBLIC
+    columns:
+      Order ID:
+        code: ORDER_ID
+        abstractType: string
+      Order Customer ID:
+        code: CUSTOMER_ID
+        abstractType: string
+      Amount:
+        code: AMOUNT
+        abstractType: float
+    joins:
+      - joinType: many-to-one
+        joinTo: Customers
+        columnsFrom:
+          - Order Customer ID
+        columnsTo:
+          - Customer ID
+
+  Returns:
+    code: RETURNS
+    database: WAREHOUSE
+    schema: PUBLIC
+    columns:
+      Return ID:
+        code: RETURN_ID
+        abstractType: string
+      Return Customer ID:
+        code: CUSTOMER_ID
+        abstractType: string
+      Refund:
+        code: REFUND
+        abstractType: float
+    joins:
+      - joinType: many-to-one
+        joinTo: Customers
+        columnsFrom:
+          - Return Customer ID
+        columnsTo:
+          - Customer ID
+
+dimensions:
+  Customer Country:
+    dataObject: Customers
+    column: Country
+    resultType: string
+
+measures:
+  Revenue:
+    columns:
+      - dataObject: Orders
+        column: Amount
+    resultType: float
+    aggregation: sum
+  Total Refunds:
+    columns:
+      - dataObject: Returns
+        column: Refund
+    resultType: float
+    aggregation: sum
+"""
+
+
+def _load_cfl_model() -> SemanticModel:
+    loader = TrackedLoader()
+    resolver = ReferenceResolver()
+    raw, source_map = loader.load_string(CFL_MODEL_YAML)
+    model, result = resolver.resolve(raw, source_map)
+    assert result.valid, f"Errors: {[e.message for e in result.errors]}"
+    return model
+
+
+class TestCFLWithFilters:
+    """Tests for CFL planner with WHERE and HAVING filters."""
+
+    def test_cfl_triggers_for_multi_fact(self) -> None:
+        """Revenue + Total Refunds span Orders and Returns — triggers CFL."""
+        model = _load_cfl_model()
+        resolver = QueryResolver()
+        query = QueryObject(
+            select=QuerySelect(
+                dimensions=["Customer Country"],
+                measures=["Revenue", "Total Refunds"],
+            ),
+        )
+        resolved = resolver.resolve(query, model)
+        assert resolved.requires_cfl
+
+    def test_cfl_with_where_filter(self) -> None:
+        """CFL query with WHERE filter — filter appears in generated SQL."""
+        model = _load_cfl_model()
+        pipeline = CompilationPipeline()
+        query = QueryObject(
+            select=QuerySelect(
+                dimensions=["Customer Country"],
+                measures=["Revenue", "Total Refunds"],
+            ),
+            where=[
+                QueryFilter(field="Customer Country", op=FilterOperator.EQ, value="US"),
+            ],
+        )
+        result = pipeline.compile(query, model, "postgres")
+        sql = result.sql
+        assert "composite_01" in sql  # CFL CTE
+        assert "WHERE" in sql
+        assert "'US'" in sql
+
+    def test_cfl_with_order_by_measure(self) -> None:
+        """CFL ORDER BY on a measure uses CTE alias, not original table ref."""
+        model = _load_cfl_model()
+        pipeline = CompilationPipeline()
+        query = QueryObject(
+            select=QuerySelect(
+                dimensions=["Customer Country"],
+                measures=["Revenue", "Total Refunds"],
+            ),
+            order_by=[QueryOrderBy(field="Revenue", direction=SortDirection.DESC)],
+        )
+        result = pipeline.compile(query, model, "postgres")
+        sql = result.sql
+        assert "composite_01" in sql
+        assert "ORDER BY" in sql
+        # Should NOT reference original table in ORDER BY
+        order_part = sql.split("ORDER BY")[1]
+        assert '"Orders"' not in order_part
+        assert '"Revenue"' in order_part
+
+    def test_cfl_without_filter(self) -> None:
+        """CFL query without filters — no WHERE clause."""
+        model = _load_cfl_model()
+        pipeline = CompilationPipeline()
+        query = QueryObject(
+            select=QuerySelect(
+                dimensions=["Customer Country"],
+                measures=["Revenue", "Total Refunds"],
+            ),
+        )
+        result = pipeline.compile(query, model, "postgres")
+        sql = result.sql
+        assert "composite_01" in sql
+        assert "UNION ALL" in sql

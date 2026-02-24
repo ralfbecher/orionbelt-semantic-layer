@@ -6,12 +6,16 @@ from orionbelt.ast.builder import QueryBuilder
 from orionbelt.ast.nodes import (
     CTE,
     AliasedExpr,
+    Between,
     BinaryOp,
     Cast,
     ColumnRef,
     Expr,
     FunctionCall,
+    InList,
+    IsNull,
     Literal,
+    RelativeDateRange,
     Select,
     UnionAll,
 )
@@ -178,6 +182,42 @@ class CFLPlanner:
                 return BinaryOp(left=new_left, op=expr.op, right=new_right)
         return expr
 
+    @staticmethod
+    def _collect_table_refs(expr: Expr, tables: set[str]) -> None:
+        """Recursively collect table names from ColumnRef nodes."""
+        if isinstance(expr, ColumnRef) and expr.table:
+            tables.add(expr.table)
+        elif isinstance(expr, BinaryOp):
+            CFLPlanner._collect_table_refs(expr.left, tables)
+            CFLPlanner._collect_table_refs(expr.right, tables)
+        elif isinstance(expr, (InList, IsNull, Between)):
+            CFLPlanner._collect_table_refs(expr.expr, tables)
+        elif isinstance(expr, RelativeDateRange):
+            CFLPlanner._collect_table_refs(expr.column, tables)
+        elif isinstance(expr, FunctionCall):
+            for arg in expr.args:
+                CFLPlanner._collect_table_refs(arg, tables)
+
+    @staticmethod
+    def _remap_cfl_order_by(expr: Expr, resolved: ResolvedQuery) -> Expr:
+        """Remap ORDER BY expressions to use CTE aliases for the outer query.
+
+        In CFL, the outer query selects from the composite CTE — original
+        table-qualified refs are out of scope.  Remap dimension and measure
+        expressions to their CTE alias names.
+        """
+        # Dimension: ColumnRef(name=source_col, table=obj) → ColumnRef(name=dim.name)
+        if isinstance(expr, ColumnRef) and expr.table is not None:
+            for dim in resolved.dimensions:
+                if expr.name == dim.source_column and expr.table == dim.object_name:
+                    return ColumnRef(name=dim.name)
+        # Measure: match by identity (same expression object)
+        for meas in resolved.measures:
+            if expr is meas.expression:
+                return ColumnRef(name=meas.name)
+        # Numeric position — pass through
+        return expr
+
     def _build_outer_concat_count(
         self,
         measure_name: str,
@@ -223,6 +263,12 @@ class CFLPlanner:
         if cross_fact:
             all_measures.extend(cross_fact)
 
+        # Collect data objects referenced by WHERE filters — each leg
+        # must join these tables so the filter predicates are valid.
+        filter_objects: set[str] = set()
+        for wf in resolved.where_filters:
+            self._collect_table_refs(wf.expression, filter_objects)
+
         # Build one SELECT per fact object group.
         # Each leg computes its own LCA (least common ancestor) as the lead
         # table — the graph-central node that can reach all dimension objects
@@ -258,9 +304,10 @@ class CFLPlanner:
 
             # Determine the common root for this leg:
             # the deepest directed ancestor that can reach all dimension
-            # objects and the measure's source object.
+            # objects, measure's source object, and filter-referenced objects.
             leg_required = {dim.object_name for dim in resolved.dimensions}
             leg_required.add(obj_name)
+            leg_required.update(filter_objects)
             lead = graph.find_common_root(leg_required)
             lead_obj = model.data_objects.get(lead)
 
@@ -282,6 +329,10 @@ class CFLPlanner:
                             join_type=step.join_type,
                             alias=step.to_object,
                         )
+
+            # Apply WHERE filters to each leg
+            for wf in resolved.where_filters:
+                leg_builder.where(wf.expression)
 
             union_legs.append(leg_builder.build())
 
@@ -339,9 +390,13 @@ class CFLPlanner:
         for dim in resolved.dimensions:
             outer_builder.group_by(ColumnRef(name=dim.name))
 
-        # ORDER BY and LIMIT
+        # HAVING filters on the outer query
+        for hf in resolved.having_filters:
+            outer_builder.having(hf.expression)
+
+        # ORDER BY and LIMIT — remap to CTE aliases
         for expr, desc in resolved.order_by_exprs:
-            outer_builder.order_by(expr, desc=desc)
+            outer_builder.order_by(self._remap_cfl_order_by(expr, resolved), desc=desc)
         if resolved.limit is not None:
             outer_builder.limit(resolved.limit)
 
