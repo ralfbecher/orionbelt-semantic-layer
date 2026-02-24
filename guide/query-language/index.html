@@ -823,6 +823,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#filter-reachability" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Filter Reachability
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#filter-operators" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1621,6 +1632,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#filter-reachability" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Filter Reachability
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#filter-operators" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1903,7 +1925,7 @@
 <tr>
 <td><code>field</code></td>
 <td>string</td>
-<td>Dimension or measure name</td>
+<td>Dimension name (<code>where</code>) or measure name (<code>having</code>)</td>
 </tr>
 <tr>
 <td><code>op</code></td>
@@ -1917,6 +1939,14 @@
 </tr>
 </tbody>
 </table>
+<h3 id="filter-reachability">Filter Reachability<a class="headerlink" href="#filter-reachability" title="Permanent link">&para;</a></h3>
+<p>A <code>where</code> filter field must reference a <strong>dimension</strong> whose data object is reachable from the query's join graph. The data object can be:</p>
+<ul>
+<li>Directly joined in the query (base object or any object in the join path)</li>
+<li>A descendant — reachable via directed joins from any already-joined object</li>
+</ul>
+<p>If the data object is reachable but not yet in the join path, it is <strong>auto-joined</strong> automatically. If the data object is not reachable at all, the query returns an <code>UNREACHABLE_FILTER_FIELD</code> error.</p>
+<p>A <code>having</code> filter field must reference a <strong>measure</strong> name.</p>
 <h3 id="filter-operators">Filter Operators<a class="headerlink" href="#filter-operators" title="Permanent link">&para;</a></h3>
 <p>OrionBelt supports two operator naming conventions — OBML style and SQL style. Both are equivalent.</p>
 <h4 id="comparison-operators">Comparison Operators<a class="headerlink" href="#comparison-operators" title="Permanent link">&para;</a></h4>
@@ -2115,12 +2145,14 @@
 </ul>
 </div>
 <h2 id="ordering">Ordering<a class="headerlink" href="#ordering" title="Permanent link">&para;</a></h2>
-<p>Sort results by dimension or measure names:</p>
+<p>Sort results by dimension or measure names from the query's SELECT, or by numeric position:</p>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="nt">order_by</span><span class="p">:</span>
 </span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">field</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Revenue</span>
 </span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">    </span><span class="nt">direction</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">desc</span>
 </span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">field</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Customer Country</span>
 </span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="w">    </span><span class="nt">direction</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">asc</span><span class="w">       </span><span class="c1"># default</span>
+</span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">field</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;1&quot;</span><span class="w">           </span><span class="c1"># numeric position (1-based)</span>
+</span><span id="__span-10-7"><a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="w">    </span><span class="nt">direction</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">asc</span>
 </span></code></pre></div>
 <table>
 <thead>
@@ -2136,7 +2168,7 @@
 <td><code>field</code></td>
 <td>string</td>
 <td>—</td>
-<td>Dimension or measure name</td>
+<td>Dimension or measure name from the query's SELECT, or a numeric position (e.g. <code>"1"</code>)</td>
 </tr>
 <tr>
 <td><code>direction</code></td>
@@ -2146,6 +2178,7 @@
 </tr>
 </tbody>
 </table>
+<p>The <code>field</code> must reference a dimension or measure that appears in the query's <code>select</code>. It cannot reference fields outside the SELECT. Alternatively, use a numeric string to reference the SELECT column by position (1-based).</p>
 <h2 id="limit">Limit<a class="headerlink" href="#limit" title="Permanent link">&para;</a></h2>
 <p>Restrict the number of returned rows:</p>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="nt">limit</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1000</span>
@@ -2155,29 +2188,54 @@
 <table>
 <thead>
 <tr>
-<th>Error</th>
+<th>Error Code</th>
 <th>Status</th>
 <th>Cause</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Unknown dimension/measure</td>
+<td><code>UNKNOWN_DIMENSION</code></td>
 <td>400</td>
-<td>Referenced name not in model</td>
+<td>Dimension name not in model</td>
 </tr>
 <tr>
-<td>Invalid operator</td>
+<td><code>UNKNOWN_MEASURE</code></td>
+<td>400</td>
+<td>Measure name not in model</td>
+</tr>
+<tr>
+<td><code>UNKNOWN_FILTER_FIELD</code></td>
+<td>400</td>
+<td>Filter field is not a dimension (WHERE) or measure (HAVING)</td>
+</tr>
+<tr>
+<td><code>UNREACHABLE_FILTER_FIELD</code></td>
+<td>400</td>
+<td>Filter dimension's data object is not reachable from join graph</td>
+</tr>
+<tr>
+<td><code>UNKNOWN_ORDER_BY_FIELD</code></td>
+<td>400</td>
+<td>ORDER BY field not in query's SELECT</td>
+</tr>
+<tr>
+<td><code>INVALID_ORDER_BY_POSITION</code></td>
+<td>400</td>
+<td>Numeric ORDER BY position out of range</td>
+</tr>
+<tr>
+<td><code>INVALID_FILTER_OPERATOR</code></td>
 <td>400</td>
 <td>Unrecognized filter operator</td>
 </tr>
 <tr>
-<td>Invalid time grain</td>
+<td><code>INVALID_RELATIVE_FILTER</code></td>
 <td>400</td>
-<td>Unrecognized grain string</td>
+<td>Malformed relative time filter</td>
 </tr>
 <tr>
-<td>Ambiguous joins</td>
+<td><code>AMBIGUOUS_JOIN</code></td>
 <td>422</td>
 <td>Multiple join paths possible</td>
 </tr>
