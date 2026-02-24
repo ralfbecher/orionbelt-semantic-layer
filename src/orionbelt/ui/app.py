@@ -1014,8 +1014,15 @@ def create_ui() -> None:
     if root_path:
         import gradio as gr
         from fastapi import FastAPI
+        from fastapi.responses import RedirectResponse
 
         app = FastAPI()
+
+        # Redirect /ui → /ui/ so the load balancer URL works without trailing slash
+        @app.get(root_path)
+        async def _redirect_to_trailing_slash() -> RedirectResponse:
+            return RedirectResponse(url=f"{root_path}/")
+
         app = gr.mount_gradio_app(app, demo, path=root_path, css=_CSS, js=_DARK_MODE_INIT_JS)
         uvicorn.run(
             app,
