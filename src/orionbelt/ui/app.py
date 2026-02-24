@@ -284,9 +284,15 @@ def _get_converter_module():  # type: ignore[no-untyped-def]
     import sys
     from pathlib import Path
 
-    converter_dir = str(Path(__file__).resolve().parents[3] / "osi-obml")
-    if converter_dir not in sys.path:
-        sys.path.insert(0, converter_dir)
+    # Try dev layout first (repo root/osi-obml), then Docker layout (/app/osi-obml)
+    candidates = [
+        Path(__file__).resolve().parents[3] / "osi-obml",
+        Path("/app/osi-obml"),
+    ]
+    for candidate in candidates:
+        converter_dir = str(candidate)
+        if candidate.is_dir() and converter_dir not in sys.path:
+            sys.path.insert(0, converter_dir)
     return importlib.import_module("osi_obml_converter")
 
 

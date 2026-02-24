@@ -15,6 +15,8 @@ RUN uv sync --no-dev --extra ui --no-install-project --frozen
 COPY src/ src/
 COPY schema/ schema/
 COPY examples/ examples/
+COPY osi-obml/osi_obml_converter.py osi-obml/
+COPY osi-obml/osi-schema.json osi-obml/
 RUN uv sync --no-dev --extra ui --no-editable --frozen
 
 # --- Runtime stage: minimal image ---
@@ -31,6 +33,12 @@ ENV PATH="/app/.venv/bin:$PATH"
 
 # Copy examples (needed by Gradio UI for example model)
 COPY --from=builder /app/examples examples/
+
+# Copy schema (needed by OSI converter for OBML validation)
+COPY --from=builder /app/schema schema/
+
+# Copy OSI converter (needed by Gradio UI for OSI import/export)
+COPY --from=builder /app/osi-obml osi-obml/
 
 # Cloud Run injects PORT (default 7860 for Gradio)
 # API_BASE_URL must point to the API service (e.g. https://orionbelt-api-xxxxx.run.app)
