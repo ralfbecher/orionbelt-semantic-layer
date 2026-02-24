@@ -205,47 +205,68 @@ _INJECT_UPLOAD_JS = (
         toolbar.insertBefore(btn, toolbar.firstChild);
     }
 
-    function patchDownloadBtn(codeId, filename) {
-        const root = document.getElementById(codeId);
-        if (!root) return;
-        /* Find download buttons (those with a download-icon SVG or title) */
-        var btns = root.querySelectorAll('button');
-        for (var b of btns) {
-            if (b._ob_patched) continue;
-            /* Detect download button by its SVG path (arrow-down + line) */
-            var svg = b.querySelector('svg');
-            if (!svg) continue;
-            var paths = svg.querySelectorAll('path, polyline, line');
-            var isDownload = false;
-            for (var p of paths) {
-                var d = p.getAttribute('d') || p.getAttribute('points') || '';
-                if (d.indexOf('21 15') >= 0 || d.indexOf('M21') >= 0) {
-                    isDownload = true;
-                    break;
+    /*
+     * MutationObserver to rename Gradio's temporary download files.
+     * Gradio creates a hidden <a download="tmpXXXX"> element when the
+     * download button is clicked.  We watch the whole document for it
+     * and rename it based on which Code component triggered it.
+     */
+    var _obDownloadMap = {
+        'ob-model': 'obml.yml',
+        'ob-query': 'query.yaml',
+        'ob-sql':   'query.sql'   /* default; overridden to osi.yml when content is OSI */
+    };
+
+    /* Track which component triggered the download */
+    var _obLastDownloadSource = null;
+    function hookDownloadBtns(codeId) {
+        var root = document.getElementById(codeId);
+        if (!root || root._ob_dl_hooked) return;
+        root._ob_dl_hooked = true;
+        root.addEventListener('click', function(e) {
+            var btn = e.target.closest('button');
+            if (btn) _obLastDownloadSource = codeId;
+        }, true);
+    }
+
+    /* Observe <a download> creation anywhere in the document */
+    var dlObserver = new MutationObserver(function(mutations) {
+        for (var m of mutations) {
+            for (var node of m.addedNodes) {
+                if (node.nodeType !== 1) continue;
+                var anchors = node.tagName === 'A' ? [node] :
+                    (node.querySelectorAll ? Array.from(node.querySelectorAll('a[download]')) : []);
+                for (var a of anchors) {
+                    if (!a.hasAttribute('download')) continue;
+                    var src = _obLastDownloadSource;
+                    if (!src) continue;
+                    var fname = _obDownloadMap[src];
+                    /* For sql output: detect OSI export by content prefix */
+                    if (src === 'ob-sql') {
+                        var sqlRoot = document.getElementById('ob-sql');
+                        if (sqlRoot) {
+                            var cm = sqlRoot.querySelector('.cm-content');
+                            var txt = cm ? cm.textContent || '' : '';
+                            if (txt.indexOf('OBML') >= 0 && txt.indexOf('OSI') >= 0) {
+                                fname = 'osi.yml';
+                            }
+                        }
+                    }
+                    a.download = fname;
                 }
             }
-            if (!isDownload) continue;
-            b._ob_patched = true;
-            (function(btn, fname) {
-                btn.addEventListener('click', function(e) {
-                    /* Defer to let Gradio create the download, then rename */
-                    setTimeout(function() {
-                        var a = document.querySelector('a[download]');
-                        if (a) a.download = fname;
-                    }, 50);
-                }, true);
-            })(b, filename);
         }
-    }
+    });
+    dlObserver.observe(document.body, {childList: true, subtree: true});
 
     /* Retry a few times — components render asynchronously. */
     var attempts = 0;
     var iv = setInterval(function() {
         addUploadBtn('ob-model', 'ob-model-bridge');
         addUploadBtn('ob-query', 'ob-query-bridge');
-        patchDownloadBtn('ob-model', 'obml.yml');
-        patchDownloadBtn('ob-query', 'query.yaml');
-        patchDownloadBtn('ob-sql', 'query.sql');
+        hookDownloadBtns('ob-model');
+        hookDownloadBtns('ob-query');
+        hookDownloadBtns('ob-sql');
         if (++attempts >= 10) clearInterval(iv);
     }, 300);
 }
