@@ -809,6 +809,8 @@ def debug_validation() -> str:
 
 - `YAML_PARSE_ERROR`: Invalid YAML syntax.
   Fix: Check indentation, quoting, colons.
+- `YAML_SAFETY_ERROR`: YAML safety constraint violated (anchors, oversized).
+  Fix: OBML does not use anchors/aliases. Reduce document size.
 - `DATA_OBJECT_PARSE_ERROR`: Cannot parse a data object.
   Fix: Check required fields (code, database, schema, columns).
 - `DIMENSION_PARSE_ERROR`: Cannot parse a dimension definition.

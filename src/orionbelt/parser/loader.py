@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -10,6 +11,27 @@ from ruamel.yaml import YAML
 from ruamel.yaml.comments import CommentedMap, CommentedSeq
 
 from orionbelt.models.errors import SourceSpan
+
+# ---------------------------------------------------------------------------
+# Safety limits
+# ---------------------------------------------------------------------------
+
+_MAX_DOCUMENT_SIZE = 5_000_000  # 5M characters
+_MAX_NODE_COUNT = 50_000
+_MAX_DEPTH = 20
+
+# Regex to detect YAML anchor definitions (&name).
+# Matches & at line start or after whitespace/sequence indicators, followed by
+# an anchor name, but NOT inside quoted strings (good-enough heuristic).
+_ANCHOR_RE = re.compile(r"(?:^|[\s\-:])&(\w+)", re.MULTILINE)
+
+
+class YAMLSafetyError(Exception):
+    """Raised when YAML input violates safety constraints.
+
+    Distinct from parse errors — these indicate potentially malicious input
+    (e.g., billion-laughs anchors, excessive nesting, oversized documents).
+    """
 
 
 @dataclass
@@ -41,13 +63,57 @@ class TrackedLoader:
     def __init__(self) -> None:
         self._yaml = YAML()
         self._yaml.preserve_quotes = True
+        # Reject deeply nested structures (mitigates stack-based DoS).
+        # ruamel.yaml raises an error when nesting exceeds this limit.
+        self._yaml.max_depth = _MAX_DEPTH
+
+    # -- safety checks -------------------------------------------------------
+
+    @staticmethod
+    def _check_yaml_safety(content: str) -> None:
+        """Pre-parse safety checks on raw YAML text.
+
+        Raises ``YAMLSafetyError`` if the content contains anchors/aliases
+        (not used in OBML) or exceeds the maximum document size.
+        """
+        if len(content) > _MAX_DOCUMENT_SIZE:
+            raise YAMLSafetyError(
+                f"YAML document exceeds maximum size "
+                f"({len(content):,} chars > {_MAX_DOCUMENT_SIZE:,} limit)"
+            )
+        if _ANCHOR_RE.search(content):
+            raise YAMLSafetyError(
+                "YAML anchors/aliases are not supported in OBML"
+            )
+
+    @staticmethod
+    def _check_node_count(data: Any, limit: int = _MAX_NODE_COUNT) -> None:
+        """Post-parse defense-in-depth: reject documents with too many nodes."""
+        count = 0
+        stack: list[Any] = [data]
+        while stack:
+            node = stack.pop()
+            count += 1
+            if count > limit:
+                raise YAMLSafetyError(
+                    f"YAML document exceeds maximum node count ({limit:,})"
+                )
+            if isinstance(node, dict):
+                stack.extend(node.values())
+            elif isinstance(node, list):
+                stack.extend(node)
+
+    # -- public loading API --------------------------------------------------
 
     def load(self, path: Path) -> tuple[dict[str, Any], SourceMap]:
         """Load a YAML file and return parsed dict + source position map."""
         with path.open("r", encoding="utf-8") as handle:
-            data = self._yaml.load(handle)
+            content = handle.read()
+        self._check_yaml_safety(content)
+        data = self._yaml.load(content)
         if data is None:
             return {}, SourceMap()
+        self._check_node_count(data)
         source_map = SourceMap()
         self._extract_positions(data, str(path), "", source_map)
         return self._to_plain_dict(data), source_map
@@ -56,9 +122,11 @@ class TrackedLoader:
         self, content: str, filename: str = "<string>"
     ) -> tuple[dict[str, Any], SourceMap]:
         """Load YAML from a string."""
+        self._check_yaml_safety(content)
         data = self._yaml.load(content)
         if data is None:
             return {}, SourceMap()
+        self._check_node_count(data)
         source_map = SourceMap()
         self._extract_positions(data, filename, "", source_map)
         return self._to_plain_dict(data), source_map

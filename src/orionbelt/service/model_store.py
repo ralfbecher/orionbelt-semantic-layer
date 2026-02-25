@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 from orionbelt.compiler.pipeline import CompilationPipeline, CompilationResult
 from orionbelt.models.query import QueryObject
 from orionbelt.models.semantic import SemanticModel
-from orionbelt.parser.loader import TrackedLoader
+from orionbelt.parser.loader import TrackedLoader, YAMLSafetyError
 from orionbelt.parser.resolver import ReferenceResolver
 from orionbelt.parser.validator import SemanticValidator
 
@@ -152,6 +152,9 @@ class ModelStore:
         # 1. Parse YAML
         try:
             raw, source_map = self._loader.load_string(yaml_str)
+        except YAMLSafetyError as exc:
+            errors.append(ErrorInfo(code="YAML_SAFETY_ERROR", message=str(exc)))
+            return SemanticModel(), errors, warnings
         except Exception as exc:
             errors.append(ErrorInfo(code="YAML_PARSE_ERROR", message=str(exc)))
             return SemanticModel(), errors, warnings

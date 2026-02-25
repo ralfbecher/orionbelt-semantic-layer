@@ -76,14 +76,21 @@ class RequestBodyLimitMiddleware(BaseHTTPMiddleware):
 
         # Fast path: check Content-Length header first
         content_length = request.headers.get("content-length")
-        if content_length is not None and int(content_length) > limit:
-            return JSONResponse(
-                status_code=413,
-                content={"detail": f"Request body too large (max {limit_mb} MB)"},
-            )
+        if content_length is not None:
+            try:
+                declared = int(content_length)
+            except ValueError:
+                declared = -1  # treat unparseable as missing — fall through to streaming
+            if declared > limit:
+                return JSONResponse(
+                    status_code=413,
+                    content={"detail": f"Request body too large (max {limit_mb} MB)"},
+                )
 
-        # Stream actual bytes — abort early if limit exceeded
-        if request.method in ("POST", "PUT", "PATCH"):
+        # Stream actual bytes — abort early if limit exceeded.
+        # Apply to any method that might carry a body (not just POST/PUT/PATCH).
+        has_body = content_length is not None or "transfer-encoding" in request.headers
+        if request.method in ("POST", "PUT", "PATCH", "DELETE") or has_body:
             chunks: list[bytes] = []
             total = 0
             async for chunk in request.stream():

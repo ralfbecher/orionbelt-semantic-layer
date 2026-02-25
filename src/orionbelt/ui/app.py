@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import contextlib
 import hashlib
+import types
 from typing import Any
 
 import httpx
@@ -323,7 +324,7 @@ _IMPORT_OSI_JS = """
 """
 
 
-def _get_converter_module():  # type: ignore[no-untyped-def]
+def _get_converter_module() -> types.ModuleType:
     """Lazy-import the OSI ↔ OBML converter module from ``osi-obml/``."""
     import importlib
     import sys
