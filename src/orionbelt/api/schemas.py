@@ -12,9 +12,9 @@ from orionbelt.models.query import QueryObject
 class ResolvedInfoResponse(BaseModel):
     """Information about what was resolved during compilation."""
 
-    fact_tables: list[str] = []
-    dimensions: list[str] = []
-    measures: list[str] = []
+    fact_tables: list[str] = Field(default_factory=list)
+    dimensions: list[str] = Field(default_factory=list)
+    measures: list[str] = Field(default_factory=list)
 
 
 class QueryCompileResponse(BaseModel):
@@ -23,7 +23,7 @@ class QueryCompileResponse(BaseModel):
     sql: str
     dialect: str
     resolved: ResolvedInfoResponse
-    warnings: list[str] = []
+    warnings: list[str] = Field(default_factory=list)
     sql_valid: bool = True
 
 
@@ -39,8 +39,8 @@ class ValidateResponse(BaseModel):
     """Response body for POST /validate."""
 
     valid: bool
-    errors: list[ErrorDetail] = []
-    warnings: list[ErrorDetail] = []
+    errors: list[ErrorDetail] = Field(default_factory=list)
+    warnings: list[ErrorDetail] = Field(default_factory=list)
 
 
 class ErrorDetail(BaseModel):
@@ -63,13 +63,13 @@ class DialectInfo(BaseModel):
     """Information about a supported dialect."""
 
     name: str
-    capabilities: dict[str, bool] = {}
+    capabilities: dict[str, bool] = Field(default_factory=dict)
 
 
 class DialectListResponse(BaseModel):
     """Response for GET /dialects."""
 
-    dialects: list[DialectInfo] = []
+    dialects: list[DialectInfo] = Field(default_factory=list)
 
 
 class HealthResponse(BaseModel):
@@ -120,7 +120,7 @@ class ModelLoadResponse(BaseModel):
     dimensions: int
     measures: int
     metrics: int
-    warnings: list[str] = []
+    warnings: list[str] = Field(default_factory=list)
 
 
 class ModelSummaryResponse(BaseModel):

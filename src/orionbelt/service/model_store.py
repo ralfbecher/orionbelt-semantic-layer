@@ -115,6 +115,19 @@ class ValidationSummary:
 # ---------------------------------------------------------------------------
 
 
+class ModelValidationError(ValueError):
+    """Raised when model loading fails validation.
+
+    Carries structured error details so callers can expose them to users.
+    """
+
+    def __init__(self, errors: list[ErrorInfo], warnings: list[ErrorInfo]) -> None:
+        self.errors = errors
+        self.warnings = warnings
+        msgs = "; ".join(e.message for e in errors)
+        super().__init__(f"Model validation failed: {msgs}")
+
+
 class ModelStore:
     """In-memory model registry.  Thread-safe via ``threading.Lock``.
 
@@ -203,8 +216,7 @@ class ModelStore:
         """
         model, errors, warnings = self._parse_and_validate(yaml_str)
         if errors:
-            msgs = "; ".join(e.message for e in errors)
-            raise ValueError(f"Model validation failed: {msgs}")
+            raise ModelValidationError(errors, warnings)
 
         model_id = self._new_id()
         with self._lock:

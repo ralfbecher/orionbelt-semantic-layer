@@ -26,7 +26,7 @@ from orionbelt.compiler.fanout import FanoutError
 from orionbelt.compiler.resolution import ResolutionError
 from orionbelt.dialect.registry import UnsupportedDialectError
 from orionbelt.service.diagram import generate_mermaid_er
-from orionbelt.service.model_store import ModelStore
+from orionbelt.service.model_store import ModelStore, ModelValidationError
 from orionbelt.service.session_manager import SessionInfo, SessionManager, SessionNotFoundError
 
 router = APIRouter()
@@ -116,9 +116,20 @@ async def load_model(
     store = _get_store(session_id, mgr)
     try:
         result = store.load_model(body.model_yaml)
-    except ValueError:
+    except ModelValidationError as exc:
         raise HTTPException(
-            status_code=422, detail="Invalid OBML model: parsing or validation failed"
+            status_code=422,
+            detail={
+                "message": "Invalid OBML model: parsing or validation failed",
+                "errors": [
+                    {"code": e.code, "message": e.message, "path": e.path}
+                    for e in exc.errors
+                ],
+                "warnings": [
+                    {"code": w.code, "message": w.message, "path": w.path}
+                    for w in exc.warnings
+                ],
+            },
         ) from None
     return ModelLoadResponse(
         model_id=result.model_id,
