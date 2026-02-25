@@ -35,8 +35,11 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
         # Gradio UI requires inline scripts/styles and external fonts —
-        # use a relaxed CSP for /ui paths, strict for API endpoints.
-        if request.url.path.startswith("/ui"):
+        # use a relaxed CSP for /ui paths.  Swagger UI / ReDoc need the
+        # jsdelivr CDN for JS + CSS assets.  All other API endpoints get
+        # a strict policy.
+        path = request.url.path
+        if path.startswith("/ui"):
             response.headers["Content-Security-Policy"] = (
                 "default-src 'self'; "
                 "script-src 'self' 'unsafe-inline' 'unsafe-eval'; "
@@ -44,6 +47,15 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
                 "font-src 'self' https://fonts.gstatic.com; "
                 "connect-src 'self'; "
                 "img-src 'self' data:; "
+                "frame-ancestors 'none'"
+            )
+        elif path in ("/docs", "/redoc", "/openapi.json"):
+            response.headers["Content-Security-Policy"] = (
+                "default-src 'self'; "
+                "script-src 'self' https://cdn.jsdelivr.net; "
+                "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+                "img-src 'self' https://fastapi.tiangolo.com data:; "
+                "worker-src 'self' blob:; "
                 "frame-ancestors 'none'"
             )
         else:
