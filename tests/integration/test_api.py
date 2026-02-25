@@ -249,6 +249,63 @@ class TestDiagramEndpoint:
 # ---------------------------------------------------------------------------
 
 
+class TestRequestBodyLimit:
+    """Verify RequestBodyLimitMiddleware rejects oversized payloads."""
+
+    async def test_model_endpoint_rejects_body_over_5mb(self, client: AsyncClient) -> None:
+        sid = (await client.post("/sessions")).json()["session_id"]
+        oversized = "x" * (5 * 1024 * 1024 + 1)
+        response = await client.post(
+            f"/sessions/{sid}/models",
+            json={"model_yaml": oversized},
+        )
+        assert response.status_code == 413
+        assert "too large" in response.json()["detail"]
+
+    async def test_validate_endpoint_rejects_body_over_5mb(self, client: AsyncClient) -> None:
+        sid = (await client.post("/sessions")).json()["session_id"]
+        oversized = "x" * (5 * 1024 * 1024 + 1)
+        response = await client.post(
+            f"/sessions/{sid}/validate",
+            json={"model_yaml": oversized},
+        )
+        assert response.status_code == 413
+        assert "too large" in response.json()["detail"]
+
+    async def test_query_endpoint_rejects_body_over_1mb(self, client: AsyncClient) -> None:
+        sid = (await client.post("/sessions")).json()["session_id"]
+        oversized = "x" * (1 * 1024 * 1024 + 1)
+        response = await client.post(
+            f"/sessions/{sid}/query/sql",
+            content=oversized,
+            headers={"content-type": "application/json"},
+        )
+        assert response.status_code == 413
+        assert "too large" in response.json()["detail"]
+
+    async def test_small_payload_passes(self, client: AsyncClient) -> None:
+        sid = (await client.post("/sessions")).json()["session_id"]
+        response = await client.post(
+            f"/sessions/{sid}/validate",
+            json={"model_yaml": "version: '1'"},
+        )
+        # Not 413 — body is small enough
+        assert response.status_code != 413
+
+    async def test_content_length_header_checked_first(self, client: AsyncClient) -> None:
+        """A spoofed Content-Length > limit triggers 413 before body is read."""
+        sid = (await client.post("/sessions")).json()["session_id"]
+        response = await client.post(
+            f"/sessions/{sid}/query/sql",
+            content=b"small",
+            headers={
+                "content-type": "application/json",
+                "content-length": "99999999",
+            },
+        )
+        assert response.status_code == 413
+
+
 class TestSessionIsolation:
     async def test_models_in_session_a_not_visible_in_b(self, client: AsyncClient) -> None:
         sid_a = (await client.post("/sessions")).json()["session_id"]

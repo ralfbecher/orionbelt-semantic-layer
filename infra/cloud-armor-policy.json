@@ -35,12 +35,32 @@
       }
     },
     {
+      "priority": 103,
+      "action": "deny(413)",
+      "description": "Block model/validate bodies > 5 MB",
+      "match": {
+        "expr": {
+          "expression": "has(request.headers[\"content-length\"]) && int(request.headers[\"content-length\"]) > 5242880 && request.path.matches(\".*/models$|.*/validate$\")"
+        }
+      }
+    },
+    {
       "priority": 104,
       "action": "deny(403)",
       "description": "Block PUT/PATCH/TRACE/CONNECT methods",
       "match": {
         "expr": {
           "expression": "request.method.matches(\"PUT|PATCH|TRACE|CONNECT\")"
+        }
+      }
+    },
+    {
+      "priority": 106,
+      "action": "deny(413)",
+      "description": "Block request bodies > 1 MB (non-model endpoints)",
+      "match": {
+        "expr": {
+          "expression": "has(request.headers[\"content-length\"]) && int(request.headers[\"content-length\"]) > 1048576 && !request.path.matches(\".*/models$|.*/validate$\")"
         }
       }
     },

@@ -44,10 +44,20 @@ apply_rule 102 \
   --action=deny-404 \
   --description="Block common exploit paths"
 
+apply_rule 103 \
+  --expression='has(request.headers["content-length"]) && int(request.headers["content-length"]) > 5242880 && request.path.matches(".*/models$|.*/validate$")' \
+  --action=deny-413 \
+  --description="Block model/validate bodies > 5 MB"
+
 apply_rule 104 \
   --expression='request.method.matches("PUT|PATCH|TRACE|CONNECT")' \
   --action=deny-403 \
   --description="Block PUT/PATCH/TRACE/CONNECT methods"
+
+apply_rule 106 \
+  --expression='has(request.headers["content-length"]) && int(request.headers["content-length"]) > 1048576 && !request.path.matches(".*/models$|.*/validate$")' \
+  --action=deny-413 \
+  --description="Block request bodies > 1 MB (non-model endpoints)"
 
 # --- Application allow rules (before OWASP) ---
 
