@@ -115,6 +115,16 @@
       }
     },
     {
+      "priority": 150,
+      "action": "allow",
+      "description": "Allow query compilation endpoint (OWASP falsely flags SQL-related body content)",
+      "match": {
+        "expr": {
+          "expression": "request.path.matches('.*/query/sql$')"
+        }
+      }
+    },
+    {
       "priority": 1000,
       "action": "allow",
       "description": "Allow Gradio UI paths without rate limiting",

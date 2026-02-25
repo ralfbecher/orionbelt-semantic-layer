@@ -101,11 +101,9 @@ apply_rule 1000 \
   --description="Allow Gradio UI paths without rate limiting"
 
 # --- Rate limiting (penultimate priority) ---
-# Note: throttle rules need special flags, handle separately
+# Note: throttle rules need special flags, handle separately from apply_rule
 echo "  Rule 2147483646 (rate limit) ..."
-if gcloud compute security-policies rules describe 2147483646 \
-    --security-policy="$POLICY" --region="$REGION" &>/dev/null; then
-  gcloud compute security-policies rules update 2147483646 \
+RATE_LIMIT_FLAGS=( \
     --security-policy="$POLICY" --region="$REGION" \
     --src-ip-ranges="*" \
     --action=throttle \
@@ -114,7 +112,13 @@ if gcloud compute security-policies rules describe 2147483646 \
     --conform-action=allow \
     --exceed-action=deny-403 \
     --enforce-on-key=IP \
-    --description="Rate limiting: 1000 req/min per IP"
+    --description="Rate limiting: 1000 req/min per IP" \
+)
+if gcloud compute security-policies rules describe 2147483646 \
+    --security-policy="$POLICY" --region="$REGION" &>/dev/null; then
+  gcloud compute security-policies rules update 2147483646 "${RATE_LIMIT_FLAGS[@]}"
+else
+  gcloud compute security-policies rules create 2147483646 "${RATE_LIMIT_FLAGS[@]}"
 fi
 
 echo ""

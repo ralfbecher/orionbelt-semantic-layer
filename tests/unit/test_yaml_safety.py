@@ -35,6 +35,12 @@ class TestAnchorRejection:
         with pytest.raises(YAMLSafetyError, match="anchors/aliases"):
             loader.load_string(yaml)
 
+    def test_ampersand_in_comment_not_rejected(self, loader: TrackedLoader) -> None:
+        """An & inside a YAML comment must not trigger a false positive."""
+        yaml = "# see R&D notes\n# &anchor_looking_thing\nkey: value\n"
+        raw, _ = loader.load_string(yaml)
+        assert raw["key"] == "value"
+
 
 class TestDepthLimit:
     """Reject deeply nested YAML structures."""

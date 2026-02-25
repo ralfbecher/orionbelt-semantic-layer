@@ -20,10 +20,12 @@ _MAX_DOCUMENT_SIZE = 5_000_000  # 5M characters
 _MAX_NODE_COUNT = 50_000
 _MAX_DEPTH = 20
 
-# Regex to detect YAML anchor definitions (&name).
+# Regex to detect YAML anchor definitions (&name) on non-comment lines.
 # Matches & at line start or after whitespace/sequence indicators, followed by
-# an anchor name, but NOT inside quoted strings (good-enough heuristic).
+# an anchor name.
 _ANCHOR_RE = re.compile(r"(?:^|[\s\-:])&(\w+)", re.MULTILINE)
+# Lines starting with optional whitespace + # are full-line comments.
+_COMMENT_LINE_RE = re.compile(r"^\s*#.*$", re.MULTILINE)
 
 
 class YAMLSafetyError(Exception):
@@ -81,7 +83,10 @@ class TrackedLoader:
                 f"YAML document exceeds maximum size "
                 f"({len(content):,} chars > {_MAX_DOCUMENT_SIZE:,} limit)"
             )
-        if _ANCHOR_RE.search(content):
+        # Strip full-line comments before scanning so that &name inside
+        # comments (e.g. "# see R&D notes") does not cause a false positive.
+        stripped = _COMMENT_LINE_RE.sub("", content)
+        if _ANCHOR_RE.search(stripped):
             raise YAMLSafetyError(
                 "YAML anchors/aliases are not supported in OBML"
             )
