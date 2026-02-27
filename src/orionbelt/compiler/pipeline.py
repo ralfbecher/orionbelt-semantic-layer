@@ -58,17 +58,22 @@ class CompilationPipeline:
         if not resolved.requires_cfl:
             detect_fanout(resolved, model)
 
+        # Create dialect early so planners can use dialect-aware table formatting
+        dialect = DialectRegistry.get(dialect_name)
+        qualify_table = lambda obj: dialect.format_table_ref(  # noqa: E731
+            obj.database, obj.schema_name, obj.code
+        )
+
         # Phase 2: Planning (star schema or CFL)
         if resolved.requires_cfl:
-            plan = self._cfl_planner.plan(resolved, model)
+            plan = self._cfl_planner.plan(resolved, model, qualify_table=qualify_table)
         else:
-            plan = self._star_planner.plan(resolved, model)
+            plan = self._star_planner.plan(resolved, model, qualify_table=qualify_table)
 
         # Phase 2.5: Wrap with totals CTE if needed
         wrapped_ast = wrap_with_totals(plan.ast, resolved)
 
         # Phase 3: Dialect-specific SQL rendering
-        dialect = DialectRegistry.get(dialect_name)
         codegen = CodeGenerator(dialect)
         sql = codegen.generate(wrapped_ast)
 

@@ -51,6 +51,35 @@ class Dialect(ABC):
     Provides default SQL compilation; dialects override specific methods.
     """
 
+    _ABSTRACT_TYPE_MAP: dict[str, str] = {
+        "string": "VARCHAR",
+        "json": "VARCHAR",
+        "int": "INTEGER",
+        "float": "FLOAT",
+        "date": "DATE",
+        "time": "TIME",
+        "time_tz": "TIME",
+        "timestamp": "TIMESTAMP",
+        "timestamp_tz": "TIMESTAMP",
+        "boolean": "BOOLEAN",
+    }
+
+    def _resolve_type_name(self, type_name: str) -> str:
+        """Map an abstract type name to a dialect-specific SQL type.
+
+        Looks up ``_ABSTRACT_TYPE_MAP`` first; if *type_name* is not found
+        (e.g. already a concrete SQL type like ``VARCHAR``), returns it as-is.
+        """
+        return self._ABSTRACT_TYPE_MAP.get(type_name, type_name)
+
+    def format_table_ref(self, database: str, schema: str, code: str) -> str:
+        """Format a fully-qualified table reference.
+
+        Default: three-part ``database.schema.code`` (Snowflake/Databricks/Dremio).
+        Postgres and ClickHouse override to two-part naming.
+        """
+        return f"{database}.{schema}.{code}"
+
     @property
     @abstractmethod
     def name(self) -> str: ...
@@ -321,7 +350,8 @@ class Dialect(ABC):
                 parts.append("END")
                 return " ".join(parts)
             case Cast(expr=inner, type_name=type_name):
-                return f"CAST({self.compile_expr(inner)} AS {type_name})"
+                resolved_type = self._resolve_type_name(type_name)
+                return f"CAST({self.compile_expr(inner)} AS {resolved_type})"
             case SubqueryExpr(query=query):
                 return f"(\n{self.compile_select(query)}\n)"
             case RawSQL(sql=sql):

@@ -12,6 +12,10 @@ from orionbelt.models.semantic import TimeGrain
 class PostgresDialect(Dialect):
     """PostgreSQL dialect — strict GROUP BY, date_trunc, ILIKE."""
 
+    def format_table_ref(self, database: str, schema: str, code: str) -> str:
+        """PostgreSQL: two-part ``schema.code`` (skip database)."""
+        return f"{schema}.{code}"
+
     @property
     def name(self) -> str:
         return "postgres"

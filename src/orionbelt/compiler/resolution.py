@@ -208,6 +208,108 @@ def _parse_metric_formula(tokens: list[_Token]) -> Expr:
     return _parse_expr()
 
 
+def _tokenize_measure_expression(formula: str, model: SemanticModel) -> list[_Token]:
+    """Tokenize a measure expression with ``{[DataObject].[Column]}`` refs.
+
+    Returns tokens compatible with the recursive descent parser.  Column
+    references are resolved to physical names and stored as ``"colref"``
+    tokens carrying ``(table, column)`` in their ``value``.
+    """
+    tokens: list[_Token] = []
+    i = 0
+    while i < len(formula):
+        ch = formula[i]
+        if ch in " \t\n":
+            i += 1
+        elif ch == "{" and i + 1 < len(formula) and formula[i + 1] == "[":
+            # {[DataObject].[Column]} reference
+            pattern = re.compile(r"\{\[([^\]]+)\]\.\[([^\]]+)\]\}", re.DOTALL)
+            m = pattern.match(formula, i)
+            if m:
+                obj_name, col_name = m.group(1), m.group(2)
+                obj = model.data_objects.get(obj_name)
+                source = (
+                    obj.columns[col_name].code if obj and col_name in obj.columns else col_name
+                )
+                # Store as "table.column" so the parser can split it
+                tokens.append(_Token(kind="colref", value=f"{obj_name}\0{source}"))
+                i = m.end()
+            else:
+                i += 1
+        elif ch in "0123456789" or (
+            ch == "." and i + 1 < len(formula) and formula[i + 1].isdigit()
+        ):
+            j = i
+            while j < len(formula) and (formula[j].isdigit() or formula[j] == "."):
+                j += 1
+            tokens.append(_Token(kind="number", value=formula[i:j]))
+            i = j
+        elif ch in "+-*/":
+            tokens.append(_Token(kind="op", value=ch))
+            i += 1
+        elif ch == "(":
+            tokens.append(_Token(kind="lparen", value="("))
+            i += 1
+        elif ch == ")":
+            tokens.append(_Token(kind="rparen", value=")"))
+            i += 1
+        else:
+            i += 1
+    return tokens
+
+
+def _parse_measure_expression(tokens: list[_Token]) -> Expr:
+    """Parse tokenized measure expression into an AST with proper ColumnRef nodes."""
+    pos = [0]
+
+    def _peek() -> _Token | None:
+        return tokens[pos[0]] if pos[0] < len(tokens) else None
+
+    def _advance() -> _Token:
+        tok = tokens[pos[0]]
+        pos[0] += 1
+        return tok
+
+    def _parse_factor() -> Expr:
+        tok = _peek()
+        if tok is None:
+            return Literal.number(0)
+        if tok.kind == "lparen":
+            _advance()
+            node = _parse_expr()
+            if _peek() and _peek().kind == "rparen":  # type: ignore[union-attr]
+                _advance()
+            return node
+        if tok.kind == "number":
+            _advance()
+            val = float(tok.value) if "." in tok.value else int(tok.value)
+            return Literal.number(val)
+        if tok.kind == "colref":
+            _advance()
+            table, column = tok.value.split("\0", 1)
+            return ColumnRef(name=column, table=table)
+        _advance()
+        return Literal.number(0)
+
+    def _parse_term() -> Expr:
+        left = _parse_factor()
+        while _peek() and _peek().kind == "op" and _peek().value in "*/":  # type: ignore[union-attr]
+            op_tok = _advance()
+            right = _parse_factor()
+            left = BinaryOp(left=left, op=op_tok.value, right=right)
+        return left
+
+    def _parse_expr() -> Expr:
+        left = _parse_term()
+        while _peek() and _peek().kind == "op" and _peek().value in "+-":  # type: ignore[union-attr]
+            op_tok = _advance()
+            right = _parse_term()
+            left = BinaryOp(left=left, op=op_tok.value, right=right)
+        return left
+
+    return _parse_expr()
+
+
 class QueryResolver:
     """Resolves a QueryObject + SemanticModel into a ResolvedQuery."""
 
@@ -501,22 +603,16 @@ class QueryResolver:
     ) -> Expr:
         """Expand a measure expression into AST nodes.
 
-        Handles {[DataObject].[Column]} placeholders.
+        Parses ``{[DataObject].[Column]}`` placeholders into proper
+        ``ColumnRef`` AST nodes so that dialect quoting is applied
+        consistently during code generation.
         """
-
         formula = measure.expression or ""
         agg = measure.aggregation.upper()
 
-        # Replace {[DataObject].[Column]} with column references
-        named_refs = re.findall(r"\{\[([^\]]+)\]\.\[([^\]]+)\]\}", formula)
-        for obj_name, col_name in named_refs:
-            obj = model.data_objects.get(obj_name)
-            if obj and col_name in obj.columns:
-                source = obj.columns[col_name].code
-                formula = formula.replace(f"{{[{obj_name}].[{col_name}]}}", f"{obj_name}.{source}")
-
-        # Wrap the whole formula in the aggregation function as raw SQL
-        from orionbelt.ast.nodes import RawSQL
+        # Tokenize the expression: {[Obj].[Col]} → ColumnRef, numbers, operators, parens
+        tokens = _tokenize_measure_expression(formula, model)
+        inner = _parse_measure_expression(tokens)
 
         distinct = measure.distinct
         if agg == "COUNT_DISTINCT":
@@ -525,7 +621,7 @@ class QueryResolver:
 
         return FunctionCall(
             name=agg,
-            args=[RawSQL(sql=formula)],
+            args=[inner],
             distinct=distinct,
         )
 

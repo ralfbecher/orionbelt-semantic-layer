@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 from orionbelt.ast.builder import QueryBuilder
 from orionbelt.ast.nodes import (
     CTE,
@@ -23,7 +25,7 @@ from orionbelt.compiler.fanout import FanoutError
 from orionbelt.compiler.graph import JoinGraph
 from orionbelt.compiler.resolution import ResolvedMeasure, ResolvedQuery
 from orionbelt.compiler.star import QueryPlan
-from orionbelt.models.semantic import SemanticModel
+from orionbelt.models.semantic import DataObject, SemanticModel
 
 __all__ = ["CFLPlanner", "FanoutError"]
 
@@ -37,7 +39,12 @@ class CFLPlanner:
     3. Outer query aggregates over the union, grouping by conformed dimensions
     """
 
-    def plan(self, resolved: ResolvedQuery, model: SemanticModel) -> QueryPlan:
+    def plan(
+        self,
+        resolved: ResolvedQuery,
+        model: SemanticModel,
+        qualify_table: Callable[[DataObject], str] | None = None,
+    ) -> QueryPlan:
         """Plan a CFL query."""
         self._validate_fanout(resolved, model)
 
@@ -48,10 +55,12 @@ class CFLPlanner:
             # Single fact — delegate to star schema
             from orionbelt.compiler.star import StarSchemaPlanner
 
-            return StarSchemaPlanner().plan(resolved, model)
+            return StarSchemaPlanner().plan(resolved, model, qualify_table=qualify_table)
 
         # Multi-fact: UNION ALL strategy
-        return self._plan_union_all(resolved, model, measures_by_object, cross_fact)
+        return self._plan_union_all(
+            resolved, model, measures_by_object, cross_fact, qualify_table=qualify_table
+        )
 
     def _validate_fanout(self, resolved: ResolvedQuery, model: SemanticModel) -> None:
         """Validate that grain is compatible and no fanout will occur."""
@@ -129,6 +138,28 @@ class CFLPlanner:
     def _is_multi_field(measure: ResolvedMeasure) -> bool:
         """Check if a measure has multiple field args (e.g. COUNT(a, b))."""
         return isinstance(measure.expression, FunctionCall) and len(measure.expression.args) > 1
+
+    @staticmethod
+    def _resolve_null_type_for_field(
+        measure: ResolvedMeasure,
+        field_idx: int,
+        model: SemanticModel,
+    ) -> str | None:
+        """Look up the abstract type for a multi-field measure's *field_idx*-th column.
+
+        Falls back to the measure's ``result_type`` if the column cannot be found.
+        """
+        model_measure = model.measures.get(measure.name)
+        if not model_measure:
+            return None
+        # Try to find the column's abstract_type from the data object
+        if field_idx < len(model_measure.columns):
+            ref = model_measure.columns[field_idx]
+            obj = model.data_objects.get(ref.view) if ref.view else None
+            if obj and ref.column in obj.columns:
+                return obj.columns[ref.column].abstract_type.value
+        # Fallback to measure result_type
+        return model_measure.result_type.value
 
     @staticmethod
     def _multi_field_cte_alias(measure_name: str, idx: int) -> str:
@@ -252,9 +283,13 @@ class CFLPlanner:
         model: SemanticModel,
         measures_by_object: dict[str, list[ResolvedMeasure]],
         cross_fact: list[ResolvedMeasure] | None = None,
+        qualify_table: Callable[[DataObject], str] | None = None,
     ) -> QueryPlan:
         """UNION ALL strategy: stack fact legs with NULL padding, aggregate outside."""
         graph = JoinGraph(model, use_path_names=resolved.use_path_names or None)
+
+        def qualify(obj: DataObject) -> str:
+            return qualify_table(obj) if qualify_table else obj.qualified_code
 
         # Collect all measures across all objects + cross-fact measures
         all_measures: list[ResolvedMeasure] = []
@@ -296,11 +331,26 @@ class CFLPlanner:
                         if arg_table == obj_name:
                             leg_builder.select(AliasedExpr(expr=arg, alias=alias))
                         else:
-                            leg_builder.select(AliasedExpr(expr=Literal.null(), alias=alias))
+                            # Typed NULL: look up column's abstract_type from the data object
+                            null_type = self._resolve_null_type_for_field(m, i, model)
+                            null_expr: Expr = (
+                                Cast(Literal.null(), type_name=null_type)
+                                if null_type
+                                else Literal.null()
+                            )
+                            leg_builder.select(AliasedExpr(expr=null_expr, alias=alias))
                 elif m.name in this_measure_names:
                     leg_builder.select(AliasedExpr(expr=self._unwrap_aggregation(m), alias=m.name))
                 else:
-                    leg_builder.select(AliasedExpr(expr=Literal.null(), alias=m.name))
+                    # Typed NULL: use the measure's result_type
+                    model_measure = model.measures.get(m.name)
+                    null_type_name = model_measure.result_type.value if model_measure else None
+                    null_expr = (
+                        Cast(Literal.null(), type_name=null_type_name)
+                        if null_type_name
+                        else Literal.null()
+                    )
+                    leg_builder.select(AliasedExpr(expr=null_expr, alias=m.name))
 
             # Determine the common root for this leg:
             # the deepest directed ancestor that can reach all dimension
@@ -313,7 +363,7 @@ class CFLPlanner:
 
             # FROM: the lead (LCA) table
             if lead_obj:
-                leg_builder.from_(lead_obj.qualified_code, alias=lead)
+                leg_builder.from_(qualify(lead_obj), alias=lead)
 
             # JOINs: all required objects reachable from the lead
             join_targets = leg_required - {lead}
@@ -324,7 +374,7 @@ class CFLPlanner:
                     if target_object:
                         on_expr = graph.build_join_condition(step)
                         leg_builder.join(
-                            table=target_object.qualified_code,
+                            table=qualify(target_object),
                             on=on_expr,
                             join_type=step.join_type,
                             alias=step.to_object,

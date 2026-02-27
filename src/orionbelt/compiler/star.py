@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 
 from orionbelt.ast.builder import QueryBuilder
@@ -14,7 +15,7 @@ from orionbelt.ast.nodes import (
 )
 from orionbelt.compiler.graph import JoinGraph
 from orionbelt.compiler.resolution import ResolvedMeasure, ResolvedQuery
-from orionbelt.models.semantic import SemanticModel
+from orionbelt.models.semantic import DataObject, SemanticModel
 
 
 def _substitute_measure_refs(
@@ -42,9 +43,17 @@ class QueryPlan:
 class StarSchemaPlanner:
     """Plans star-schema queries: single fact base with dimension joins."""
 
-    def plan(self, resolved: ResolvedQuery, model: SemanticModel) -> QueryPlan:
+    def plan(
+        self,
+        resolved: ResolvedQuery,
+        model: SemanticModel,
+        qualify_table: Callable[[DataObject], str] | None = None,
+    ) -> QueryPlan:
         builder = QueryBuilder()
         graph = JoinGraph(model, use_path_names=resolved.use_path_names or None)
+
+        def qualify(obj: DataObject) -> str:
+            return qualify_table(obj) if qualify_table else obj.qualified_code
 
         base_object = model.data_objects.get(resolved.base_object)
         if not base_object:
@@ -72,7 +81,7 @@ class StarSchemaPlanner:
                 builder.select(AliasedExpr(expr=measure.expression, alias=measure.name))
 
         # FROM: base fact table
-        builder.from_(base_object.qualified_code, alias=base_alias)
+        builder.from_(qualify(base_object), alias=base_alias)
 
         # JOINs: dimension tables
         for step in resolved.join_steps:
@@ -81,7 +90,7 @@ class StarSchemaPlanner:
                 continue
             on_expr = graph.build_join_condition(step)
             builder.join(
-                table=target_object.qualified_code,
+                table=qualify(target_object),
                 on=on_expr,
                 join_type=step.join_type,
                 alias=step.to_object,

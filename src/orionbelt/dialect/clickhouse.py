@@ -23,6 +23,23 @@ _GRAIN_FUNCTIONS: dict[TimeGrain, str] = {
 class ClickHouseDialect(Dialect):
     """ClickHouse dialect — custom date functions, aggregation differences."""
 
+    _ABSTRACT_TYPE_MAP: dict[str, str] = {
+        "string": "String",
+        "json": "String",
+        "int": "Int64",
+        "float": "Float64",
+        "date": "Date",
+        "time": "String",
+        "time_tz": "String",
+        "timestamp": "DateTime",
+        "timestamp_tz": "DateTime",
+        "boolean": "Bool",
+    }
+
+    def format_table_ref(self, database: str, schema: str, code: str) -> str:
+        """ClickHouse: two-part ``schema.code`` (OBML schema maps to CH database)."""
+        return f"{schema}.{code}"
+
     @property
     def name(self) -> str:
         return "clickhouse"
