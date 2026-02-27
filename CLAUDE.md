@@ -114,7 +114,7 @@ Two distinct validators exist — don't confuse them:
 `TrackedLoader` uses ruamel.yaml for line-faithful source positions. `ReferenceResolver` converts raw dict → `SemanticModel` + `ValidationResult`.
 
 ### MCP Server (`mcp/server.py`)
-10 tools + 3 prompts + 1 resource. Uses FastMCP 2.x. In stdio mode, `_resolve_store(session_id)` auto-creates a `__default__` session. `ToolError` is imported from `fastmcp.exceptions` (not top-level `fastmcp`).
+10 tools + 3 prompts + 1 resource. Uses FastMCP 3.x. In stdio mode, `_resolve_store(session_id)` auto-creates a `__default__` session. `ToolError` is imported from `fastmcp.exceptions` (not top-level `fastmcp`).
 
 ## Pydantic v2 Alias Convention
 

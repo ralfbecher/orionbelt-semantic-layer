@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import pytest
+from ruamel.yaml.composer import MaxDepthExceededError
 
-from orionbelt.parser.loader import TrackedLoader, YAMLSafetyError, _MAX_DOCUMENT_SIZE
+from orionbelt.parser.loader import _MAX_DOCUMENT_SIZE, TrackedLoader, YAMLSafetyError
 from orionbelt.service.model_store import ModelStore
 from tests.conftest import SAMPLE_MODEL_YAML
 
@@ -52,7 +53,7 @@ class TestDepthLimit:
         for i in range(25):
             yaml += "  " * i + f"level{i}:\n"
         yaml += "  " * 25 + "value: deep\n"
-        with pytest.raises(Exception):  # ruamel raises its own error type
+        with pytest.raises(MaxDepthExceededError):
             loader.load_string(yaml)
 
 

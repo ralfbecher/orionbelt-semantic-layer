@@ -505,7 +505,7 @@ class TestListaggRendering:
 
     @pytest.mark.parametrize("dialect_name", ["clickhouse", "databricks"])
     def test_cross_column_order_by_raises(self, dialect_name: str) -> None:
-        """ORDER BY on a different column than the aggregated one raises in ClickHouse/Databricks."""
+        """ORDER BY on different column than aggregated raises in ClickHouse/Databricks."""
         dialect = DialectRegistry.get(dialect_name)
         expr = FunctionCall(
             name="LISTAGG",

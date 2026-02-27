@@ -23,7 +23,6 @@ from orionbelt.models.semantic import (
     SemanticModel,
 )
 
-
 # -- helpers -----------------------------------------------------------------
 
 

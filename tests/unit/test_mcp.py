@@ -1,7 +1,7 @@
 """Unit tests for MCP server tools — direct function calls, no transport.
 
-FastMCP's ``@mcp.tool`` wraps functions in ``FunctionTool`` objects.  We call
-the underlying function via ``.fn`` to test the business logic directly.
+FastMCP 3.x ``@mcp.tool`` decorators return the original function, so we
+can call the tool functions directly without any unwrapping.
 """
 
 from __future__ import annotations
@@ -29,16 +29,16 @@ from orionbelt.mcp.server import (
 from orionbelt.service.session_manager import SessionManager
 from tests.conftest import SAMPLE_MODEL_YAML
 
-# Unwrap FunctionTool → raw functions
-_load_model = load_model.fn
-_validate_model = validate_model.fn
-_describe_model = describe_model.fn
-_compile_query = compile_query.fn
-_list_models = list_models.fn
-_list_dialects = list_dialects.fn
-_create_session = create_session.fn
-_close_session = close_session.fn
-_list_sessions = list_sessions.fn
+# In FastMCP 3.x, @mcp.tool returns the original function directly
+_load_model = load_model
+_validate_model = validate_model
+_describe_model = describe_model
+_compile_query = compile_query
+_list_models = list_models
+_list_dialects = list_dialects
+_create_session = create_session
+_close_session = close_session
+_list_sessions = list_sessions
 
 
 @pytest.fixture(autouse=True)
@@ -446,7 +446,7 @@ class TestObmlResource:
         assert "unique within" in text
 
     def test_resource_function_returns_reference(self) -> None:
-        result = obml_reference.fn()
+        result = obml_reference()
         assert result == OBML_REFERENCE
 
 
