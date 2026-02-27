@@ -148,6 +148,10 @@ _DARK_MODE_INIT_JS = """
 _THEME_REDIRECT_JS = """
 () => {
     setTimeout(() => {
+        // Signal that a theme toggle is in progress so the restore step
+        // knows it should re-select the saved tab.
+        sessionStorage.setItem('ob_theme_toggled', '1');
+
         const url = new URL(window.location);
         const current = url.searchParams.get('__theme');
         url.searchParams.set('__theme', current === 'dark' ? 'light' : 'dark');
@@ -156,12 +160,17 @@ _THEME_REDIRECT_JS = """
 }
 """
 
+
 # JS pre-processor: detect the active Gradio colour scheme from the URL
 # and inject the matching Mermaid theme into the last argument slot.
 _DETECT_THEME_JS = """
 (...args) => {
     const p = new URLSearchParams(window.location.search);
-    const isDark = p.get('__theme') !== 'light';
+    const paramTheme = p.get('__theme');
+    const isDark = paramTheme
+        ? paramTheme === 'dark'
+        : document.documentElement.classList.contains('dark')
+          || document.body.classList.contains('dark');
     args[args.length - 1] = isDark ? 'dark' : 'default';
     return args;
 }
@@ -294,6 +303,22 @@ _INJECT_UPLOAD_JS = (
         patchDownloads('ob-sql', 'query.sql');
         if (++attempts >= 10) clearInterval(iv);
     }, 300);
+
+    /* ── Tab persistence across theme toggle ── */
+    var tabBtns = document.querySelectorAll('button[role="tab"]');
+    tabBtns.forEach(function(btn, idx) {
+        btn.addEventListener('click', function() {
+            sessionStorage.setItem('ob_active_tab', String(idx));
+        });
+    });
+    var toggled = sessionStorage.getItem('ob_theme_toggled');
+    if (toggled) {
+        sessionStorage.removeItem('ob_theme_toggled');
+        var savedIdx = parseInt(
+            sessionStorage.getItem('ob_active_tab') || '0', 10
+        );
+        if (savedIdx > 0 && tabBtns[savedIdx]) tabBtns[savedIdx].click();
+    }
 }
 """
 )
@@ -482,8 +507,8 @@ def _fetch_diagram_er(
         return "*No model YAML provided.*", session_state, model_state
 
     try:
-        client, session_id, model_id, session_state, model_state = (
-            _ensure_session_and_model(model_yaml, api_url, session_state, model_state)
+        client, session_id, model_id, session_state, model_state = _ensure_session_and_model(
+            model_yaml, api_url, session_state, model_state
         )
 
         # Fetch ER diagram
@@ -493,8 +518,8 @@ def _fetch_diagram_er(
         )
         # Auto-recover from expired session (404)
         if resp.status_code == 404:
-            client, session_id, model_id, session_state, model_state = (
-                _ensure_session_and_model(model_yaml, api_url, None, None)
+            client, session_id, model_id, session_state, model_state = _ensure_session_and_model(
+                model_yaml, api_url, None, None
             )
             resp = client.get(
                 f"/sessions/{session_id}/models/{model_id}/diagram/er",
@@ -637,9 +662,9 @@ def _cleanup_session(session_state: dict[str, str] | None) -> None:
     """Delete the API session on browser tab close."""
     if session_state:
         with contextlib.suppress(Exception):
-            httpx.Client(
-                base_url=session_state["api_url"], timeout=5, headers=_API_HEADERS
-            ).delete(f"/sessions/{session_state['session_id']}")
+            httpx.Client(base_url=session_state["api_url"], timeout=5, headers=_API_HEADERS).delete(
+                f"/sessions/{session_state['session_id']}"
+            )
 
 
 def compile_sql(
@@ -655,8 +680,8 @@ def compile_sql(
     Returns ``(sql_output, updated_session_state, updated_model_state)``.
     """
     try:
-        client, session_id, model_id, session_state, model_state = (
-            _ensure_session_and_model(model_yaml, api_url, session_state, model_state)
+        client, session_id, model_id, session_state, model_state = _ensure_session_and_model(
+            model_yaml, api_url, session_state, model_state
         )
 
         # Parse query YAML
@@ -679,8 +704,8 @@ def compile_sql(
         )
         # Auto-recover from expired session on compile (404)
         if resp.status_code == 404:
-            client, session_id, model_id, session_state, model_state = (
-                _ensure_session_and_model(model_yaml, api_url, None, None)
+            client, session_id, model_id, session_state, model_state = _ensure_session_and_model(
+                model_yaml, api_url, None, None
             )
             resp = client.post(
                 f"/sessions/{session_id}/query/sql",
@@ -714,7 +739,7 @@ def compile_sql(
     except _ModelValidationError as exc:
         return f"-- Error: Model validation failed\n-- {exc}", session_state, model_state
     except httpx.ConnectError:
-        api = (api_url.rstrip("/") if api_url else _DEFAULT_API_URL)
+        api = api_url.rstrip("/") if api_url else _DEFAULT_API_URL
         return (
             f"-- Error: Cannot connect to API at {api}\n"
             "-- Make sure the server is running: uv run orionbelt-api",
@@ -759,9 +784,8 @@ def create_blocks(default_api_url: str | None = None) -> Any:
         saved_query = gr.BrowserState("", storage_key="ob_query_yaml")
         saved_api = gr.BrowserState(api_base, storage_key="ob_api_url")
         saved_dialect = gr.BrowserState(default_dialect, storage_key="ob_dialect")
-        saved_tab = gr.BrowserState(0, storage_key="ob_active_tab")
         saved_zoom = gr.BrowserState(100, storage_key="ob_zoom")
-        active_tab = gr.State(0)
+        saved_sql = gr.BrowserState("", storage_key="ob_sql_output")
 
         # ── Stateful API session (avoids re-creating per compile) ──
         session_state = gr.State(None)  # {"session_id": str, "api_url": str}
@@ -774,8 +798,8 @@ def create_blocks(default_api_url: str | None = None) -> Any:
             )
             dark_btn = gr.Button("Light / Dark", size="sm", scale=0, min_width=120)
 
-        with gr.Tabs() as tabs:
-            with gr.Tab("SQL Compiler", id=0) as sql_tab:
+        with gr.Tabs():
+            with gr.Tab("SQL Compiler", id=0):
                 with gr.Row(elem_classes=["settings-row"]):
                     dialect = gr.Dropdown(
                         choices=dialects,
@@ -861,8 +885,12 @@ def create_blocks(default_api_url: str | None = None) -> Any:
                 compile_btn.click(
                     fn=compile_sql,
                     inputs=[
-                        model_input, query_input, dialect, api_url,
-                        session_state, model_state,
+                        model_input,
+                        query_input,
+                        dialect,
+                        api_url,
+                        session_state,
+                        model_state,
                     ],
                     outputs=[sql_output, session_state, model_state],
                 )
@@ -927,8 +955,12 @@ def create_blocks(default_api_url: str | None = None) -> Any:
                 er_btn.click(
                     fn=_fetch_diagram_er,
                     inputs=[
-                        model_input, show_columns_cb, api_url,
-                        session_state, model_state, theme_input,
+                        model_input,
+                        show_columns_cb,
+                        api_url,
+                        session_state,
+                        model_state,
+                        theme_input,
                     ],
                     outputs=[mermaid_output, session_state, model_state],
                     js=_DETECT_THEME_JS,
@@ -941,8 +973,12 @@ def create_blocks(default_api_url: str | None = None) -> Any:
                 er_tab.select(
                     fn=_fetch_diagram_er,
                     inputs=[
-                        model_input, show_columns_cb, api_url,
-                        session_state, model_state, theme_input,
+                        model_input,
+                        show_columns_cb,
+                        api_url,
+                        session_state,
+                        model_state,
+                        theme_input,
                     ],
                     outputs=[mermaid_output, session_state, model_state],
                     js=_DETECT_THEME_JS,
@@ -958,35 +994,38 @@ def create_blocks(default_api_url: str | None = None) -> Any:
                     js=_apply_zoom_js,
                 )
 
-        # ── Track active tab ──
-        sql_tab.select(fn=lambda: 0, outputs=[active_tab])
-        er_tab.select(fn=lambda: 1, outputs=[active_tab])
-
-        # ── Toggle: Python reads all inputs → BrowserState, then JS redirects ──
+        # ── Toggle: Python saves inputs → BrowserState, then JS redirects ──
         dark_btn.click(
-            fn=lambda m, q, a, d, t, z: (m, q, a, d, t, z),
-            inputs=[model_input, query_input, api_url, dialect, active_tab, zoom_slider],
-            outputs=[saved_model, saved_query, saved_api, saved_dialect, saved_tab, saved_zoom],
+            fn=lambda m, q, a, d, z, s: (m, q, a, d, z, s),
+            inputs=[model_input, query_input, api_url, dialect, zoom_slider, sql_output],
+            outputs=[
+                saved_model,
+                saved_query,
+                saved_api,
+                saved_dialect,
+                saved_zoom,
+                saved_sql,
+            ],
         ).then(
             fn=None,
             js=_THEME_REDIRECT_JS,
         )
 
         # ── On page load: restore from BrowserState → visible components ──
-        def _restore(sm, sq, sa, sd, st, sz):  # type: ignore[no-untyped-def]
+        def _restore(sm, sq, sa, sd, sz, ss):  # type: ignore[no-untyped-def]
             return (
                 sm if sm else example_model,
                 sq if sq else _DEFAULT_QUERY,
                 sa if sa else api_base,
                 sd if sd else default_dialect,
-                gr.Tabs(selected=st if st else 0),
                 sz if sz else 100,
+                ss if ss else "",
             )
 
         demo.load(
             fn=_restore,
-            inputs=[saved_model, saved_query, saved_api, saved_dialect, saved_tab, saved_zoom],
-            outputs=[model_input, query_input, api_url, dialect, tabs, zoom_slider],
+            inputs=[saved_model, saved_query, saved_api, saved_dialect, saved_zoom, saved_sql],
+            outputs=[model_input, query_input, api_url, dialect, zoom_slider, sql_output],
         ).then(fn=None, js=_INJECT_UPLOAD_JS)
 
         # Session cleanup: API sessions expire automatically via SESSION_TTL_SECONDS.
@@ -1015,6 +1054,7 @@ def create_ui() -> None:
     if root_path:
         import gradio as gr
         from fastapi import FastAPI
+
         app = FastAPI()
         app = gr.mount_gradio_app(app, demo, path=root_path, css=_CSS, js=_DARK_MODE_INIT_JS)
         uvicorn.run(
