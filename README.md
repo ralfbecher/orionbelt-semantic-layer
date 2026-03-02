@@ -369,17 +369,17 @@ API endpoint: `http://35.187.174.102` — Interactive docs: [Swagger UI](http://
 
 Configuration is via environment variables or a `.env` file. See `.env.example` for all options:
 
-| Variable                   | Default     | Description                            |
-| -------------------------- | ----------- | -------------------------------------- |
-| `LOG_LEVEL`                | `INFO`      | Logging level                          |
-| `API_SERVER_HOST`          | `localhost` | REST API bind host                     |
-| `API_SERVER_PORT`          | `8000`      | REST API bind port                     |
-| `PORT`                     | —           | Override port (Cloud Run sets this)    |
-| `DISABLE_SESSION_LIST`     | `false`     | Disable `GET /sessions` endpoint       |
-| `SESSION_TTL_SECONDS`      | `1800`      | Session inactivity timeout (30 min)    |
-| `SESSION_CLEANUP_INTERVAL` | `60`        | Cleanup sweep interval (seconds)       |
-| `API_BASE_URL`             | —           | API URL for standalone UI              |
-| `ROOT_PATH`                | —           | ASGI root path for UI behind LB       |
+| Variable                   | Default     | Description                         |
+| -------------------------- | ----------- | ----------------------------------- |
+| `LOG_LEVEL`                | `INFO`      | Logging level                       |
+| `API_SERVER_HOST`          | `localhost` | REST API bind host                  |
+| `API_SERVER_PORT`          | `8000`      | REST API bind port                  |
+| `PORT`                     | —           | Override port (Cloud Run sets this) |
+| `DISABLE_SESSION_LIST`     | `false`     | Disable `GET /sessions` endpoint    |
+| `SESSION_TTL_SECONDS`      | `1800`      | Session inactivity timeout (30 min) |
+| `SESSION_CLEANUP_INTERVAL` | `60`        | Cleanup sweep interval (seconds)    |
+| `API_BASE_URL`             | —           | API URL for standalone UI           |
+| `ROOT_PATH`                | —           | ASGI root path for UI behind LB     |
 
 ## Development
 
@@ -424,6 +424,10 @@ See the [OSI ↔ OBML Mapping Analysis](osi-obml/osi_obml_mapping_analysis.md) f
 ### [OrionBelt Analytics](https://github.com/ralfbecher/orionbelt-analytics)
 
 OrionBelt Analytics is an ontology-based MCP server that analyzes relational database schemas and generates RDF/OWL ontologies with embedded SQL mappings. It connects to PostgreSQL, Snowflake, and Dremio, providing AI assistants with deep structural and semantic understanding of your data.
+
+<p align="center">
+  <img src="docs/assets/architecture.png" alt="OrionBelt Analytics Architecture" width="800">
+</p>
 
 Together, the two projects form a powerful combination for AI-guided analytical workflows:
 
