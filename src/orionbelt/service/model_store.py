@@ -1,4 +1,4 @@
-"""In-memory model registry — core service layer reusable by MCP and REST API."""
+"""In-memory model registry — core service layer for the REST API."""
 
 from __future__ import annotations
 

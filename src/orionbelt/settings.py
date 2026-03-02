@@ -2,13 +2,11 @@
 
 from __future__ import annotations
 
-from typing import Literal
-
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    """Configuration for OrionBelt servers (API + MCP).
+    """Configuration for OrionBelt REST API server.
 
     Values are read from environment variables and from a ``.env`` file
     in the working directory.  See ``.env.example`` for all options.
@@ -32,11 +30,6 @@ class Settings(BaseSettings):
     def effective_port(self) -> int:
         """Return the port to listen on (Cloud Run PORT takes precedence)."""
         return self.port if self.port is not None else self.api_server_port
-
-    # MCP
-    mcp_transport: Literal["stdio", "http", "sse"] = "stdio"
-    mcp_server_host: str = "localhost"
-    mcp_server_port: int = 9000
 
     # Sessions
     session_ttl_seconds: int = 1800  # 30 min inactivity

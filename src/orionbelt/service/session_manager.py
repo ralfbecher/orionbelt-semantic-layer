@@ -157,7 +157,7 @@ class SessionManager:
             )
 
     def get_or_create_default(self) -> ModelStore:
-        """Get (or lazily create) the default session for stdio MCP."""
+        """Get (or lazily create) the default session."""
         with self._lock:
             session = self._sessions.get(_DEFAULT_SESSION_ID)
             if session is not None:

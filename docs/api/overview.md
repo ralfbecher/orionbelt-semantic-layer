@@ -1,9 +1,6 @@
 # API Overview
 
-OrionBelt exposes two server interfaces:
-
-1. **REST API** — FastAPI-powered HTTP endpoints for session-based model management, validation, and query compilation
-2. **MCP Server** — Model Context Protocol server with 10 tools and 3 prompts for AI assistant integration
+OrionBelt exposes a REST API — FastAPI-powered HTTP endpoints for session-based model management, validation, and query compilation.
 
 ## REST API
 
@@ -39,20 +36,6 @@ The primary API workflow uses sessions to manage model state:
 4. **Close** — `DELETE /sessions/{id}` when done (or let TTL expire)
 
 Sessions automatically expire after 30 minutes of inactivity (configurable via `SESSION_TTL_SECONDS`).
-
-## MCP Server
-
-The MCP server exposes OrionBelt as tools for AI assistants (Claude Desktop, Cursor, etc.):
-
-| Category | Tools |
-|----------|-------|
-| Reference | `get_obml_reference` |
-| Session | `create_session`, `close_session`, `list_sessions` |
-| Model | `load_model`, `validate_model`, `describe_model`, `list_models` |
-| Query | `compile_query` |
-| Info | `list_dialects` |
-
-See [MCP Server](mcp.md) for the full tool and prompt reference.
 
 ## Error Responses
 

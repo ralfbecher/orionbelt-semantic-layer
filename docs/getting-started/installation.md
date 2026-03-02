@@ -28,7 +28,6 @@ This installs all runtime dependencies:
 | `pydantic-settings`      | Configuration from environment / .env |
 | `ruamel.yaml`            | YAML parsing with source positions    |
 | `networkx`               | Join graph algorithms                 |
-| `fastmcp`                | MCP server framework                  |
 | `sqlalchemy` + `alembic` | Database persistence                  |
 | `structlog`              | Structured logging                    |
 | `opentelemetry-api`      | Observability                         |
@@ -77,9 +76,6 @@ Key settings:
 | `LOG_LEVEL`                | `INFO`      | Logging level                          |
 | `API_SERVER_HOST`          | `localhost` | REST API bind host                     |
 | `API_SERVER_PORT`          | `8000`      | REST API bind port                     |
-| `MCP_TRANSPORT`            | `stdio`     | MCP transport (`stdio`, `http`, `sse`) |
-| `MCP_SERVER_HOST`          | `localhost` | MCP server host (http/sse only)        |
-| `MCP_SERVER_PORT`          | `9000`      | MCP server port (http/sse only)        |
 | `SESSION_TTL_SECONDS`      | `1800`      | Session inactivity timeout (30 min)    |
 | `SESSION_CLEANUP_INTERVAL` | `60`        | Cleanup sweep interval (seconds)       |
 
@@ -100,16 +96,6 @@ The API is available at:
 - `http://127.0.0.1:8000/redoc` — ReDoc
 - `http://127.0.0.1:8000/health` — Health check
 
-### MCP Server
-
-```bash
-# stdio (default, for Claude Desktop / Cursor)
-uv run orionbelt-mcp
-
-# HTTP transport (for multi-client use)
-MCP_TRANSPORT=http uv run orionbelt-mcp
-```
-
 ## Project Structure
 
 ```
@@ -120,7 +106,6 @@ orionbelt-semantic-layer/
 │   ├── ast/            # SQL AST nodes, builder, visitor
 │   ├── compiler/       # Resolution, planning (star/CFL), codegen pipeline
 │   ├── dialect/        # 5 SQL dialect implementations
-│   ├── mcp/            # MCP server (10 tools, 3 prompts)
 │   ├── models/         # Pydantic models (semantic, query, errors)
 │   ├── parser/         # YAML loader, reference resolver, validator
 │   ├── service/        # ModelStore, SessionManager

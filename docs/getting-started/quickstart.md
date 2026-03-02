@@ -209,31 +209,9 @@ curl -s -X POST "http://127.0.0.1:8000/sessions/$SESSION_ID/query/sql" \
 curl -s -X DELETE "http://127.0.0.1:8000/sessions/$SESSION_ID"
 ```
 
-## Step 6: Use with Claude Desktop (MCP)
-
-Add OrionBelt to your Claude Desktop config:
-
-```json
-{
-  "mcpServers": {
-    "orionbelt-semantic-layer": {
-      "command": "uv",
-      "args": ["run", "--directory", "/path/to/orionbelt-semantic-layer", "orionbelt-mcp"]
-    }
-  }
-}
-```
-
-Then in Claude Desktop, you can ask:
-
-> Load this OBML model and compile a query for Revenue by Country using Snowflake dialect.
-
-Claude will use the `load_model`, `describe_model`, and `compile_query` tools to complete the workflow.
-
 ## Next Steps
 
 - [OBML Model Format](../guide/model-format.md) — Complete OrionBelt ML specification
 - [Query Language](../guide/query-language.md) — Filters, operators, time grains
 - [SQL Dialects](../guide/dialects.md) — Dialect capabilities and differences
 - [API Endpoints](../api/endpoints.md) — Full REST API documentation
-- [MCP Server](../api/mcp.md) — MCP tools and prompts reference

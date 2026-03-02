@@ -1,0 +1,190 @@
+"""OBML reference text — served via the REST API reference endpoint."""
+
+from __future__ import annotations
+
+OBML_REFERENCE = """\
+# OBML (OrionBelt ML) Reference
+
+OBML is a YAML-based semantic model format. A model has four top-level sections:
+
+## 1. dataObjects — physical tables/views
+
+```yaml
+dataObjects:
+  Orders:                         # data object name
+    code: ORDERS                  # physical table/view name
+    database: EDW                 # database
+    schema: SALES_MART            # schema
+    columns:
+      Order ID:                   # column name — must be unique within this data object
+        code: ID                  # physical column name
+        abstractType: string      # see abstractType values below
+      Amount:
+        code: AMOUNT
+        abstractType: float
+    joins:                        # optional — defined on fact tables
+      - joinType: many-to-one     # many-to-one | one-to-one
+        joinTo: Customers         # target data object name
+        columnsFrom:
+          - Customer ID           # local column name
+        columnsTo:
+          - Customer ID           # target column name
+```
+
+## 2. dimensions — named analytical dimensions
+
+```yaml
+dimensions:
+  Customer Country:
+    dataObject: Customers         # which data object owns this dimension
+    column: Country               # column within that data object
+    resultType: string            # data type of the result (informative only)
+    timeGrain: month              # optional: year | quarter | month | week | day | hour
+```
+
+## 3. measures — aggregations
+
+```yaml
+measures:
+  Total Revenue:                  # measure name
+    columns:                      # column references (for simple aggregations)
+      - dataObject: Orders
+        column: Amount
+    resultType: float
+    aggregation: sum              # see aggregation values below
+    total: false                  # optional: use total (unfiltered) value in metrics
+
+  Profit:                         # expression-based measure
+    resultType: float
+    aggregation: sum
+    expression: '{[Orders].[Amount]} - {[Orders].[Cost]}'  # {[DataObject].[Column]} syntax
+
+  Filtered Measure:               # measure with a filter
+    columns:
+      - dataObject: Orders
+        column: Amount
+    resultType: float
+    aggregation: sum
+    filter:
+      column:
+        dataObject: Orders
+        column: Status
+      operator: equals            # equals | gt | gte | lt | lte | in | not_in | ...
+      values:
+        - dataType: string
+          valueString: completed
+```
+
+## 4. metrics — composite calculations from measures
+
+```yaml
+metrics:
+  Profit Margin:
+    expression: '{[Profit]} / {[Total Revenue]}'  # {[Measure Name]} syntax
+```
+
+## abstractType Values
+
+string, int, float, date, time, time_tz, timestamp,
+timestamp_tz, boolean, json
+
+## Aggregation Values
+
+sum, count, count_distinct, avg, min, max,
+any_value, median, mode, listagg
+
+## 5. customExtensions — vendor-keyed metadata (optional)
+
+All six levels (model, dataObject, column, dimension, measure, metric) support
+an optional `customExtensions` array for vendor-specific metadata:
+
+```yaml
+customExtensions:
+  - vendor: OSI
+    data: '{"instructions": "Use for retail analytics", "synonyms": ["sales"]}'
+  - vendor: GOVERNANCE
+    data: '{"owner": "data-team", "classification": "internal"}'
+```
+
+Each entry has `vendor` (identifier string) and `data` (opaque JSON string).
+OrionBelt preserves these during parsing but does not interpret them.
+
+## Key Rules
+
+1. **Column names are unique within each data object**.
+   Dimensions, measures, and metrics must be unique across the model.
+2. Measure expressions use `{[DataObject].[Column]}` to reference columns.
+3. Metric expressions use `{[Measure Name]}` to reference measures by name.
+4. Joins are defined on fact tables pointing to dimension tables \
+(many-to-one or one-to-one).
+5. A dimension references exactly one `dataObject` + `column` pair.
+
+## Complete Minimal Example
+
+```yaml
+version: 1.0
+
+dataObjects:
+  Orders:
+    code: ORDERS
+    database: EDW
+    schema: SALES
+    columns:
+      Order ID:
+        code: ID
+        abstractType: string
+      Customer ID:
+        code: CUST_ID
+        abstractType: string
+      Amount:
+        code: AMOUNT
+        abstractType: float
+    joins:
+      - joinType: many-to-one
+        joinTo: Customers
+        columnsFrom:
+          - Customer ID
+        columnsTo:
+          - Cust ID
+
+  Customers:
+    code: CUSTOMERS
+    database: EDW
+    schema: SALES
+    columns:
+      Cust ID:
+        code: ID
+        abstractType: string
+      Country:
+        code: COUNTRY
+        abstractType: string
+
+dimensions:
+  Customer Country:
+    dataObject: Customers
+    column: Country
+    resultType: string
+
+measures:
+  Total Revenue:
+    columns:
+      - dataObject: Orders
+        column: Amount
+    resultType: float
+    aggregation: sum
+
+metrics:
+  Revenue Per Order:
+    expression: '{[Total Revenue]} / {[Order Count]}'
+```
+
+## Supported SQL Dialects
+
+postgres, snowflake, clickhouse, databricks, dremio
+
+## Workflow
+
+1. `load_model(model_yaml)` — parse, validate, store → returns `model_id`
+2. `describe_model(model_id)` — inspect data objects, dimensions, measures, metrics
+3. `compile_query(model_id, dimensions=[...], measures=[...])` — generate SQL
+"""

@@ -1,6 +1,6 @@
 [project]
 name = "orionbelt-semantic-layer"
-version = "0.5.0"
+version = "0.6.0"
 description = "OrionBelt Semantic Layer - Compiles YAML semantic models into analytical SQL"
 license = {text = "Apache-2.0"}
 authors = [{name = "Ralf Becher, RALFORION d.o.o.", email = "ralf.becher@web.de"}]
@@ -12,7 +12,6 @@ keywords = [
     "sql",
     "sql-generation",
     "data-warehouse",
-    "mcp",
     "yaml",
     "obml",
     "snowflake",
@@ -48,7 +47,6 @@ dependencies = [
     "alembic>=1.18",
     "structlog>=25.1",
     "opentelemetry-api>=1.39",
-    "fastmcp>=3.0,<4",
     "httpx>=0.28",
     "sqlparse>=0.5",
     "sqlglot>=26.0",
@@ -56,7 +54,6 @@ dependencies = [
 
 [project.scripts]
 orionbelt-api = "orionbelt.api.app:main"
-orionbelt-mcp = "orionbelt.mcp.server:main"
 orionbelt-ui = "orionbelt.ui.app:main"
 
 [project.optional-dependencies]
