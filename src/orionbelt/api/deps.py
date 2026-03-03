@@ -8,9 +8,7 @@ _session_manager: SessionManager | None = None
 _disable_session_list: bool = False
 
 
-def init_session_manager(
-    manager: SessionManager, *, disable_session_list: bool = False
-) -> None:
+def init_session_manager(manager: SessionManager, *, disable_session_list: bool = False) -> None:
     """Set the global SessionManager (called at app startup)."""
     global _session_manager, _disable_session_list  # noqa: PLW0603
     _session_manager = manager

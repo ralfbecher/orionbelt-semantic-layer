@@ -87,9 +87,7 @@ class TrackedLoader:
         # comments (e.g. "# see R&D notes") does not cause a false positive.
         stripped = _COMMENT_LINE_RE.sub("", content)
         if _ANCHOR_RE.search(stripped):
-            raise YAMLSafetyError(
-                "YAML anchors/aliases are not supported in OBML"
-            )
+            raise YAMLSafetyError("YAML anchors/aliases are not supported in OBML")
 
     @staticmethod
     def _check_node_count(data: Any, limit: int = _MAX_NODE_COUNT) -> None:
@@ -100,9 +98,7 @@ class TrackedLoader:
             node = stack.pop()
             count += 1
             if count > limit:
-                raise YAMLSafetyError(
-                    f"YAML document exceeds maximum node count ({limit:,})"
-                )
+                raise YAMLSafetyError(f"YAML document exceeds maximum node count ({limit:,})")
             if isinstance(node, dict):
                 stack.extend(node.values())
             elif isinstance(node, list):

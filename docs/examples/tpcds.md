@@ -31,12 +31,15 @@ dataObjects:
       ss_quantity:
         code: SS_QUANTITY
         abstractType: int
+        numClass: additive
       ss_sales_price:
         code: SS_SALES_PRICE
         abstractType: float
+        numClass: non-additive
       ss_net_profit:
         code: SS_NET_PROFIT
         abstractType: float
+        numClass: additive
     joins:
       - joinType: many-to-one
         joinTo: date_dim
@@ -83,9 +86,11 @@ dataObjects:
       sr_return_quantity:
         code: SR_RETURN_QUANTITY
         abstractType: int
+        numClass: additive
       sr_return_amt:
         code: SR_RETURN_AMT
         abstractType: float
+        numClass: additive
     joins:
       - joinType: many-to-one
         joinTo: date_dim

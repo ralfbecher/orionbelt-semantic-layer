@@ -81,9 +81,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
         api_url = f"http://localhost:{settings.effective_port}"
         demo = create_blocks(default_api_url=api_url)
-        app = gr.mount_gradio_app(
-            app, demo, path="/ui", css=_CSS, js=_DARK_MODE_INIT_JS
-        )
+        app = gr.mount_gradio_app(app, demo, path="/ui", css=_CSS, js=_DARK_MODE_INIT_JS)
     except ImportError:
         pass  # gradio not installed — skip UI mount
 
@@ -98,7 +96,9 @@ def main() -> None:
     logger = logging.getLogger("orionbelt.api")
     logger.info(
         "OrionBelt API Server v%s starting (host=%s, port=%d)",
-        __version__, settings.api_server_host, settings.effective_port,
+        __version__,
+        settings.api_server_host,
+        settings.effective_port,
     )
 
     uvicorn.run(

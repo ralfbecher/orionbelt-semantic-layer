@@ -77,6 +77,7 @@ dataObjects:
       Amount:
         code: AMOUNT
         abstractType: float
+        numClass: additive
     joins:
       - joinType: many-to-one
         joinTo: Customers

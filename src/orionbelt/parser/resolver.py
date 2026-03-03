@@ -67,6 +67,7 @@ class ReferenceResolver:
                         sql_type=fdata.get("sqlType"),
                         sql_precision=fdata.get("sqlPrecision"),
                         sql_scale=fdata.get("sqlScale"),
+                        num_class=fdata.get("numClass"),
                         comment=fdata.get("comment"),
                         custom_extensions=_parse_extensions(fdata),
                     )

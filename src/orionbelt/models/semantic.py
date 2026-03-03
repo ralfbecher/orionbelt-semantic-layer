@@ -57,6 +57,12 @@ class TimeGrain(StrEnum):
     SECOND = "second"
 
 
+class NumClass(StrEnum):
+    CATEGORICAL = "categorical"
+    ADDITIVE = "additive"
+    NON_ADDITIVE = "non-additive"
+
+
 class CustomExtension(BaseModel):
     """Vendor-keyed extension data — opaque to OrionBelt.
 
@@ -88,10 +94,9 @@ class DataObjectColumn(BaseModel):
     sql_type: str | None = Field(None, alias="sqlType")
     sql_precision: int | None = Field(None, alias="sqlPrecision")
     sql_scale: int | None = Field(None, alias="sqlScale")
+    num_class: NumClass | None = Field(None, alias="numClass")
     comment: str | None = None
-    custom_extensions: list[CustomExtension] = Field(
-        default_factory=list, alias="customExtensions"
-    )
+    custom_extensions: list[CustomExtension] = Field(default_factory=list, alias="customExtensions")
 
     model_config = {"populate_by_name": True}
 
@@ -119,9 +124,7 @@ class DataObject(BaseModel):
     columns: dict[str, DataObjectColumn] = {}
     joins: list[DataObjectJoin] = []
     comment: str | None = None
-    custom_extensions: list[CustomExtension] = Field(
-        default_factory=list, alias="customExtensions"
-    )
+    custom_extensions: list[CustomExtension] = Field(default_factory=list, alias="customExtensions")
 
     @property
     def qualified_code(self) -> str:
@@ -140,9 +143,7 @@ class Dimension(BaseModel):
     result_type: DataType = Field(DataType.STRING, alias="resultType")
     time_grain: TimeGrain | None = Field(None, alias="timeGrain")
     format: str | None = None
-    custom_extensions: list[CustomExtension] = Field(
-        default_factory=list, alias="customExtensions"
-    )
+    custom_extensions: list[CustomExtension] = Field(default_factory=list, alias="customExtensions")
 
     model_config = {"populate_by_name": True}
 
@@ -195,9 +196,7 @@ class Measure(BaseModel):
     allow_fan_out: bool = Field(False, alias="allowFanOut")
     delimiter: str | None = None
     within_group: WithinGroup | None = Field(None, alias="withinGroup")
-    custom_extensions: list[CustomExtension] = Field(
-        default_factory=list, alias="customExtensions"
-    )
+    custom_extensions: list[CustomExtension] = Field(default_factory=list, alias="customExtensions")
 
     model_config = {"populate_by_name": True}
 
@@ -211,9 +210,7 @@ class Metric(BaseModel):
     label: str
     expression: str
     format: str | None = None
-    custom_extensions: list[CustomExtension] = Field(
-        default_factory=list, alias="customExtensions"
-    )
+    custom_extensions: list[CustomExtension] = Field(default_factory=list, alias="customExtensions")
 
     model_config = {"populate_by_name": True}
 
@@ -238,9 +235,7 @@ class SemanticModel(BaseModel):
     dimensions: dict[str, Dimension] = {}
     measures: dict[str, Measure] = {}
     metrics: dict[str, Metric] = {}
-    custom_extensions: list[CustomExtension] = Field(
-        default_factory=list, alias="customExtensions"
-    )
+    custom_extensions: list[CustomExtension] = Field(default_factory=list, alias="customExtensions")
 
     model_config = {"populate_by_name": True}
 

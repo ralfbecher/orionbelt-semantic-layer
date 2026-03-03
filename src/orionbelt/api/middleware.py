@@ -110,9 +110,7 @@ class RequestBodyLimitMiddleware(BaseHTTPMiddleware):
                 if total > limit:
                     return JSONResponse(
                         status_code=413,
-                        content={
-                            "detail": f"Request body too large (max {limit_mb} MB)"
-                        },
+                        content={"detail": f"Request body too large (max {limit_mb} MB)"},
                     )
                 chunks.append(chunk)
             # Cache consumed body so downstream can call request.body()

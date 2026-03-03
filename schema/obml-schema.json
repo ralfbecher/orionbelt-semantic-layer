@@ -87,6 +87,10 @@
         "second"
       ]
     },
+    "numClass": {
+      "description": "Numeric classification hint for LLMs: categorical (IDs/codes — group/filter only), additive (sum-safe — amounts, quantities), non_additive (rates, %, ratios — don't assume SUM)",
+      "enum": ["categorical", "additive", "non-additive"]
+    },
     "column": {
       "type": "object",
       "description": "Unique Column Name in that Data Object",
@@ -110,6 +114,9 @@
           "type": "integer",
           "description": "Informational: numeric scale",
           "minimum": 0
+        },
+        "numClass": {
+          "$ref": "#/definitions/numClass"
         },
         "comment": {
           "type": "string"

@@ -46,6 +46,7 @@ dataObjects:
       Price:
         code: PRICE
         abstractType: float
+        numClass: non-additive
     joins:
       - joinType: many-to-one
         joinTo: Customers
@@ -75,6 +76,7 @@ dataObjects:
 | `sqlType` | string | No | Informational: SQL data type (e.g. `VARCHAR`, `INTEGER`, `NUMERIC(10,2)`) |
 | `sqlPrecision` | int | No | Informational: numeric precision |
 | `sqlScale` | int | No | Informational: numeric scale |
+| `numClass` | enum | No | LLM hint: `categorical` (IDs/codes), `additive` (sum-safe), `non-additive` (rates/ratios) |
 | `comment` | string | No | Documentation |
 
 ### Joins

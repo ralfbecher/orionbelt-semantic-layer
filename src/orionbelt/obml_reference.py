@@ -22,6 +22,7 @@ dataObjects:
       Amount:
         code: AMOUNT
         abstractType: float
+        numClass: additive        # categorical | additive | non-additive
     joins:                        # optional — defined on fact tables
       - joinType: many-to-one     # many-to-one | one-to-one
         joinTo: Customers         # target data object name
@@ -87,6 +88,10 @@ metrics:
 
 string, int, float, date, time, time_tz, timestamp,
 timestamp_tz, boolean, json
+
+## numClass Values (optional — LLM hint for numeric columns)
+
+categorical, additive, non-additive
 
 ## Aggregation Values
 

@@ -228,9 +228,7 @@ def _tokenize_measure_expression(formula: str, model: SemanticModel) -> list[_To
             if m:
                 obj_name, col_name = m.group(1), m.group(2)
                 obj = model.data_objects.get(obj_name)
-                source = (
-                    obj.columns[col_name].code if obj and col_name in obj.columns else col_name
-                )
+                source = obj.columns[col_name].code if obj and col_name in obj.columns else col_name
                 # Store as "table.column" so the parser can split it
                 tokens.append(_Token(kind="colref", value=f"{obj_name}\0{source}"))
                 i = m.end()

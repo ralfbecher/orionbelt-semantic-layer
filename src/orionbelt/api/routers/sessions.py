@@ -122,12 +122,10 @@ async def load_model(
             detail={
                 "message": "Invalid OBML model: parsing or validation failed",
                 "errors": [
-                    {"code": e.code, "message": e.message, "path": e.path}
-                    for e in exc.errors
+                    {"code": e.code, "message": e.message, "path": e.path} for e in exc.errors
                 ],
                 "warnings": [
-                    {"code": w.code, "message": w.message, "path": w.path}
-                    for w in exc.warnings
+                    {"code": w.code, "message": w.message, "path": w.path} for w in exc.warnings
                 ],
             },
         ) from None
@@ -242,9 +240,7 @@ async def compile_query(
     try:
         result = store.compile_query(body.model_id, body.query, body.dialect)
     except KeyError:
-        raise HTTPException(
-            status_code=404, detail=f"Model '{body.model_id}' not found"
-        ) from None
+        raise HTTPException(status_code=404, detail=f"Model '{body.model_id}' not found") from None
     except UnsupportedDialectError:
         raise HTTPException(
             status_code=400, detail=f"Unsupported dialect: '{body.dialect}'"
@@ -255,8 +251,7 @@ async def compile_query(
             detail={
                 "error": "Query resolution failed",
                 "errors": [
-                    {"code": e.code, "message": e.message, "path": e.path}
-                    for e in exc.errors
+                    {"code": e.code, "message": e.message, "path": e.path} for e in exc.errors
                 ],
             },
         ) from None

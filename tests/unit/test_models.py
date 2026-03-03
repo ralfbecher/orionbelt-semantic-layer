@@ -23,6 +23,7 @@ from orionbelt.models.semantic import (
     Dimension,
     JoinType,
     Measure,
+    NumClass,
     TimeGrain,
 )
 
@@ -49,6 +50,11 @@ class TestDataTypes:
         assert TimeGrain.MONTH == "month"
         assert TimeGrain.QUARTER == "quarter"
 
+    def test_num_class_values(self) -> None:
+        assert NumClass.CATEGORICAL == "categorical"
+        assert NumClass.ADDITIVE == "additive"
+        assert NumClass.NON_ADDITIVE == "non-additive"
+
 
 class TestDataColumnRef:
     def test_data_column_ref_with_data_object_and_column(self) -> None:
@@ -63,6 +69,16 @@ class TestDataObjectColumn:
         assert col.label == "Amount"
         assert col.code == "AMOUNT"
         assert col.abstract_type == DataType.FLOAT
+
+    def test_data_object_column_with_num_class(self) -> None:
+        col = DataObjectColumn(
+            label="Amount", code="AMOUNT", abstractType="float", numClass="additive"
+        )
+        assert col.num_class == NumClass.ADDITIVE
+
+    def test_data_object_column_num_class_defaults_to_none(self) -> None:
+        col = DataObjectColumn(label="Amount", code="AMOUNT", abstractType="float")
+        assert col.num_class is None
 
 
 class TestDataObject:

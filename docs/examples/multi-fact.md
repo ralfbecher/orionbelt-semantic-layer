@@ -78,6 +78,7 @@ dataObjects:
       Amount:
         code: AMOUNT
         abstractType: float
+        numClass: additive
     joins:
       - joinType: many-to-one
         joinTo: Customers
@@ -109,6 +110,7 @@ dataObjects:
       Refund Amount:
         code: REFUND_AMT
         abstractType: float
+        numClass: additive
     joins:
       - joinType: many-to-one
         joinTo: Customers

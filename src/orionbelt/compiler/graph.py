@@ -156,9 +156,7 @@ class JoinGraph:
         best: str = nodes[0]
         best_max: int | float = len(self._graph.nodes) + 1
         for node in sorted(steiner):
-            max_dist = max(
-                nx.shortest_path_length(self._graph, node, r) for r in nodes
-            )
+            max_dist = max(nx.shortest_path_length(self._graph, node, r) for r in nodes)
             if max_dist < best_max:
                 best_max = max_dist
                 best = node

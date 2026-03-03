@@ -40,9 +40,11 @@ dataObjects:
       Price:
         code: PRICE
         abstractType: float
+        numClass: non-additive
       Quantity:
         code: QUANTITY
         abstractType: int
+        numClass: additive
     joins:
       - joinType: many-to-one
         joinTo: Customers
