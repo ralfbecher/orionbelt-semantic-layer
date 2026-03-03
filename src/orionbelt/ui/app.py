@@ -176,6 +176,63 @@ _DETECT_THEME_JS = """
 }
 """
 
+# JS: download the raw Mermaid text as a .md file
+_DOWNLOAD_MD_JS = """(raw) => {
+    if (!raw) { alert('No diagram available. Generate the ER diagram first.'); return; }
+    var content = '```mermaid\\n' + raw + '\\n```\\n';
+    var blob = new Blob([content], {type: 'text/markdown'});
+    var a = document.createElement('a');
+    a.download = 'mermaid.md';
+    a.href = URL.createObjectURL(blob);
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(a.href);
+}"""
+
+# JS: render the Mermaid SVG to a PNG and trigger download
+_DOWNLOAD_PNG_JS = """() => {
+    var svgEl = document.querySelector('#er-diagram svg');
+    if (!svgEl) { alert('No diagram available. Generate the ER diagram first.'); return; }
+    var clone = svgEl.cloneNode(true);
+    clone.style.transform = 'none';
+    var vb = clone.getAttribute('viewBox');
+    var w, h;
+    if (vb) {
+        var parts = vb.split(/[\\s,]+/);
+        w = parseFloat(parts[2]);
+        h = parseFloat(parts[3]);
+    } else {
+        w = parseFloat(clone.getAttribute('width')) || svgEl.getBoundingClientRect().width;
+        h = parseFloat(clone.getAttribute('height')) || svgEl.getBoundingClientRect().height;
+    }
+    clone.setAttribute('width', w);
+    clone.setAttribute('height', h);
+    var xml = new XMLSerializer().serializeToString(clone);
+    var dataUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(xml);
+    var img = new Image();
+    img.onload = function() {
+        var dpr = 2;
+        var canvas = document.createElement('canvas');
+        canvas.width = w * dpr;
+        canvas.height = h * dpr;
+        var ctx = canvas.getContext('2d');
+        ctx.scale(dpr, dpr);
+        ctx.drawImage(img, 0, 0, w, h);
+        canvas.toBlob(function(blob) {
+            var a = document.createElement('a');
+            a.download = 'mermaid.png';
+            a.href = URL.createObjectURL(blob);
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(a.href);
+        }, 'image/png');
+    };
+    img.onerror = function() { alert('Failed to render diagram as PNG.'); };
+    img.src = dataUrl;
+}"""
+
 # SVG icon: upload (Lucide style, matches Gradio's 16x16 toolbar icons)
 _UPLOAD_SVG = (
     '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"'
@@ -495,16 +552,16 @@ def _fetch_diagram_er(
     session_state: dict[str, str] | None,
     model_state: dict[str, str] | None,
     theme: str = "dark",
-) -> tuple[str, dict[str, str] | None, dict[str, str] | None]:
+) -> tuple[str, str, dict[str, str] | None, dict[str, str] | None]:
     """Fetch a Mermaid ER diagram via the REST API.
 
     Falls back to local generation (using ``service.diagram``) when the API
     is not reachable.  *theme* is the Mermaid theme name (``"dark"`` or
     ``"default"``), injected by JS based on the active Gradio colour scheme.
-    Returns ``(mermaid_md, updated_session_state, updated_model_state)``.
+    Returns ``(mermaid_md, raw_mermaid, session_state, model_state)``.
     """
     if not model_yaml or not model_yaml.strip():
-        return "*No model YAML provided.*", session_state, model_state
+        return "*No model YAML provided.*", "", session_state, model_state
 
     try:
         client, session_id, model_id, session_state, model_state = _ensure_session_and_model(
@@ -527,28 +584,31 @@ def _fetch_diagram_er(
             )
         resp.raise_for_status()
         mermaid: str = resp.json()["mermaid"]
-        return f"```mermaid\n{mermaid}\n```", session_state, model_state
+        return f"```mermaid\n{mermaid}\n```", mermaid, session_state, model_state
 
     except _ModelValidationError as exc:
-        return f"**Model validation failed:** {exc}", session_state, model_state
+        return f"**Model validation failed:** {exc}", "", session_state, model_state
     except httpx.ConnectError:
         # API not available — fall back to local generation
-        md = _generate_mermaid_er_local(model_yaml, show_columns, theme=theme)
-        return md, session_state, model_state
+        md, raw = _generate_mermaid_er_local(model_yaml, show_columns, theme=theme)
+        return md, raw, session_state, model_state
     except httpx.HTTPStatusError as exc:
         return (
             f"**Error:** HTTP {exc.response.status_code} — {exc.response.text}",
+            "",
             session_state,
             model_state,
         )
     except Exception as exc:
-        return f"**Error:** {exc}", session_state, model_state
+        return f"**Error:** {exc}", "", session_state, model_state
 
 
 def _generate_mermaid_er_local(
     model_yaml: str, show_columns: bool = True, *, theme: str = "dark"
-) -> str:
-    """Generate a Mermaid ER diagram locally from raw OBML YAML (no API)."""
+) -> tuple[str, str]:
+    """Generate a Mermaid ER diagram locally from raw OBML YAML (no API).
+
+    Returns ``(markdown, raw_mermaid)``."""
     from orionbelt.parser.loader import TrackedLoader
     from orionbelt.parser.resolver import ReferenceResolver
     from orionbelt.service.diagram import generate_mermaid_er
@@ -560,11 +620,11 @@ def _generate_mermaid_er_local(
         model, result = resolver.resolve(raw, source_map)
         if not result.valid:
             msgs = "; ".join(e.message for e in result.errors)
-            return f"**Model validation failed:** {msgs}"
+            return f"**Model validation failed:** {msgs}", ""
         mermaid = generate_mermaid_er(model, show_columns=show_columns, theme=theme)
-        return f"```mermaid\n{mermaid}\n```"
+        return f"```mermaid\n{mermaid}\n```", mermaid
     except Exception as exc:
-        return f"**Error:** {exc}"
+        return f"**Error:** {exc}", ""
 
 
 def _load_example_model() -> str:
@@ -923,9 +983,13 @@ def create_blocks(default_api_url: str | None = None) -> Any:
                         variant="primary",
                         elem_classes=["purple-btn"],
                     )
+                    dl_md_btn = gr.Button("↓ .md", scale=0, min_width=60, size="sm")
+                    dl_png_btn = gr.Button("↓ .png", scale=0, min_width=60, size="sm")
 
-                # Hidden input — JS injects the Mermaid theme at call time
+                # Hidden inputs — JS injects the Mermaid theme at call time;
+                # mermaid_raw stores the raw Mermaid text for downloads.
                 theme_input = gr.Textbox(value="dark", visible=False)
+                mermaid_raw = gr.Textbox(value="", visible=False)
 
                 mermaid_output = gr.Markdown(
                     value="*Click 'Refresh Diagram' to generate the ER diagram "
@@ -962,7 +1026,7 @@ def create_blocks(default_api_url: str | None = None) -> Any:
                         model_state,
                         theme_input,
                     ],
-                    outputs=[mermaid_output, session_state, model_state],
+                    outputs=[mermaid_output, mermaid_raw, session_state, model_state],
                     js=_DETECT_THEME_JS,
                 ).then(
                     fn=None,
@@ -980,7 +1044,7 @@ def create_blocks(default_api_url: str | None = None) -> Any:
                         model_state,
                         theme_input,
                     ],
-                    outputs=[mermaid_output, session_state, model_state],
+                    outputs=[mermaid_output, mermaid_raw, session_state, model_state],
                     js=_DETECT_THEME_JS,
                 ).then(
                     fn=None,
@@ -992,6 +1056,16 @@ def create_blocks(default_api_url: str | None = None) -> Any:
                     fn=None,
                     inputs=[zoom_slider],
                     js=_apply_zoom_js,
+                )
+
+                dl_md_btn.click(
+                    fn=None,
+                    inputs=[mermaid_raw],
+                    js=_DOWNLOAD_MD_JS,
+                )
+                dl_png_btn.click(
+                    fn=None,
+                    js=_DOWNLOAD_PNG_JS,
                 )
 
         # ── Toggle: Python saves inputs → BrowserState, then JS redirects ──
