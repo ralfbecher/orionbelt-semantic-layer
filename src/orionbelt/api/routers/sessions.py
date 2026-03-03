@@ -249,14 +249,21 @@ async def compile_query(
         raise HTTPException(
             status_code=400, detail=f"Unsupported dialect: '{body.dialect}'"
         ) from None
-    except ResolutionError:
+    except ResolutionError as exc:
         raise HTTPException(
             status_code=422,
-            detail="Query resolution failed: check dimensions, measures, and filters",
+            detail={
+                "error": "Query resolution failed",
+                "errors": [
+                    {"code": e.code, "message": e.message, "path": e.path}
+                    for e in exc.errors
+                ],
+            },
         ) from None
-    except FanoutError:
+    except FanoutError as exc:
         raise HTTPException(
-            status_code=422, detail="Query would cause row fanout due to reversed many-to-one joins"
+            status_code=422,
+            detail={"error": "Query fanout detected", "message": exc.message},
         ) from None
     return QueryCompileResponse(
         sql=result.sql,
