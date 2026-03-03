@@ -104,9 +104,11 @@ dataObjects:
       Unit Cost:
         code: unit_cost
         abstractType: float
+        numClass: non-additive
       Unit Price:
         code: unit_price
         abstractType: float
+        numClass: non-additive
     joins:
       - joinType: many-to-one
         joinTo: Suppliers
@@ -144,6 +146,7 @@ dataObjects:
       Balance:
         code: balance
         abstractType: float
+        numClass: non-additive
 
   # ── Fact tables ────────────────────────────────────────────────────
 
@@ -176,9 +179,11 @@ dataObjects:
       Sales Quantity:
         code: sales_quantity
         abstractType: int
+        numClass: additive
       Sales Amount:
         code: sales_amount
         abstractType: float
+        numClass: additive
       Sales Notes:
         code: notes
         abstractType: string
@@ -237,9 +242,11 @@ dataObjects:
       Return Quantity:
         code: return_quantity
         abstractType: int
+        numClass: additive
       Return Amount:
         code: return_amount
         abstractType: float
+        numClass: additive
       Return Notes:
         code: notes
         abstractType: string
@@ -274,9 +281,11 @@ dataObjects:
       Shipment Quantity:
         code: shipment_quantity
         abstractType: int
+        numClass: additive
       Shipment Amount:
         code: shipment_amount
         abstractType: float
+        numClass: additive
       Shipment Notes:
         code: notes
         abstractType: string
@@ -320,9 +329,11 @@ dataObjects:
       Purchase Quantity:
         code: purchase_quantity
         abstractType: float
+        numClass: additive
       Purchase Price:
         code: purchase_price
         abstractType: float
+        numClass: non-additive
     joins:
       - joinType: many-to-one
         joinTo: Products
