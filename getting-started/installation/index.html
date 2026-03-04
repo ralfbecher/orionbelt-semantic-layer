@@ -643,17 +643,6 @@
   
 </li>
         
-          <li class="md-nav__item">
-  <a href="#mcp-server" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        MCP Server
-      
-    </span>
-  </a>
-  
-</li>
-        
       </ul>
     </nav>
   
@@ -675,7 +664,7 @@
 </nav>
 <div class="obml-version-badge">
   OBML v1.0<br>
-  OrionBelt v0.5.0
+  OrionBelt v0.6.0
 </div>
       
     </li>
@@ -988,34 +977,6 @@
     
   
     Endpoints
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../api/mcp/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    MCP Server
   
 
     
@@ -1458,17 +1419,6 @@
   
 </li>
         
-          <li class="md-nav__item">
-  <a href="#mcp-server" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        MCP Server
-      
-    </span>
-  </a>
-  
-</li>
-        
       </ul>
     </nav>
   
@@ -1490,7 +1440,7 @@
 </nav>
 <div class="obml-version-badge">
   OBML v1.0<br>
-  OrionBelt v0.5.0
+  OrionBelt v0.6.0
 </div>
                   </div>
                 </div>
@@ -1556,10 +1506,6 @@
 <td>Join graph algorithms</td>
 </tr>
 <tr>
-<td><code>fastmcp</code></td>
-<td>MCP server framework</td>
-</tr>
-<tr>
 <td><code>sqlalchemy</code> + <code>alembic</code></td>
 <td>Database persistence</td>
 </tr>
@@ -1621,21 +1567,6 @@
 <td>REST API bind port</td>
 </tr>
 <tr>
-<td><code>MCP_TRANSPORT</code></td>
-<td><code>stdio</code></td>
-<td>MCP transport (<code>stdio</code>, <code>http</code>, <code>sse</code>)</td>
-</tr>
-<tr>
-<td><code>MCP_SERVER_HOST</code></td>
-<td><code>localhost</code></td>
-<td>MCP server host (http/sse only)</td>
-</tr>
-<tr>
-<td><code>MCP_SERVER_PORT</code></td>
-<td><code>9000</code></td>
-<td>MCP server port (http/sse only)</td>
-</tr>
-<tr>
 <td><code>SESSION_TTL_SECONDS</code></td>
 <td><code>1800</code></td>
 <td>Session inactivity timeout (30 min)</td>
@@ -1660,35 +1591,27 @@
 <li><code>http://127.0.0.1:8000/redoc</code> — ReDoc</li>
 <li><code>http://127.0.0.1:8000/health</code> — Health check</li>
 </ul>
-<h3 id="mcp-server">MCP Server<a class="headerlink" href="#mcp-server" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># stdio (default, for Claude Desktop / Cursor)</span>
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>uv<span class="w"> </span>run<span class="w"> </span>orionbelt-mcp
-</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>
-</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="c1"># HTTP transport (for multi-client use)</span>
-</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="nv">MCP_TRANSPORT</span><span class="o">=</span>http<span class="w"> </span>uv<span class="w"> </span>run<span class="w"> </span>orionbelt-mcp
-</span></code></pre></div>
 <h2 id="project-structure">Project Structure<a class="headerlink" href="#project-structure" title="Permanent link">&para;</a></h2>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>orionbelt-semantic-layer/
-</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>├── src/orionbelt/
-</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>│   ├── api/            # FastAPI app, routers, schemas, deps, middleware
-</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>│   │   └── routers/    # sessions, validate, query, dialects
-</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>│   ├── ast/            # SQL AST nodes, builder, visitor
-</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>│   ├── compiler/       # Resolution, planning (star/CFL), codegen pipeline
-</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>│   ├── dialect/        # 5 SQL dialect implementations
-</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>│   ├── mcp/            # MCP server (10 tools, 3 prompts)
-</span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>│   ├── models/         # Pydantic models (semantic, query, errors)
-</span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>│   ├── parser/         # YAML loader, reference resolver, validator
-</span><span id="__span-8-11"><a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a>│   ├── service/        # ModelStore, SessionManager
-</span><span id="__span-8-12"><a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a>│   └── settings.py     # Shared configuration
-</span><span id="__span-8-13"><a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a>├── tests/
-</span><span id="__span-8-14"><a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a>│   ├── unit/           # Unit tests for each module
-</span><span id="__span-8-15"><a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a>│   ├── integration/    # End-to-end compilation and API tests
-</span><span id="__span-8-16"><a id="__codelineno-8-16" name="__codelineno-8-16" href="#__codelineno-8-16"></a>│   └── fixtures/       # Sample models and queries
-</span><span id="__span-8-17"><a id="__codelineno-8-17" name="__codelineno-8-17" href="#__codelineno-8-17"></a>├── examples/           # Model examples and JSON Schema
-</span><span id="__span-8-18"><a id="__codelineno-8-18" name="__codelineno-8-18" href="#__codelineno-8-18"></a>├── schema/             # OBML JSON Schema
-</span><span id="__span-8-19"><a id="__codelineno-8-19" name="__codelineno-8-19" href="#__codelineno-8-19"></a>├── docs/               # MkDocs documentation source
-</span><span id="__span-8-20"><a id="__codelineno-8-20" name="__codelineno-8-20" href="#__codelineno-8-20"></a>├── mkdocs.yml          # MkDocs configuration
-</span><span id="__span-8-21"><a id="__codelineno-8-21" name="__codelineno-8-21" href="#__codelineno-8-21"></a>└── pyproject.toml      # Project metadata and dependencies
+<div class="language-text highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>orionbelt-semantic-layer/
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>├── src/orionbelt/
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>│   ├── api/            # FastAPI app, routers, schemas, deps, middleware
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>│   │   └── routers/    # sessions, validate, query, dialects
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>│   ├── ast/            # SQL AST nodes, builder, visitor
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>│   ├── compiler/       # Resolution, planning (star/CFL), codegen pipeline
+</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>│   ├── dialect/        # 5 SQL dialect implementations
+</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>│   ├── models/         # Pydantic models (semantic, query, errors)
+</span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>│   ├── parser/         # YAML loader, reference resolver, validator
+</span><span id="__span-7-10"><a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>│   ├── service/        # ModelStore, SessionManager
+</span><span id="__span-7-11"><a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a>│   └── settings.py     # Shared configuration
+</span><span id="__span-7-12"><a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a>├── tests/
+</span><span id="__span-7-13"><a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a>│   ├── unit/           # Unit tests for each module
+</span><span id="__span-7-14"><a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a>│   ├── integration/    # End-to-end compilation and API tests
+</span><span id="__span-7-15"><a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a>│   └── fixtures/       # Sample models and queries
+</span><span id="__span-7-16"><a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a>├── examples/           # Model examples and JSON Schema
+</span><span id="__span-7-17"><a id="__codelineno-7-17" name="__codelineno-7-17" href="#__codelineno-7-17"></a>├── schema/             # OBML JSON Schema
+</span><span id="__span-7-18"><a id="__codelineno-7-18" name="__codelineno-7-18" href="#__codelineno-7-18"></a>├── docs/               # MkDocs documentation source
+</span><span id="__span-7-19"><a id="__codelineno-7-19" name="__codelineno-7-19" href="#__codelineno-7-19"></a>├── mkdocs.yml          # MkDocs configuration
+</span><span id="__span-7-20"><a id="__codelineno-7-20" name="__codelineno-7-20" href="#__codelineno-7-20"></a>└── pyproject.toml      # Project metadata and dependencies
 </span></code></pre></div>
 
 

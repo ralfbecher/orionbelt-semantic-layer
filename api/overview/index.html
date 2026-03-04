@@ -889,17 +889,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#mcp-server" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        MCP Server
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#error-responses" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -971,7 +960,7 @@
 </nav>
 <div class="obml-version-badge">
   OBML v1.0<br>
-  OrionBelt v0.5.0
+  OrionBelt v0.6.0
 </div>
       
     </li>
@@ -994,34 +983,6 @@
     
   
     Endpoints
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../mcp/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    MCP Server
   
 
     
@@ -1420,17 +1381,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#mcp-server" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        MCP Server
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#error-responses" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1502,7 +1452,7 @@
 </nav>
 <div class="obml-version-badge">
   OBML v1.0<br>
-  OrionBelt v0.5.0
+  OrionBelt v0.6.0
 </div>
                   </div>
                 </div>
@@ -1522,11 +1472,7 @@
 
 
 <h1 id="api-overview">API Overview<a class="headerlink" href="#api-overview" title="Permanent link">&para;</a></h1>
-<p>OrionBelt exposes two server interfaces:</p>
-<ol>
-<li><strong>REST API</strong> — FastAPI-powered HTTP endpoints for session-based model management, validation, and query compilation</li>
-<li><strong>MCP Server</strong> — Model Context Protocol server with 10 tools and 3 prompts for AI assistant integration</li>
-</ol>
+<p>OrionBelt exposes a REST API — FastAPI-powered HTTP endpoints for session-based model management, validation, and query compilation.</p>
 <h2 id="rest-api">REST API<a class="headerlink" href="#rest-api" title="Permanent link">&para;</a></h2>
 <h3 id="base-url">Base URL<a class="headerlink" href="#base-url" title="Permanent link">&para;</a></h3>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>http://127.0.0.1:8000
@@ -1571,39 +1517,6 @@
 <li><strong>Close</strong> — <code>DELETE /sessions/{id}</code> when done (or let TTL expire)</li>
 </ol>
 <p>Sessions automatically expire after 30 minutes of inactivity (configurable via <code>SESSION_TTL_SECONDS</code>).</p>
-<h2 id="mcp-server">MCP Server<a class="headerlink" href="#mcp-server" title="Permanent link">&para;</a></h2>
-<p>The MCP server exposes OrionBelt as tools for AI assistants (Claude Desktop, Cursor, etc.):</p>
-<table>
-<thead>
-<tr>
-<th>Category</th>
-<th>Tools</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Reference</td>
-<td><code>get_obml_reference</code></td>
-</tr>
-<tr>
-<td>Session</td>
-<td><code>create_session</code>, <code>close_session</code>, <code>list_sessions</code></td>
-</tr>
-<tr>
-<td>Model</td>
-<td><code>load_model</code>, <code>validate_model</code>, <code>describe_model</code>, <code>list_models</code></td>
-</tr>
-<tr>
-<td>Query</td>
-<td><code>compile_query</code></td>
-</tr>
-<tr>
-<td>Info</td>
-<td><code>list_dialects</code></td>
-</tr>
-</tbody>
-</table>
-<p>See <a href="../mcp/">MCP Server</a> for the full tool and prompt reference.</p>
 <h2 id="error-responses">Error Responses<a class="headerlink" href="#error-responses" title="Permanent link">&para;</a></h2>
 <p>All errors follow a consistent format:</p>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="p">{</span>
