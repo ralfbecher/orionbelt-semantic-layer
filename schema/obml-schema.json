@@ -128,7 +128,16 @@
         }
       },
       "required": ["code", "abstractType"],
-      "additionalProperties": false
+      "additionalProperties": false,
+      "if": {
+        "not": {
+          "properties": { "abstractType": { "enum": ["int", "float"] } },
+          "required": ["abstractType"]
+        }
+      },
+      "then": {
+        "not": { "required": ["numClass"] }
+      }
     },
     "join": {
       "type": "object",

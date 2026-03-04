@@ -1008,3 +1008,51 @@ dataObjects:
         assert joins[0].path_name is None
         assert joins[1].secondary is True
         assert joins[1].path_name == "alt_path"
+
+    def test_num_class_on_non_numeric_column(self, resolver: ReferenceResolver) -> None:
+        """numClass on a string column should produce NUM_CLASS_ON_NON_NUMERIC."""
+        yaml_content = """\
+version: 1.0
+dataObjects:
+  T:
+    code: T
+    database: DB
+    schema: SCH
+    columns:
+      Name:
+        code: NAME
+        abstractType: string
+        numClass: additive
+"""
+        loader = TrackedLoader()
+        raw, source_map = loader.load_string(yaml_content)
+        model, result = resolver.resolve(raw, source_map)
+        validator = SemanticValidator()
+        errors = validator.validate(model)
+        assert any(e.code == "NUM_CLASS_ON_NON_NUMERIC" for e in errors)
+
+    def test_num_class_on_numeric_column_ok(self, resolver: ReferenceResolver) -> None:
+        """numClass on int/float columns should not produce errors."""
+        yaml_content = """\
+version: 1.0
+dataObjects:
+  T:
+    code: T
+    database: DB
+    schema: SCH
+    columns:
+      Qty:
+        code: QTY
+        abstractType: int
+        numClass: additive
+      Price:
+        code: PRICE
+        abstractType: float
+        numClass: non-additive
+"""
+        loader = TrackedLoader()
+        raw, source_map = loader.load_string(yaml_content)
+        model, result = resolver.resolve(raw, source_map)
+        validator = SemanticValidator()
+        errors = validator.validate(model)
+        assert not any(e.code == "NUM_CLASS_ON_NON_NUMERIC" for e in errors)

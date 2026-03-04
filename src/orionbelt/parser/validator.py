@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections import deque
 
 from orionbelt.models.errors import SemanticError
-from orionbelt.models.semantic import SemanticModel
+from orionbelt.models.semantic import DataType, SemanticModel
 
 
 class SemanticValidator:
@@ -21,6 +21,7 @@ class SemanticValidator:
         errors.extend(self._check_measures_resolve(model))
         errors.extend(self._check_join_targets_exist(model))
         errors.extend(self._check_references_resolve(model))
+        errors.extend(self._check_num_class_on_numeric_columns(model))
         return errors
 
     def _check_unique_identifiers(self, model: SemanticModel) -> list[SemanticError]:
@@ -336,6 +337,29 @@ class SemanticValidator:
                                 f"'{col_name}' in data object '{obj_name}'"
                             ),
                             path=f"dimensions.{name}",
+                        )
+                    )
+        return errors
+
+    _NUMERIC_TYPES = {DataType.INT, DataType.FLOAT}
+
+    def _check_num_class_on_numeric_columns(
+        self, model: SemanticModel
+    ) -> list[SemanticError]:
+        """Ensure numClass is only set on numeric columns (int or float)."""
+        errors: list[SemanticError] = []
+        for obj_name, obj in model.data_objects.items():
+            for col_name, col in obj.columns.items():
+                if col.num_class and col.abstract_type not in self._NUMERIC_TYPES:
+                    errors.append(
+                        SemanticError(
+                            code="NUM_CLASS_ON_NON_NUMERIC",
+                            message=(
+                                f"Column '{col_name}' in data object '{obj_name}' "
+                                f"has numClass '{col.num_class}' but abstractType "
+                                f"'{col.abstract_type}' is not numeric (int or float)"
+                            ),
+                            path=f"dataObjects.{obj_name}.columns.{col_name}",
                         )
                     )
         return errors
