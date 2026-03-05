@@ -89,7 +89,7 @@ metrics:
 string, int, float, date, time, time_tz, timestamp,
 timestamp_tz, boolean, json
 
-## numClass Values (optional — LLM hint for numeric columns)
+## numClass Values (optional — classification of numeric columns to control aggregation behavior)
 
 categorical, additive, non-additive
 
