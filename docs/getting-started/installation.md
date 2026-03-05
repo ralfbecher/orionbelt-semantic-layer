@@ -28,7 +28,6 @@ This installs all runtime dependencies:
 | `pydantic-settings`      | Configuration from environment / .env |
 | `ruamel.yaml`            | YAML parsing with source positions    |
 | `networkx`               | Join graph algorithms                 |
-| `sqlalchemy` + `alembic` | Database persistence                  |
 | `structlog`              | Structured logging                    |
 | `opentelemetry-api`      | Observability                         |
 
