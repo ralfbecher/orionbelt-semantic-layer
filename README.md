@@ -311,12 +311,7 @@ The bundled example model (`examples/sem-layer.obml.yml`) is loaded automaticall
   <img src="docs/assets/ui-er-diagram-dark.png" alt="ER Diagram in Gradio UI (dark mode)" width="900">
 </p>
 
-The ER diagram is also available via the REST API:
-
-```bash
-# Generate Mermaid ER diagram for a loaded model
-curl -s "http://127.0.0.1:8000/sessions/{session_id}/models/{model_id}/diagram/er?theme=default" | jq .mermaid
-```
+The ER diagram is also available as download (MD, or PNG) or via the REST API.
 
 ## Docker
 
@@ -338,21 +333,15 @@ docker run -p 7860:7860 \
 
 The API is available at `http://localhost:8080`. The UI is at `http://localhost:7860`. Sessions are ephemeral (in-memory, lost on container restart).
 
-### Deploy to Google Cloud Run
-
-The deploy script builds and pushes both images, then deploys them as separate Cloud Run services:
-
-```bash
-./scripts/deploy-gcloud.sh
-```
-
-The API and UI services share a single IP via a Google Cloud Application Load Balancer with path-based routing. Cloud Armor provides WAF protection.
+### Public Demo at Google Cloud Run
 
 A public demo is available at:
 
 > **[http://35.187.174.102/ui](http://35.187.174.102/ui/?__theme=dark)**
 
 API endpoint: `http://35.187.174.102` — Interactive docs: [Swagger UI](http://35.187.174.102/docs) | [ReDoc](http://35.187.174.102/redoc)
+
+The API and UI services share a single IP via a Google Cloud Application Load Balancer with path-based routing. Cloud Armor provides WAF protection.
 
 ### Run Integration Tests
 
