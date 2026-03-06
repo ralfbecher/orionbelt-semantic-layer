@@ -333,9 +333,9 @@ docker run -p 7860:7860 \
 
 The API is available at `http://localhost:8080`. The UI is at `http://localhost:7860`. Sessions are ephemeral (in-memory, lost on container restart).
 
-### Public Demo at Google Cloud Run
+### API and UI Live Demo Hosting at Google Cloud Run
 
-A public demo is available at:
+OrionBelt Semantic Layer API and UI is available as a hosted live demo:
 
 > **[http://35.187.174.102/ui](http://35.187.174.102/ui/?__theme=dark)**
 
