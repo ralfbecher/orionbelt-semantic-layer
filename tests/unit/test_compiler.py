@@ -6,12 +6,8 @@ import pytest
 
 from orionbelt.ast.nodes import BinaryOp, ColumnRef, Literal, RelativeDateRange
 from orionbelt.compiler.pipeline import CompilationPipeline
-from orionbelt.compiler.resolution import (
-    QueryResolver,
-    ResolutionError,
-    _parse_metric_formula,
-    _tokenize_formula,
-)
+from orionbelt.compiler.expr_parser import parse_expression, tokenize_metric_formula
+from orionbelt.compiler.resolution import QueryResolver, ResolutionError
 from orionbelt.compiler.star import StarSchemaPlanner
 from orionbelt.models.query import (
     FilterOperator,
@@ -221,29 +217,29 @@ class TestFormulaParser:
     """Tests for the metric formula tokenizer and parser."""
 
     def test_tokenize_simple_division(self) -> None:
-        tokens = _tokenize_formula("{[Revenue]} / {[Order Count]}")
+        tokens = tokenize_metric_formula("{[Revenue]} / {[Order Count]}")
         assert len(tokens) == 3
         assert tokens[0].kind == "ref" and tokens[0].value == "Revenue"
         assert tokens[1].kind == "op" and tokens[1].value == "/"
         assert tokens[2].kind == "ref" and tokens[2].value == "Order Count"
 
     def test_tokenize_with_numbers(self) -> None:
-        tokens = _tokenize_formula("{[Revenue]} * 100")
+        tokens = tokenize_metric_formula("{[Revenue]} * 100")
         assert len(tokens) == 3
         assert tokens[2].kind == "number" and tokens[2].value == "100"
 
     def test_tokenize_with_parens(self) -> None:
-        tokens = _tokenize_formula("({[A]} + {[B]}) * {[C]}")
+        tokens = tokenize_metric_formula("({[A]} + {[B]}) * {[C]}")
         assert tokens[0].kind == "lparen"
         assert tokens[4].kind == "rparen"
 
     def test_tokenize_unclosed_ref_raises(self) -> None:
         with pytest.raises(ValueError):
-            _tokenize_formula("{[Revenue} / {[Order Count]}")
+            tokenize_metric_formula("{[Revenue} / {[Order Count]}")
 
     def test_parse_simple_division(self) -> None:
-        tokens = _tokenize_formula("{[Revenue]} / {[Count]}")
-        ast = _parse_metric_formula(tokens)
+        tokens = tokenize_metric_formula("{[Revenue]} / {[Count]}")
+        ast = parse_expression(tokens)
         assert isinstance(ast, BinaryOp)
         assert ast.op == "/"
         assert isinstance(ast.left, ColumnRef) and ast.left.name == "Revenue"
@@ -251,35 +247,35 @@ class TestFormulaParser:
 
     def test_parse_precedence_multiply_before_add(self) -> None:
         # a + b * c → a + (b * c)
-        tokens = _tokenize_formula("{[A]} + {[B]} * {[C]}")
-        ast = _parse_metric_formula(tokens)
+        tokens = tokenize_metric_formula("{[A]} + {[B]} * {[C]}")
+        ast = parse_expression(tokens)
         assert isinstance(ast, BinaryOp) and ast.op == "+"
         assert isinstance(ast.left, ColumnRef) and ast.left.name == "A"
         assert isinstance(ast.right, BinaryOp) and ast.right.op == "*"
 
     def test_parse_parentheses_override_precedence(self) -> None:
         # (a + b) * c
-        tokens = _tokenize_formula("({[A]} + {[B]}) * {[C]}")
-        ast = _parse_metric_formula(tokens)
+        tokens = tokenize_metric_formula("({[A]} + {[B]}) * {[C]}")
+        ast = parse_expression(tokens)
         assert isinstance(ast, BinaryOp) and ast.op == "*"
         assert isinstance(ast.left, BinaryOp) and ast.left.op == "+"
         assert isinstance(ast.right, ColumnRef) and ast.right.name == "C"
 
     def test_parse_numeric_literal(self) -> None:
-        tokens = _tokenize_formula("{[Revenue]} / 100")
-        ast = _parse_metric_formula(tokens)
+        tokens = tokenize_metric_formula("{[Revenue]} / 100")
+        ast = parse_expression(tokens)
         assert isinstance(ast, BinaryOp) and ast.op == "/"
         assert isinstance(ast.right, Literal) and ast.right.value == 100
 
     def test_parse_float_literal(self) -> None:
-        tokens = _tokenize_formula("{[Revenue]} * 1.5")
-        ast = _parse_metric_formula(tokens)
+        tokens = tokenize_metric_formula("{[Revenue]} * 1.5")
+        ast = parse_expression(tokens)
         assert isinstance(ast, BinaryOp) and ast.op == "*"
         assert isinstance(ast.right, Literal) and ast.right.value == 1.5
 
     def test_parse_multi_word_measure_name(self) -> None:
-        tokens = _tokenize_formula("{[Total Revenue]} / {[Total Order Count]}")
-        ast = _parse_metric_formula(tokens)
+        tokens = tokenize_metric_formula("{[Total Revenue]} / {[Total Order Count]}")
+        ast = parse_expression(tokens)
         assert isinstance(ast, BinaryOp)
         assert isinstance(ast.left, ColumnRef) and ast.left.name == "Total Revenue"
         assert isinstance(ast.right, ColumnRef) and ast.right.name == "Total Order Count"

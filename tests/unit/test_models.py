@@ -2,10 +2,7 @@
 
 from __future__ import annotations
 
-import uuid
-
 from orionbelt.models.errors import SemanticError, SourceSpan, ValidationResult
-from orionbelt.models.project import ModelStatus, Tenant
 from orionbelt.models.query import (
     DimensionRef,
     FilterOperator,
@@ -173,11 +170,3 @@ class TestErrors:
         assert result.errors == []
 
 
-class TestProject:
-    def test_tenant_creation(self) -> None:
-        t = Tenant(id=uuid.uuid4(), name="Acme Corp")
-        assert t.name == "Acme Corp"
-
-    def test_model_status(self) -> None:
-        assert ModelStatus.DRAFT == "draft"
-        assert ModelStatus.PUBLISHED == "published"

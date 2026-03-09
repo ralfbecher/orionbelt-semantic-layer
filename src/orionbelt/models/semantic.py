@@ -220,18 +220,6 @@ class Metric(BaseModel):
     model_config = {"populate_by_name": True}
 
 
-class Relationship(BaseModel):
-    """A join relationship between two tables (from spec §3.5)."""
-
-    from_field: str = Field(alias="from")
-    to_field: str = Field(alias="to")
-    on: str | None = None
-    type: JoinType = JoinType.LEFT
-    cardinality: Cardinality = Cardinality.MANY_TO_ONE
-
-    model_config = {"populate_by_name": True}
-
-
 class SemanticModel(BaseModel):
     """Complete semantic model parsed from OBML YAML."""
 
@@ -241,20 +229,5 @@ class SemanticModel(BaseModel):
     measures: dict[str, Measure] = {}
     metrics: dict[str, Metric] = {}
     custom_extensions: list[CustomExtension] = Field(default_factory=list, alias="customExtensions")
-
-    model_config = {"populate_by_name": True}
-
-
-class Fact(BaseModel):
-    """A fact table definition (from spec §3.2)."""
-
-    name: str
-    description: str = ""
-    table: str
-    schema_name: str = Field("", alias="schema")
-    grain: str
-    dimensions: list[str] = []
-    measures: list[str] = []
-    relationships: list[Relationship] = []
 
     model_config = {"populate_by_name": True}
