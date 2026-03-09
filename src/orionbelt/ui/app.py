@@ -15,6 +15,30 @@ _DEFAULT_API_URL = "http://localhost:8000"
 _FALLBACK_DIALECTS = ["postgres", "snowflake", "clickhouse", "dremio", "databricks"]
 _API_HEADERS = {"User-Agent": "OrionBelt-UI/1.0"}
 
+
+def _format_api_errors(detail: Any) -> str:
+    """Format API error detail into readable SQL-commented lines."""
+    if isinstance(detail, dict):
+        lines: list[str] = []
+        if detail.get("error"):
+            lines.append(f"-- {detail['error']}")
+        for err in detail.get("errors", []):
+            code = err.get("code", "ERROR")
+            msg = err.get("message", "")
+            path = err.get("path", "")
+            line = f"--   [{code}] {msg}"
+            if path:
+                line += f"  (at {path})"
+            lines.append(line)
+        for warn in detail.get("warnings", []):
+            if isinstance(warn, dict):
+                lines.append(f"--   [WARNING] {warn.get('message', warn)}")
+            else:
+                lines.append(f"--   [WARNING] {warn}")
+        return "\n".join(lines) if lines else f"-- {detail}"
+    return f"-- {detail}"
+
+
 _DEFAULT_QUERY = """\
 select:
   dimensions:
@@ -717,6 +741,10 @@ def _ensure_session_and_model(
 class _ModelValidationError(Exception):
     """Raised when the API rejects a model with HTTP 422."""
 
+    def __init__(self, detail: Any) -> None:
+        self.detail = detail
+        super().__init__(str(detail))
+
 
 def _cleanup_session(session_state: dict[str, str] | None) -> None:
     """Delete the API session on browser tab close."""
@@ -774,7 +802,7 @@ def compile_sql(
         if resp.status_code in (400, 422):
             detail = resp.json().get("detail", resp.text)
             return (
-                f"-- Error: Query compilation failed\n-- {detail}",
+                f"-- Error: Query compilation failed\n{_format_api_errors(detail)}",
                 session_state,
                 model_state,
             )
@@ -797,7 +825,11 @@ def compile_sql(
         return formatted, session_state, model_state
 
     except _ModelValidationError as exc:
-        return f"-- Error: Model validation failed\n-- {exc}", session_state, model_state
+        return (
+            f"-- Error: Model validation failed\n{_format_api_errors(exc.detail)}",
+            session_state,
+            model_state,
+        )
     except httpx.ConnectError:
         api = api_url.rstrip("/") if api_url else _DEFAULT_API_URL
         return (
