@@ -71,6 +71,7 @@ docs = [
 ]
 ui = [
     "gradio>=5.0",
+    "jsonschema>=4.23",
 ]
 
 [build-system]
