@@ -98,7 +98,39 @@ categorical, additive, non-additive
 sum, count, count_distinct, avg, min, max,
 any_value, median, mode, listagg
 
-## 5. customExtensions — vendor-keyed metadata (optional)
+## 5. synonyms — alternative names (optional, LLM hints)
+
+All five element levels (dataObject, column, dimension, measure, metric) support
+an optional `synonyms` list — alternative names or terms that help LLMs
+map natural-language questions to the correct model element:
+
+```yaml
+dataObjects:
+  Customers:
+    code: CUSTOMERS
+    database: EDW
+    schema: SALES
+    synonyms: [client, buyer, purchaser]
+    columns:
+      Country:
+        code: COUNTRY
+        abstractType: string
+        synonyms: [nation, region]
+
+dimensions:
+  Customer Country:
+    dataObject: Customers
+    column: Country
+    synonyms: [client country, buyer country]
+
+measures:
+  Revenue:
+    aggregation: sum
+    expression: '{[Orders].[Amount]}'
+    synonyms: [sales, income, turnover]
+```
+
+## 6. customExtensions — vendor-keyed metadata (optional)
 
 All six levels (model, dataObject, column, dimension, measure, metric) support
 an optional `customExtensions` array for vendor-specific metadata:

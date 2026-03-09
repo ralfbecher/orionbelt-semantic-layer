@@ -8,15 +8,14 @@ and OrionBelt Markup Language (OBML v1.0) YAML models.
 Author: OrionBelt / RALFORION
 """
 
-import re
-import json
 import argparse
+import json
+import re
 import sys
 from pathlib import Path
 from typing import Any
 
 import yaml
-
 
 # ─── Type mapping ───────────────────────────────────────────────────────────
 
@@ -175,14 +174,20 @@ class OSItoOBML:
         if ds.get("description"):
             do["comment"] = ds["description"]
 
-        # ── Preserve ai_context losslessly via customExtensions ─────
+        # ── Extract ai_context: synonyms → native, rest → customExtensions ─
         ai_ctx = ds.get("ai_context")
         if ai_ctx:
             ai_data = ai_ctx if isinstance(ai_ctx, dict) else {"instructions": ai_ctx}
-            do["customExtensions"] = [{
-                "vendor": "OSI",
-                "data": json.dumps(ai_data),
-            }]
+            # Extract synonyms directly into OBML synonyms property
+            if "synonyms" in ai_data:
+                do["synonyms"] = list(ai_data["synonyms"])
+            # Store remaining ai_context keys in customExtensions
+            remaining = {k: v for k, v in ai_data.items() if k != "synonyms"}
+            if remaining:
+                do["customExtensions"] = [{
+                    "vendor": "OSI",
+                    "data": json.dumps(remaining),
+                }]
 
         return name, do
 
@@ -222,14 +227,20 @@ class OSItoOBML:
         if field.get("description"):
             col["comment"] = field["description"]
 
-        # Preserve field-level ai_context as customExtensions
+        # Extract field-level ai_context: synonyms → native, rest → customExtensions
         ai_ctx = field.get("ai_context")
         if ai_ctx:
             ai_data = ai_ctx if isinstance(ai_ctx, dict) else {"instructions": ai_ctx}
-            col["customExtensions"] = [{
-                "vendor": "OSI",
-                "data": json.dumps(ai_data),
-            }]
+            # Extract synonyms directly into OBML synonyms property
+            if "synonyms" in ai_data:
+                col["synonyms"] = list(ai_data["synonyms"])
+            # Store remaining ai_context keys in customExtensions
+            remaining = {k: v for k, v in ai_data.items() if k != "synonyms"}
+            if remaining:
+                col["customExtensions"] = [{
+                    "vendor": "OSI",
+                    "data": json.dumps(remaining),
+                }]
 
         return name, col
 
@@ -336,11 +347,16 @@ class OSItoOBML:
                 if (ds_name, field_name) in self._join_key_columns:
                     continue
                 abstract_type = self._infer_obml_type(field)
-                dimensions[field_name] = {
+                dim_def: dict[str, Any] = {
                     "dataObject": ds_name,
                     "column": field_name,
                     "resultType": abstract_type,
                 }
+                # Extract synonyms from field-level ai_context
+                ai_ctx = field.get("ai_context")
+                if isinstance(ai_ctx, dict) and ai_ctx.get("synonyms"):
+                    dim_def["synonyms"] = list(ai_ctx["synonyms"])
+                dimensions[field_name] = dim_def
         return dimensions
 
     def _convert_metrics(self, osi_metrics: list, ds_map: dict
@@ -364,6 +380,12 @@ class OSItoOBML:
         for m in osi_metrics:
             name = m["name"]
 
+            # Extract synonyms from OSI ai_context
+            osi_ai_ctx = m.get("ai_context")
+            osi_synonyms: list[str] = []
+            if isinstance(osi_ai_ctx, dict) and osi_ai_ctx.get("synonyms"):
+                osi_synonyms = list(osi_ai_ctx["synonyms"])
+
             expr_text = self._get_ansi_expression(m.get("expression", {}))
             if not expr_text:
                 self.warnings.append(f"Metric '{name}' has no ANSI_SQL expression; skipped.")
@@ -380,6 +402,8 @@ class OSItoOBML:
                 }
                 if is_distinct:
                     measure_def["distinct"] = True
+                if osi_synonyms:
+                    measure_def["synonyms"] = osi_synonyms
                 measures[name] = measure_def
                 continue
 
@@ -393,6 +417,8 @@ class OSItoOBML:
                     "resultType": "float" if agg.upper() in ("SUM", "AVG") else "int",
                     "aggregation": agg.lower(),
                 }
+                if osi_synonyms:
+                    measure_def["synonyms"] = osi_synonyms
                 measures[name] = measure_def
                 continue
 
@@ -413,7 +439,10 @@ class OSItoOBML:
                             del auto_measures[auto_key]
                             break
                 measures.update(auto_measures)
-                metrics[name] = {"expression": obml_expr}
+                metric_def: dict[str, Any] = {"expression": obml_expr}
+                if osi_synonyms:
+                    metric_def["synonyms"] = osi_synonyms
+                metrics[name] = metric_def
             else:
                 self.warnings.append(
                     f"Metric '{name}' has unparseable expression: {expr_text}"
@@ -471,8 +500,8 @@ class OSItoOBML:
         Returns (agg, inner_expression) or None.
         """
 
-        AGG_FUNCS = {"SUM", "COUNT", "AVG", "MIN", "MAX", "ANY_VALUE",
-                      "MEDIAN", "MODE", "LISTAGG"}
+        agg_funcs = {"SUM", "COUNT", "AVG", "MIN", "MAX", "ANY_VALUE",
+                     "MEDIAN", "MODE", "LISTAGG"}
 
         expr = expr.strip()
         # Match AGG(...) — must use balanced parentheses
@@ -481,7 +510,7 @@ class OSItoOBML:
         if not match:
             return None
         agg = match.group(1).upper()
-        if agg not in AGG_FUNCS:
+        if agg not in agg_funcs:
             return None
         inner = match.group(2).strip()
 
@@ -504,7 +533,7 @@ class OSItoOBML:
         if re.match(r'^(DISTINCT\s+)?\w+\.\w+$', inner, re.IGNORECASE):
             return None
         # Must NOT contain nested aggregation calls (those are complex metrics)
-        if re.search(r'\b(' + '|'.join(AGG_FUNCS) + r')\s*\(', inner, re.IGNORECASE):
+        if re.search(r'\b(' + '|'.join(agg_funcs) + r')\s*\(', inner, re.IGNORECASE):
             return None
         return agg.lower(), inner
 
@@ -530,8 +559,8 @@ class OSItoOBML:
         → auto-measures, metric referencing them via {[name]}
         """
 
-        AGG_FUNCS = {"SUM", "COUNT", "AVG", "MIN", "MAX", "ANY_VALUE",
-                      "MEDIAN", "MODE", "LISTAGG"}
+        agg_funcs = {"SUM", "COUNT", "AVG", "MIN", "MAX", "ANY_VALUE",
+                     "MEDIAN", "MODE", "LISTAGG"}
 
         auto_measures: dict[str, Any] = {}
         obml_expr = expr
@@ -542,7 +571,7 @@ class OSItoOBML:
         while i < len(expr):
             # Look for WORD( pattern
             m = re.match(r'(\w+)\s*\(', expr[i:])
-            if m and m.group(1).upper() in AGG_FUNCS:
+            if m and m.group(1).upper() in agg_funcs:
                 agg = m.group(1)
                 start = i
                 paren_start = i + m.end() - 1  # position of '('
@@ -697,15 +726,24 @@ class OBMLtoOSI:
         if do_obj.get("comment"):
             dataset["description"] = do_obj["comment"]
 
-        # ── Restore ai_context from customExtensions (OSI vendor) ──
+        # ── Rebuild ai_context: native synonyms + remaining from customExtensions
+        ai_ctx: dict[str, Any] = {}
         for ext in do_obj.get("customExtensions", []):
             if ext.get("vendor") == "OSI":
                 try:
                     ai_data = json.loads(ext.get("data", "{}"))
                     if ai_data:
-                        dataset["ai_context"] = ai_data
+                        ai_ctx.update(ai_data)
                 except (json.JSONDecodeError, TypeError):
                     pass
+        # Merge native OBML synonyms into ai_context.synonyms
+        obml_synonyms = do_obj.get("synonyms", [])
+        if obml_synonyms:
+            existing = ai_ctx.get("synonyms", [])
+            merged = list(existing) + [s for s in obml_synonyms if s not in existing]
+            ai_ctx["synonyms"] = merged
+        if ai_ctx:
+            dataset["ai_context"] = ai_ctx
 
         # ── Fields ──────────────────────────────────────────────────
         fields = []
@@ -782,6 +820,13 @@ class OBMLtoOSI:
                         ai_ctx.update(ai_data)
                 except (json.JSONDecodeError, TypeError):
                     pass
+
+        # Merge native OBML column synonyms into ai_context
+        obml_col_synonyms = col_obj.get("synonyms", [])
+        if obml_col_synonyms:
+            existing = ai_ctx.get("synonyms", [])
+            merged = list(existing) + [s for s in obml_col_synonyms if s not in existing]
+            ai_ctx["synonyms"] = merged
 
         # Build ai_context with synonyms from display name
         display_synonym = col_name.lower()
@@ -893,6 +938,11 @@ class OBMLtoOSI:
         columns = measure.get("columns", [])
         agg = measure.get("aggregation", "sum").upper()
         distinct = measure.get("distinct", False)
+        obml_synonyms = measure.get("synonyms", [])
+
+        # Build ai_context with synonyms (name + native OBML synonyms)
+        ai_synonyms = [name] + [s for s in obml_synonyms if s != name]
+        ai_ctx: dict[str, Any] = {"synonyms": ai_synonyms} if ai_synonyms else {}
 
         if not columns:
             obml_expr = measure.get("expression", "")
@@ -901,7 +951,7 @@ class OBMLtoOSI:
                 sql_inner = self._obml_refs_to_sql(obml_expr, data_objects)
                 distinct_kw = "DISTINCT " if distinct else ""
                 expr = f"{agg}({distinct_kw}{sql_inner})"
-                return {
+                result: dict[str, Any] = {
                     "name": name,
                     "expression": {
                         "dialects": [{
@@ -911,6 +961,9 @@ class OBMLtoOSI:
                     },
                     "description": name,
                 }
+                if ai_ctx:
+                    result["ai_context"] = ai_ctx
+                return result
             self.warnings.append(f"Measure '{name}' has no columns; skipped.")
             return None
 
@@ -929,7 +982,7 @@ class OBMLtoOSI:
         distinct_kw = "DISTINCT " if distinct else ""
         expr = f"{agg}({distinct_kw}{do_code}.{col_code})"
 
-        return {
+        result = {
             "name": name,
             "expression": {
                 "dialects": [{
@@ -938,10 +991,10 @@ class OBMLtoOSI:
                 }]
             },
             "description": name,
-            "ai_context": {
-                "synonyms": [name],
-            },
         }
+        if ai_ctx:
+            result["ai_context"] = ai_ctx
+        return result
 
     def _obml_refs_to_sql(self, obml_expr: str, data_objects: dict) -> str:
         """Convert OBML {[DataObject].[Column]} references to SQL dataset.column."""
@@ -993,7 +1046,7 @@ class OBMLtoOSI:
                     f"'{measure_name}' to SQL."
                 )
 
-        return {
+        result: dict[str, Any] = {
             "name": name,
             "expression": {
                 "dialects": [{
@@ -1003,6 +1056,12 @@ class OBMLtoOSI:
             },
             "description": name,
         }
+        # Include OBML synonyms in ai_context
+        obml_synonyms = metric.get("synonyms", [])
+        ai_synonyms = [s for s in obml_synonyms if s != name]
+        if ai_synonyms:
+            result["ai_context"] = {"synonyms": ai_synonyms}
+        return result
 
     def _measure_to_sql(self, measure: dict, data_objects: dict) -> str | None:
         """Convert an OBML measure definition to a SQL expression string."""

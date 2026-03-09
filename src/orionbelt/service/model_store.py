@@ -38,6 +38,7 @@ class DataObjectInfo:
     code: str
     columns: list[str]
     join_targets: list[str]
+    synonyms: list[str]
 
 
 @dataclass
@@ -49,6 +50,7 @@ class DimensionInfo:
     data_object: str
     column: str
     time_grain: str | None
+    synonyms: list[str]
 
 
 @dataclass
@@ -59,6 +61,7 @@ class MeasureInfo:
     result_type: str
     aggregation: str
     expression: str | None
+    synonyms: list[str]
 
 
 @dataclass
@@ -67,6 +70,7 @@ class MetricInfo:
 
     name: str
     expression: str
+    synonyms: list[str]
 
 
 @dataclass
@@ -249,6 +253,7 @@ class ModelStore:
                 code=obj.qualified_code,
                 columns=list(obj.columns.keys()),
                 join_targets=[j.join_to for j in obj.joins],
+                synonyms=obj.synonyms,
             )
             for obj in model.data_objects.values()
         ]
@@ -260,6 +265,7 @@ class ModelStore:
                 data_object=dim.view,
                 column=dim.column,
                 time_grain=dim.time_grain.value if dim.time_grain else None,
+                synonyms=dim.synonyms,
             )
             for dim in model.dimensions.values()
         ]
@@ -270,12 +276,14 @@ class ModelStore:
                 result_type=m.result_type.value,
                 aggregation=m.aggregation,
                 expression=m.expression,
+                synonyms=m.synonyms,
             )
             for m in model.measures.values()
         ]
 
         metrics = [
-            MetricInfo(name=met.label, expression=met.expression) for met in model.metrics.values()
+            MetricInfo(name=met.label, expression=met.expression, synonyms=met.synonyms)
+            for met in model.metrics.values()
         ]
 
         return ModelDescription(

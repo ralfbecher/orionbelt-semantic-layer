@@ -57,6 +57,11 @@
         "comment": {
           "type": "string"
         },
+        "synonyms": {
+          "type": "array",
+          "description": "Alternative names or terms for this data object (LLM hints)",
+          "items": { "type": "string" }
+        },
         "customExtensions": {
           "type": "array",
           "description": "Vendor-keyed extension data",
@@ -120,6 +125,11 @@
         },
         "comment": {
           "type": "string"
+        },
+        "synonyms": {
+          "type": "array",
+          "description": "Alternative names or terms for this column (LLM hints)",
+          "items": { "type": "string" }
         },
         "customExtensions": {
           "type": "array",
@@ -405,6 +415,11 @@
           },
           "minItems": 2
         },
+        "synonyms": {
+          "type": "array",
+          "description": "Alternative names or terms for this dimension (LLM hints)",
+          "items": { "type": "string" }
+        },
         "customExtensions": {
           "type": "array",
           "description": "Vendor-keyed extension data",
@@ -487,6 +502,11 @@
         "filter": {
           "$ref": "#/definitions/filter"
         },
+        "synonyms": {
+          "type": "array",
+          "description": "Alternative names or terms for this measure (LLM hints)",
+          "items": { "type": "string" }
+        },
         "customExtensions": {
           "type": "array",
           "description": "Vendor-keyed extension data",
@@ -509,6 +529,11 @@
         },
         "format": {
           "type": "string"
+        },
+        "synonyms": {
+          "type": "array",
+          "description": "Alternative names or terms for this metric (LLM hints)",
+          "items": { "type": "string" }
         },
         "customExtensions": {
           "type": "array",

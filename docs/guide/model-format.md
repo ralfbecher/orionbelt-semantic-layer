@@ -66,6 +66,7 @@ dataObjects:
 | `columns` | map | Yes | Dictionary of column definitions |
 | `joins` | list | No | Join relationships to other data objects |
 | `comment` | string | No | Documentation |
+| `synonyms` | list | No | Alternative names or terms (LLM hints) |
 
 ### Columns
 
@@ -78,6 +79,7 @@ dataObjects:
 | `sqlScale` | int | No | Informational: numeric scale |
 | `numClass` | enum | No | Classification of numeric columns to control aggregation behavior. `categorical` (IDs/codes), `additive` (sum-safe), `non-additive` (rates/ratios) |
 | `comment` | string | No | Documentation |
+| `synonyms` | list | No | Alternative names or terms (LLM hints) |
 
 ### Joins
 
@@ -178,6 +180,7 @@ dimensions:
 | `label` | string | No | Display label |
 | `timeGrain` | enum | No | Time grain: `year`, `quarter`, `month`, `week`, `day`, `hour`, `minute`, `second` |
 | `format` | string | No | Display format |
+| `synonyms` | list | No | Alternative names or terms (LLM hints) |
 
 ### Time Dimensions
 
@@ -247,6 +250,7 @@ measures:
 | `withinGroup` | object | No | Ordering clause for `listagg` — specifies `column` and `order` (`ASC`/`DESC`) |
 | `filter` | object | No | Conditional filter applied to this measure |
 | `allowFanOut` | bool | No | Allow fan-out joins (default: false) |
+| `synonyms` | list | No | Alternative names or terms (LLM hints) |
 
 ### Aggregation Types
 
@@ -333,12 +337,45 @@ All artefacts (data objects, dimensions, measures, metrics) have unique names. T
 | `expression` | string | Yes | Expression with `{[Measure Name]}` placeholders |
 | `label` | string | No | Display label |
 | `format` | string | No | Display format |
+| `synonyms` | list | No | Alternative names or terms (LLM hints) |
 
 ### Metric Expression Placeholders
 
 | Placeholder | Resolves to |
 |-------------|-------------|
 | `{[Measure Name]}` | Named reference to any defined measure |
+
+## Synonyms
+
+All five element levels (data object, column, dimension, measure, metric) support an optional `synonyms` list. Synonyms provide alternative names or terms that help LLMs map natural-language questions to the correct model element.
+
+```yaml
+dataObjects:
+  Customers:
+    code: CUSTOMERS
+    database: WAREHOUSE
+    schema: PUBLIC
+    synonyms: [client, buyer, purchaser]
+    columns:
+      Country:
+        code: COUNTRY
+        abstractType: string
+        synonyms: [nation, region]
+
+dimensions:
+  Customer Country:
+    dataObject: Customers
+    column: Country
+    synonyms: [client country, buyer country]
+
+measures:
+  Revenue:
+    aggregation: sum
+    expression: '{[Orders].[Amount]}'
+    synonyms: [sales, income, turnover]
+```
+
+Synonyms are surfaced in the `describe_model` response (REST API and MCP) so LLMs can match user intent to the correct dimension, measure, or data object even when the user uses different terminology.
 
 ## Custom Extensions
 

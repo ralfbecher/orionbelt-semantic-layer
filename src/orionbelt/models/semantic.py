@@ -96,6 +96,7 @@ class DataObjectColumn(BaseModel):
     sql_scale: int | None = Field(None, alias="sqlScale")
     num_class: NumClass | None = Field(None, alias="numClass")
     comment: str | None = None
+    synonyms: list[str] = Field(default_factory=list)
     custom_extensions: list[CustomExtension] = Field(default_factory=list, alias="customExtensions")
 
     model_config = {"populate_by_name": True}
@@ -124,6 +125,7 @@ class DataObject(BaseModel):
     columns: dict[str, DataObjectColumn] = {}
     joins: list[DataObjectJoin] = []
     comment: str | None = None
+    synonyms: list[str] = Field(default_factory=list)
     custom_extensions: list[CustomExtension] = Field(default_factory=list, alias="customExtensions")
 
     @property
@@ -143,6 +145,7 @@ class Dimension(BaseModel):
     result_type: DataType = Field(DataType.STRING, alias="resultType")
     time_grain: TimeGrain | None = Field(None, alias="timeGrain")
     format: str | None = None
+    synonyms: list[str] = Field(default_factory=list)
     custom_extensions: list[CustomExtension] = Field(default_factory=list, alias="customExtensions")
 
     model_config = {"populate_by_name": True}
@@ -196,6 +199,7 @@ class Measure(BaseModel):
     allow_fan_out: bool = Field(False, alias="allowFanOut")
     delimiter: str | None = None
     within_group: WithinGroup | None = Field(None, alias="withinGroup")
+    synonyms: list[str] = Field(default_factory=list)
     custom_extensions: list[CustomExtension] = Field(default_factory=list, alias="customExtensions")
 
     model_config = {"populate_by_name": True}
@@ -210,6 +214,7 @@ class Metric(BaseModel):
     label: str
     expression: str
     format: str | None = None
+    synonyms: list[str] = Field(default_factory=list)
     custom_extensions: list[CustomExtension] = Field(default_factory=list, alias="customExtensions")
 
     model_config = {"populate_by_name": True}

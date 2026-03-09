@@ -85,6 +85,7 @@ dataObjects:
     code: CUSTOMERS
     database: WAREHOUSE
     schema: PUBLIC
+    synonyms: [client, buyer, purchaser]
     columns:
       Customer ID:
         code: CUSTOMER_ID
@@ -131,6 +132,7 @@ measures:
     resultType: float
     aggregation: sum
     expression: "{[Orders].[Price]} * {[Orders].[Quantity]}"
+    synonyms: [sales, income, turnover]
 ```
 
 The `yaml-language-server` comment enables schema validation in editors that support it (VS Code with YAML extension, IntelliJ, etc.). The JSON Schema is at [`schema/obml-schema.json`](schema/obml-schema.json).
@@ -281,9 +283,17 @@ uv run orionbelt-api &
 API_BASE_URL=http://localhost:8000 uv run orionbelt-ui
 ```
 
-### Production (Cloud Run)
+### API and UI Live Demo Hosting at Google Cloud Run
 
-In production, the API and UI are deployed as **separate Cloud Run services** behind a shared load balancer. The API image (`Dockerfile`) excludes Gradio for faster cold starts (~2-3s vs ~12s), while the UI image (`Dockerfile.ui`) connects to the API via `API_BASE_URL`:
+OrionBelt Semantic Layer API and UI is available as a hosted live demo:
+
+> **[http://35.187.174.102/ui](http://35.187.174.102/ui/?__theme=dark)**
+
+API endpoint: `http://35.187.174.102` — Interactive docs: [Swagger UI](http://35.187.174.102/docs) | [ReDoc](http://35.187.174.102/redoc)
+
+The API and UI services share a single IP via a Google Cloud Application Load Balancer with path-based routing. Cloud Armor provides WAF protection.
+
+The API and UI are deployed as **separate Cloud Run services** behind a shared load balancer. The API image (`Dockerfile`) excludes Gradio for faster cold starts (~2-3s vs ~12s), while the UI image (`Dockerfile.ui`) connects to the API via `API_BASE_URL`:
 
 ```
 Load Balancer (single IP)
@@ -332,16 +342,6 @@ docker run -p 7860:7860 \
 ```
 
 The API is available at `http://localhost:8080`. The UI is at `http://localhost:7860`. Sessions are ephemeral (in-memory, lost on container restart).
-
-### API and UI Live Demo Hosting at Google Cloud Run
-
-OrionBelt Semantic Layer API and UI is available as a hosted live demo:
-
-> **[http://35.187.174.102/ui](http://35.187.174.102/ui/?__theme=dark)**
-
-API endpoint: `http://35.187.174.102` — Interactive docs: [Swagger UI](http://35.187.174.102/docs) | [ReDoc](http://35.187.174.102/redoc)
-
-The API and UI services share a single IP via a Google Cloud Application Load Balancer with path-based routing. Cloud Armor provides WAF protection.
 
 ### Run Integration Tests
 
