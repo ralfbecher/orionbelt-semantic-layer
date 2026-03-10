@@ -280,6 +280,69 @@ Compile a semantic query against a model loaded in the session.
 
 ---
 
+## OSI ↔ OBML Conversion
+
+Stateless endpoints for converting between [OSI (Open Semantic Interchange)](https://github.com/open-semantic-interchange/OSI) and OBML formats. No session required.
+
+### `POST /convert/osi-to-obml`
+
+Convert an OSI YAML model to OBML format.
+
+**Request:**
+
+```json
+{
+  "input_yaml": "version: \"0.1.1\"\nsemantic_model:\n  - name: my_model\n    ..."
+}
+```
+
+**Response (200):**
+
+```json
+{
+  "output_yaml": "version: 1.0\ndataObjects:\n  ...",
+  "warnings": [
+    "Relationship 'sales_to_date': no type specified, defaulting to many-to-one."
+  ],
+  "validation": {
+    "schema_valid": true,
+    "semantic_valid": true,
+    "schema_errors": [],
+    "semantic_errors": [],
+    "semantic_warnings": []
+  }
+}
+```
+
+**Error (400):** Invalid YAML input.
+
+**Error (422):** Conversion failed (e.g. unsupported OSI structure).
+
+### `POST /convert/obml-to-osi`
+
+Convert an OBML YAML model to OSI format.
+
+**Request:**
+
+```json
+{
+  "input_yaml": "version: 1.0\ndataObjects:\n  ...",
+  "model_name": "my_model",
+  "model_description": "Sales analytics model",
+  "ai_instructions": ""
+}
+```
+
+The `model_name`, `model_description`, and `ai_instructions` fields are optional (defaults: `"semantic_model"`, `""`, `""`).
+
+**Response (200):** Same structure as `POST /convert/osi-to-obml`.
+
+**Error (400):** Invalid YAML input.
+
+**Error (422):** Conversion failed.
+
+---
+
 ## Dialects
 
 ### `GET /dialects`

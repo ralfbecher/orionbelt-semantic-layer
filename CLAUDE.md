@@ -172,6 +172,8 @@ Top-level YAML keys: `version`, `dataObjects`, `dimensions`, `measures`, `metric
 | POST | `/sessions/{id}/validate` | Validate YAML |
 | POST | `/sessions/{id}/query/sql` | Compile query |
 | GET | `/sessions/{id}/models/{mid}/diagram/er` | Mermaid ER diagram |
+| POST | `/convert/osi-to-obml` | Convert OSI YAML → OBML YAML |
+| POST | `/convert/obml-to-osi` | Convert OBML YAML → OSI YAML |
 
 ## Configuration
 

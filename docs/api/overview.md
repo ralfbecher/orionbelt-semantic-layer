@@ -23,6 +23,7 @@ Content-Type: application/json
 | Prefix | Tag | Description |
 |--------|-----|-------------|
 | `/sessions` | sessions | Session-scoped model management, validation, and query compilation |
+| `/convert` | convert | OSI ↔ OBML format conversion with validation |
 | `/dialects` | dialects | Available SQL dialect info |
 | `/health` | health | Health check |
 

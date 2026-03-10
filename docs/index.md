@@ -25,7 +25,7 @@ OrionBelt is a semantic layer engine that transforms declarative YAML model defi
 | OrionBelt ML (OBML) | YAML-based data objects, dimensions, measures, metrics, joins |
 | Star Schema & CFL | Automatic fact selection and join path resolution |
 | Session Management | TTL-scoped per-client sessions for the REST API |
-| REST API | FastAPI endpoints for session-based model management, validation, and compilation |
+| REST API | FastAPI endpoints for session-based model management, validation, compilation, and OSI conversion |
 | Gradio UI | Interactive web interface for model editing, query testing, SQL compilation, ER diagrams, and OSI import/export |
 | Custom Extensions | Vendor-specific metadata at all model levels (model, data object, column, dimension, measure, metric) |
 | Plugin Architecture | Extensible dialect system with capability flags |

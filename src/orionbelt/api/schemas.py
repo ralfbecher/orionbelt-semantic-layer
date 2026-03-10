@@ -145,3 +145,42 @@ class DiagramResponse(BaseModel):
     """Response for GET /sessions/{session_id}/models/{model_id}/diagram/er."""
 
     mermaid: str = Field(description="Mermaid ER diagram script")
+
+
+# ---------------------------------------------------------------------------
+# OSI ↔ OBML conversion schemas
+# ---------------------------------------------------------------------------
+
+
+class ConvertRequest(BaseModel):
+    """Request body for POST /convert/osi-to-obml."""
+
+    input_yaml: str = Field(description="Source YAML content to convert", max_length=5_000_000)
+
+
+class OBMLtoOSIRequest(ConvertRequest):
+    """Request body for POST /convert/obml-to-osi."""
+
+    model_name: str = Field(default="semantic_model", description="Name for the OSI model")
+    model_description: str = Field(default="", description="Description for the OSI model")
+    ai_instructions: str = Field(default="", description="AI instructions for the OSI model")
+
+
+class ValidationDetail(BaseModel):
+    """Validation result from conversion."""
+
+    schema_valid: bool = True
+    semantic_valid: bool = True
+    schema_errors: list[str] = Field(default_factory=list)
+    semantic_errors: list[str] = Field(default_factory=list)
+    semantic_warnings: list[str] = Field(default_factory=list)
+
+
+class ConvertResponse(BaseModel):
+    """Response body for conversion endpoints."""
+
+    output_yaml: str = Field(description="Converted YAML content")
+    warnings: list[str] = Field(default_factory=list, description="Conversion warnings")
+    validation: ValidationDetail = Field(
+        default_factory=ValidationDetail, description="Validation results"
+    )

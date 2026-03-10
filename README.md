@@ -6,7 +6,7 @@
 
 <p align="center"><strong>Compile YAML semantic models into analytical SQL across multiple database dialects</strong></p>
 
-[![Version 0.6.0](https://img.shields.io/badge/version-0.6.0-purple.svg)](https://github.com/ralfbecher/orionbelt-semantic-layer/releases)
+[![Version 0.7.0](https://img.shields.io/badge/version-0.7.0-purple.svg)](https://github.com/ralfbecher/orionbelt-semantic-layer/releases)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://github.com/ralfbecher/orionbelt-semantic-layer/blob/main/LICENSE)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.128+-009688.svg?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
@@ -38,7 +38,7 @@ OrionBelt Semantic Layer is an **API-first** engine that transforms declarative 
 - **REST API** — FastAPI-powered session endpoints for model loading, validation, compilation, diagram generation, and management
 - **MCP Server** — Available as a separate thin client in [orionbelt-semantic-layer-mcp](https://github.com/ralfbecher/orionbelt-semantic-layer-mcp) — delegates to the REST API via HTTP, deployable independently (e.g. to Prefect Horizon)
 - **Gradio UI** — Interactive web interface for model editing, query testing, and SQL compilation with live validation feedback
-- **[OSI](https://github.com/open-semantic-interchange/OSI) Interoperability** — Bidirectional import/export between OBML and the Open Semantic Interchange format, with validation for both directions
+- **[OSI](https://github.com/open-semantic-interchange/OSI) Interoperability** — Bidirectional conversion between OBML and the Open Semantic Interchange format via REST API (`/convert`) and Gradio UI, with validation for both directions
 - **Plugin Architecture** — Extensible dialect system with capability flags and registry
 
 ## Quick Start
@@ -407,6 +407,22 @@ uv run mkdocs serve   # http://127.0.0.1:8080
 ## OSI Interoperability
 
 OrionBelt includes a bidirectional converter between OBML and the [Open Semantic Interchange (OSI)](https://github.com/open-semantic-interchange/OSI) format. The converter handles the structural differences between the two formats — including metric decomposition, relationship restructuring, and lossless `ai_context` preservation via `customExtensions` — with built-in validation for both directions.
+
+The conversion is available via REST API endpoints:
+
+```bash
+# Convert OSI → OBML
+curl -X POST http://127.0.0.1:8000/convert/osi-to-obml \
+  -H "Content-Type: application/json" \
+  -d '{"input_yaml": "version: \"0.1.1\"\nsemantic_model:\n  ..."}' | jq
+
+# Convert OBML → OSI
+curl -X POST http://127.0.0.1:8000/convert/obml-to-osi \
+  -H "Content-Type: application/json" \
+  -d '{"input_yaml": "version: 1.0\ndataObjects:\n  ..."}' | jq
+```
+
+The Gradio UI also provides **Import OSI** / **Export to OSI** buttons that use these API endpoints.
 
 See the [OSI ↔ OBML Mapping Analysis](osi-obml/osi_obml_mapping_analysis.md) for a detailed comparison and conversion reference.
 

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import contextlib
 import hashlib
-import types
 from typing import Any
 
 import httpx
@@ -430,121 +429,80 @@ _IMPORT_OSI_JS = """
 """
 
 
-def _get_converter_module() -> types.ModuleType:
-    """Lazy-import the OSI ↔ OBML converter module from ``osi-obml/``."""
-    import importlib
-    import sys
-    from pathlib import Path
+def _format_convert_status(
+    direction: str,
+    warnings: list[str],
+    validation: dict[str, Any],
+) -> str:
+    """Build status lines from a /convert API response."""
+    lines: list[str] = [f"-- {direction}"]
+    for w in warnings:
+        lines.append(f"-- WARNING: {w}")
+    schema_ok = "✓" if validation.get("schema_valid", True) else (
+        f"{len(validation.get('schema_errors', []))} error(s)"
+    )
+    sem_ok = "✓" if validation.get("semantic_valid", True) else (
+        f"{len(validation.get('semantic_errors', []))} error(s)"
+    )
+    lines.append(f"-- Validation: JSON Schema {schema_ok} | Semantic {sem_ok}")
+    for e in validation.get("schema_errors", []):
+        lines.append(f"-- Schema error: {e}")
+    for e in validation.get("semantic_errors", []):
+        lines.append(f"-- Semantic error: {e}")
+    for w in validation.get("semantic_warnings", []):
+        lines.append(f"-- Validation warning: {w}")
+    return "\n".join(lines)
 
-    # Try dev layout first (repo root/osi-obml), then Docker layout (/app/osi-obml)
-    candidates = [
-        Path(__file__).resolve().parents[3] / "osi-obml",
-        Path("/app/osi-obml"),
-    ]
-    for candidate in candidates:
-        converter_dir = str(candidate)
-        if candidate.is_dir() and converter_dir not in sys.path:
-            sys.path.insert(0, converter_dir)
-    return importlib.import_module("osi_obml_converter")
 
-
-def _import_osi(osi_yaml: str) -> tuple[str, str]:
-    """Convert OSI YAML to OBML. Returns ``(obml_yaml, status_message)``."""
+def _import_osi(osi_yaml: str, api_base: str) -> tuple[str, str]:
+    """Convert OSI YAML to OBML via the API. Returns ``(obml_yaml, status)``."""
     if not osi_yaml or not osi_yaml.strip():
         return "", "-- Error: No OSI YAML content provided"
 
     try:
-        data = yaml.safe_load(osi_yaml)
-    except yaml.YAMLError as exc:
-        return "", f"-- Error: Invalid YAML\n-- {exc}"
-
-    if not isinstance(data, dict):
-        return "", "-- Error: OSI YAML must be a mapping (dict), not a scalar or list"
-
-    mod = _get_converter_module()
-    try:
-        converter = mod.OSItoOBML(data)
-        result = converter.convert()
-        warnings = converter.warnings
+        resp = httpx.post(
+            f"{api_base}/convert/osi-to-obml",
+            json={"input_yaml": osi_yaml},
+            headers=_API_HEADERS,
+            timeout=30,
+        )
+        if resp.status_code != 200:
+            detail = resp.json().get("detail", resp.text)
+            return "", f"-- Error: {detail}"
+        data = resp.json()
     except Exception as exc:
         return "", f"-- Error: OSI → OBML conversion failed\n-- {exc}"
 
-    obml_yaml = yaml.dump(
-        result, default_flow_style=False, allow_unicode=True, sort_keys=False, width=120
+    status = _format_convert_status(
+        "OSI → OBML Import", data.get("warnings", []), data.get("validation", {})
     )
-
-    # Build status lines
-    lines: list[str] = ["-- OSI → OBML Import"]
-    for w in warnings:
-        lines.append(f"-- WARNING: {w}")
-
-    # Validate the OBML output
-    try:
-        vr = mod.validate_obml(result)
-        schema_ok = "✓" if not vr.schema_errors else f"{len(vr.schema_errors)} error(s)"
-        sem_ok = "✓" if not vr.semantic_errors else f"{len(vr.semantic_errors)} error(s)"
-        lines.append(f"-- Validation: JSON Schema {schema_ok} | Semantic {sem_ok}")
-        for e in vr.schema_errors:
-            lines.append(f"-- Schema error: {e}")
-        for e in vr.semantic_errors:
-            lines.append(f"-- Semantic error: {e}")
-        for w in vr.semantic_warnings:
-            lines.append(f"-- Validation warning: {w}")
-    except Exception:
-        lines.append("-- Validation: skipped (validator unavailable)")
-
-    return obml_yaml, "\n".join(lines)
+    return data.get("output_yaml", ""), status
 
 
-def _export_to_osi(obml_yaml: str) -> str:
-    """Convert OBML YAML to OSI. Returns status + OSI YAML for ``sql_output``."""
+def _export_to_osi(obml_yaml: str, api_base: str) -> str:
+    """Convert OBML YAML to OSI via the API. Returns status + OSI YAML."""
     if not obml_yaml or not obml_yaml.strip():
         return "-- Error: No OBML model YAML to export"
 
     try:
-        data = yaml.safe_load(obml_yaml)
-    except yaml.YAMLError as exc:
-        return f"-- Error: Invalid YAML\n-- {exc}"
-
-    if not isinstance(data, dict):
-        return "-- Error: OBML YAML must be a mapping (dict), not a scalar or list"
-
-    mod = _get_converter_module()
-    try:
-        converter = mod.OBMLtoOSI(data)
-        result = converter.convert()
-        warnings = converter.warnings
+        resp = httpx.post(
+            f"{api_base}/convert/obml-to-osi",
+            json={"input_yaml": obml_yaml},
+            headers=_API_HEADERS,
+            timeout=30,
+        )
+        if resp.status_code != 200:
+            detail = resp.json().get("detail", resp.text)
+            return f"-- Error: {detail}"
+        data = resp.json()
     except Exception as exc:
         return f"-- Error: OBML → OSI conversion failed\n-- {exc}"
 
-    osi_yaml = yaml.dump(
-        result, default_flow_style=False, allow_unicode=True, sort_keys=False, width=120
+    status = _format_convert_status(
+        "OBML → OSI Export", data.get("warnings", []), data.get("validation", {})
     )
-
-    # Build header lines
-    lines: list[str] = ["-- OBML → OSI Export"]
-    for w in warnings:
-        lines.append(f"-- WARNING: {w}")
-
-    # Validate the OSI output
-    try:
-        vr = mod.validate_osi(result)
-        schema_ok = "✓" if not vr.schema_errors else f"{len(vr.schema_errors)} error(s)"
-        sem_ok = "✓" if not vr.semantic_errors else f"{len(vr.semantic_errors)} error(s)"
-        lines.append(f"-- Validation: JSON Schema {schema_ok} | Semantic {sem_ok}")
-        for e in vr.schema_errors:
-            lines.append(f"-- Schema error: {e}")
-        for e in vr.semantic_errors:
-            lines.append(f"-- Semantic error: {e}")
-        for w in vr.semantic_warnings:
-            lines.append(f"-- Validation warning: {w}")
-    except Exception:
-        lines.append("-- Validation: skipped (validator unavailable)")
-
-    lines.append("-- Copy the OSI YAML output below.")
-    lines.append("")
-
-    return "\n".join(lines) + "\n" + osi_yaml
+    output: str = data.get("output_yaml", "")
+    return status + "\n-- Copy the OSI YAML output below.\n\n" + output
 
 
 def _format_sql(sql: str) -> str:
@@ -990,12 +948,12 @@ def create_blocks(default_api_url: str | None = None) -> Any:
                 # Wire OSI bridge + export after sql_output exists
                 osi_bridge.change(
                     fn=_import_osi,
-                    inputs=[osi_bridge],
+                    inputs=[osi_bridge, api_url],
                     outputs=[model_input, sql_output],
                 )
                 export_osi_btn.click(
                     fn=_export_to_osi,
-                    inputs=[model_input],
+                    inputs=[model_input, api_url],
                     outputs=[sql_output],
                 )
 
