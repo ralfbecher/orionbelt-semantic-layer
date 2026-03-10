@@ -14,6 +14,8 @@ RUN uv sync --no-dev --no-install-project --frozen
 # Copy source and install the project itself
 COPY src/ src/
 COPY schema/ schema/
+COPY osi-obml/osi_obml_converter.py osi-obml/
+COPY osi-obml/osi-schema.json osi-obml/
 RUN uv sync --no-dev --no-editable --frozen
 
 # --- Runtime stage: minimal image ---
@@ -30,6 +32,9 @@ ENV PATH="/app/.venv/bin:$PATH"
 
 # Copy schema (needed at runtime for validation)
 COPY --from=builder /app/schema schema/
+
+# Copy OSI converter (needed at runtime for /convert endpoints)
+COPY --from=builder /app/osi-obml osi-obml/
 
 # Cloud Run injects PORT (default 8080)
 ENV PORT=8080 \
