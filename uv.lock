@@ -1128,6 +1128,7 @@ source = { editable = "." }
 dependencies = [
     { name = "fastapi" },
     { name = "httpx" },
+    { name = "jsonschema" },
     { name = "networkx" },
     { name = "opentelemetry-api" },
     { name = "pydantic" },
@@ -1157,7 +1158,6 @@ docs = [
 ]
 ui = [
     { name = "gradio" },
-    { name = "jsonschema" },
 ]
 
 [package.dev-dependencies]
@@ -1172,7 +1172,7 @@ requires-dist = [
     { name = "gradio", marker = "extra == 'ui'", specifier = ">=5.0" },
     { name = "httpx", specifier = ">=0.28" },
     { name = "httpx", marker = "extra == 'dev'", specifier = ">=0.28" },
-    { name = "jsonschema", marker = "extra == 'ui'", specifier = ">=4.23" },
+    { name = "jsonschema", specifier = ">=4.23" },
     { name = "mkdocs-autorefs", marker = "extra == 'docs'", specifier = ">=1.4" },
     { name = "mkdocs-material", marker = "extra == 'docs'", specifier = ">=9.7" },
     { name = "mkdocstrings", extras = ["python"], marker = "extra == 'docs'", specifier = ">=1.0" },

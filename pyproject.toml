@@ -48,6 +48,7 @@ dependencies = [
     "httpx>=0.28",
     "sqlparse>=0.5",
     "sqlglot>=26.0",
+    "jsonschema>=4.23",
 ]
 
 [project.scripts]
@@ -71,7 +72,6 @@ docs = [
 ]
 ui = [
     "gradio>=5.0",
-    "jsonschema>=4.23",
 ]
 
 [build-system]
