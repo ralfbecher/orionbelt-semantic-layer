@@ -1,10 +1,10 @@
 # OSI ↔ OBML Mapping Analysis
 
-> Bidirectional conversion between [Open Semantic Interchange (OSI)](https://github.com/open-semantic-interchange/OSI) v1.0 and [OrionBelt ML (OBML)](https://github.com/ralfbecher/orionbelt-semantic-layer) v1.0 semantic model formats.
+> Bidirectional conversion between [Open Semantic Interchange (OSI)](https://github.com/open-semantic-interchange/OSI) v0.1.1 and [OrionBelt ML (OBML)](https://github.com/ralfbecher/orionbelt-semantic-layer) v1.0 semantic model formats.
 
 ## 1. Structural Comparison
 
-| Aspect | OSI v1.0 | OBML v1.0 |
+| Aspect | OSI v0.1.1 | OBML v1.0 |
 |---|---|---|
 | **Top-level** | `semantic_model[]` (array of models) | Single model with `dataObjects`, `dimensions`, `measures`, `metrics` sections |
 | **Tables / Entities** | `datasets[]` (flat array) | `dataObjects{}` (named dictionary) |

@@ -2,7 +2,7 @@
 """
 OSI ↔ OBML Bidirectional Converter
 ===================================
-Converts between Open Semantic Interchange (OSI v1.0) YAML models
+Converts between Open Semantic Interchange (OSI v0.1.1) YAML models
 and OrionBelt Markup Language (OBML v1.0) YAML models.
 
 Author: OrionBelt / RALFORION
@@ -655,7 +655,7 @@ class OBMLtoOSI:
         self.warnings: list[str] = []
 
     def convert(self) -> dict:
-        osi: dict[str, Any] = {"version": "1.0"}
+        osi: dict[str, Any] = {"version": "0.1.1"}
 
         data_objects = self.obml.get("dataObjects", {})
         obml_dimensions = self.obml.get("dimensions", {})
