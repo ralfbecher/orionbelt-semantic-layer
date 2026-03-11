@@ -883,6 +883,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#single-model-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Single-Model Mode
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -960,7 +971,7 @@
 </nav>
 <div class="obml-version-badge">
   OBML v1.0<br>
-  OrionBelt v0.6.0
+  OrionBelt v0.8.0
 </div>
       
     </li>
@@ -1375,6 +1386,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#single-model-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Single-Model Mode
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1452,7 +1474,7 @@
 </nav>
 <div class="obml-version-badge">
   OBML v1.0<br>
-  OrionBelt v0.6.0
+  OrionBelt v0.8.0
 </div>
                   </div>
                 </div>
@@ -1497,9 +1519,19 @@
 <td>Session-scoped model management, validation, and query compilation</td>
 </tr>
 <tr>
+<td><code>/convert</code></td>
+<td>convert</td>
+<td>OSI ↔ OBML format conversion with validation</td>
+</tr>
+<tr>
 <td><code>/dialects</code></td>
 <td>dialects</td>
 <td>Available SQL dialect info</td>
+</tr>
+<tr>
+<td><code>/settings</code></td>
+<td>settings</td>
+<td>Public configuration (single-model mode, TTL)</td>
 </tr>
 <tr>
 <td><code>/health</code></td>
@@ -1517,6 +1549,15 @@
 <li><strong>Close</strong> — <code>DELETE /sessions/{id}</code> when done (or let TTL expire)</li>
 </ol>
 <p>Sessions automatically expire after 30 minutes of inactivity (configurable via <code>SESSION_TTL_SECONDS</code>).</p>
+<h3 id="single-model-mode">Single-Model Mode<a class="headerlink" href="#single-model-mode" title="Permanent link">&para;</a></h3>
+<p>When the <code>MODEL_FILE</code> environment variable is set, the server runs in <strong>single-model mode</strong>:</p>
+<ol>
+<li><strong>Create a session</strong> — <code>POST /sessions</code> returns a <code>session_id</code> with the model already loaded (<code>model_count: 1</code>)</li>
+<li><strong>List the model</strong> — <code>GET /sessions/{id}/models</code> to get the pre-loaded <code>model_id</code></li>
+<li><strong>Query</strong> — <code>POST /sessions/{id}/query/sql</code> against the pre-loaded model</li>
+<li><strong>Close</strong> — <code>DELETE /sessions/{id}</code> when done (or let TTL expire)</li>
+</ol>
+<p>Model upload (<code>POST /sessions/{id}/models</code>) and removal (<code>DELETE /sessions/{id}/models/{mid}</code>) return <strong>403 Forbidden</strong> in this mode. All other endpoints work normally.</p>
 <h2 id="error-responses">Error Responses<a class="headerlink" href="#error-responses" title="Permanent link">&para;</a></h2>
 <p>All errors follow a consistent format:</p>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="p">{</span>
@@ -1552,6 +1593,11 @@
 <td>400</td>
 <td>Bad Request</td>
 <td>Invalid YAML, unknown dialect, bad operator</td>
+</tr>
+<tr>
+<td>403</td>
+<td>Forbidden</td>
+<td>Model upload/removal in single-model mode</td>
 </tr>
 <tr>
 <td>404</td>
