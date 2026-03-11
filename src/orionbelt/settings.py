@@ -35,3 +35,7 @@ class Settings(BaseSettings):
     session_ttl_seconds: int = 1800  # 30 min inactivity
     session_cleanup_interval: int = 60  # seconds between cleanup sweeps
     disable_session_list: bool = False  # hide GET /sessions endpoint
+
+    # Single-model mode — path to an OBML YAML file that is pre-loaded into
+    # every new session.  When set, model upload/removal endpoints return 403.
+    model_file: str | None = None

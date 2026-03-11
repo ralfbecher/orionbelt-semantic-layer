@@ -95,6 +95,9 @@ Close a session and release its resources.
 
 Load an OBML semantic model into a session. The model is parsed, validated, and stored.
 
+!!! note "Single-model mode"
+    Returns **403 Forbidden** when `MODEL_FILE` is configured. The model is pre-loaded automatically.
+
 **Request:**
 
 ```json
@@ -115,6 +118,8 @@ Load an OBML semantic model into a session. The model is parsed, validated, and 
   "warnings": []
 }
 ```
+
+**Error (403):** Single-model mode: model upload is disabled.
 
 **Error (422):** Model has validation errors.
 
@@ -175,7 +180,12 @@ Describe a model's contents — data objects (with fields and joins), dimensions
 
 Remove a model from a session.
 
+!!! note "Single-model mode"
+    Returns **403 Forbidden** when `MODEL_FILE` is configured.
+
 **Response (204):** No content.
+
+**Error (403):** Single-model mode: model removal is disabled.
 
 **Error (404):** Model or session not found.
 
@@ -340,6 +350,40 @@ The `model_name`, `model_description`, and `ai_instructions` fields are optional
 **Error (400):** Invalid YAML input.
 
 **Error (422):** Conversion failed.
+
+---
+
+## Settings
+
+### `GET /settings`
+
+Return public configuration for API clients (UI, MCP, etc.).
+
+**Response (200):**
+
+```json
+{
+  "single_model_mode": false,
+  "model_yaml": null,
+  "session_ttl_seconds": 1800
+}
+```
+
+When `MODEL_FILE` is configured:
+
+```json
+{
+  "single_model_mode": true,
+  "model_yaml": "version: 1.0\ndataObjects:\n  ...",
+  "session_ttl_seconds": 1800
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `single_model_mode` | bool | Whether model upload/removal is disabled |
+| `model_yaml` | string \| null | Pre-loaded OBML YAML (only when single-model mode is active) |
+| `session_ttl_seconds` | int | Session inactivity timeout |
 
 ---
 

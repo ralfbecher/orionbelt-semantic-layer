@@ -160,6 +160,7 @@ Top-level YAML keys: `version`, `dataObjects`, `dimensions`, `measures`, `metric
 | Method | Path | Description |
 |--------|------|-------------|
 | GET | `/health` | Health check (returns version) |
+| GET | `/settings` | Public config (single-model mode, TTL) |
 | GET | `/dialects` | List 5 dialects with capabilities |
 | POST | `/sessions` | Create session |
 | GET | `/sessions` | List sessions |
@@ -189,6 +190,7 @@ Environment variables or `.env` file (via pydantic-settings):
 | `MCP_SERVER_HOST` / `MCP_SERVER_PORT` | `localhost` / `9000` | MCP bind |
 | `SESSION_TTL_SECONDS` | `1800` | Session timeout |
 | `SESSION_CLEANUP_INTERVAL` | `60` | Cleanup sweep interval |
+| `MODEL_FILE` | — | Path to OBML YAML for single-model mode |
 | `LOG_LEVEL` | `INFO` | Logging level |
 | `API_BASE_URL` | — | API URL for standalone UI |
 | `ROOT_PATH` | — | ASGI root path for UI behind load balancer |

@@ -635,6 +635,16 @@ def _fetch_dialects(api_url: str) -> list[str]:
         return _FALLBACK_DIALECTS
 
 
+def _fetch_settings(api_url: str) -> dict[str, Any]:
+    """Fetch public settings from the API. Returns empty dict on failure."""
+    try:
+        resp = httpx.get(f"{api_url.rstrip('/')}/settings", timeout=5, headers=_API_HEADERS)
+        resp.raise_for_status()
+        return resp.json()  # type: ignore[no-any-return]
+    except Exception:
+        return {}
+
+
 def _ensure_session_and_model(
     model_yaml: str,
     api_url: str,
@@ -656,15 +666,28 @@ def _ensure_session_and_model(
     client = httpx.Client(base_url=api_url, timeout=30, headers=_API_HEADERS)
 
     # Create session if needed
+    preloaded_model_count = 0
     if need_session:
         resp = client.post("/sessions")
         resp.raise_for_status()
-        session_id: str = resp.json()["session_id"]
+        sess_data = resp.json()
+        session_id: str = sess_data["session_id"]
+        preloaded_model_count = sess_data.get("model_count", 0)
         session_state = {"session_id": session_id, "api_url": api_url}
         model_state = None  # force model re-upload on new session
     else:
         assert session_state is not None  # for type narrowing
         session_id = session_state["session_id"]
+
+    # Single-model mode: session already has a pre-loaded model
+    if preloaded_model_count > 0 and model_state is None:
+        resp = client.get(f"/sessions/{session_id}/models")
+        resp.raise_for_status()
+        models = resp.json()
+        if models:
+            model_id = models[0]["model_id"]
+            model_state = {"model_id": model_id, "model_hash": model_hash}
+            return client, session_id, model_id, session_state, model_state
 
     # Upload model if needed
     need_model = model_state is None or model_state.get("model_hash") != model_hash
@@ -687,7 +710,7 @@ def _ensure_session_and_model(
         if resp.status_code == 422:
             raise _ModelValidationError(resp.json().get("detail", resp.text))
         resp.raise_for_status()
-        model_id: str = resp.json()["model_id"]
+        model_id = resp.json()["model_id"]
         model_state = {"model_id": model_id, "model_hash": model_hash}
     else:
         assert model_state is not None  # for type narrowing
@@ -822,9 +845,16 @@ def create_blocks(default_api_url: str | None = None) -> Any:
 
     cohosted = default_api_url is not None
     api_base = default_api_url or _DEFAULT_API_URL
-    example_model = _load_example_model()
     dialects = _fetch_dialects(api_base)
     default_dialect = dialects[0] if dialects else "postgres"
+
+    # Detect single-model mode from the API /settings endpoint
+    api_settings = _fetch_settings(api_base)
+    single_model = api_settings.get("single_model_mode", False)
+    if single_model and api_settings.get("model_yaml"):
+        example_model = api_settings["model_yaml"]
+    else:
+        example_model = _load_example_model()
 
     with gr.Blocks(
         title="OrionBelt Semantic Layer",
@@ -863,17 +893,28 @@ def create_blocks(default_api_url: str | None = None) -> Any:
                         scale=2,
                         visible=not cohosted,
                     )
-                    import_osi_btn = gr.Button("Import OSI", size="sm", scale=0, min_width=100)
+                    import_osi_btn = gr.Button(
+                        "Import OSI",
+                        size="sm",
+                        scale=0,
+                        min_width=100,
+                        visible=not single_model,
+                    )
                     export_osi_btn = gr.Button("Export to OSI", size="sm", scale=0, min_width=120)
 
                 with gr.Row(equal_height=True):
+                    model_label = (
+                        "OBML Model (YAML) \u2014 read-only (single-model mode)"
+                        if single_model
+                        else "OBML Model (YAML) \u2014 schema/obml-schema.json"
+                    )
                     model_input = gr.Code(
                         value=example_model,
                         language="yaml",
-                        label="OBML Model (YAML) \u2014 schema/obml-schema.json",
+                        label=model_label,
                         lines=11,
                         scale=3,
-                        interactive=True,
+                        interactive=not single_model,
                         elem_classes=["code-editor"],
                         elem_id="ob-model",
                     )
@@ -1078,7 +1119,7 @@ def create_blocks(default_api_url: str | None = None) -> Any:
         # ── On page load: restore from BrowserState → visible components ──
         def _restore(sm, sq, sa, sd, sz, ss):  # type: ignore[no-untyped-def]
             return (
-                sm if sm else example_model,
+                example_model if single_model else (sm if sm else example_model),
                 sq if sq else _DEFAULT_QUERY,
                 sa if sa else api_base,
                 sd if sd else default_dialect,
@@ -1086,11 +1127,20 @@ def create_blocks(default_api_url: str | None = None) -> Any:
                 ss if ss else "",
             )
 
+        # In single-model mode, skip injecting the file upload button for the
+        # model editor (it's read-only).  The query upload button still applies.
+        inject_js = _INJECT_UPLOAD_JS
+        if single_model:
+            inject_js = inject_js.replace(
+                "addUploadBtn('ob-model', 'ob-model-bridge');",
+                "/* single-model mode: model upload disabled */",
+            )
+
         demo.load(
             fn=_restore,
             inputs=[saved_model, saved_query, saved_api, saved_dialect, saved_zoom, saved_sql],
             outputs=[model_input, query_input, api_url, dialect, zoom_slider, sql_output],
-        ).then(fn=None, js=_INJECT_UPLOAD_JS)
+        ).then(fn=None, js=inject_js)
 
         # Session cleanup: API sessions expire automatically via SESSION_TTL_SECONDS.
         # Gradio's demo.unload() cannot access gr.State, so we rely on TTL expiry

@@ -79,6 +79,17 @@ class HealthResponse(BaseModel):
     version: str = ""
 
 
+class SettingsResponse(BaseModel):
+    """Response for GET /settings — public configuration for clients."""
+
+    single_model_mode: bool = False
+    model_yaml: str | None = Field(
+        default=None,
+        description="Pre-loaded OBML YAML content (only when single_model_mode is true)",
+    )
+    session_ttl_seconds: int = 1800
+
+
 # ---------------------------------------------------------------------------
 # Session schemas
 # ---------------------------------------------------------------------------

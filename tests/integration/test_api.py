@@ -60,6 +60,25 @@ class TestDialectsEndpoint:
         assert "databricks" in names
 
 
+class TestSettingsEndpoint:
+    async def test_settings_default(self, client: AsyncClient) -> None:
+        response = await client.get("/settings")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["single_model_mode"] is False
+        assert data["model_yaml"] is None
+        assert data["session_ttl_seconds"] == 3600  # from fixture
+
+    async def test_settings_single_model(self, single_model_client: AsyncClient) -> None:
+        response = await single_model_client.get("/settings")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["single_model_mode"] is True
+        assert data["model_yaml"] is not None
+        assert "dataObjects" in data["model_yaml"]
+        assert data["session_ttl_seconds"] == 3600  # from fixture
+
+
 # ---------------------------------------------------------------------------
 # Session endpoints
 # ---------------------------------------------------------------------------
@@ -318,3 +337,117 @@ class TestSessionIsolation:
 
         assert len(models_a) == 1
         assert len(models_b) == 0
+
+
+# ---------------------------------------------------------------------------
+# Single-model mode
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def single_model_app(tmp_path):
+    """Create an app in single-model mode with SAMPLE_MODEL_YAML on disk."""
+    model_file = tmp_path / "model.yaml"
+    model_file.write_text(SAMPLE_MODEL_YAML)
+    settings = Settings(
+        session_ttl_seconds=3600,
+        session_cleanup_interval=9999,
+        model_file=str(model_file),
+    )
+    app = create_app(settings=settings)
+    # Manually init (ASGITransport doesn't trigger lifespan)
+    from orionbelt.api.app import _read_model_file
+
+    preload_yaml = _read_model_file(str(model_file))
+    mgr = SessionManager(
+        ttl_seconds=settings.session_ttl_seconds,
+        cleanup_interval=settings.session_cleanup_interval,
+    )
+    init_session_manager(mgr, preload_model_yaml=preload_yaml)
+    yield app
+    reset_session_manager()
+
+
+@pytest.fixture
+async def single_model_client(single_model_app):
+    transport = ASGITransport(app=single_model_app)
+    async with AsyncClient(transport=transport, base_url="http://test") as c:
+        yield c
+
+
+class TestSingleModelMode:
+    async def test_session_created_with_preloaded_model(
+        self, single_model_client: AsyncClient
+    ) -> None:
+        response = await single_model_client.post("/sessions")
+        assert response.status_code == 201
+        data = response.json()
+        assert data["model_count"] == 1
+
+    async def test_model_upload_blocked(self, single_model_client: AsyncClient) -> None:
+        sid = (await single_model_client.post("/sessions")).json()["session_id"]
+        response = await single_model_client.post(
+            f"/sessions/{sid}/models",
+            json={"model_yaml": SAMPLE_MODEL_YAML},
+        )
+        assert response.status_code == 403
+        assert "model upload is disabled" in response.json()["detail"]
+
+    async def test_model_removal_blocked(self, single_model_client: AsyncClient) -> None:
+        sid = (await single_model_client.post("/sessions")).json()["session_id"]
+        models = (await single_model_client.get(f"/sessions/{sid}/models")).json()
+        mid = models[0]["model_id"]
+        response = await single_model_client.delete(f"/sessions/{sid}/models/{mid}")
+        assert response.status_code == 403
+        assert "model removal is disabled" in response.json()["detail"]
+
+    async def test_query_works_with_preloaded_model(
+        self, single_model_client: AsyncClient
+    ) -> None:
+        sid = (await single_model_client.post("/sessions")).json()["session_id"]
+        models = (await single_model_client.get(f"/sessions/{sid}/models")).json()
+        mid = models[0]["model_id"]
+        response = await single_model_client.post(
+            f"/sessions/{sid}/query/sql",
+            json={
+                "model_id": mid,
+                "query": {
+                    "select": {
+                        "dimensions": ["Customer Country"],
+                        "measures": ["Total Revenue"],
+                    },
+                },
+                "dialect": "postgres",
+            },
+        )
+        assert response.status_code == 200
+        assert "SELECT" in response.json()["sql"]
+
+    async def test_sessions_still_independent(
+        self, single_model_client: AsyncClient
+    ) -> None:
+        """Each session gets its own copy of the preloaded model."""
+        sid_a = (await single_model_client.post("/sessions")).json()["session_id"]
+        sid_b = (await single_model_client.post("/sessions")).json()["session_id"]
+        models_a = (await single_model_client.get(f"/sessions/{sid_a}/models")).json()
+        models_b = (await single_model_client.get(f"/sessions/{sid_b}/models")).json()
+        assert len(models_a) == 1
+        assert len(models_b) == 1
+        # Different model IDs (separate ModelStore instances)
+        assert models_a[0]["model_id"] != models_b[0]["model_id"]
+
+    async def test_validate_still_works(self, single_model_client: AsyncClient) -> None:
+        sid = (await single_model_client.post("/sessions")).json()["session_id"]
+        response = await single_model_client.post(
+            f"/sessions/{sid}/validate",
+            json={"model_yaml": SAMPLE_MODEL_YAML},
+        )
+        assert response.status_code == 200
+        assert response.json()["valid"] is True
+
+    async def test_delete_session_still_works(
+        self, single_model_client: AsyncClient
+    ) -> None:
+        sid = (await single_model_client.post("/sessions")).json()["session_id"]
+        response = await single_model_client.delete(f"/sessions/{sid}")
+        assert response.status_code == 204

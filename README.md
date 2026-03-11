@@ -6,7 +6,7 @@
 
 <p align="center"><strong>Compile YAML semantic models into analytical SQL across multiple database dialects</strong></p>
 
-[![Version 0.7.0](https://img.shields.io/badge/version-0.7.0-purple.svg)](https://github.com/ralfbecher/orionbelt-semantic-layer/releases)
+[![Version 0.8.0](https://img.shields.io/badge/version-0.8.0-purple.svg)](https://github.com/ralfbecher/orionbelt-semantic-layer/releases)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://github.com/ralfbecher/orionbelt-semantic-layer/blob/main/LICENSE)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.128+-009688.svg?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
@@ -360,17 +360,32 @@ The API is available at `http://localhost:8080`. The UI is at `http://localhost:
 
 Configuration is via environment variables or a `.env` file. See `.env.example` for all options:
 
-| Variable                   | Default     | Description                         |
-| -------------------------- | ----------- | ----------------------------------- |
-| `LOG_LEVEL`                | `INFO`      | Logging level                       |
-| `API_SERVER_HOST`          | `localhost` | REST API bind host                  |
-| `API_SERVER_PORT`          | `8000`      | REST API bind port                  |
-| `PORT`                     | —           | Override port (Cloud Run sets this) |
-| `DISABLE_SESSION_LIST`     | `false`     | Disable `GET /sessions` endpoint    |
-| `SESSION_TTL_SECONDS`      | `1800`      | Session inactivity timeout (30 min) |
-| `SESSION_CLEANUP_INTERVAL` | `60`        | Cleanup sweep interval (seconds)    |
-| `API_BASE_URL`             | —           | API URL for standalone UI           |
-| `ROOT_PATH`                | —           | ASGI root path for UI behind LB     |
+| Variable                   | Default     | Description                                    |
+| -------------------------- | ----------- | ---------------------------------------------- |
+| `LOG_LEVEL`                | `INFO`      | Logging level                                  |
+| `API_SERVER_HOST`          | `localhost` | REST API bind host                             |
+| `API_SERVER_PORT`          | `8000`      | REST API bind port                             |
+| `PORT`                     | —           | Override port (Cloud Run sets this)             |
+| `DISABLE_SESSION_LIST`     | `false`     | Disable `GET /sessions` endpoint               |
+| `SESSION_TTL_SECONDS`      | `1800`      | Session inactivity timeout (30 min)            |
+| `SESSION_CLEANUP_INTERVAL` | `60`        | Cleanup sweep interval (seconds)               |
+| `MODEL_FILE`               | —           | Path to OBML YAML for single-model mode        |
+| `API_BASE_URL`             | —           | API URL for standalone UI                      |
+| `ROOT_PATH`                | —           | ASGI root path for UI behind LB                |
+
+### Single-Model Mode
+
+When `MODEL_FILE` is set to a path to an OBML YAML file, the server starts in **single-model mode**:
+
+- The model file is validated at startup (the server refuses to start if it's invalid)
+- Every new session is automatically pre-loaded with the configured model
+- Model upload (`POST /sessions/{id}/models`) and removal (`DELETE /sessions/{id}/models/{id}`) return **403 Forbidden**
+- All other endpoints (sessions, query, validate, diagram, etc.) work normally
+
+```bash
+# Start in single-model mode
+MODEL_FILE=./examples/sem-layer.obml.yml uv run orionbelt-api
+```
 
 ## Development
 

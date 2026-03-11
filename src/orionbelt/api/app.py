@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 import uvicorn
 from fastapi import FastAPI
@@ -18,21 +19,54 @@ from orionbelt.api.middleware import (
     SecurityHeadersMiddleware,
 )
 from orionbelt.api.routers import convert, dialects, reference, sessions
+from orionbelt.api.routers import settings as settings_router
 from orionbelt.api.schemas import HealthResponse
 from orionbelt.service.session_manager import SessionManager
 from orionbelt.settings import Settings
+
+logger = logging.getLogger("orionbelt.api")
+
+
+def _read_model_file(path_str: str) -> str:
+    """Read and validate the MODEL_FILE at startup. Raises on error."""
+    path = Path(path_str)
+    if not path.is_file():
+        raise FileNotFoundError(f"MODEL_FILE not found: {path}")
+    yaml_str = path.read_text(encoding="utf-8")
+    if not yaml_str.strip():
+        raise ValueError(f"MODEL_FILE is empty: {path}")
+    # Validate the model can be parsed (fail fast at startup)
+    from orionbelt.service.model_store import ModelStore
+
+    store = ModelStore()
+    summary = store.validate(yaml_str)
+    if not summary.valid:
+        msgs = "; ".join(e.message for e in summary.errors)
+        raise ValueError(f"MODEL_FILE validation failed: {msgs}")
+    return yaml_str
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     """Start/stop the SessionManager alongside the application."""
     settings: Settings = app.state.settings
+
+    # Read and validate MODEL_FILE before starting (fail fast)
+    preload_yaml: str | None = None
+    if settings.model_file:
+        preload_yaml = _read_model_file(settings.model_file)
+        logger.info("Single-model mode: loaded %s", settings.model_file)
+
     mgr = SessionManager(
         ttl_seconds=settings.session_ttl_seconds,
         cleanup_interval=settings.session_cleanup_interval,
     )
     mgr.start()
-    init_session_manager(mgr, disable_session_list=settings.disable_session_list)
+    init_session_manager(
+        mgr,
+        disable_session_list=settings.disable_session_list,
+        preload_model_yaml=preload_yaml,
+    )
     try:
         yield
     finally:
@@ -67,6 +101,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app.include_router(reference.router, prefix="/reference", tags=["reference"])
 
+    app.include_router(settings_router.router, prefix="/settings", tags=["settings"])
+
     @app.get("/health", response_model=HealthResponse, tags=["health"])
     async def health() -> HealthResponse:
         return HealthResponse(status="ok", version=__version__)
@@ -95,7 +131,6 @@ def main() -> None:
     settings = Settings()
 
     logging.basicConfig(level=settings.log_level.upper())
-    logger = logging.getLogger("orionbelt.api")
     logger.info(
         "OrionBelt API Server v%s starting (host=%s, port=%d)",
         __version__,

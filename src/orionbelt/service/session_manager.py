@@ -57,6 +57,11 @@ class SessionManager:
         self._stop_event = threading.Event()
         self._cleanup_thread: threading.Thread | None = None
 
+    @property
+    def ttl(self) -> int:
+        """Session TTL in seconds."""
+        return self._ttl
+
     # -- lifecycle -----------------------------------------------------------
 
     def start(self) -> None:

@@ -1,0 +1,23 @@
+"""Public settings endpoint: GET /settings."""
+
+from __future__ import annotations
+
+from fastapi import APIRouter, Depends
+
+from orionbelt.api.deps import get_preload_model_yaml, get_session_manager, is_single_model_mode
+from orionbelt.api.schemas import SettingsResponse
+from orionbelt.service.session_manager import SessionManager
+
+router = APIRouter()
+
+
+@router.get("", response_model=SettingsResponse)
+async def get_settings(
+    mgr: SessionManager = Depends(get_session_manager),  # noqa: B008
+) -> SettingsResponse:
+    """Return public configuration for API clients (UI, MCP, etc.)."""
+    return SettingsResponse(
+        single_model_mode=is_single_model_mode(),
+        model_yaml=get_preload_model_yaml() if is_single_model_mode() else None,
+        session_ttl_seconds=mgr.ttl,
+    )

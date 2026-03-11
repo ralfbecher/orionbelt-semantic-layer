@@ -6,7 +6,12 @@ from dataclasses import asdict
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from orionbelt.api.deps import get_session_manager, is_session_list_disabled
+from orionbelt.api.deps import (
+    get_preload_model_yaml,
+    get_session_manager,
+    is_session_list_disabled,
+    is_single_model_mode,
+)
 from orionbelt.api.schemas import (
     DiagramResponse,
     ErrorDetail,
@@ -60,6 +65,15 @@ async def create_session(
     """Create a new session."""
     metadata = body.metadata if body else {}
     info = mgr.create_session(metadata=metadata)
+
+    # Single-model mode: pre-load the configured model into the new session
+    preload_yaml = get_preload_model_yaml()
+    if preload_yaml is not None:
+        store = mgr.get_store(info.session_id)
+        store.load_model(preload_yaml)
+        # Refresh info to reflect the loaded model count
+        info = mgr.get_session(info.session_id)
+
     return _session_response(info)
 
 
@@ -113,6 +127,10 @@ async def load_model(
     mgr: SessionManager = Depends(get_session_manager),  # noqa: B008
 ) -> ModelLoadResponse:
     """Load an OBML model into a session."""
+    if is_single_model_mode():
+        raise HTTPException(
+            status_code=403, detail="Single-model mode: model upload is disabled"
+        )
     store = _get_store(session_id, mgr)
     try:
         result = store.load_model(body.model_yaml)
@@ -201,6 +219,10 @@ async def remove_model(
     mgr: SessionManager = Depends(get_session_manager),  # noqa: B008
 ) -> None:
     """Remove a model from a session."""
+    if is_single_model_mode():
+        raise HTTPException(
+            status_code=403, detail="Single-model mode: model removal is disabled"
+        )
     store = _get_store(session_id, mgr)
     try:
         store.remove_model(model_id)

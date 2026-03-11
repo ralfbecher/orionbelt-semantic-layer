@@ -70,13 +70,18 @@ cp .env.example .env
 
 Key settings:
 
-| Variable                   | Default     | Description                            |
-| -------------------------- | ----------- | -------------------------------------- |
-| `LOG_LEVEL`                | `INFO`      | Logging level                          |
-| `API_SERVER_HOST`          | `localhost` | REST API bind host                     |
-| `API_SERVER_PORT`          | `8000`      | REST API bind port                     |
-| `SESSION_TTL_SECONDS`      | `1800`      | Session inactivity timeout (30 min)    |
-| `SESSION_CLEANUP_INTERVAL` | `60`        | Cleanup sweep interval (seconds)       |
+| Variable                   | Default     | Description                                 |
+| -------------------------- | ----------- | ------------------------------------------- |
+| `LOG_LEVEL`                | `INFO`      | Logging level                               |
+| `API_SERVER_HOST`          | `localhost` | REST API bind host                          |
+| `API_SERVER_PORT`          | `8000`      | REST API bind port                          |
+| `SESSION_TTL_SECONDS`      | `1800`      | Session inactivity timeout (30 min)         |
+| `SESSION_CLEANUP_INTERVAL` | `60`        | Cleanup sweep interval (seconds)            |
+| `MODEL_FILE`               | —           | Path to OBML YAML for single-model mode     |
+
+### Single-Model Mode
+
+Set `MODEL_FILE` to serve a fixed OBML model. Every new session gets the model pre-loaded, and model upload/removal endpoints return 403.
 
 ## Start the Servers
 
