@@ -822,6 +822,28 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#dimension-only-queries" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dimension-Only Queries
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dimension-exclusion-except-pattern" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dimension Exclusion (EXCEPT Pattern)
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1436,6 +1458,28 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#dimension-only-queries" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dimension-Only Queries
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dimension-exclusion-except-pattern" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dimension Exclusion (EXCEPT Pattern)
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1640,6 +1684,11 @@
 <td><code>list[UsePathName]</code></td>
 <td>Secondary join overrides from the query</td>
 </tr>
+<tr>
+<td><code>dimensions_exclude</code></td>
+<td><code>bool</code></td>
+<td>Whether to generate anti-join EXCEPT query</td>
+</tr>
 </tbody>
 </table>
 <h3 id="join-graph">Join Graph<a class="headerlink" href="#join-graph" title="Permanent link">&para;</a></h3>
@@ -1721,15 +1770,49 @@
 </span></code></pre></div>
 <p>On Snowflake, <code>UNION ALL BY NAME</code> is used instead, so each leg only selects its own measures (no NULL padding needed).</p>
 <p>If there is only one fact table, the CFL planner delegates to the Star Schema planner.</p>
+<h3 id="dimension-only-queries">Dimension-Only Queries<a class="headerlink" href="#dimension-only-queries" title="Permanent link">&para;</a></h3>
+<p>Queries with only dimensions (no measures) are supported. When dimensions come from multiple data objects, the resolver selects the best intermediate fact/bridge table as the base object using <code>find_common_root()</code>. If dimensions span independent branches, the CFL planner builds separate legs — each leg joining through its own fact table — and combines them with <code>UNION ALL</code>.</p>
+<h3 id="dimension-exclusion-except-pattern">Dimension Exclusion (EXCEPT Pattern)<a class="headerlink" href="#dimension-exclusion-except-pattern" title="Permanent link">&para;</a></h3>
+<p>When <code>dimensionsExclude: true</code> is set on a dimension-only query, the CFL planner generates an anti-join using SQL <code>EXCEPT</code>:</p>
+<div class="language-sql highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="k">WITH</span><span class="w"> </span><span class="n">dim_group_0</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="p">(</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="k">SELECT</span><span class="w"> </span><span class="k">DISTINCT</span><span class="w"> </span><span class="ss">&quot;Directors&quot;</span><span class="p">.</span><span class="ss">&quot;NAME&quot;</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="ss">&quot;Director&quot;</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span><span class="k">FROM</span><span class="w"> </span><span class="n">directors</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="ss">&quot;Directors&quot;</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="p">),</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="n">dim_group_1</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="p">(</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">  </span><span class="k">SELECT</span><span class="w"> </span><span class="k">DISTINCT</span><span class="w"> </span><span class="ss">&quot;Producers&quot;</span><span class="p">.</span><span class="ss">&quot;NAME&quot;</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="ss">&quot;Producer&quot;</span>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">  </span><span class="k">FROM</span><span class="w"> </span><span class="n">producers</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="ss">&quot;Producers&quot;</span>
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="p">),</span>
+</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="n">all_pairs</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="p">(</span>
+</span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="w">  </span><span class="k">SELECT</span><span class="w"> </span><span class="ss">&quot;dim_group_0&quot;</span><span class="p">.</span><span class="ss">&quot;Director&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">&quot;dim_group_1&quot;</span><span class="p">.</span><span class="ss">&quot;Producer&quot;</span>
+</span><span id="__span-5-11"><a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="w">  </span><span class="k">FROM</span><span class="w"> </span><span class="n">dim_group_0</span><span class="p">,</span><span class="w"> </span><span class="n">dim_group_1</span>
+</span><span id="__span-5-12"><a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="p">),</span>
+</span><span id="__span-5-13"><a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="n">existing_pairs</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="p">(</span>
+</span><span id="__span-5-14"><a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="w">  </span><span class="k">SELECT</span><span class="w"> </span><span class="ss">&quot;Directors&quot;</span><span class="p">.</span><span class="ss">&quot;NAME&quot;</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="ss">&quot;Director&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">&quot;Producers&quot;</span><span class="p">.</span><span class="ss">&quot;NAME&quot;</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="ss">&quot;Producer&quot;</span>
+</span><span id="__span-5-15"><a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a><span class="w">  </span><span class="k">FROM</span><span class="w"> </span><span class="n">movie_directors</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="ss">&quot;Movie Directors&quot;</span>
+</span><span id="__span-5-16"><a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a><span class="w">  </span><span class="k">JOIN</span><span class="w"> </span><span class="n">movies</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="ss">&quot;Movies&quot;</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="p">...</span>
+</span><span id="__span-5-17"><a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a><span class="w">  </span><span class="k">JOIN</span><span class="w"> </span><span class="n">movie_producers</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="ss">&quot;Movie Producers&quot;</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="p">...</span>
+</span><span id="__span-5-18"><a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a><span class="w">  </span><span class="k">JOIN</span><span class="w"> </span><span class="n">directors</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="ss">&quot;Directors&quot;</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="p">...</span>
+</span><span id="__span-5-19"><a id="__codelineno-5-19" name="__codelineno-5-19" href="#__codelineno-5-19"></a><span class="w">  </span><span class="k">JOIN</span><span class="w"> </span><span class="n">producers</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="ss">&quot;Producers&quot;</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="p">...</span>
+</span><span id="__span-5-20"><a id="__codelineno-5-20" name="__codelineno-5-20" href="#__codelineno-5-20"></a><span class="w">  </span><span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="ss">&quot;Directors&quot;</span><span class="p">.</span><span class="ss">&quot;NAME&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">&quot;Producers&quot;</span><span class="p">.</span><span class="ss">&quot;NAME&quot;</span>
+</span><span id="__span-5-21"><a id="__codelineno-5-21" name="__codelineno-5-21" href="#__codelineno-5-21"></a><span class="p">),</span>
+</span><span id="__span-5-22"><a id="__codelineno-5-22" name="__codelineno-5-22" href="#__codelineno-5-22"></a><span class="n">non_combinations</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="p">(</span>
+</span><span id="__span-5-23"><a id="__codelineno-5-23" name="__codelineno-5-23" href="#__codelineno-5-23"></a><span class="w">  </span><span class="k">SELECT</span><span class="w"> </span><span class="p">...</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">all_pairs</span>
+</span><span id="__span-5-24"><a id="__codelineno-5-24" name="__codelineno-5-24" href="#__codelineno-5-24"></a><span class="w">  </span><span class="k">EXCEPT</span>
+</span><span id="__span-5-25"><a id="__codelineno-5-25" name="__codelineno-5-25" href="#__codelineno-5-25"></a><span class="w">  </span><span class="k">SELECT</span><span class="w"> </span><span class="p">...</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">existing_pairs</span>
+</span><span id="__span-5-26"><a id="__codelineno-5-26" name="__codelineno-5-26" href="#__codelineno-5-26"></a><span class="p">)</span>
+</span><span id="__span-5-27"><a id="__codelineno-5-27" name="__codelineno-5-27" href="#__codelineno-5-27"></a><span class="k">SELECT</span><span class="w"> </span><span class="ss">&quot;non_combinations&quot;</span><span class="p">.</span><span class="ss">&quot;Director&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">&quot;non_combinations&quot;</span><span class="p">.</span><span class="ss">&quot;Producer&quot;</span>
+</span><span id="__span-5-28"><a id="__codelineno-5-28" name="__codelineno-5-28" href="#__codelineno-5-28"></a><span class="k">FROM</span><span class="w"> </span><span class="n">non_combinations</span>
+</span></code></pre></div>
+<p>The dimensions are partitioned into independent groups based on the join graph. Each group gets a CTE with distinct values, and the <code>all_pairs</code> CTE uses an implicit cross join (comma-separated FROM) to produce all possible combinations. The <code>EXCEPT</code> clause removes existing combinations found through the fact/bridge tables.</p>
 <h2 id="phase-3-code-generation">Phase 3: Code Generation<a class="headerlink" href="#phase-3-code-generation" title="Permanent link">&para;</a></h2>
 <p><strong>Module:</strong> <code>orionbelt.compiler.codegen</code></p>
 <p>The code generator walks the SQL AST and produces a dialect-specific SQL string. It delegates entirely to the dialect's <code>compile()</code> method.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">CodeGenerator</span><span class="p">:</span>
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dialect</span><span class="p">:</span> <span class="n">Dialect</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_dialect</span> <span class="o">=</span> <span class="n">dialect</span>
-</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>
-</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">generate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ast</span><span class="p">:</span> <span class="n">Select</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dialect</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">ast</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">CodeGenerator</span><span class="p">:</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dialect</span><span class="p">:</span> <span class="n">Dialect</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_dialect</span> <span class="o">=</span> <span class="n">dialect</span>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">generate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ast</span><span class="p">:</span> <span class="n">Select</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dialect</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">ast</span><span class="p">)</span>
 </span></code></pre></div>
 <p>The dialect's <code>compile()</code> method recursively visits each AST node:</p>
 <ul>
@@ -1858,45 +1941,49 @@
 <td><code>UnionAll</code></td>
 <td>UNION ALL of multiple SELECT statements</td>
 </tr>
+<tr>
+<td><code>Except</code></td>
+<td>EXCEPT of two SELECT statements (anti-join)</td>
+</tr>
 </tbody>
 </table>
 <h3 id="querybuilder">QueryBuilder<a class="headerlink" href="#querybuilder" title="Permanent link">&para;</a></h3>
 <p><strong>Module:</strong> <code>orionbelt.ast.builder</code></p>
 <p>Fluent API for constructing AST nodes:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">orionbelt.ast.builder</span><span class="w"> </span><span class="kn">import</span> <span class="n">QueryBuilder</span><span class="p">,</span> <span class="n">col</span><span class="p">,</span> <span class="n">func</span><span class="p">,</span> <span class="n">lit</span><span class="p">,</span> <span class="n">alias</span><span class="p">,</span> <span class="n">eq</span><span class="p">,</span> <span class="n">and_</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="n">query</span> <span class="o">=</span> <span class="p">(</span>
-</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>    <span class="n">QueryBuilder</span><span class="p">()</span>
-</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>    <span class="o">.</span><span class="n">select</span><span class="p">(</span><span class="n">alias</span><span class="p">(</span><span class="n">col</span><span class="p">(</span><span class="s2">&quot;COUNTRY&quot;</span><span class="p">,</span> <span class="s2">&quot;Customers&quot;</span><span class="p">),</span> <span class="s2">&quot;Country&quot;</span><span class="p">))</span>
-</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>    <span class="o">.</span><span class="n">select</span><span class="p">(</span><span class="n">alias</span><span class="p">(</span><span class="n">func</span><span class="p">(</span><span class="s2">&quot;SUM&quot;</span><span class="p">,</span> <span class="n">col</span><span class="p">(</span><span class="s2">&quot;PRICE&quot;</span><span class="p">,</span> <span class="s2">&quot;Orders&quot;</span><span class="p">)),</span> <span class="s2">&quot;Revenue&quot;</span><span class="p">))</span>
-</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>    <span class="o">.</span><span class="n">from_</span><span class="p">(</span><span class="s2">&quot;WAREHOUSE.PUBLIC.ORDERS&quot;</span><span class="p">,</span> <span class="n">alias</span><span class="o">=</span><span class="s2">&quot;Orders&quot;</span><span class="p">)</span>
-</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>    <span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s2">&quot;WAREHOUSE.PUBLIC.CUSTOMERS&quot;</span><span class="p">,</span> <span class="n">on</span><span class="o">=</span><span class="n">eq</span><span class="p">(</span><span class="n">col</span><span class="p">(</span><span class="s2">&quot;CUSTOMER_ID&quot;</span><span class="p">,</span> <span class="s2">&quot;Orders&quot;</span><span class="p">),</span> <span class="n">col</span><span class="p">(</span><span class="s2">&quot;CUSTOMER_ID&quot;</span><span class="p">,</span> <span class="s2">&quot;Customers&quot;</span><span class="p">)),</span> <span class="n">alias</span><span class="o">=</span><span class="s2">&quot;Customers&quot;</span><span class="p">)</span>
-</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>    <span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">col</span><span class="p">(</span><span class="s2">&quot;SEGMENT&quot;</span><span class="p">,</span> <span class="s2">&quot;Customers&quot;</span><span class="p">))</span>
-</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a>    <span class="o">.</span><span class="n">group_by</span><span class="p">(</span><span class="n">col</span><span class="p">(</span><span class="s2">&quot;COUNTRY&quot;</span><span class="p">,</span> <span class="s2">&quot;Customers&quot;</span><span class="p">))</span>
-</span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>    <span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="n">col</span><span class="p">(</span><span class="s2">&quot;Revenue&quot;</span><span class="p">),</span> <span class="n">desc</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-</span><span id="__span-6-12"><a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a>    <span class="o">.</span><span class="n">limit</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span>
-</span><span id="__span-6-13"><a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a>    <span class="o">.</span><span class="n">build</span><span class="p">()</span>
-</span><span id="__span-6-14"><a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">orionbelt.ast.builder</span><span class="w"> </span><span class="kn">import</span> <span class="n">QueryBuilder</span><span class="p">,</span> <span class="n">col</span><span class="p">,</span> <span class="n">func</span><span class="p">,</span> <span class="n">lit</span><span class="p">,</span> <span class="n">alias</span><span class="p">,</span> <span class="n">eq</span><span class="p">,</span> <span class="n">and_</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="n">query</span> <span class="o">=</span> <span class="p">(</span>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>    <span class="n">QueryBuilder</span><span class="p">()</span>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>    <span class="o">.</span><span class="n">select</span><span class="p">(</span><span class="n">alias</span><span class="p">(</span><span class="n">col</span><span class="p">(</span><span class="s2">&quot;COUNTRY&quot;</span><span class="p">,</span> <span class="s2">&quot;Customers&quot;</span><span class="p">),</span> <span class="s2">&quot;Country&quot;</span><span class="p">))</span>
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>    <span class="o">.</span><span class="n">select</span><span class="p">(</span><span class="n">alias</span><span class="p">(</span><span class="n">func</span><span class="p">(</span><span class="s2">&quot;SUM&quot;</span><span class="p">,</span> <span class="n">col</span><span class="p">(</span><span class="s2">&quot;PRICE&quot;</span><span class="p">,</span> <span class="s2">&quot;Orders&quot;</span><span class="p">)),</span> <span class="s2">&quot;Revenue&quot;</span><span class="p">))</span>
+</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>    <span class="o">.</span><span class="n">from_</span><span class="p">(</span><span class="s2">&quot;WAREHOUSE.PUBLIC.ORDERS&quot;</span><span class="p">,</span> <span class="n">alias</span><span class="o">=</span><span class="s2">&quot;Orders&quot;</span><span class="p">)</span>
+</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>    <span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s2">&quot;WAREHOUSE.PUBLIC.CUSTOMERS&quot;</span><span class="p">,</span> <span class="n">on</span><span class="o">=</span><span class="n">eq</span><span class="p">(</span><span class="n">col</span><span class="p">(</span><span class="s2">&quot;CUSTOMER_ID&quot;</span><span class="p">,</span> <span class="s2">&quot;Orders&quot;</span><span class="p">),</span> <span class="n">col</span><span class="p">(</span><span class="s2">&quot;CUSTOMER_ID&quot;</span><span class="p">,</span> <span class="s2">&quot;Customers&quot;</span><span class="p">)),</span> <span class="n">alias</span><span class="o">=</span><span class="s2">&quot;Customers&quot;</span><span class="p">)</span>
+</span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>    <span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">col</span><span class="p">(</span><span class="s2">&quot;SEGMENT&quot;</span><span class="p">,</span> <span class="s2">&quot;Customers&quot;</span><span class="p">))</span>
+</span><span id="__span-7-10"><a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>    <span class="o">.</span><span class="n">group_by</span><span class="p">(</span><span class="n">col</span><span class="p">(</span><span class="s2">&quot;COUNTRY&quot;</span><span class="p">,</span> <span class="s2">&quot;Customers&quot;</span><span class="p">))</span>
+</span><span id="__span-7-11"><a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a>    <span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="n">col</span><span class="p">(</span><span class="s2">&quot;Revenue&quot;</span><span class="p">),</span> <span class="n">desc</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="__span-7-12"><a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a>    <span class="o">.</span><span class="n">limit</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span>
+</span><span id="__span-7-13"><a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a>    <span class="o">.</span><span class="n">build</span><span class="p">()</span>
+</span><span id="__span-7-14"><a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a><span class="p">)</span>
 </span></code></pre></div>
 <h2 id="pipeline-orchestration">Pipeline Orchestration<a class="headerlink" href="#pipeline-orchestration" title="Permanent link">&para;</a></h2>
 <p><strong>Module:</strong> <code>orionbelt.compiler.pipeline</code></p>
 <p>The <code>CompilationPipeline</code> ties all phases together:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">CompilationPipeline</span><span class="p">:</span>
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">compile</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">query</span><span class="p">:</span> <span class="n">QueryObject</span><span class="p">,</span> <span class="n">model</span><span class="p">:</span> <span class="n">SemanticModel</span><span class="p">,</span> <span class="n">dialect_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">CompilationResult</span><span class="p">:</span>
-</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>        <span class="c1"># Phase 1: Resolution</span>
-</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>        <span class="n">resolved</span> <span class="o">=</span> <span class="n">QueryResolver</span><span class="p">()</span><span class="o">.</span><span class="n">resolve</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">model</span><span class="p">)</span>
-</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>
-</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>        <span class="c1"># Phase 2: Planning</span>
-</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>        <span class="k">if</span> <span class="n">resolved</span><span class="o">.</span><span class="n">requires_cfl</span><span class="p">:</span>
-</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>            <span class="n">plan</span> <span class="o">=</span> <span class="n">CFLPlanner</span><span class="o">.</span><span class="n">plan</span><span class="p">(</span><span class="n">resolved</span><span class="p">,</span> <span class="n">model</span><span class="p">)</span>
-</span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>        <span class="k">else</span><span class="p">:</span>
-</span><span id="__span-7-10"><a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>            <span class="n">plan</span> <span class="o">=</span> <span class="n">StarSchemaPlanner</span><span class="o">.</span><span class="n">plan</span><span class="p">(</span><span class="n">resolved</span><span class="p">,</span> <span class="n">model</span><span class="p">)</span>
-</span><span id="__span-7-11"><a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a>
-</span><span id="__span-7-12"><a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a>        <span class="c1"># Phase 3: Code Generation</span>
-</span><span id="__span-7-13"><a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a>        <span class="n">dialect</span> <span class="o">=</span> <span class="n">DialectRegistry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">dialect_name</span><span class="p">)</span>
-</span><span id="__span-7-14"><a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a>        <span class="n">sql</span> <span class="o">=</span> <span class="n">CodeGenerator</span><span class="p">(</span><span class="n">dialect</span><span class="p">)</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span><span class="n">plan</span><span class="o">.</span><span class="n">ast</span><span class="p">)</span>
-</span><span id="__span-7-15"><a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a>
-</span><span id="__span-7-16"><a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a>        <span class="k">return</span> <span class="n">CompilationResult</span><span class="p">(</span><span class="n">sql</span><span class="o">=</span><span class="n">sql</span><span class="p">,</span> <span class="n">dialect</span><span class="o">=</span><span class="n">dialect_name</span><span class="p">,</span> <span class="n">resolved</span><span class="o">=...</span><span class="p">,</span> <span class="n">warnings</span><span class="o">=...</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">CompilationPipeline</span><span class="p">:</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">compile</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">query</span><span class="p">:</span> <span class="n">QueryObject</span><span class="p">,</span> <span class="n">model</span><span class="p">:</span> <span class="n">SemanticModel</span><span class="p">,</span> <span class="n">dialect_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">CompilationResult</span><span class="p">:</span>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>        <span class="c1"># Phase 1: Resolution</span>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>        <span class="n">resolved</span> <span class="o">=</span> <span class="n">QueryResolver</span><span class="p">()</span><span class="o">.</span><span class="n">resolve</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">model</span><span class="p">)</span>
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>        <span class="c1"># Phase 2: Planning</span>
+</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>        <span class="k">if</span> <span class="n">resolved</span><span class="o">.</span><span class="n">requires_cfl</span><span class="p">:</span>
+</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>            <span class="n">plan</span> <span class="o">=</span> <span class="n">CFLPlanner</span><span class="o">.</span><span class="n">plan</span><span class="p">(</span><span class="n">resolved</span><span class="p">,</span> <span class="n">model</span><span class="p">)</span>
+</span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>        <span class="k">else</span><span class="p">:</span>
+</span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>            <span class="n">plan</span> <span class="o">=</span> <span class="n">StarSchemaPlanner</span><span class="o">.</span><span class="n">plan</span><span class="p">(</span><span class="n">resolved</span><span class="p">,</span> <span class="n">model</span><span class="p">)</span>
+</span><span id="__span-8-11"><a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a>
+</span><span id="__span-8-12"><a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a>        <span class="c1"># Phase 3: Code Generation</span>
+</span><span id="__span-8-13"><a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a>        <span class="n">dialect</span> <span class="o">=</span> <span class="n">DialectRegistry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">dialect_name</span><span class="p">)</span>
+</span><span id="__span-8-14"><a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a>        <span class="n">sql</span> <span class="o">=</span> <span class="n">CodeGenerator</span><span class="p">(</span><span class="n">dialect</span><span class="p">)</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span><span class="n">plan</span><span class="o">.</span><span class="n">ast</span><span class="p">)</span>
+</span><span id="__span-8-15"><a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a>
+</span><span id="__span-8-16"><a id="__codelineno-8-16" name="__codelineno-8-16" href="#__codelineno-8-16"></a>        <span class="k">return</span> <span class="n">CompilationResult</span><span class="p">(</span><span class="n">sql</span><span class="o">=</span><span class="n">sql</span><span class="p">,</span> <span class="n">dialect</span><span class="o">=</span><span class="n">dialect_name</span><span class="p">,</span> <span class="n">resolved</span><span class="o">=...</span><span class="p">,</span> <span class="n">warnings</span><span class="o">=...</span><span class="p">)</span>
 </span></code></pre></div>
 <p>The <code>CompilationResult</code> includes:</p>
 <table>
