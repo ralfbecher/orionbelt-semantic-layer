@@ -227,7 +227,7 @@ class CTE:
     """Common Table Expression: WITH name AS (query or UNION ALL)."""
 
     name: str
-    query: Select | UnionAll
+    query: Select | UnionAll | Except
 
 
 @dataclass(frozen=True)
@@ -251,3 +251,11 @@ class UnionAll:
     """UNION ALL of multiple SELECT statements."""
 
     queries: list[Select] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class Except:
+    """EXCEPT of two SELECT statements: left EXCEPT right."""
+
+    left: Select
+    right: Select

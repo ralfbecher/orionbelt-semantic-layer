@@ -72,6 +72,7 @@ class ResolvedQuery:
     measure_source_objects: set[str] = field(default_factory=set)
     metric_components: dict[str, ResolvedMeasure] = field(default_factory=dict)
     use_path_names: list[UsePathName] = field(default_factory=list)
+    dimensions_exclude: bool = False
 
     @property
     def fact_tables(self) -> list[str]:
@@ -151,6 +152,47 @@ class QueryResolver:
             unreachable = ctx.result.measure_source_objects - reachable - {ctx.result.base_object}
             if unreachable:
                 ctx.result.requires_cfl = True
+
+        # Dimension-only CFL: when no measures but dimensions span
+        # independent branches unreachable from the base object.
+        if not ctx.result.measure_source_objects and ctx.result.dimensions:
+            graph = JoinGraph(model, use_path_names=query.use_path_names or None)
+            reachable = graph.descendants(ctx.result.base_object) | {ctx.result.base_object}
+            dim_objects = {d.object_name for d in ctx.result.dimensions}
+            if not dim_objects <= reachable:
+                ctx.result.requires_cfl = True
+
+        # Validate dimensionsExclude constraints
+        if query.dimensions_exclude:
+            if query.select.measures:
+                ctx.errors.append(
+                    SemanticError(
+                        code="DIMENSIONS_EXCLUDE_WITH_MEASURES",
+                        message="dimensionsExclude cannot be combined with measures",
+                        path="select",
+                    )
+                )
+            elif len(ctx.result.dimensions) < 2:
+                ctx.errors.append(
+                    SemanticError(
+                        code="DIMENSIONS_EXCLUDE_INSUFFICIENT",
+                        message="dimensionsExclude requires at least 2 dimensions",
+                        path="select.dimensions",
+                    )
+                )
+            elif not ctx.result.requires_cfl:
+                ctx.errors.append(
+                    SemanticError(
+                        code="DIMENSIONS_EXCLUDE_NOT_INDEPENDENT",
+                        message=(
+                            "dimensionsExclude requires dimensions on at least "
+                            "2 independent branches"
+                        ),
+                        path="select.dimensions",
+                    )
+                )
+            else:
+                ctx.result.dimensions_exclude = True
 
         # 4. Validate usePathNames before building join graph
         self._validate_use_path_names(ctx, query.use_path_names)
@@ -404,6 +446,15 @@ class QueryResolver:
                     best_joins = n
             if best:
                 return best
+
+        # Dimension-only: use JoinGraph to find the deepest ancestor
+        # (possibly an intermediate fact/bridge table) that can reach
+        # all required dimension objects via directed join paths.
+        if len(ctx.result.required_objects) > 1:
+            graph = JoinGraph(ctx.model, use_path_names=ctx.result.use_path_names or None)
+            root = graph.find_common_root(ctx.result.required_objects)
+            if root:
+                return root
 
         for obj_name in sorted(ctx.result.required_objects):
             obj = ctx.model.data_objects.get(obj_name)

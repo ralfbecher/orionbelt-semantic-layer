@@ -109,5 +109,6 @@ class QueryObject(BaseModel):
     order_by: list[QueryOrderBy] = Field([], alias="order_by")
     limit: int | None = None
     use_path_names: list[UsePathName] = Field([], alias="usePathNames")
+    dimensions_exclude: bool = Field(False, alias="dimensionsExclude")
 
     model_config = {"populate_by_name": True}

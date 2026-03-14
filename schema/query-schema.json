@@ -155,6 +155,11 @@
       "items": {
         "$ref": "#/definitions/usePathName"
       }
+    },
+    "dimensionsExclude": {
+      "type": "boolean",
+      "description": "When true, returns dimension value combinations that do NOT exist in the data (anti-join via EXCEPT). Requires 2+ dimensions on independent branches and no measures.",
+      "default": false
     }
   },
   "required": ["select"],

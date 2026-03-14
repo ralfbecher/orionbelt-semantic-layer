@@ -12,6 +12,7 @@ from orionbelt.ast.nodes import (
     CaseExpr,
     Cast,
     ColumnRef,
+    Except,
     Expr,
     From,
     FunctionCall,
@@ -191,6 +192,8 @@ class Dialect(ABC):
             for cte in node.ctes:
                 if isinstance(cte.query, UnionAll):
                     cte_sql = self.compile_union_all(cte.query)
+                elif isinstance(cte.query, Except):
+                    cte_sql = self.compile_except(cte.query)
                 else:
                     cte_sql = self.compile_select(cte.query)
                 cte_parts.append(f"{self.quote_identifier(cte.name)} AS (\n{cte_sql}\n)")
@@ -277,6 +280,10 @@ class Dialect(ABC):
     def compile_union_all(self, node: UnionAll) -> str:
         """Compile a UNION ALL of multiple SELECT statements."""
         return "\nUNION ALL\n".join(self.compile_select(q) for q in node.queries)
+
+    def compile_except(self, node: Except) -> str:
+        """Compile an EXCEPT of two SELECT statements."""
+        return self.compile_select(node.left) + "\nEXCEPT\n" + self.compile_select(node.right)
 
     def compile_expr(self, expr: Expr) -> str:
         """Compile an expression node to SQL string."""
