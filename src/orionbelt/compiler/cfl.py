@@ -313,9 +313,22 @@ class CFLPlanner:
             leg_builder = QueryBuilder()
             this_measure_names = {m.name for m in measures}
 
-            # SELECT conformed dimensions
+            # Compute reachability from this leg's fact object upfront
+            reachable = graph.descendants(obj_name) | {obj_name}
+
+            # SELECT conformed dimensions — only emit real column refs for
+            # dimensions reachable from this leg's fact; NULL-pad the rest.
             for dim in resolved.dimensions:
-                col = ColumnRef(name=dim.source_column, table=dim.object_name)
+                if dim.object_name in reachable:
+                    col: Expr = ColumnRef(name=dim.source_column, table=dim.object_name)
+                else:
+                    model_dim = model.dimensions.get(dim.name)
+                    dim_type = model_dim.result_type.value if model_dim else None
+                    col = (
+                        Cast(Literal.null(), type_name=dim_type)
+                        if dim_type
+                        else Literal.null()
+                    )
                 leg_builder.select(AliasedExpr(expr=col, alias=dim.name))
 
             # SELECT this fact's measures (raw expressions, no aggregation)
@@ -355,7 +368,12 @@ class CFLPlanner:
             # Determine the common root for this leg:
             # the deepest directed ancestor that can reach all dimension
             # objects, measure's source object, and filter-referenced objects.
-            leg_required = {dim.object_name for dim in resolved.dimensions}
+            # Only include dimensions reachable from this leg's fact object.
+            leg_required = {
+                dim.object_name
+                for dim in resolved.dimensions
+                if dim.object_name in reachable
+            }
             leg_required.add(obj_name)
             leg_required.update(filter_objects)
             lead = graph.find_common_root(leg_required)
