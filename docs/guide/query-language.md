@@ -147,6 +147,60 @@ query = QueryObject(
 
 If a `usePathNames` entry references a non-existent data object or pathName, the query will return a resolution error.
 
+## Dimension Exclusion (Anti-Join)
+
+The `dimensionsExclude` flag inverts a dimension-only query to return value combinations that do **not** exist in the data. This is useful for finding missing relationships — for example, directors and producers who have never collaborated on a movie.
+
+```yaml
+select:
+  dimensions:
+    - Director
+    - Producer
+dimensionsExclude: true
+```
+
+This generates an anti-join query using SQL `EXCEPT`:
+
+1. **All possible combinations** — A `CROSS JOIN` of the distinct values from each independent dimension group
+2. **Existing combinations** — The actual dimension pairs found through the fact/bridge tables
+3. **Result** — All combinations `EXCEPT` existing ones
+
+### Constraints
+
+- **No measures allowed** — `dimensionsExclude` only works with dimension-only queries (no measures or metrics)
+- **2+ dimensions required** — At least two dimensions from independent branches are needed
+- **Independent branches** — The dimensions must come from data objects on separate branches of the join graph (connected through intermediate fact/bridge tables, not directly joined to each other)
+
+### In Python
+
+```python
+from orionbelt.models.query import QueryObject, QuerySelect
+
+query = QueryObject(
+    select=QuerySelect(dimensions=["Director", "Producer"]),
+    dimensions_exclude=True,
+)
+```
+
+### In JSON
+
+```json
+{
+  "select": {
+    "dimensions": ["Director", "Producer"]
+  },
+  "dimensionsExclude": true
+}
+```
+
+### Error Codes
+
+| Error Code | Cause |
+|------------|-------|
+| `DIMENSIONS_EXCLUDE_WITH_MEASURES` | Query includes measures — not allowed with `dimensionsExclude` |
+| `DIMENSIONS_EXCLUDE_INSUFFICIENT` | Fewer than 2 dimensions specified |
+| `DIMENSIONS_EXCLUDE_NOT_INDEPENDENT` | All dimensions come from the same branch (no meaningful exclusion possible) |
+
 ## Filters
 
 Filters restrict the result set. **Dimension filters** go in `where` (become SQL `WHERE`), and **measure filters** go in `having` (become SQL `HAVING`).
@@ -303,6 +357,9 @@ Invalid queries return error responses:
 | `INVALID_FILTER_OPERATOR` | 400 | Unrecognized filter operator |
 | `INVALID_RELATIVE_FILTER` | 400 | Malformed relative time filter |
 | `AMBIGUOUS_JOIN` | 422 | Multiple join paths possible |
+| `DIMENSIONS_EXCLUDE_WITH_MEASURES` | 400 | `dimensionsExclude` used with measures |
+| `DIMENSIONS_EXCLUDE_INSUFFICIENT` | 400 | `dimensionsExclude` with fewer than 2 dimensions |
+| `DIMENSIONS_EXCLUDE_NOT_INDEPENDENT` | 400 | `dimensionsExclude` dimensions not on independent branches |
 
 ## Semantics Summary
 
@@ -314,3 +371,4 @@ Invalid queries return error responses:
 | `having` | `HAVING` clause |
 | `order_by` | `ORDER BY` clause |
 | `limit` | `LIMIT` clause |
+| `dimensionsExclude` | Anti-join via `CROSS JOIN` + `EXCEPT` (dimension-only) |

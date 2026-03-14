@@ -59,6 +59,7 @@ The output of resolution contains everything the planner needs:
 | `limit` | `int | None` | Row limit |
 | `requires_cfl` | `bool` | Whether multi-fact CFL planning is needed |
 | `use_path_names` | `list[UsePathName]` | Secondary join overrides from the query |
+| `dimensions_exclude` | `bool` | Whether to generate anti-join EXCEPT query |
 
 ### Join Graph
 
@@ -158,6 +159,47 @@ On Snowflake, `UNION ALL BY NAME` is used instead, so each leg only selects its 
 
 If there is only one fact table, the CFL planner delegates to the Star Schema planner.
 
+### Dimension-Only Queries
+
+Queries with only dimensions (no measures) are supported. When dimensions come from multiple data objects, the resolver selects the best intermediate fact/bridge table as the base object using `find_common_root()`. If dimensions span independent branches, the CFL planner builds separate legs — each leg joining through its own fact table — and combines them with `UNION ALL`.
+
+### Dimension Exclusion (EXCEPT Pattern)
+
+When `dimensionsExclude: true` is set on a dimension-only query, the CFL planner generates an anti-join using SQL `EXCEPT`:
+
+```sql
+WITH dim_group_0 AS (
+  SELECT DISTINCT "Directors"."NAME" AS "Director"
+  FROM directors AS "Directors"
+),
+dim_group_1 AS (
+  SELECT DISTINCT "Producers"."NAME" AS "Producer"
+  FROM producers AS "Producers"
+),
+all_pairs AS (
+  SELECT "dim_group_0"."Director", "dim_group_1"."Producer"
+  FROM dim_group_0, dim_group_1
+),
+existing_pairs AS (
+  SELECT "Directors"."NAME" AS "Director", "Producers"."NAME" AS "Producer"
+  FROM movie_directors AS "Movie Directors"
+  JOIN movies AS "Movies" ON ...
+  JOIN movie_producers AS "Movie Producers" ON ...
+  JOIN directors AS "Directors" ON ...
+  JOIN producers AS "Producers" ON ...
+  GROUP BY "Directors"."NAME", "Producers"."NAME"
+),
+non_combinations AS (
+  SELECT ... FROM all_pairs
+  EXCEPT
+  SELECT ... FROM existing_pairs
+)
+SELECT "non_combinations"."Director", "non_combinations"."Producer"
+FROM non_combinations
+```
+
+The dimensions are partitioned into independent groups based on the join graph. Each group gets a CTE with distinct values, and the `all_pairs` CTE uses an implicit cross join (comma-separated FROM) to produce all possible combinations. The `EXCEPT` clause removes existing combinations found through the fact/bridge tables.
+
 ## Phase 3: Code Generation
 
 **Module:** `orionbelt.compiler.codegen`
@@ -217,6 +259,7 @@ All SQL is generated from an immutable AST — never by string concatenation. Th
 | `OrderByItem` | ORDER BY item (expression, direction, nulls handling) |
 | `CTE` | Common Table Expression (name + SELECT or UNION ALL query) |
 | `UnionAll` | UNION ALL of multiple SELECT statements |
+| `Except` | EXCEPT of two SELECT statements (anti-join) |
 
 ### QueryBuilder
 
