@@ -373,6 +373,54 @@ _INJECT_UPLOAD_JS = (
         }
     }
 
+    /*
+     * Fix copy button for non-HTTPS contexts.
+     * navigator.clipboard.writeText() requires a secure context (HTTPS/localhost).
+     * We intercept copy button clicks, stop Gradio's handler, and use a fallback.
+     */
+    function fallbackCopy(text) {
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+    }
+
+    function patchCopyBtn(codeId) {
+        var root = document.getElementById(codeId);
+        if (!root || root._ob_copy_patched) return;
+        /* Gradio Code toolbar has <button> elements with SVG icons.
+         * The copy button is a <button> (not <a>) that is not our upload btn.
+         * The download is an <a> element, so querySelectorAll('button') skips it. */
+        var btns = root.querySelectorAll('button');
+        btns.forEach(function(btn) {
+            if (btn.classList.contains('ob-upload-btn')) return;
+            if (!btn.querySelector('svg')) return;
+            /* Clone and replace to strip all existing Gradio listeners */
+            var clone = btn.cloneNode(true);
+            btn.parentNode.replaceChild(clone, btn);
+            clone.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+                var lines = root.querySelectorAll('.cm-content .cm-line');
+                if (!lines.length) return;
+                var text = Array.from(lines).map(function(l) { return l.textContent; }).join('\n');
+                if (navigator.clipboard && window.isSecureContext) {
+                    navigator.clipboard.writeText(text).catch(function() {
+                        fallbackCopy(text);
+                    });
+                } else {
+                    fallbackCopy(text);
+                }
+            });
+        });
+        root._ob_copy_patched = true;
+    }
+
     /* Retry — components render asynchronously. */
     var attempts = 0;
     var iv = setInterval(function() {
@@ -381,6 +429,9 @@ _INJECT_UPLOAD_JS = (
         patchDownloads('ob-model', 'obml.yml');
         patchDownloads('ob-query', 'query.yml');
         patchDownloads('ob-sql', 'query.sql');
+        patchCopyBtn('ob-model');
+        patchCopyBtn('ob-query');
+        patchCopyBtn('ob-sql');
         if (++attempts >= 10) clearInterval(iv);
     }, 300);
 
@@ -766,6 +817,10 @@ def compile_sql(
                 model_state,
             )
 
+        # Auto-unwrap if user included a top-level "query:" key
+        if "query" in query_dict and "select" not in query_dict:
+            query_dict = query_dict["query"]
+
         # Compile query
         resp = client.post(
             f"/sessions/{session_id}/query/sql",
@@ -858,6 +913,8 @@ def create_blocks(default_api_url: str | None = None) -> Any:
 
     with gr.Blocks(
         title="OrionBelt Semantic Layer",
+        css=_CSS,
+        js=_DARK_MODE_INIT_JS,
     ) as demo:
         # ── Browser-persisted state (localStorage via Gradio BrowserState) ──
         saved_model = gr.BrowserState("", storage_key="ob_model_yaml")

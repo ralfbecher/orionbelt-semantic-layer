@@ -71,7 +71,7 @@ docs = [
     "mkdocstrings[python]>=1.0",
 ]
 ui = [
-    "gradio>=5.0",
+    "gradio>=5.0,<6.0",
 ]
 
 [build-system]

@@ -115,11 +115,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     try:
         import gradio as gr
 
-        from orionbelt.ui.app import _CSS, _DARK_MODE_INIT_JS, create_blocks
+        from orionbelt.ui.app import create_blocks
 
         api_url = f"http://localhost:{settings.effective_port}"
         demo = create_blocks(default_api_url=api_url)
-        app = gr.mount_gradio_app(app, demo, path="/ui", css=_CSS, js=_DARK_MODE_INIT_JS)
+        app = gr.mount_gradio_app(app, demo, path="/ui")
     except ImportError:
         pass  # gradio not installed — skip UI mount
 
