@@ -1227,7 +1227,7 @@ def create_ui() -> None:
         from fastapi import FastAPI
 
         app = FastAPI()
-        app = gr.mount_gradio_app(app, demo, path=root_path, css=_CSS, js=_DARK_MODE_INIT_JS)
+        app = gr.mount_gradio_app(app, demo, path=root_path)
         uvicorn.run(
             app,
             host="0.0.0.0",
@@ -1241,8 +1241,6 @@ def create_ui() -> None:
         demo.launch(
             server_name="0.0.0.0",
             server_port=port,
-            css=_CSS,
-            js=_DARK_MODE_INIT_JS,
         )
 
 
