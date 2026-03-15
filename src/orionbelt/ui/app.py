@@ -839,9 +839,9 @@ def compile_sql(
         sql_valid: bool = data.get("sql_valid", True)
         header_lines: list[str] = []
         if not sql_valid:
-            header_lines.append("WARNING: SQL validation failed")
+            header_lines.append("-- WARNING: SQL validation failed")
         for w in warnings:
-            header_lines.append(f"WARNING: {w}")
+            header_lines.append(f"-- WARNING: {w}")
         if header_lines:
             header_lines.append("")  # blank line before SQL
             return "\n".join(header_lines) + "\n" + formatted, session_state, model_state
