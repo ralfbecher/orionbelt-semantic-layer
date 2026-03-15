@@ -345,6 +345,300 @@ class TestDetectFanout:
         detect_fanout(resolved, model)  # should not raise
 
 
+class TestJunctionTableFanout:
+    """Fanout through junction/bridge tables is resolved by GROUP BY dimensions."""
+
+    @staticmethod
+    def _make_movies_model() -> SemanticModel:
+        """Build the movies model: Movies ← MovieDirectors → Directors,
+        Movies ← MovieProducers → Producers."""
+        movies = DataObject(
+            label="Movies", code="movies", database="demo", schema_name="movies",
+            columns={
+                "Movie ID": DataObjectColumn(
+                    label="Movie ID", code="movie_id", abstract_type=DataType.INT
+                ),
+                "Title": DataObjectColumn(
+                    label="Title", code="title", abstract_type=DataType.STRING
+                ),
+            },
+        )
+        directors = DataObject(
+            label="Directors", code="directors", database="demo", schema_name="movies",
+            columns={
+                "Director ID": DataObjectColumn(
+                    label="Director ID", code="director_id", abstract_type=DataType.INT
+                ),
+                "Director Name": DataObjectColumn(
+                    label="Director Name", code="name", abstract_type=DataType.STRING
+                ),
+            },
+        )
+        producers = DataObject(
+            label="Producers", code="producers", database="demo", schema_name="movies",
+            columns={
+                "Producer ID": DataObjectColumn(
+                    label="Producer ID", code="producer_id", abstract_type=DataType.INT
+                ),
+                "Producer Name": DataObjectColumn(
+                    label="Producer Name", code="name", abstract_type=DataType.STRING
+                ),
+            },
+        )
+        movie_directors = DataObject(
+            label="Movie Directors", code="movie_directors",
+            database="demo", schema_name="movies",
+            columns={
+                "Movie ID": DataObjectColumn(
+                    label="Movie ID", code="movie_id", abstract_type=DataType.INT
+                ),
+                "Director ID": DataObjectColumn(
+                    label="Director ID", code="director_id", abstract_type=DataType.INT
+                ),
+            },
+            joins=[
+                DataObjectJoin(
+                    join_type=Cardinality.MANY_TO_ONE,
+                    join_to="Movies",
+                    columns_from=["Movie ID"],
+                    columns_to=["Movie ID"],
+                ),
+                DataObjectJoin(
+                    join_type=Cardinality.MANY_TO_ONE,
+                    join_to="Directors",
+                    columns_from=["Director ID"],
+                    columns_to=["Director ID"],
+                ),
+            ],
+        )
+        movie_producers = DataObject(
+            label="Movie Producers", code="movie_producers",
+            database="demo", schema_name="movies",
+            columns={
+                "Movie ID": DataObjectColumn(
+                    label="Movie ID", code="movie_id", abstract_type=DataType.INT
+                ),
+                "Producer ID": DataObjectColumn(
+                    label="Producer ID", code="producer_id", abstract_type=DataType.INT
+                ),
+            },
+            joins=[
+                DataObjectJoin(
+                    join_type=Cardinality.MANY_TO_ONE,
+                    join_to="Movies",
+                    columns_from=["Movie ID"],
+                    columns_to=["Movie ID"],
+                ),
+                DataObjectJoin(
+                    join_type=Cardinality.MANY_TO_ONE,
+                    join_to="Producers",
+                    columns_from=["Producer ID"],
+                    columns_to=["Producer ID"],
+                ),
+            ],
+        )
+        return SemanticModel(
+            data_objects={
+                "Movies": movies,
+                "Directors": directors,
+                "Producers": producers,
+                "Movie Directors": movie_directors,
+                "Movie Producers": movie_producers,
+            },
+            dimensions={
+                "Director": Dimension(
+                    label="Director", view="Directors",
+                    column="Director Name", result_type=DataType.STRING,
+                ),
+                "Producer": Dimension(
+                    label="Producer", view="Producers",
+                    column="Producer Name", result_type=DataType.STRING,
+                ),
+            },
+            measures={
+                "Movies Cnt": Measure(
+                    label="Movies Cnt",
+                    columns=[{"dataObject": "Movies", "column": "Movie ID"}],
+                    result_type=DataType.INT,
+                    aggregation="count",
+                ),
+            },
+        )
+
+    def test_junction_fanout_resolved_both_dims(self) -> None:
+        """Director + Producer + Movies Cnt: fanout through both junctions
+        is resolved because both dimensions are in GROUP BY.
+        COUNT is additive → warnings emitted for each junction."""
+        model = self._make_movies_model()
+        resolved = ResolvedQuery(
+            dimensions=[
+                ResolvedDimension(
+                    name="Director", object_name="Directors",
+                    column_name="Director Name", source_column="name",
+                ),
+                ResolvedDimension(
+                    name="Producer", object_name="Producers",
+                    column_name="Producer Name", source_column="name",
+                ),
+            ],
+            measures=[
+                ResolvedMeasure(
+                    name="Movies Cnt", aggregation="count",
+                    expression=FunctionCall(
+                        name="COUNT",
+                        args=[ColumnRef(name="movie_id", table="Movies")],
+                    ),
+                ),
+            ],
+            base_object="Movies",
+            required_objects={
+                "Movies", "Movie Directors", "Directors",
+                "Movie Producers", "Producers",
+            },
+            join_steps=[
+                # Movies ← Movie Directors (reversed many-to-one)
+                JoinStep(
+                    from_object="Movie Directors", to_object="Movies",
+                    from_columns=["Movie ID"], to_columns=["Movie ID"],
+                    join_type=ASTJoinType.LEFT,
+                    cardinality=Cardinality.MANY_TO_ONE, reversed=True,
+                ),
+                # Movie Directors → Directors (forward many-to-one)
+                JoinStep(
+                    from_object="Movie Directors", to_object="Directors",
+                    from_columns=["Director ID"], to_columns=["Director ID"],
+                    join_type=ASTJoinType.LEFT,
+                    cardinality=Cardinality.MANY_TO_ONE, reversed=False,
+                ),
+                # Movies ← Movie Producers (reversed many-to-one)
+                JoinStep(
+                    from_object="Movie Producers", to_object="Movies",
+                    from_columns=["Movie ID"], to_columns=["Movie ID"],
+                    join_type=ASTJoinType.LEFT,
+                    cardinality=Cardinality.MANY_TO_ONE, reversed=True,
+                ),
+                # Movie Producers → Producers (forward many-to-one)
+                JoinStep(
+                    from_object="Movie Producers", to_object="Producers",
+                    from_columns=["Producer ID"], to_columns=["Producer ID"],
+                    join_type=ASTJoinType.LEFT,
+                    cardinality=Cardinality.MANY_TO_ONE, reversed=False,
+                ),
+            ],
+            measure_source_objects={"Movies"},
+        )
+        detect_fanout(resolved, model)  # should NOT raise
+        # COUNT is additive — two junctions produce two warnings
+        assert len(resolved.warnings) == 2
+        assert all("cross-join" in w for w in resolved.warnings)
+        assert any("Movie Directors" in w for w in resolved.warnings)
+        assert any("Movie Producers" in w for w in resolved.warnings)
+
+    def test_junction_fanout_resolved_single_dim(self) -> None:
+        """Director + Movies Cnt (no Producer): fanout through Movie Directors
+        is resolved because Director is in GROUP BY."""
+        model = self._make_movies_model()
+        resolved = ResolvedQuery(
+            dimensions=[
+                ResolvedDimension(
+                    name="Director", object_name="Directors",
+                    column_name="Director Name", source_column="name",
+                ),
+            ],
+            measures=[
+                ResolvedMeasure(
+                    name="Movies Cnt", aggregation="count",
+                    expression=FunctionCall(
+                        name="COUNT",
+                        args=[ColumnRef(name="movie_id", table="Movies")],
+                    ),
+                ),
+            ],
+            base_object="Movies",
+            required_objects={"Movies", "Movie Directors", "Directors"},
+            join_steps=[
+                JoinStep(
+                    from_object="Movie Directors", to_object="Movies",
+                    from_columns=["Movie ID"], to_columns=["Movie ID"],
+                    join_type=ASTJoinType.LEFT,
+                    cardinality=Cardinality.MANY_TO_ONE, reversed=True,
+                ),
+                JoinStep(
+                    from_object="Movie Directors", to_object="Directors",
+                    from_columns=["Director ID"], to_columns=["Director ID"],
+                    join_type=ASTJoinType.LEFT,
+                    cardinality=Cardinality.MANY_TO_ONE, reversed=False,
+                ),
+            ],
+            measure_source_objects={"Movies"},
+        )
+        detect_fanout(resolved, model)  # should NOT raise
+        assert len(resolved.warnings) == 1
+        assert "Movie Directors" in resolved.warnings[0]
+
+    def test_junction_no_warning_for_non_additive(self) -> None:
+        """MIN/MAX aggregations don't produce inflated totals — no warning."""
+        model = self._make_movies_model()
+        # Override measure to use MAX
+        model.measures["Movies Cnt"] = Measure(
+            label="Movies Cnt",
+            columns=[{"dataObject": "Movies", "column": "Movie ID"}],
+            result_type=DataType.INT,
+            aggregation="max",
+        )
+        resolved = ResolvedQuery(
+            dimensions=[
+                ResolvedDimension(
+                    name="Director", object_name="Directors",
+                    column_name="Director Name", source_column="name",
+                ),
+            ],
+            measures=[
+                ResolvedMeasure(
+                    name="Movies Cnt", aggregation="max",
+                    expression=FunctionCall(
+                        name="MAX",
+                        args=[ColumnRef(name="movie_id", table="Movies")],
+                    ),
+                ),
+            ],
+            base_object="Movies",
+            required_objects={"Movies", "Movie Directors", "Directors"},
+            join_steps=[
+                JoinStep(
+                    from_object="Movie Directors", to_object="Movies",
+                    from_columns=["Movie ID"], to_columns=["Movie ID"],
+                    join_type=ASTJoinType.LEFT,
+                    cardinality=Cardinality.MANY_TO_ONE, reversed=True,
+                ),
+                JoinStep(
+                    from_object="Movie Directors", to_object="Directors",
+                    from_columns=["Director ID"], to_columns=["Director ID"],
+                    join_type=ASTJoinType.LEFT,
+                    cardinality=Cardinality.MANY_TO_ONE, reversed=False,
+                ),
+            ],
+            measure_source_objects={"Movies"},
+        )
+        detect_fanout(resolved, model)  # should NOT raise
+        assert len(resolved.warnings) == 0  # MAX is not additive — no warning
+
+    def test_pipeline_junction_fanout_compiles(self) -> None:
+        """Full pipeline: Director + Producer + Movies Cnt should compile."""
+        model = self._make_movies_model()
+        query = QueryObject(
+            select=QuerySelect(
+                dimensions=["Director", "Producer"],
+                measures=["Movies Cnt"],
+            )
+        )
+        pipeline = CompilationPipeline()
+        result = pipeline.compile(query, model, "postgres")
+        assert "COUNT" in result.sql
+        assert result.resolved.dimensions == ["Director", "Producer"]
+        assert result.resolved.measures == ["Movies Cnt"]
+
+
 # -- Pipeline integration test ----------------------------------------------
 
 

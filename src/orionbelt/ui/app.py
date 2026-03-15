@@ -16,26 +16,26 @@ _API_HEADERS = {"User-Agent": "OrionBelt-UI/1.0"}
 
 
 def _format_api_errors(detail: Any) -> str:
-    """Format API error detail into readable SQL-commented lines."""
+    """Format API error detail into readable lines."""
     if isinstance(detail, dict):
         lines: list[str] = []
         if detail.get("error"):
-            lines.append(f"-- {detail['error']}")
+            lines.append(detail["error"])
         for err in detail.get("errors", []):
             code = err.get("code", "ERROR")
             msg = err.get("message", "")
             path = err.get("path", "")
-            line = f"--   [{code}] {msg}"
+            line = f"  [{code}] {msg}"
             if path:
                 line += f"  (at {path})"
             lines.append(line)
         for warn in detail.get("warnings", []):
             if isinstance(warn, dict):
-                lines.append(f"--   [WARNING] {warn.get('message', warn)}")
+                lines.append(f"  [WARNING] {warn.get('message', warn)}")
             else:
-                lines.append(f"--   [WARNING] {warn}")
-        return "\n".join(lines) if lines else f"-- {detail}"
-    return f"-- {detail}"
+                lines.append(f"  [WARNING] {warn}")
+        return "\n".join(lines) if lines else str(detail)
+    return str(detail)
 
 
 _DEFAULT_QUERY = """\
@@ -473,29 +473,29 @@ def _format_convert_status(
     validation: dict[str, Any],
 ) -> str:
     """Build status lines from a /convert API response."""
-    lines: list[str] = [f"-- {direction}"]
+    lines: list[str] = [direction]
     for w in warnings:
-        lines.append(f"-- WARNING: {w}")
+        lines.append(f"WARNING: {w}")
     schema_ok = "✓" if validation.get("schema_valid", True) else (
         f"{len(validation.get('schema_errors', []))} error(s)"
     )
     sem_ok = "✓" if validation.get("semantic_valid", True) else (
         f"{len(validation.get('semantic_errors', []))} error(s)"
     )
-    lines.append(f"-- Validation: JSON Schema {schema_ok} | Semantic {sem_ok}")
+    lines.append(f"Validation: JSON Schema {schema_ok} | Semantic {sem_ok}")
     for e in validation.get("schema_errors", []):
-        lines.append(f"-- Schema error: {e}")
+        lines.append(f"Schema error: {e}")
     for e in validation.get("semantic_errors", []):
-        lines.append(f"-- Semantic error: {e}")
+        lines.append(f"Semantic error: {e}")
     for w in validation.get("semantic_warnings", []):
-        lines.append(f"-- Validation warning: {w}")
+        lines.append(f"Validation warning: {w}")
     return "\n".join(lines)
 
 
 def _import_osi(osi_yaml: str, api_base: str) -> tuple[str, str]:
     """Convert OSI YAML to OBML via the API. Returns ``(obml_yaml, status)``."""
     if not osi_yaml or not osi_yaml.strip():
-        return "", "-- Error: No OSI YAML content provided"
+        return "", "Error: No OSI YAML content provided"
 
     try:
         resp = httpx.post(
@@ -506,10 +506,10 @@ def _import_osi(osi_yaml: str, api_base: str) -> tuple[str, str]:
         )
         if resp.status_code != 200:
             detail = resp.json().get("detail", resp.text)
-            return "", f"-- Error: {detail}"
+            return "", f"Error: {detail}"
         data = resp.json()
     except Exception as exc:
-        return "", f"-- Error: OSI → OBML conversion failed\n-- {exc}"
+        return "", f"Error: OSI → OBML conversion failed\n{exc}"
 
     status = _format_convert_status(
         "OSI → OBML Import", data.get("warnings", []), data.get("validation", {})
@@ -520,7 +520,7 @@ def _import_osi(osi_yaml: str, api_base: str) -> tuple[str, str]:
 def _export_to_osi(obml_yaml: str, api_base: str) -> str:
     """Convert OBML YAML to OSI via the API. Returns status + OSI YAML."""
     if not obml_yaml or not obml_yaml.strip():
-        return "-- Error: No OBML model YAML to export"
+        return "Error: No OBML model YAML to export"
 
     try:
         resp = httpx.post(
@@ -531,16 +531,16 @@ def _export_to_osi(obml_yaml: str, api_base: str) -> str:
         )
         if resp.status_code != 200:
             detail = resp.json().get("detail", resp.text)
-            return f"-- Error: {detail}"
+            return f"Error: {detail}"
         data = resp.json()
     except Exception as exc:
-        return f"-- Error: OBML → OSI conversion failed\n-- {exc}"
+        return f"Error: OBML → OSI conversion failed\n{exc}"
 
     status = _format_convert_status(
         "OBML → OSI Export", data.get("warnings", []), data.get("validation", {})
     )
     output: str = data.get("output_yaml", "")
-    return status + "\n-- Copy the OSI YAML output below.\n\n" + output
+    return status + "\nCopy the OSI YAML output below.\n\n" + output
 
 
 def _format_sql(sql: str) -> str:
@@ -795,11 +795,11 @@ def compile_sql(
         try:
             query_dict = yaml.safe_load(query_yaml)
         except yaml.YAMLError as exc:
-            return f"-- Error: Invalid query YAML\n-- {exc}", session_state, model_state
+            return f"Error: Invalid query YAML\n{exc}", session_state, model_state
 
         if not isinstance(query_dict, dict):
             return (
-                "-- Error: Query YAML must be a mapping (dict), not a scalar or list",
+                "Error: Query YAML must be a mapping (dict), not a scalar or list",
                 session_state,
                 model_state,
             )
@@ -825,7 +825,7 @@ def compile_sql(
         if resp.status_code in (400, 422):
             detail = resp.json().get("detail", resp.text)
             return (
-                f"-- Error: Query compilation failed\n{_format_api_errors(detail)}",
+                f"Error: Query compilation failed\n{_format_api_errors(detail)}",
                 session_state,
                 model_state,
             )
@@ -839,9 +839,9 @@ def compile_sql(
         sql_valid: bool = data.get("sql_valid", True)
         header_lines: list[str] = []
         if not sql_valid:
-            header_lines.append("-- ⚠ SQL validation failed")
+            header_lines.append("WARNING: SQL validation failed")
         for w in warnings:
-            header_lines.append(f"-- WARNING: {w}")
+            header_lines.append(f"WARNING: {w}")
         if header_lines:
             header_lines.append("")  # blank line before SQL
             return "\n".join(header_lines) + "\n" + formatted, session_state, model_state
@@ -849,26 +849,26 @@ def compile_sql(
 
     except _ModelValidationError as exc:
         return (
-            f"-- Error: Model validation failed\n{_format_api_errors(exc.detail)}",
+            f"Error: Model validation failed\n{_format_api_errors(exc.detail)}",
             session_state,
             model_state,
         )
     except httpx.ConnectError:
         api = api_url.rstrip("/") if api_url else _DEFAULT_API_URL
         return (
-            f"-- Error: Cannot connect to API at {api}\n"
-            "-- Make sure the server is running: uv run orionbelt-api",
+            f"Error: Cannot connect to API at {api}\n"
+            "Make sure the server is running: uv run orionbelt-api",
             session_state,
             model_state,
         )
     except httpx.HTTPStatusError as exc:
         return (
-            f"-- Error: HTTP {exc.response.status_code}\n-- {exc.response.text}",
+            f"Error: HTTP {exc.response.status_code}\n{exc.response.text}",
             session_state,
             model_state,
         )
     except Exception as exc:
-        return f"-- Error: {exc}", session_state, model_state
+        return f"Error: {exc}", session_state, model_state
 
 
 def create_blocks(default_api_url: str | None = None) -> Any:
