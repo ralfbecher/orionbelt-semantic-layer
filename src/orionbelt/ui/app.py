@@ -277,9 +277,16 @@ _INJECT_UPLOAD_JS = (
         if (!el) return;
         var ta = el.querySelector('textarea') || el.querySelector('input');
         if (!ta) return;
-        ta.value = content;
+        /* Clear first so Gradio always sees a state change,
+         * even if the same file is loaded twice. */
+        ta.value = '';
         ta.dispatchEvent(new Event('input', {bubbles: true}));
         ta.dispatchEvent(new Event('change', {bubbles: true}));
+        setTimeout(function() {
+            ta.value = content;
+            ta.dispatchEvent(new Event('input', {bubbles: true}));
+            ta.dispatchEvent(new Event('change', {bubbles: true}));
+        }, 50);
     }
 
     function addUploadBtn(codeId, bridgeId) {
@@ -881,7 +888,7 @@ def create_blocks(default_api_url: str | None = None) -> Any:
     cohosted = default_api_url is not None
     api_base = default_api_url or _DEFAULT_API_URL
     dialects = _fetch_dialects(api_base)
-    default_dialect = dialects[0] if dialects else "postgres"
+    default_dialect = "postgres" if "postgres" in dialects else (dialects[0] if dialects else "postgres")
 
     # Detect single-model mode from the API /settings endpoint
     api_settings = _fetch_settings(api_base)

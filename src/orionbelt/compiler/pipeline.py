@@ -65,7 +65,7 @@ class CompilationPipeline:
         )
 
         # Phase 2: Planning (star schema or CFL)
-        if resolved.requires_cfl:
+        if resolved.requires_cfl or resolved.dimensions_exclude:
             plan = self._cfl_planner.plan(resolved, model, qualify_table=qualify_table)
         else:
             plan = self._star_planner.plan(resolved, model, qualify_table=qualify_table)

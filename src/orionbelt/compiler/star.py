@@ -83,18 +83,27 @@ class StarSchemaPlanner:
         # FROM: base fact table
         builder.from_(qualify(base_object), alias=base_alias)
 
-        # JOINs: dimension tables
+        # JOINs: dimension and intermediate tables
+        joined = {base_alias}
         for step in resolved.join_steps:
-            target_object = model.data_objects.get(step.to_object)
-            if not target_object:
+            # Determine which side of the step needs to be joined
+            if step.to_object not in joined:
+                new_object = step.to_object
+            elif step.from_object not in joined:
+                new_object = step.from_object
+            else:
+                continue  # both already joined
+            obj = model.data_objects.get(new_object)
+            if not obj:
                 continue
             on_expr = graph.build_join_condition(step)
             builder.join(
-                table=qualify(target_object),
+                table=qualify(obj),
                 on=on_expr,
                 join_type=step.join_type,
-                alias=step.to_object,
+                alias=new_object,
             )
+            joined.add(new_object)
 
         # WHERE
         for wf in resolved.where_filters:

@@ -153,14 +153,18 @@ class QueryResolver:
             if unreachable:
                 ctx.result.requires_cfl = True
 
-        # Dimension-only CFL: when no measures but dimensions span
-        # independent branches unreachable from the base object.
+        # Dimension-only queries: when dimensions span independent branches,
+        # join through intermediate bridge/fact tables (no CFL needed).
+        # Add intermediate tables from the join steps to required_objects
+        # so the star schema planner includes them.
         if not ctx.result.measure_source_objects and ctx.result.dimensions:
-            graph = JoinGraph(model, use_path_names=query.use_path_names or None)
-            reachable = graph.descendants(ctx.result.base_object) | {ctx.result.base_object}
             dim_objects = {d.object_name for d in ctx.result.dimensions}
-            if not dim_objects <= reachable:
-                ctx.result.requires_cfl = True
+            if not dim_objects <= {ctx.result.base_object}:
+                graph = JoinGraph(model, use_path_names=query.use_path_names or None)
+                steps = graph.find_join_path({ctx.result.base_object}, dim_objects)
+                for step in steps:
+                    ctx.result.required_objects.add(step.from_object)
+                    ctx.result.required_objects.add(step.to_object)
 
         # Validate dimensionsExclude constraints
         if query.dimensions_exclude:
@@ -180,19 +184,26 @@ class QueryResolver:
                         path="select.dimensions",
                     )
                 )
-            elif not ctx.result.requires_cfl:
-                ctx.errors.append(
-                    SemanticError(
-                        code="DIMENSIONS_EXCLUDE_NOT_INDEPENDENT",
-                        message=(
-                            "dimensionsExclude requires dimensions on at least "
-                            "2 independent branches"
-                        ),
-                        path="select.dimensions",
-                    )
-                )
             else:
-                ctx.result.dimensions_exclude = True
+                # Check if dimensions are on independent branches
+                graph = JoinGraph(model, use_path_names=query.use_path_names or None)
+                reachable = graph.descendants(ctx.result.base_object) | {
+                    ctx.result.base_object
+                }
+                dim_objects = {d.object_name for d in ctx.result.dimensions}
+                if dim_objects <= reachable:
+                    ctx.errors.append(
+                        SemanticError(
+                            code="DIMENSIONS_EXCLUDE_NOT_INDEPENDENT",
+                            message=(
+                                "dimensionsExclude requires dimensions on at least "
+                                "2 independent branches"
+                            ),
+                            path="select.dimensions",
+                        )
+                    )
+                else:
+                    ctx.result.dimensions_exclude = True
 
         # 4. Validate usePathNames before building join graph
         self._validate_use_path_names(ctx, query.use_path_names)
