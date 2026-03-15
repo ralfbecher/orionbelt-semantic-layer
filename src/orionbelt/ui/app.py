@@ -374,51 +374,34 @@ _INJECT_UPLOAD_JS = (
     }
 
     /*
-     * Fix copy button for non-HTTPS contexts.
+     * Fix clipboard for non-HTTPS contexts (e.g. http://35.187.174.102).
      * navigator.clipboard.writeText() requires a secure context (HTTPS/localhost).
-     * We intercept copy button clicks, stop Gradio's handler, and use a fallback.
+     * Polyfill it globally so Gradio's own copy buttons use the fallback.
      */
-    function fallbackCopy(text) {
-        var ta = document.createElement('textarea');
-        ta.value = text;
-        ta.style.position = 'fixed';
-        ta.style.left = '-9999px';
-        document.body.appendChild(ta);
-        ta.select();
-        document.execCommand('copy');
-        document.body.removeChild(ta);
-    }
-
-    function patchCopyBtn(codeId) {
-        var root = document.getElementById(codeId);
-        if (!root || root._ob_copy_patched) return;
-        /* Gradio Code toolbar has <button> elements with SVG icons.
-         * The copy button is a <button> (not <a>) that is not our upload btn.
-         * The download is an <a> element, so querySelectorAll('button') skips it. */
-        var btns = root.querySelectorAll('button');
-        btns.forEach(function(btn) {
-            if (btn.classList.contains('ob-upload-btn')) return;
-            if (!btn.querySelector('svg')) return;
-            /* Clone and replace to strip all existing Gradio listeners */
-            var clone = btn.cloneNode(true);
-            btn.parentNode.replaceChild(clone, btn);
-            clone.addEventListener('click', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                e.stopImmediatePropagation();
-                var lines = root.querySelectorAll('.cm-content .cm-line');
-                if (!lines.length) return;
-                var text = Array.from(lines).map(function(l) { return l.textContent; }).join('\n');
-                if (navigator.clipboard && window.isSecureContext) {
-                    navigator.clipboard.writeText(text).catch(function() {
-                        fallbackCopy(text);
-                    });
-                } else {
-                    fallbackCopy(text);
+    if (!window.isSecureContext) {
+        if (!navigator.clipboard) {
+            navigator.clipboard = {};
+        }
+        navigator.clipboard.writeText = function(text) {
+            return new Promise(function(resolve, reject) {
+                var ta = document.createElement('textarea');
+                ta.value = text;
+                ta.style.position = 'fixed';
+                ta.style.left = '-9999px';
+                ta.style.top = '-9999px';
+                document.body.appendChild(ta);
+                ta.focus();
+                ta.select();
+                try {
+                    document.execCommand('copy');
+                    resolve();
+                } catch (err) {
+                    reject(err);
+                } finally {
+                    document.body.removeChild(ta);
                 }
             });
-        });
-        root._ob_copy_patched = true;
+        };
     }
 
     /* Retry — components render asynchronously. */
@@ -429,9 +412,6 @@ _INJECT_UPLOAD_JS = (
         patchDownloads('ob-model', 'obml.yml');
         patchDownloads('ob-query', 'query.yml');
         patchDownloads('ob-sql', 'query.sql');
-        patchCopyBtn('ob-model');
-        patchCopyBtn('ob-query');
-        patchCopyBtn('ob-sql');
         if (++attempts >= 10) clearInterval(iv);
     }, 300);
 
