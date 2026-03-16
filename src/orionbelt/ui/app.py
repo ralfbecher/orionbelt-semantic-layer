@@ -896,7 +896,9 @@ def create_blocks(default_api_url: str | None = None) -> Any:
     cohosted = default_api_url is not None
     api_base = default_api_url or _DEFAULT_API_URL
     dialects = _fetch_dialects(api_base)
-    default_dialect = "postgres" if "postgres" in dialects else (dialects[0] if dialects else "postgres")
+    default_dialect = (
+        "postgres" if "postgres" in dialects else (dialects[0] if dialects else "postgres")
+    )
 
     # Detect single-model mode from the API /settings endpoint
     api_settings = _fetch_settings(api_base)
