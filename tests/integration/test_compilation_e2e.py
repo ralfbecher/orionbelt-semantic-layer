@@ -116,7 +116,7 @@ class TestEndToEndCompilation:
 
     @pytest.mark.parametrize(
         "dialect",
-        ["bigquery", "clickhouse", "databricks", "dremio", "duckdb", "postgres", "snowflake"]
+        ["bigquery", "clickhouse", "databricks", "dremio", "duckdb", "postgres", "snowflake"],
     )
     def test_all_dialects(
         self, model: SemanticModel, pipeline: CompilationPipeline, dialect: str
@@ -133,7 +133,7 @@ class TestEndToEndCompilation:
 
     @pytest.mark.parametrize(
         "dialect",
-        ["bigquery", "clickhouse", "databricks", "dremio", "duckdb", "postgres", "snowflake"]
+        ["bigquery", "clickhouse", "databricks", "dremio", "duckdb", "postgres", "snowflake"],
     )
     def test_metric_revenue_per_order_all_dialects(
         self, model: SemanticModel, pipeline: CompilationPipeline, dialect: str
@@ -170,7 +170,7 @@ class TestEndToEndCompilation:
 
     @pytest.mark.parametrize(
         "dialect",
-        ["bigquery", "clickhouse", "databricks", "dremio", "duckdb", "postgres", "snowflake"]
+        ["bigquery", "clickhouse", "databricks", "dremio", "duckdb", "postgres", "snowflake"],
     )
     def test_total_measure_all_dialects(
         self, model: SemanticModel, pipeline: CompilationPipeline, dialect: str
@@ -190,7 +190,7 @@ class TestEndToEndCompilation:
 
     @pytest.mark.parametrize(
         "dialect",
-        ["bigquery", "clickhouse", "databricks", "dremio", "duckdb", "postgres", "snowflake"]
+        ["bigquery", "clickhouse", "databricks", "dremio", "duckdb", "postgres", "snowflake"],
     )
     def test_total_with_regular_measure_all_dialects(
         self, model: SemanticModel, pipeline: CompilationPipeline, dialect: str
@@ -210,7 +210,7 @@ class TestEndToEndCompilation:
 
     @pytest.mark.parametrize(
         "dialect",
-        ["bigquery", "clickhouse", "databricks", "dremio", "duckdb", "postgres", "snowflake"]
+        ["bigquery", "clickhouse", "databricks", "dremio", "duckdb", "postgres", "snowflake"],
     )
     def test_revenue_share_metric_all_dialects(
         self, model: SemanticModel, pipeline: CompilationPipeline, dialect: str

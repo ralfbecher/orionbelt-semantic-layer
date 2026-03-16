@@ -100,9 +100,7 @@ def _build_schema(model_id: str, model: SemanticModel) -> SchemaResponse:
             result_type=m.result_type.value,
             aggregation=m.aggregation,
             expression=m.expression,
-            columns=[
-                {"dataObject": c.view or "", "column": c.column or ""} for c in m.columns
-            ],
+            columns=[{"dataObject": c.view or "", "column": c.column or ""} for c in m.columns],
             distinct=m.distinct,
             total=m.total,
             format=m.format,
@@ -204,9 +202,7 @@ def _build_explain(name: str, model: SemanticModel) -> ExplainResponse:
         met = model.metrics[name]
         lineage = [
             ExplainLineageItem(type="metric", name=name, detail="composite metric"),
-            ExplainLineageItem(
-                type="expression", name=met.expression, detail="metric formula"
-            ),
+            ExplainLineageItem(type="expression", name=met.expression, detail="metric formula"),
         ]
         component_names = re.findall(r"\{\[([^\]]+)\]\}", met.expression)
         for comp_name in component_names:
@@ -253,9 +249,7 @@ def _search_model(model: SemanticModel, query: str, types: list[str]) -> list[Se
     if "data_object" in types:
         for name, obj in model.data_objects.items():
             if q in name.lower():
-                results.append(
-                    SearchResultItem(type="data_object", name=name, match_field="name")
-                )
+                results.append(SearchResultItem(type="data_object", name=name, match_field="name"))
             elif any(q in s.lower() for s in obj.synonyms):
                 results.append(
                     SearchResultItem(type="data_object", name=name, match_field="synonym")

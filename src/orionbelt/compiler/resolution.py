@@ -187,9 +187,7 @@ class QueryResolver:
             else:
                 # Check if dimensions are on independent branches
                 graph = JoinGraph(model, use_path_names=query.use_path_names or None)
-                reachable = graph.descendants(ctx.result.base_object) | {
-                    ctx.result.base_object
-                }
+                reachable = graph.descendants(ctx.result.base_object) | {ctx.result.base_object}
                 dim_objects = {d.object_name for d in ctx.result.dimensions}
                 if dim_objects <= reachable:
                     ctx.errors.append(

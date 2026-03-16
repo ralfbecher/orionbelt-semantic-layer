@@ -5,8 +5,8 @@ from __future__ import annotations
 import pytest
 
 from orionbelt.ast.nodes import BinaryOp, ColumnRef, Literal, RelativeDateRange
-from orionbelt.compiler.pipeline import CompilationPipeline
 from orionbelt.compiler.expr_parser import parse_expression, tokenize_metric_formula
+from orionbelt.compiler.pipeline import CompilationPipeline
 from orionbelt.compiler.resolution import QueryResolver, ResolutionError
 from orionbelt.compiler.star import StarSchemaPlanner
 from orionbelt.models.query import (

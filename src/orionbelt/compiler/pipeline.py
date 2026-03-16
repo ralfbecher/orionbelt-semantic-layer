@@ -173,8 +173,7 @@ class CompilationPipeline:
         explain_joins: list[ExplainJoin] = []
         for step in resolved.join_steps:
             join_cols = [
-                f"{fc} = {tc}"
-                for fc, tc in zip(step.from_columns, step.to_columns, strict=True)
+                f"{fc} = {tc}" for fc, tc in zip(step.from_columns, step.to_columns, strict=True)
             ]
             if step.reversed:
                 reason = (

@@ -353,7 +353,10 @@ class TestJunctionTableFanout:
         """Build the movies model: Movies ← MovieDirectors → Directors,
         Movies ← MovieProducers → Producers."""
         movies = DataObject(
-            label="Movies", code="movies", database="demo", schema_name="movies",
+            label="Movies",
+            code="movies",
+            database="demo",
+            schema_name="movies",
             columns={
                 "Movie ID": DataObjectColumn(
                     label="Movie ID", code="movie_id", abstract_type=DataType.INT
@@ -364,7 +367,10 @@ class TestJunctionTableFanout:
             },
         )
         directors = DataObject(
-            label="Directors", code="directors", database="demo", schema_name="movies",
+            label="Directors",
+            code="directors",
+            database="demo",
+            schema_name="movies",
             columns={
                 "Director ID": DataObjectColumn(
                     label="Director ID", code="director_id", abstract_type=DataType.INT
@@ -375,7 +381,10 @@ class TestJunctionTableFanout:
             },
         )
         producers = DataObject(
-            label="Producers", code="producers", database="demo", schema_name="movies",
+            label="Producers",
+            code="producers",
+            database="demo",
+            schema_name="movies",
             columns={
                 "Producer ID": DataObjectColumn(
                     label="Producer ID", code="producer_id", abstract_type=DataType.INT
@@ -386,8 +395,10 @@ class TestJunctionTableFanout:
             },
         )
         movie_directors = DataObject(
-            label="Movie Directors", code="movie_directors",
-            database="demo", schema_name="movies",
+            label="Movie Directors",
+            code="movie_directors",
+            database="demo",
+            schema_name="movies",
             columns={
                 "Movie ID": DataObjectColumn(
                     label="Movie ID", code="movie_id", abstract_type=DataType.INT
@@ -412,8 +423,10 @@ class TestJunctionTableFanout:
             ],
         )
         movie_producers = DataObject(
-            label="Movie Producers", code="movie_producers",
-            database="demo", schema_name="movies",
+            label="Movie Producers",
+            code="movie_producers",
+            database="demo",
+            schema_name="movies",
             columns={
                 "Movie ID": DataObjectColumn(
                     label="Movie ID", code="movie_id", abstract_type=DataType.INT
@@ -447,12 +460,16 @@ class TestJunctionTableFanout:
             },
             dimensions={
                 "Director": Dimension(
-                    label="Director", view="Directors",
-                    column="Director Name", result_type=DataType.STRING,
+                    label="Director",
+                    view="Directors",
+                    column="Director Name",
+                    result_type=DataType.STRING,
                 ),
                 "Producer": Dimension(
-                    label="Producer", view="Producers",
-                    column="Producer Name", result_type=DataType.STRING,
+                    label="Producer",
+                    view="Producers",
+                    column="Producer Name",
+                    result_type=DataType.STRING,
                 ),
             },
             measures={
@@ -473,17 +490,22 @@ class TestJunctionTableFanout:
         resolved = ResolvedQuery(
             dimensions=[
                 ResolvedDimension(
-                    name="Director", object_name="Directors",
-                    column_name="Director Name", source_column="name",
+                    name="Director",
+                    object_name="Directors",
+                    column_name="Director Name",
+                    source_column="name",
                 ),
                 ResolvedDimension(
-                    name="Producer", object_name="Producers",
-                    column_name="Producer Name", source_column="name",
+                    name="Producer",
+                    object_name="Producers",
+                    column_name="Producer Name",
+                    source_column="name",
                 ),
             ],
             measures=[
                 ResolvedMeasure(
-                    name="Movies Cnt", aggregation="count",
+                    name="Movies Cnt",
+                    aggregation="count",
                     expression=FunctionCall(
                         name="COUNT",
                         args=[ColumnRef(name="movie_id", table="Movies")],
@@ -492,37 +514,52 @@ class TestJunctionTableFanout:
             ],
             base_object="Movies",
             required_objects={
-                "Movies", "Movie Directors", "Directors",
-                "Movie Producers", "Producers",
+                "Movies",
+                "Movie Directors",
+                "Directors",
+                "Movie Producers",
+                "Producers",
             },
             join_steps=[
                 # Movies ← Movie Directors (reversed many-to-one)
                 JoinStep(
-                    from_object="Movie Directors", to_object="Movies",
-                    from_columns=["Movie ID"], to_columns=["Movie ID"],
+                    from_object="Movie Directors",
+                    to_object="Movies",
+                    from_columns=["Movie ID"],
+                    to_columns=["Movie ID"],
                     join_type=ASTJoinType.LEFT,
-                    cardinality=Cardinality.MANY_TO_ONE, reversed=True,
+                    cardinality=Cardinality.MANY_TO_ONE,
+                    reversed=True,
                 ),
                 # Movie Directors → Directors (forward many-to-one)
                 JoinStep(
-                    from_object="Movie Directors", to_object="Directors",
-                    from_columns=["Director ID"], to_columns=["Director ID"],
+                    from_object="Movie Directors",
+                    to_object="Directors",
+                    from_columns=["Director ID"],
+                    to_columns=["Director ID"],
                     join_type=ASTJoinType.LEFT,
-                    cardinality=Cardinality.MANY_TO_ONE, reversed=False,
+                    cardinality=Cardinality.MANY_TO_ONE,
+                    reversed=False,
                 ),
                 # Movies ← Movie Producers (reversed many-to-one)
                 JoinStep(
-                    from_object="Movie Producers", to_object="Movies",
-                    from_columns=["Movie ID"], to_columns=["Movie ID"],
+                    from_object="Movie Producers",
+                    to_object="Movies",
+                    from_columns=["Movie ID"],
+                    to_columns=["Movie ID"],
                     join_type=ASTJoinType.LEFT,
-                    cardinality=Cardinality.MANY_TO_ONE, reversed=True,
+                    cardinality=Cardinality.MANY_TO_ONE,
+                    reversed=True,
                 ),
                 # Movie Producers → Producers (forward many-to-one)
                 JoinStep(
-                    from_object="Movie Producers", to_object="Producers",
-                    from_columns=["Producer ID"], to_columns=["Producer ID"],
+                    from_object="Movie Producers",
+                    to_object="Producers",
+                    from_columns=["Producer ID"],
+                    to_columns=["Producer ID"],
                     join_type=ASTJoinType.LEFT,
-                    cardinality=Cardinality.MANY_TO_ONE, reversed=False,
+                    cardinality=Cardinality.MANY_TO_ONE,
+                    reversed=False,
                 ),
             ],
             measure_source_objects={"Movies"},
@@ -541,13 +578,16 @@ class TestJunctionTableFanout:
         resolved = ResolvedQuery(
             dimensions=[
                 ResolvedDimension(
-                    name="Director", object_name="Directors",
-                    column_name="Director Name", source_column="name",
+                    name="Director",
+                    object_name="Directors",
+                    column_name="Director Name",
+                    source_column="name",
                 ),
             ],
             measures=[
                 ResolvedMeasure(
-                    name="Movies Cnt", aggregation="count",
+                    name="Movies Cnt",
+                    aggregation="count",
                     expression=FunctionCall(
                         name="COUNT",
                         args=[ColumnRef(name="movie_id", table="Movies")],
@@ -558,16 +598,22 @@ class TestJunctionTableFanout:
             required_objects={"Movies", "Movie Directors", "Directors"},
             join_steps=[
                 JoinStep(
-                    from_object="Movie Directors", to_object="Movies",
-                    from_columns=["Movie ID"], to_columns=["Movie ID"],
+                    from_object="Movie Directors",
+                    to_object="Movies",
+                    from_columns=["Movie ID"],
+                    to_columns=["Movie ID"],
                     join_type=ASTJoinType.LEFT,
-                    cardinality=Cardinality.MANY_TO_ONE, reversed=True,
+                    cardinality=Cardinality.MANY_TO_ONE,
+                    reversed=True,
                 ),
                 JoinStep(
-                    from_object="Movie Directors", to_object="Directors",
-                    from_columns=["Director ID"], to_columns=["Director ID"],
+                    from_object="Movie Directors",
+                    to_object="Directors",
+                    from_columns=["Director ID"],
+                    to_columns=["Director ID"],
                     join_type=ASTJoinType.LEFT,
-                    cardinality=Cardinality.MANY_TO_ONE, reversed=False,
+                    cardinality=Cardinality.MANY_TO_ONE,
+                    reversed=False,
                 ),
             ],
             measure_source_objects={"Movies"},
@@ -589,13 +635,16 @@ class TestJunctionTableFanout:
         resolved = ResolvedQuery(
             dimensions=[
                 ResolvedDimension(
-                    name="Director", object_name="Directors",
-                    column_name="Director Name", source_column="name",
+                    name="Director",
+                    object_name="Directors",
+                    column_name="Director Name",
+                    source_column="name",
                 ),
             ],
             measures=[
                 ResolvedMeasure(
-                    name="Movies Cnt", aggregation="max",
+                    name="Movies Cnt",
+                    aggregation="max",
                     expression=FunctionCall(
                         name="MAX",
                         args=[ColumnRef(name="movie_id", table="Movies")],
@@ -606,16 +655,22 @@ class TestJunctionTableFanout:
             required_objects={"Movies", "Movie Directors", "Directors"},
             join_steps=[
                 JoinStep(
-                    from_object="Movie Directors", to_object="Movies",
-                    from_columns=["Movie ID"], to_columns=["Movie ID"],
+                    from_object="Movie Directors",
+                    to_object="Movies",
+                    from_columns=["Movie ID"],
+                    to_columns=["Movie ID"],
                     join_type=ASTJoinType.LEFT,
-                    cardinality=Cardinality.MANY_TO_ONE, reversed=True,
+                    cardinality=Cardinality.MANY_TO_ONE,
+                    reversed=True,
                 ),
                 JoinStep(
-                    from_object="Movie Directors", to_object="Directors",
-                    from_columns=["Director ID"], to_columns=["Director ID"],
+                    from_object="Movie Directors",
+                    to_object="Directors",
+                    from_columns=["Director ID"],
+                    to_columns=["Director ID"],
                     join_type=ASTJoinType.LEFT,
-                    cardinality=Cardinality.MANY_TO_ONE, reversed=False,
+                    cardinality=Cardinality.MANY_TO_ONE,
+                    reversed=False,
                 ),
             ],
             measure_source_objects={"Movies"},

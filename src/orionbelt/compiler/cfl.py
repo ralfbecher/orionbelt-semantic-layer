@@ -371,11 +371,7 @@ class CFLPlanner:
                 else:
                     model_dim = model.dimensions.get(dim.name)
                     dim_type = model_dim.result_type.value if model_dim else None
-                    col = (
-                        Cast(Literal.null(), type_name=dim_type)
-                        if dim_type
-                        else Literal.null()
-                    )
+                    col = Cast(Literal.null(), type_name=dim_type) if dim_type else Literal.null()
                 leg_builder.select(AliasedExpr(expr=col, alias=dim.name))
 
             # SELECT this fact's measures (raw expressions, no aggregation)
@@ -417,9 +413,7 @@ class CFLPlanner:
             # objects, measure's source object, and filter-referenced objects.
             # Only include dimensions reachable from this leg's fact object.
             leg_required = {
-                dim.object_name
-                for dim in resolved.dimensions
-                if dim.object_name in reachable
+                dim.object_name for dim in resolved.dimensions if dim.object_name in reachable
             }
             leg_required.add(obj_name)
             leg_required.update(filter_objects)
@@ -567,17 +561,13 @@ class CFLPlanner:
         for i, group_dims in enumerate(dim_groups):
             cte_name = f"dim_group_{i:02d}"
             group_cte_names.append(cte_name)
-            cte_query = self._build_group_distinct_select(
-                group_dims, model, graph, qualify
-            )
+            cte_query = self._build_group_distinct_select(group_dims, model, graph, qualify)
             ctes.append(CTE(name=cte_name, query=cte_query))
 
         # Build "all_pairs": CROSS JOIN of all dim_group CTEs
         all_pairs_builder = QueryBuilder()
         for dim in resolved.dimensions:
-            all_pairs_builder.select(
-                AliasedExpr(expr=ColumnRef(name=dim.name), alias=dim.name)
-            )
+            all_pairs_builder.select(AliasedExpr(expr=ColumnRef(name=dim.name), alias=dim.name))
         all_pairs_builder.from_(group_cte_names[0], alias=group_cte_names[0])
         for cte_name in group_cte_names[1:]:
             all_pairs_builder._joins.append(
@@ -586,9 +576,7 @@ class CFLPlanner:
         all_pairs_select = all_pairs_builder.build()
 
         # Build "existing_pairs": actual combinations via fact-table joins
-        existing_pairs_select = self._build_existing_pairs_select(
-            resolved, model, graph, qualify
-        )
+        existing_pairs_select = self._build_existing_pairs_select(resolved, model, graph, qualify)
 
         # EXCEPT CTE: all_pairs EXCEPT existing_pairs
         except_cte = CTE(
@@ -600,9 +588,7 @@ class CFLPlanner:
         # Outer query: SELECT from non_combinations with ORDER BY / LIMIT
         outer_builder = QueryBuilder()
         for dim in resolved.dimensions:
-            outer_builder.select(
-                AliasedExpr(expr=ColumnRef(name=dim.name), alias=dim.name)
-            )
+            outer_builder.select(AliasedExpr(expr=ColumnRef(name=dim.name), alias=dim.name))
         outer_builder.from_("non_combinations", alias="non_combinations")
 
         for expr, desc in resolved.order_by_exprs:

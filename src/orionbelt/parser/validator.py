@@ -343,9 +343,7 @@ class SemanticValidator:
 
     _NUMERIC_TYPES = {DataType.INT, DataType.FLOAT}
 
-    def _check_num_class_on_numeric_columns(
-        self, model: SemanticModel
-    ) -> list[SemanticError]:
+    def _check_num_class_on_numeric_columns(self, model: SemanticModel) -> list[SemanticError]:
         """Ensure numClass is only set on numeric columns (int or float)."""
         errors: list[SemanticError] = []
         for obj_name, obj in model.data_objects.items():

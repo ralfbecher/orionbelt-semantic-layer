@@ -130,9 +130,7 @@ async def load_model(
 ) -> ModelLoadResponse:
     """Load an OBML model into a session."""
     if is_single_model_mode():
-        raise HTTPException(
-            status_code=403, detail="Single-model mode: model upload is disabled"
-        )
+        raise HTTPException(status_code=403, detail="Single-model mode: model upload is disabled")
     store = _get_store(session_id, mgr)
     try:
         result = store.load_model(body.model_yaml)
@@ -222,9 +220,7 @@ async def remove_model(
 ) -> None:
     """Remove a model from a session."""
     if is_single_model_mode():
-        raise HTTPException(
-            status_code=403, detail="Single-model mode: model removal is disabled"
-        )
+        raise HTTPException(status_code=403, detail="Single-model mode: model removal is disabled")
     store = _get_store(session_id, mgr)
     try:
         store.remove_model(model_id)

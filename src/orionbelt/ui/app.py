@@ -484,11 +484,15 @@ def _format_convert_status(
     lines: list[str] = [direction]
     for w in warnings:
         lines.append(f"WARNING: {w}")
-    schema_ok = "✓" if validation.get("schema_valid", True) else (
-        f"{len(validation.get('schema_errors', []))} error(s)"
+    schema_ok = (
+        "✓"
+        if validation.get("schema_valid", True)
+        else (f"{len(validation.get('schema_errors', []))} error(s)")
     )
-    sem_ok = "✓" if validation.get("semantic_valid", True) else (
-        f"{len(validation.get('semantic_errors', []))} error(s)"
+    sem_ok = (
+        "✓"
+        if validation.get("semantic_valid", True)
+        else (f"{len(validation.get('semantic_errors', []))} error(s)")
     )
     lines.append(f"Validation: JSON Schema {schema_ok} | Semantic {sem_ok}")
     for e in validation.get("schema_errors", []):

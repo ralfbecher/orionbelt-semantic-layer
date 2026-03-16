@@ -72,8 +72,7 @@ def _resolve_single_model(mgr: SessionManager) -> tuple[str, str, SemanticModel]
         raise HTTPException(
             status_code=409,
             detail=(
-                "Multiple models loaded across sessions — "
-                "use session-scoped endpoints instead"
+                "Multiple models loaded across sessions — use session-scoped endpoints instead"
             ),
         )
     return candidates[0]
@@ -259,9 +258,7 @@ async def shortcut_compile_query(
     except KeyError:
         raise HTTPException(status_code=404, detail=f"Model '{model_id}' not found") from None
     except UnsupportedDialectError:
-        raise HTTPException(
-            status_code=400, detail=f"Unsupported dialect: '{dialect}'"
-        ) from None
+        raise HTTPException(status_code=400, detail=f"Unsupported dialect: '{dialect}'") from None
     except ResolutionError as exc:
         raise HTTPException(
             status_code=422,

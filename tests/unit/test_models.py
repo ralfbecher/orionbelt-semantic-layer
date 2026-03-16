@@ -168,5 +168,3 @@ class TestErrors:
         result = ValidationResult(valid=True)
         assert result.valid
         assert result.errors == []
-
-

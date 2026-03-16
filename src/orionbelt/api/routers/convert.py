@@ -48,9 +48,7 @@ def _parse_yaml(raw: str) -> dict[str, Any]:
     return data
 
 
-def _run_validation(
-    validate_fn: Any, data: dict[str, Any]
-) -> ValidationDetail:
+def _run_validation(validate_fn: Any, data: dict[str, Any]) -> ValidationDetail:
     """Run a converter validation function, return structured result."""
     try:
         vr = validate_fn(data)
@@ -89,9 +87,7 @@ async def osi_to_obml(body: ConvertRequest) -> ConvertResponse:
         warnings = list(converter.warnings)
     except Exception as exc:
         logger.exception("OSI → OBML conversion failed")
-        raise HTTPException(
-            status_code=422, detail=f"OSI → OBML conversion failed: {exc}"
-        ) from exc
+        raise HTTPException(status_code=422, detail=f"OSI → OBML conversion failed: {exc}") from exc
 
     output_yaml = yaml.dump(
         result, default_flow_style=False, allow_unicode=True, sort_keys=False, width=120
@@ -128,9 +124,7 @@ async def obml_to_osi(body: OBMLtoOSIRequest) -> ConvertResponse:
         warnings = list(converter.warnings)
     except Exception as exc:
         logger.exception("OBML → OSI conversion failed")
-        raise HTTPException(
-            status_code=422, detail=f"OBML → OSI conversion failed: {exc}"
-        ) from exc
+        raise HTTPException(status_code=422, detail=f"OBML → OSI conversion failed: {exc}") from exc
 
     output_yaml = yaml.dump(
         result, default_flow_style=False, allow_unicode=True, sort_keys=False, width=120
