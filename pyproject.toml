@@ -1,8 +1,8 @@
 [project]
 name = "orionbelt-semantic-layer"
-version = "0.8.0"
+version = "1.0.0"
 description = "OrionBelt Semantic Layer - Compiles YAML semantic models into analytical SQL"
-license = {text = "Apache-2.0"}
+license = {text = "BSL-1.1"}
 authors = [{name = "Ralf Becher, RALFORION d.o.o.", email = "ralf.becher@web.de"}]
 requires-python = ">=3.12"
 readme = "README.md"
@@ -14,11 +14,13 @@ keywords = [
     "data-warehouse",
     "yaml",
     "obml",
+    "bigquery",
     "snowflake",
     "postgres",
     "clickhouse",
     "dremio",
     "databricks",
+    "duckdb",
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -26,7 +28,7 @@ classifiers = [
     "Framework :: Pydantic :: 2",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: Apache Software License",
+    "License :: Other/Proprietary License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",

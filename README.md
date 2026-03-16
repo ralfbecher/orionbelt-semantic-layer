@@ -6,9 +6,9 @@
 
 <p align="center"><strong>Compile YAML semantic models into analytical SQL across multiple database dialects</strong></p>
 
-[![Version 0.8.0](https://img.shields.io/badge/version-0.8.0-purple.svg)](https://github.com/ralfbecher/orionbelt-semantic-layer/releases)
+[![Version 1.0.0](https://img.shields.io/badge/version-1.0.0-purple.svg)](https://github.com/ralfbecher/orionbelt-semantic-layer/releases)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
-[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://github.com/ralfbecher/orionbelt-semantic-layer/blob/main/LICENSE)
+[![License: BSL 1.1](https://img.shields.io/badge/License-BSL_1.1-orange.svg)](https://github.com/ralfbecher/orionbelt-semantic-layer/blob/main/LICENSE)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.128+-009688.svg?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![Pydantic v2](https://img.shields.io/badge/Pydantic-v2-E92063.svg?logo=pydantic&logoColor=white)](https://docs.pydantic.dev)
 [![Gradio](https://img.shields.io/badge/Gradio-5.0+-F97316.svg?logo=gradio&logoColor=white)](https://www.gradio.app)
@@ -465,7 +465,9 @@ By combining both, an AI assistant can navigate your data landscape through onto
 
 Copyright 2025 [RALFORION d.o.o.](https://ralforion.com)
 
-Licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE) for details.
+Licensed under the [Business Source License 1.1](LICENSE). The Licensed Work will convert to Apache License 2.0 on 2030-03-16.
+
+By contributing to this project, you agree to the [Contributor License Agreement](CLA.md).
 
 ---
 

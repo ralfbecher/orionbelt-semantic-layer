@@ -3,13 +3,13 @@ site_description: Compile YAML semantic models into analytical SQL across multip
 site_url: https://ralfbecher.github.io/orionbelt-semantic-layer/
 repo_url: https://github.com/ralfbecher/orionbelt-semantic-layer
 repo_name: orionbelt-semantic-layer
-copyright: Copyright &copy; 2025 RALFORION d.o.o. — Apache 2.0
+copyright: Copyright &copy; 2025 RALFORION d.o.o. — BSL 1.1
 
 dev_addr: 127.0.0.1:8080
 
 extra:
   obml_version: "1.0"
-  project_version: "0.8.0"
+  project_version: "1.0.0"
 
 extra_css:
   - stylesheets/extra.css
