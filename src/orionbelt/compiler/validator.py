@@ -8,11 +8,13 @@ from sqlglot.errors import SqlglotError
 # Map OrionBelt dialect names to sqlglot dialect identifiers.
 # Dremio uses Calcite-based ANSI SQL; Trino is the closest sqlglot dialect.
 _DIALECT_MAP: dict[str, str] = {
-    "postgres": "postgres",
-    "snowflake": "snowflake",
+    "bigquery": "bigquery",
     "clickhouse": "clickhouse",
     "databricks": "databricks",
     "dremio": "trino",
+    "duckdb": "duckdb",
+    "postgres": "postgres",
+    "snowflake": "snowflake",
 }
 
 

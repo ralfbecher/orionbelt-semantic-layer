@@ -94,7 +94,7 @@ fi
 
 # ── 4. Create session ───────────────────────────────────────────────
 
-api POST /v1/sessions -H "Content-Type: application/json" -d '{"metadata":{"env":"cloudrun-test"}}'
+api POST /v1/sessions -H "Content-Type: application/json" -d '{"metadata":{"purpose":"integration-test"}}'
 SESSION_ID=$(json_field "['session_id']" 2>/dev/null || echo "")
 if [[ "$HTTP_CODE" == "200" || "$HTTP_CODE" == "201" ]] && [[ -n "$SESSION_ID" ]]; then
     pass "POST /sessions creates session ($SESSION_ID)"
@@ -116,7 +116,7 @@ fi
 
 api GET "/v1/sessions/${SESSION_ID}"
 GOT_SID=$(json_field "['session_id']" 2>/dev/null || echo "")
-GOT_META=$(json_field "['metadata']['env']" 2>/dev/null || echo "")
+GOT_META=$(json_field "['metadata']['purpose']" 2>/dev/null || echo "")
 if [[ "$HTTP_CODE" == "200" ]] && [[ "$GOT_SID" == "$SESSION_ID" ]]; then
     pass "GET /sessions/{id} returns session details"
 else
@@ -124,10 +124,10 @@ else
 fi
 
 # 7. Session metadata preserved
-if [[ "$GOT_META" == "cloudrun-test" ]]; then
-    pass "Session metadata preserved (env=cloudrun-test)"
+if [[ "$GOT_META" == "integration-test" ]]; then
+    pass "Session metadata preserved (purpose=integration-test)"
 else
-    fail "Session metadata" "expected cloudrun-test, got $GOT_META"
+    fail "Session metadata" "expected integration-test, got $GOT_META"
 fi
 
 # ── 8. Load model ───────────────────────────────────────────────────
