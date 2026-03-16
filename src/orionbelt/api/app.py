@@ -8,17 +8,19 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 import uvicorn
-from fastapi import FastAPI
-from fastapi.responses import Response
+from fastapi import APIRouter, FastAPI, Request
+from fastapi.responses import JSONResponse, Response
 
 from orionbelt import __version__
 from orionbelt.api.deps import init_session_manager, reset_session_manager
+from orionbelt.api.logging_config import configure_logging
 from orionbelt.api.middleware import (
     RequestBodyLimitMiddleware,
+    RequestIdMiddleware,
     RequestTimingMiddleware,
     SecurityHeadersMiddleware,
 )
-from orionbelt.api.routers import convert, dialects, reference, sessions
+from orionbelt.api.routers import convert, dialects, model_api, reference, sessions, shortcuts
 from orionbelt.api.routers import settings as settings_router
 from orionbelt.api.schemas import HealthResponse
 from orionbelt.service.session_manager import SessionManager
@@ -87,22 +89,33 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     app.state.settings = settings
 
+    # Global exception handler — prevents stack trace leaks
+    @app.exception_handler(Exception)
+    async def _unhandled_exception(request: Request, exc: Exception) -> JSONResponse:
+        logger.exception("Unhandled exception on %s %s", request.method, request.url.path)
+        return JSONResponse(
+            status_code=500,
+            content={"detail": "Internal server error"},
+        )
+
     # Middleware (order matters: last added = first to execute)
     app.add_middleware(RequestTimingMiddleware)
     app.add_middleware(SecurityHeadersMiddleware)
     app.add_middleware(RequestBodyLimitMiddleware)
+    app.add_middleware(RequestIdMiddleware)
 
-    # Session-scoped endpoints
-    app.include_router(sessions.router, prefix="/sessions", tags=["sessions"])
+    # Versioned API routes under /v1
+    v1 = APIRouter(prefix="/v1")
+    v1.include_router(sessions.router, prefix="/sessions", tags=["sessions"])
+    v1.include_router(model_api.router, prefix="/sessions", tags=["model-discovery"])
+    v1.include_router(shortcuts.router, tags=["model-discovery"])
+    v1.include_router(convert.router, prefix="/convert", tags=["convert"])
+    v1.include_router(dialects.router, prefix="/dialects", tags=["dialects"])
+    v1.include_router(reference.router, prefix="/reference", tags=["reference"])
+    v1.include_router(settings_router.router, prefix="/settings", tags=["settings"])
+    app.include_router(v1)
 
-    app.include_router(convert.router, prefix="/convert", tags=["convert"])
-
-    app.include_router(dialects.router, prefix="/dialects", tags=["dialects"])
-
-    app.include_router(reference.router, prefix="/reference", tags=["reference"])
-
-    app.include_router(settings_router.router, prefix="/settings", tags=["settings"])
-
+    # Root-level endpoints (no version prefix — used by load balancers, crawlers)
     @app.get("/health", response_model=HealthResponse, tags=["health"])
     async def health() -> HealthResponse:
         return HealthResponse(status="ok", version=__version__)
@@ -130,7 +143,7 @@ def main() -> None:
     """Run the REST API server using settings from environment / .env file."""
     settings = Settings()
 
-    logging.basicConfig(level=settings.log_level.upper())
+    configure_logging(log_level=settings.log_level, log_format=settings.log_format)
     logger.info(
         "OrionBelt API Server v%s starting (host=%s, port=%d)",
         __version__,

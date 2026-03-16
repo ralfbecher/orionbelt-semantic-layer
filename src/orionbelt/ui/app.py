@@ -507,7 +507,7 @@ def _import_osi(osi_yaml: str, api_base: str) -> tuple[str, str]:
 
     try:
         resp = httpx.post(
-            f"{api_base}/convert/osi-to-obml",
+            f"{api_base}/v1/convert/osi-to-obml",
             json={"input_yaml": osi_yaml},
             headers=_API_HEADERS,
             timeout=30,
@@ -532,7 +532,7 @@ def _export_to_osi(obml_yaml: str, api_base: str) -> str:
 
     try:
         resp = httpx.post(
-            f"{api_base}/convert/obml-to-osi",
+            f"{api_base}/v1/convert/obml-to-osi",
             json={"input_yaml": obml_yaml},
             headers=_API_HEADERS,
             timeout=30,
@@ -598,7 +598,7 @@ def _fetch_diagram_er(
 
         # Fetch ER diagram
         resp = client.get(
-            f"/sessions/{session_id}/models/{model_id}/diagram/er",
+            f"/v1/sessions/{session_id}/models/{model_id}/diagram/er",
             params={"show_columns": show_columns, "theme": theme},
         )
         # Auto-recover from expired session (404)
@@ -607,7 +607,7 @@ def _fetch_diagram_er(
                 model_yaml, api_url, None, None
             )
             resp = client.get(
-                f"/sessions/{session_id}/models/{model_id}/diagram/er",
+                f"/v1/sessions/{session_id}/models/{model_id}/diagram/er",
                 params={"show_columns": show_columns, "theme": theme},
             )
         resp.raise_for_status()
@@ -672,7 +672,7 @@ def _load_example_model() -> str:
 def _fetch_dialects(api_url: str) -> list[str]:
     """Fetch dialect names from the API, falling back to hardcoded list."""
     try:
-        resp = httpx.get(f"{api_url.rstrip('/')}/dialects", timeout=5, headers=_API_HEADERS)
+        resp = httpx.get(f"{api_url.rstrip('/')}/v1/dialects", timeout=5, headers=_API_HEADERS)
         resp.raise_for_status()
         data = resp.json()
         names = [d["name"] for d in data.get("dialects", [])]
@@ -684,7 +684,7 @@ def _fetch_dialects(api_url: str) -> list[str]:
 def _fetch_settings(api_url: str) -> dict[str, Any]:
     """Fetch public settings from the API. Returns empty dict on failure."""
     try:
-        resp = httpx.get(f"{api_url.rstrip('/')}/settings", timeout=5, headers=_API_HEADERS)
+        resp = httpx.get(f"{api_url.rstrip('/')}/v1/settings", timeout=5, headers=_API_HEADERS)
         resp.raise_for_status()
         return resp.json()  # type: ignore[no-any-return]
     except Exception:
@@ -714,7 +714,7 @@ def _ensure_session_and_model(
     # Create session if needed
     preloaded_model_count = 0
     if need_session:
-        resp = client.post("/sessions")
+        resp = client.post("/v1/sessions")
         resp.raise_for_status()
         sess_data = resp.json()
         session_id: str = sess_data["session_id"]
@@ -727,7 +727,7 @@ def _ensure_session_and_model(
 
     # Single-model mode: session already has a pre-loaded model
     if preloaded_model_count > 0 and model_state is None:
-        resp = client.get(f"/sessions/{session_id}/models")
+        resp = client.get(f"/v1/sessions/{session_id}/models")
         resp.raise_for_status()
         models = resp.json()
         if models:
@@ -740,17 +740,17 @@ def _ensure_session_and_model(
 
     if need_model:
         resp = client.post(
-            f"/sessions/{session_id}/models",
+            f"/v1/sessions/{session_id}/models",
             json={"model_yaml": model_yaml},
         )
         # Auto-recover from expired session (404)
         if resp.status_code == 404:
-            resp = client.post("/sessions")
+            resp = client.post("/v1/sessions")
             resp.raise_for_status()
             session_id = resp.json()["session_id"]
             session_state = {"session_id": session_id, "api_url": api_url}
             resp = client.post(
-                f"/sessions/{session_id}/models",
+                f"/v1/sessions/{session_id}/models",
                 json={"model_yaml": model_yaml},
             )
         if resp.status_code == 422:
@@ -778,7 +778,7 @@ def _cleanup_session(session_state: dict[str, str] | None) -> None:
     if session_state:
         with contextlib.suppress(Exception):
             httpx.Client(base_url=session_state["api_url"], timeout=5, headers=_API_HEADERS).delete(
-                f"/sessions/{session_state['session_id']}"
+                f"/v1/sessions/{session_state['session_id']}"
             )
 
 
@@ -818,7 +818,7 @@ def compile_sql(
 
         # Compile query
         resp = client.post(
-            f"/sessions/{session_id}/query/sql",
+            f"/v1/sessions/{session_id}/query/sql",
             json={"model_id": model_id, "query": query_dict, "dialect": dialect},
         )
         # Auto-recover from expired session on compile (404)
@@ -827,7 +827,7 @@ def compile_sql(
                 model_yaml, api_url, None, None
             )
             resp = client.post(
-                f"/sessions/{session_id}/query/sql",
+                f"/v1/sessions/{session_id}/query/sql",
                 json={"model_id": model_id, "query": query_dict, "dialect": dialect},
             )
         if resp.status_code in (400, 422):

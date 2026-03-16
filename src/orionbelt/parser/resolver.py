@@ -69,6 +69,8 @@ class ReferenceResolver:
                         sql_scale=fdata.get("sqlScale"),
                         num_class=fdata.get("numClass"),
                         comment=fdata.get("comment"),
+                        owner=fdata.get("owner"),
+                        synonyms=fdata.get("synonyms", []),
                         custom_extensions=_parse_extensions(fdata),
                     )
 
@@ -93,6 +95,8 @@ class ReferenceResolver:
                     columns=obj_columns,
                     joins=obj_joins,
                     comment=raw_obj.get("comment"),
+                    owner=raw_obj.get("owner"),
+                    synonyms=raw_obj.get("synonyms", []),
                     custom_extensions=_parse_extensions(raw_obj),
                 )
             except Exception as e:
@@ -168,6 +172,8 @@ class ReferenceResolver:
                     result_type=raw_dim.get("resultType", "string"),
                     time_grain=raw_dim.get("timeGrain"),
                     format=raw_dim.get("format"),
+                    owner=raw_dim.get("owner"),
+                    synonyms=raw_dim.get("synonyms", []),
                     custom_extensions=_parse_extensions(raw_dim),
                 )
             except Exception as e:
@@ -250,6 +256,8 @@ class ReferenceResolver:
                     filter=mfilter,
                     format=raw_meas.get("format"),
                     allow_fan_out=raw_meas.get("allowFanOut", False),
+                    owner=raw_meas.get("owner"),
+                    synonyms=raw_meas.get("synonyms", []),
                     custom_extensions=_parse_extensions(raw_meas),
                 )
             except Exception as e:
@@ -287,6 +295,8 @@ class ReferenceResolver:
                     label=name,
                     expression=expression,
                     format=raw_metric.get("format"),
+                    owner=raw_metric.get("owner"),
+                    synonyms=raw_metric.get("synonyms", []),
                     custom_extensions=_parse_extensions(raw_metric),
                 )
             except Exception as e:
@@ -306,6 +316,7 @@ class ReferenceResolver:
             dimensions=dimensions,
             measures=measures,
             metrics=metrics,
+            owner=raw.get("owner"),
             custom_extensions=_parse_extensions(raw),
         )
 

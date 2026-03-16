@@ -203,17 +203,17 @@ Change the dialect to `"bigquery"`, `"clickhouse"`, `"databricks"`, `"dremio"`, 
 uv run orionbelt-api
 
 # Create a session
-curl -s -X POST http://127.0.0.1:8000/sessions | jq
+curl -s -X POST http://127.0.0.1:8000/v1/sessions | jq
 # → {"session_id": "a1b2c3d4e5f6", "model_count": 0, ...}
 
 # Load a model into the session
-curl -s -X POST http://127.0.0.1:8000/sessions/a1b2c3d4e5f6/models \
+curl -s -X POST http://127.0.0.1:8000/v1/sessions/a1b2c3d4e5f6/models \
   -H "Content-Type: application/json" \
   -d '{"model_yaml": "version: 1.0\ndataObjects:\n  ..."}' | jq
 # → {"model_id": "abcd1234", "data_objects": 2, ...}
 
 # Compile a query
-curl -s -X POST http://127.0.0.1:8000/sessions/a1b2c3d4e5f6/query/sql \
+curl -s -X POST http://127.0.0.1:8000/v1/sessions/a1b2c3d4e5f6/query/sql \
   -H "Content-Type: application/json" \
   -d '{
     "model_id": "abcd1234",
@@ -366,6 +366,7 @@ Configuration is via environment variables or a `.env` file. See `.env.example` 
 | Variable                   | Default     | Description                             |
 | -------------------------- | ----------- | --------------------------------------- |
 | `LOG_LEVEL`                | `INFO`      | Logging level                           |
+| `LOG_FORMAT`               | `console`   | `console` (pretty) or `json` (structured) |
 | `API_SERVER_HOST`          | `localhost` | REST API bind host                      |
 | `API_SERVER_PORT`          | `8000`      | REST API bind port                      |
 | `PORT`                     | —           | Override port (Cloud Run sets this)     |
@@ -382,7 +383,7 @@ When `MODEL_FILE` is set to a path to an OBML YAML file, the server starts in **
 
 - The model file is validated at startup (the server refuses to start if it's invalid)
 - Every new session is automatically pre-loaded with the configured model
-- Model upload (`POST /sessions/{id}/models`) and removal (`DELETE /sessions/{id}/models/{id}`) return **403 Forbidden**
+- Model upload (`POST /v1/sessions/{id}/models`) and removal (`DELETE /v1/sessions/{id}/models/{id}`) return **403 Forbidden**
 - All other endpoints (sessions, query, validate, diagram, etc.) work normally
 
 ```bash
@@ -430,12 +431,12 @@ The conversion is available via REST API endpoints:
 
 ```bash
 # Convert OSI → OBML
-curl -X POST http://127.0.0.1:8000/convert/osi-to-obml \
+curl -X POST http://127.0.0.1:8000/v1/convert/osi-to-obml \
   -H "Content-Type: application/json" \
   -d '{"input_yaml": "version: \"0.1.1\"\nsemantic_model:\n  ..."}' | jq
 
 # Convert OBML → OSI
-curl -X POST http://127.0.0.1:8000/convert/obml-to-osi \
+curl -X POST http://127.0.0.1:8000/v1/convert/obml-to-osi \
   -H "Content-Type: application/json" \
   -d '{"input_yaml": "version: 1.0\ndataObjects:\n  ..."}' | jq
 ```

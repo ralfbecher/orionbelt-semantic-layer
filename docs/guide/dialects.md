@@ -291,7 +291,7 @@ sql = dialect.compile(ast)
 ## Querying Dialect Info via API
 
 ```bash
-curl http://127.0.0.1:8000/dialects
+curl http://127.0.0.1:8000/v1/dialects
 ```
 
 ```json

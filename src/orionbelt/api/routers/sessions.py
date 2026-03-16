@@ -15,6 +15,8 @@ from orionbelt.api.deps import (
 from orionbelt.api.schemas import (
     DiagramResponse,
     ErrorDetail,
+    ExplainJoinResponse,
+    ExplainPlanResponse,
     ModelLoadRequest,
     ModelLoadResponse,
     ModelSummaryResponse,
@@ -282,6 +284,27 @@ async def compile_query(
             status_code=422,
             detail={"error": "Query fanout detected", "message": exc.message},
         ) from None
+    explain_resp = None
+    if result.explain:
+        explain_resp = ExplainPlanResponse(
+            planner=result.explain.planner,
+            planner_reason=result.explain.planner_reason,
+            base_object=result.explain.base_object,
+            base_object_reason=result.explain.base_object_reason,
+            joins=[
+                ExplainJoinResponse(
+                    from_object=j.from_object,
+                    to_object=j.to_object,
+                    join_columns=j.join_columns,
+                    reason=j.reason,
+                )
+                for j in result.explain.joins
+            ],
+            where_filter_count=result.explain.where_filter_count,
+            having_filter_count=result.explain.having_filter_count,
+            has_totals=result.explain.has_totals,
+            cfl_legs=result.explain.cfl_legs,
+        )
     return QueryCompileResponse(
         sql=result.sql,
         dialect=result.dialect,
@@ -292,4 +315,5 @@ async def compile_query(
         ),
         warnings=result.warnings,
         sql_valid=result.sql_valid,
+        explain=explain_resp,
     )

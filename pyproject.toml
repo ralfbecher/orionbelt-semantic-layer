@@ -23,7 +23,7 @@ keywords = [
     "duckdb",
 ]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Framework :: FastAPI",
     "Framework :: Pydantic :: 2",
     "Intended Audience :: Developers",
@@ -38,19 +38,19 @@ classifiers = [
     "Typing :: Typed",
 ]
 dependencies = [
-    "fastapi>=0.128",
-    "uvicorn[standard]>=0.40",
-    "pydantic>=2.12",
-    "pydantic-settings>=2.12",
-    "pyyaml>=6.0",
-    "ruamel.yaml>=0.19",
-    "networkx>=3.6",
-    "structlog>=25.1",
-    "opentelemetry-api>=1.39",
-    "httpx>=0.28",
-    "sqlparse>=0.5",
-    "sqlglot>=26.0",
-    "jsonschema>=4.23",
+    "fastapi>=0.128,<1.0",
+    "uvicorn[standard]>=0.40,<1.0",
+    "pydantic>=2.12,<3.0",
+    "pydantic-settings>=2.12,<3.0",
+    "pyyaml>=6.0,<7.0",
+    "ruamel.yaml>=0.19,<1.0",
+    "networkx>=3.6,<4.0",
+    "structlog>=25.1,<26.0",
+    "opentelemetry-api>=1.39,<2.0",
+    "httpx>=0.28,<1.0",
+    "sqlparse>=0.5,<1.0",
+    "sqlglot>=26.0,<27.0",
+    "jsonschema>=4.23,<5.0",
 ]
 
 [project.scripts]

@@ -96,6 +96,7 @@ class DataObjectColumn(BaseModel):
     sql_scale: int | None = Field(None, alias="sqlScale")
     num_class: NumClass | None = Field(None, alias="numClass")
     comment: str | None = None
+    owner: str | None = None
     synonyms: list[str] = Field(default_factory=list)
     custom_extensions: list[CustomExtension] = Field(default_factory=list, alias="customExtensions")
 
@@ -125,6 +126,7 @@ class DataObject(BaseModel):
     columns: dict[str, DataObjectColumn] = {}
     joins: list[DataObjectJoin] = []
     comment: str | None = None
+    owner: str | None = None
     synonyms: list[str] = Field(default_factory=list)
     custom_extensions: list[CustomExtension] = Field(default_factory=list, alias="customExtensions")
 
@@ -145,6 +147,7 @@ class Dimension(BaseModel):
     result_type: DataType = Field(DataType.STRING, alias="resultType")
     time_grain: TimeGrain | None = Field(None, alias="timeGrain")
     format: str | None = None
+    owner: str | None = None
     synonyms: list[str] = Field(default_factory=list)
     custom_extensions: list[CustomExtension] = Field(default_factory=list, alias="customExtensions")
 
@@ -199,6 +202,7 @@ class Measure(BaseModel):
     allow_fan_out: bool = Field(False, alias="allowFanOut")
     delimiter: str | None = None
     within_group: WithinGroup | None = Field(None, alias="withinGroup")
+    owner: str | None = None
     synonyms: list[str] = Field(default_factory=list)
     custom_extensions: list[CustomExtension] = Field(default_factory=list, alias="customExtensions")
 
@@ -214,6 +218,7 @@ class Metric(BaseModel):
     label: str
     expression: str
     format: str | None = None
+    owner: str | None = None
     synonyms: list[str] = Field(default_factory=list)
     custom_extensions: list[CustomExtension] = Field(default_factory=list, alias="customExtensions")
 
@@ -228,6 +233,7 @@ class SemanticModel(BaseModel):
     dimensions: dict[str, Dimension] = {}
     measures: dict[str, Measure] = {}
     metrics: dict[str, Metric] = {}
+    owner: str | None = None
     custom_extensions: list[CustomExtension] = Field(default_factory=list, alias="customExtensions")
 
     model_config = {"populate_by_name": True}

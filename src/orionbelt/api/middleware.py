@@ -1,18 +1,41 @@
-"""Middleware: tenant isolation, auth, rate limiting, tracing."""
+"""Middleware: security headers, body limits, request ID, timing."""
 
 from __future__ import annotations
 
+import logging
 import time
+import uuid
 
+import structlog
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
+
+logger = logging.getLogger(__name__)
 
 # Body size limits (also enforced by Cloud Armor — keep in sync with
 # infra/apply-cloud-armor.sh rules 103/106)
 _MODEL_PATHS = ("/models", "/validate")
 _MAX_BODY_MODEL = 5 * 1024 * 1024  # 5 MB for model load/validate
 _MAX_BODY_DEFAULT = 1 * 1024 * 1024  # 1 MB for everything else
+
+
+class RequestIdMiddleware(BaseHTTPMiddleware):
+    """Add a unique request ID for log correlation.
+
+    Uses the incoming ``X-Request-Id`` header if present (e.g. from a load
+    balancer), otherwise generates a UUID4.  The ID is:
+    - returned in the ``X-Request-Id`` response header
+    - bound to structlog context vars for automatic inclusion in all log entries
+    """
+
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+        request_id = request.headers.get("x-request-id", str(uuid.uuid4()))
+        structlog.contextvars.clear_contextvars()
+        structlog.contextvars.bind_contextvars(request_id=request_id)
+        response = await call_next(request)
+        response.headers["X-Request-Id"] = request_id
+        return response
 
 
 class RequestTimingMiddleware(BaseHTTPMiddleware):

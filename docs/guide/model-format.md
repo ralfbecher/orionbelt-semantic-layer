@@ -7,6 +7,7 @@ OrionBelt ML (OBML) is the YAML-based format for defining semantic models in Ori
 ```yaml
 # yaml-language-server: $schema=schema/obml-schema.json
 version: 1.0
+owner: team-data           # Optional: model-level owner
 
 dataObjects:  # Database tables/views with columns and joins
   ...
@@ -22,6 +23,31 @@ metrics:      # Composite metrics combining measures
 ```
 
 All four sections are dictionaries keyed by name.
+
+### Owner Field
+
+Every level of the model supports an optional `owner` field — a free-text string identifying the responsible team or person. The owner is returned in model discovery API responses.
+
+```yaml
+version: 1.0
+owner: team-data
+
+dataObjects:
+  Orders:
+    owner: team-sales
+    columns:
+      Price:
+        owner: team-finance
+dimensions:
+  Country:
+    owner: team-analytics
+measures:
+  Revenue:
+    owner: team-analytics
+metrics:
+  Revenue per Order:
+    owner: team-analytics
+```
 
 ## Data Objects
 
@@ -67,6 +93,7 @@ dataObjects:
 | `joins` | list | No | Join relationships to other data objects |
 | `comment` | string | No | Documentation |
 | `synonyms` | list | No | Alternative names or terms (LLM hints) |
+| `owner` | string | No | Responsible team or person |
 
 ### Columns
 
@@ -80,6 +107,7 @@ dataObjects:
 | `numClass` | enum | No | Classification of numeric columns to control aggregation behavior. `categorical` (IDs/codes), `additive` (sum-safe), `non-additive` (rates/ratios) |
 | `comment` | string | No | Documentation |
 | `synonyms` | list | No | Alternative names or terms (LLM hints) |
+| `owner` | string | No | Responsible team or person |
 
 ### Joins
 
@@ -181,6 +209,7 @@ dimensions:
 | `timeGrain` | enum | No | Time grain: `year`, `quarter`, `month`, `week`, `day`, `hour`, `minute`, `second` |
 | `format` | string | No | Display format |
 | `synonyms` | list | No | Alternative names or terms (LLM hints) |
+| `owner` | string | No | Responsible team or person |
 
 ### Time Dimensions
 
@@ -251,6 +280,7 @@ measures:
 | `filter` | object | No | Conditional filter applied to this measure |
 | `allowFanOut` | bool | No | Allow fan-out joins (default: false) |
 | `synonyms` | list | No | Alternative names or terms (LLM hints) |
+| `owner` | string | No | Responsible team or person |
 
 ### Aggregation Types
 
@@ -338,6 +368,7 @@ All artefacts (data objects, dimensions, measures, metrics) have unique names. T
 | `label` | string | No | Display label |
 | `format` | string | No | Display format |
 | `synonyms` | list | No | Alternative names or terms (LLM hints) |
+| `owner` | string | No | Responsible team or person |
 
 ### Metric Expression Placeholders
 

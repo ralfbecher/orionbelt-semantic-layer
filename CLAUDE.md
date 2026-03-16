@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**OrionBelt Semantic Layer** is a SaaS semantic layer engine that compiles YAML semantic models (OBML format) into analytical SQL across 5 database dialects: Postgres, Snowflake, ClickHouse, Dremio, Databricks SQL. It exposes all capabilities through a REST API (FastAPI) and an MCP server (FastMCP).
+**OrionBelt Semantic Layer** is a SaaS semantic layer engine that compiles YAML semantic models (OBML format) into analytical SQL across 7 database dialects: BigQuery, ClickHouse, Databricks, Dremio, DuckDB, Postgres, Snowflake. It exposes all capabilities through a REST API (FastAPI). An MCP server is available as a separate thin client in [orionbelt-semantic-layer-mcp](https://github.com/ralfbecher/orionbelt-semantic-layer-mcp).
 
 ## Commands
 
@@ -15,8 +15,6 @@ uv sync --all-extras --all-groups # all deps (dev, docs, ui, type stubs)
 
 # Run servers
 uv run orionbelt-api              # REST API on :8000
-uv run orionbelt-mcp              # MCP server (stdio)
-MCP_TRANSPORT=http uv run orionbelt-mcp  # MCP server (HTTP on :9000)
 uv run orionbelt-ui               # Gradio UI (requires --extra ui)
 
 # Tests
@@ -98,7 +96,7 @@ The pipeline is orchestrated by `CompilationPipeline` in `compiler/pipeline.py`.
 ## Key Subsystems
 
 ### Dialect Registry (`dialect/`)
-Dialects self-register via `@DialectRegistry.register` decorator. `dialect/__init__.py` imports all 5 modules to trigger registration. `DialectRegistry.get(name)` returns a fresh instance. Each dialect implements `quote_identifier()`, `render_time_grain()`, `render_cast()`, `current_date_sql()`, `date_add_sql()`, and `compile_expr()` (uses `match` on AST nodes).
+Dialects self-register via `@DialectRegistry.register` decorator. `dialect/__init__.py` imports all 7 modules to trigger registration. `DialectRegistry.get(name)` returns a fresh instance. Each dialect implements `quote_identifier()`, `render_time_grain()`, `render_cast()`, `current_date_sql()`, `date_add_sql()`, and `compile_expr()` (uses `match` on AST nodes).
 
 ### SQL AST (`ast/nodes.py`)
 All nodes are frozen dataclasses. Key types: `Select`, `From`, `Join`, `CTE`, `UnionAll`, `ColumnRef`, `AliasedExpr`, `FunctionCall`, `BinaryOp`, `WindowFunction`, `CaseExpr`, `Cast`, `Literal`, `RawSQL`. The union type `Expr` covers all expression nodes.
@@ -113,8 +111,8 @@ Two distinct validators exist — don't confuse them:
 
 `TrackedLoader` uses ruamel.yaml for line-faithful source positions. `ReferenceResolver` converts raw dict → `SemanticModel` + `ValidationResult`.
 
-### MCP Server (`mcp/server.py`)
-10 tools + 3 prompts + 1 resource. Uses FastMCP 3.x. In stdio mode, `_resolve_store(session_id)` auto-creates a `__default__` session. `ToolError` is imported from `fastmcp.exceptions` (not top-level `fastmcp`).
+### MCP Server (separate repo)
+The MCP server lives in [orionbelt-semantic-layer-mcp](https://github.com/ralfbecher/orionbelt-semantic-layer-mcp) — a thin HTTP client that delegates to the REST API. It is not part of this repository.
 
 ## Pydantic v2 Alias Convention
 
@@ -157,24 +155,38 @@ Top-level YAML keys: `version`, `dataObjects`, `dimensions`, `measures`, `metric
 
 ## REST API Endpoints
 
+All API routes are prefixed with `/v1/` except `/health` and `/robots.txt`.
+
 | Method | Path | Description |
 |--------|------|-------------|
 | GET | `/health` | Health check (returns version) |
-| GET | `/settings` | Public config (single-model mode, TTL) |
-| GET | `/dialects` | List 5 dialects with capabilities |
-| POST | `/sessions` | Create session |
-| GET | `/sessions` | List sessions |
-| GET | `/sessions/{id}` | Get session info |
-| DELETE | `/sessions/{id}` | Close session |
-| POST | `/sessions/{id}/models` | Load model (field: `model_yaml`) |
-| GET | `/sessions/{id}/models` | List models |
-| GET | `/sessions/{id}/models/{mid}` | Describe model |
-| DELETE | `/sessions/{id}/models/{mid}` | Remove model |
-| POST | `/sessions/{id}/validate` | Validate YAML |
-| POST | `/sessions/{id}/query/sql` | Compile query |
-| GET | `/sessions/{id}/models/{mid}/diagram/er` | Mermaid ER diagram |
-| POST | `/convert/osi-to-obml` | Convert OSI YAML → OBML YAML |
-| POST | `/convert/obml-to-osi` | Convert OBML YAML → OSI YAML |
+| GET | `/v1/settings` | Public config (single-model mode, TTL) |
+| GET | `/v1/dialects` | List 7 dialects with capabilities |
+| POST | `/v1/sessions` | Create session |
+| GET | `/v1/sessions` | List sessions |
+| GET | `/v1/sessions/{id}` | Get session info |
+| DELETE | `/v1/sessions/{id}` | Close session |
+| POST | `/v1/sessions/{id}/models` | Load model (field: `model_yaml`) |
+| GET | `/v1/sessions/{id}/models` | List models |
+| GET | `/v1/sessions/{id}/models/{mid}` | Describe model |
+| DELETE | `/v1/sessions/{id}/models/{mid}` | Remove model |
+| POST | `/v1/sessions/{id}/validate` | Validate YAML |
+| POST | `/v1/sessions/{id}/query/sql` | Compile query (includes explain) |
+| GET | `/v1/sessions/{id}/models/{mid}/diagram/er` | Mermaid ER diagram |
+| GET | `/v1/sessions/{id}/models/{mid}/schema` | Full model as JSON |
+| GET | `/v1/sessions/{id}/models/{mid}/dimensions` | List dimensions |
+| GET | `/v1/sessions/{id}/models/{mid}/dimensions/{name}` | Get dimension |
+| GET | `/v1/sessions/{id}/models/{mid}/measures` | List measures |
+| GET | `/v1/sessions/{id}/models/{mid}/measures/{name}` | Get measure |
+| GET | `/v1/sessions/{id}/models/{mid}/metrics` | List metrics |
+| GET | `/v1/sessions/{id}/models/{mid}/metrics/{name}` | Get metric |
+| GET | `/v1/sessions/{id}/models/{mid}/explain/{name}` | Lineage explain |
+| POST | `/v1/sessions/{id}/models/{mid}/find` | Search artefacts |
+| GET | `/v1/sessions/{id}/models/{mid}/join-graph` | Join graph adjacency |
+| POST | `/v1/convert/osi-to-obml` | Convert OSI YAML → OBML YAML |
+| POST | `/v1/convert/obml-to-osi` | Convert OBML YAML → OSI YAML |
+
+Top-level shortcuts (auto-resolve when single session/model): `/v1/schema`, `/v1/dimensions`, `/v1/measures`, `/v1/metrics`, `/v1/explain/{name}`, `/v1/find`, `/v1/join-graph`, `/v1/query/sql`.
 
 ## Configuration
 
@@ -186,12 +198,11 @@ Environment variables or `.env` file (via pydantic-settings):
 | `API_SERVER_HOST` | `localhost` | REST API bind host |
 | `API_SERVER_PORT` | `8000` | REST API port |
 | `DISABLE_SESSION_LIST` | `false` | Disable `GET /sessions` endpoint (security) |
-| `MCP_TRANSPORT` | `stdio` | MCP transport: `stdio`, `http`, `sse` |
-| `MCP_SERVER_HOST` / `MCP_SERVER_PORT` | `localhost` / `9000` | MCP bind |
 | `SESSION_TTL_SECONDS` | `1800` | Session timeout |
 | `SESSION_CLEANUP_INTERVAL` | `60` | Cleanup sweep interval |
 | `MODEL_FILE` | — | Path to OBML YAML for single-model mode |
 | `LOG_LEVEL` | `INFO` | Logging level |
+| `LOG_FORMAT` | `console` | `console` (pretty) or `json` (structured for cloud) |
 | `API_BASE_URL` | — | API URL for standalone UI |
 | `ROOT_PATH` | — | ASGI root path for UI behind load balancer |
 

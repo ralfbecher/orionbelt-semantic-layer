@@ -192,15 +192,15 @@ Create a session and load a model:
 
 ```bash
 # Create a session
-SESSION_ID=$(curl -s -X POST http://127.0.0.1:8000/sessions | jq -r .session_id)
+SESSION_ID=$(curl -s -X POST http://127.0.0.1:8000/v1/sessions | jq -r .session_id)
 
 # Load a model into the session
-MODEL_ID=$(curl -s -X POST "http://127.0.0.1:8000/sessions/$SESSION_ID/models" \
+MODEL_ID=$(curl -s -X POST "http://127.0.0.1:8000/v1/sessions/$SESSION_ID/models" \
   -H "Content-Type: application/json" \
   -d "{\"model_yaml\": \"$(cat model.yaml)\"}" | jq -r .model_id)
 
 # Compile a query
-curl -s -X POST "http://127.0.0.1:8000/sessions/$SESSION_ID/query/sql" \
+curl -s -X POST "http://127.0.0.1:8000/v1/sessions/$SESSION_ID/query/sql" \
   -H "Content-Type: application/json" \
   -d "{
     \"model_id\": \"$MODEL_ID\",
@@ -214,7 +214,7 @@ curl -s -X POST "http://127.0.0.1:8000/sessions/$SESSION_ID/query/sql" \
   }" | jq .sql
 
 # Clean up
-curl -s -X DELETE "http://127.0.0.1:8000/sessions/$SESSION_ID"
+curl -s -X DELETE "http://127.0.0.1:8000/v1/sessions/$SESSION_ID"
 ```
 
 ## Step 6: Single-Model Mode
@@ -229,14 +229,14 @@ The model is pre-loaded into every new session:
 
 ```bash
 # Create a session (model is already loaded)
-SESSION_ID=$(curl -s -X POST http://127.0.0.1:8000/sessions | jq -r .session_id)
+SESSION_ID=$(curl -s -X POST http://127.0.0.1:8000/v1/sessions | jq -r .session_id)
 # → model_count: 1
 
 # Get the pre-loaded model ID
-MODEL_ID=$(curl -s "http://127.0.0.1:8000/sessions/$SESSION_ID/models" | jq -r '.[0].model_id')
+MODEL_ID=$(curl -s "http://127.0.0.1:8000/v1/sessions/$SESSION_ID/models" | jq -r '.[0].model_id')
 
 # Query directly — no model upload needed
-curl -s -X POST "http://127.0.0.1:8000/sessions/$SESSION_ID/query/sql" \
+curl -s -X POST "http://127.0.0.1:8000/v1/sessions/$SESSION_ID/query/sql" \
   -H "Content-Type: application/json" \
   -d "{
     \"model_id\": \"$MODEL_ID\",

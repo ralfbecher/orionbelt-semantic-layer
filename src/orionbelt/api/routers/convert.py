@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib
+import logging
 import sys
 import types
 from pathlib import Path
@@ -17,6 +18,8 @@ from orionbelt.api.schemas import (
     OBMLtoOSIRequest,
     ValidationDetail,
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -59,6 +62,7 @@ def _run_validation(
             semantic_warnings=list(vr.semantic_warnings),
         )
     except Exception:
+        logger.warning("Validation skipped due to error", exc_info=True)
         return ValidationDetail(
             schema_valid=True,
             semantic_valid=True,
@@ -84,6 +88,7 @@ async def osi_to_obml(body: ConvertRequest) -> ConvertResponse:
         result = converter.convert()
         warnings = list(converter.warnings)
     except Exception as exc:
+        logger.exception("OSI → OBML conversion failed")
         raise HTTPException(
             status_code=422, detail=f"OSI → OBML conversion failed: {exc}"
         ) from exc
@@ -122,6 +127,7 @@ async def obml_to_osi(body: OBMLtoOSIRequest) -> ConvertResponse:
         result = converter.convert()
         warnings = list(converter.warnings)
     except Exception as exc:
+        logger.exception("OBML → OSI conversion failed")
         raise HTTPException(
             status_code=422, detail=f"OBML → OSI conversion failed: {exc}"
         ) from exc

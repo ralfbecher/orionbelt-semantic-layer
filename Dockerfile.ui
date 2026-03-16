@@ -25,21 +25,27 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
+# Create non-root user
+RUN groupadd -r app && useradd -r -g app -d /app -s /sbin/nologin app
+
 # Copy installed virtualenv from builder
-COPY --from=builder /app/.venv /app/.venv
+COPY --from=builder --chown=app:app /app/.venv /app/.venv
 ENV PATH="/app/.venv/bin:$PATH"
 
 # Copy examples (needed by Gradio UI for example model)
-COPY --from=builder /app/examples examples/
+COPY --from=builder --chown=app:app /app/examples examples/
 
 # Copy schema (needed at runtime for validation)
-COPY --from=builder /app/schema schema/
+COPY --from=builder --chown=app:app /app/schema schema/
+
+USER app
 
 # Cloud Run injects PORT (default 7860 for Gradio)
 # API_BASE_URL must point to the API service (e.g. https://orionbelt-api-xxxxx.run.app)
 ENV PORT=7860 \
     API_BASE_URL="" \
-    LOG_LEVEL=INFO
+    LOG_LEVEL=INFO \
+    LOG_FORMAT=json
 
 EXPOSE ${PORT}
 

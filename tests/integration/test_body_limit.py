@@ -60,7 +60,7 @@ class TestChunkedOverLimit:
         """Body exceeding 1 MB default limit without Content-Length header."""
         oversized = b"x" * (1 * 1024 * 1024 + 1)
         response = await client.post(
-            "/sessions",
+            "/v1/sessions",
             content=oversized,
             headers={"transfer-encoding": "chunked"},
         )

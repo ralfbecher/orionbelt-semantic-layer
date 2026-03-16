@@ -20,6 +20,7 @@ class Settings(BaseSettings):
 
     # Shared
     log_level: str = "INFO"
+    log_format: str = "console"  # "console" (pretty) or "json" (structured)
 
     # REST API
     api_server_host: str = "localhost"

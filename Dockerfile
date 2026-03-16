@@ -26,20 +26,26 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
+# Create non-root user
+RUN groupadd -r app && useradd -r -g app -d /app -s /sbin/nologin app
+
 # Copy installed virtualenv from builder
-COPY --from=builder /app/.venv /app/.venv
+COPY --from=builder --chown=app:app /app/.venv /app/.venv
 ENV PATH="/app/.venv/bin:$PATH"
 
 # Copy schema (needed at runtime for validation)
-COPY --from=builder /app/schema schema/
+COPY --from=builder --chown=app:app /app/schema schema/
 
 # Copy OSI converter (needed at runtime for /convert endpoints)
-COPY --from=builder /app/osi-obml osi-obml/
+COPY --from=builder --chown=app:app /app/osi-obml osi-obml/
+
+USER app
 
 # Cloud Run injects PORT (default 8080)
 ENV PORT=8080 \
     API_SERVER_HOST=0.0.0.0 \
     LOG_LEVEL=INFO \
+    LOG_FORMAT=json \
     DISABLE_SESSION_LIST=true
 
 EXPOSE ${PORT}

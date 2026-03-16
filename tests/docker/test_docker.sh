@@ -98,7 +98,7 @@ else
 fi
 
 # 3. Dialects endpoint
-api GET /dialects
+api GET /v1/dialects
 DIALECT_COUNT=$(python3 -c "import sys,json; print(len(json.loads(sys.stdin.read())['dialects']))" <<< "$BODY")
 if [[ "$HTTP_CODE" == "200" ]] && [[ "$DIALECT_COUNT" -ge 5 ]]; then
     pass "GET /dialects returns $DIALECT_COUNT dialects"
@@ -107,7 +107,7 @@ else
 fi
 
 # 4. Create session
-api POST /sessions
+api POST /v1/sessions
 SESSION_ID=$(json_field "['session_id']" 2>/dev/null || echo "")
 if [[ "$HTTP_CODE" == "200" || "$HTTP_CODE" == "201" ]] && [[ -n "$SESSION_ID" ]]; then
     pass "POST /sessions creates session ($SESSION_ID)"
@@ -116,7 +116,7 @@ else
 fi
 
 # 5. List sessions
-api GET /sessions
+api GET /v1/sessions
 SESSION_COUNT=$(python3 -c "import sys,json; print(len(json.loads(sys.stdin.read())['sessions']))" <<< "$BODY")
 if [[ "$HTTP_CODE" == "200" ]] && [[ "$SESSION_COUNT" -ge 1 ]]; then
     pass "GET /sessions lists $SESSION_COUNT session(s)"
@@ -125,7 +125,7 @@ else
 fi
 
 # 6. Get session
-api GET "/sessions/${SESSION_ID}"
+api GET "/v1/sessions/${SESSION_ID}"
 if [[ "$HTTP_CODE" == "200" ]] && [[ "$(json_field "['session_id']")" == "$SESSION_ID" ]]; then
     pass "GET /sessions/{id} returns session details"
 else
@@ -134,7 +134,7 @@ fi
 
 # 7. Load model
 MODEL_YAML=$(python3 -c "import json; print(json.dumps(open('examples/sem-layer.obml.yml').read()))")
-api POST "/sessions/${SESSION_ID}/models" \
+api POST "/v1/sessions/${SESSION_ID}/models" \
     -H "Content-Type: application/json" \
     -d "{\"model_id\": \"test\", \"model_yaml\": ${MODEL_YAML}}"
 MODEL_ID=$(json_field "['model_id']" 2>/dev/null || echo "")
@@ -146,7 +146,7 @@ else
 fi
 
 # 8. List models
-api GET "/sessions/${SESSION_ID}/models"
+api GET "/v1/sessions/${SESSION_ID}/models"
 if [[ "$HTTP_CODE" == "200" ]]; then
     pass "GET /sessions/{id}/models lists models"
 else
@@ -154,7 +154,7 @@ else
 fi
 
 # 9. Describe model
-api GET "/sessions/${SESSION_ID}/models/${MODEL_ID}"
+api GET "/v1/sessions/${SESSION_ID}/models/${MODEL_ID}"
 DESC_OBJS=$(python3 -c "import sys,json; print(len(json.loads(sys.stdin.read())['data_objects']))" <<< "$BODY" 2>/dev/null || echo "0")
 if [[ "$HTTP_CODE" == "200" ]] && [[ "$DESC_OBJS" -ge 1 ]]; then
     pass "GET /sessions/{id}/models/{mid} describes model ($DESC_OBJS data objects)"
@@ -163,7 +163,7 @@ else
 fi
 
 # 10. Compile query (star schema — single fact)
-api POST "/sessions/${SESSION_ID}/query/sql" \
+api POST "/v1/sessions/${SESSION_ID}/query/sql" \
     -H "Content-Type: application/json" \
     -d "{
         \"model_id\": \"${MODEL_ID}\",
@@ -183,7 +183,7 @@ else
 fi
 
 # 11. Compile query — different dialect (snowflake)
-api POST "/sessions/${SESSION_ID}/query/sql" \
+api POST "/v1/sessions/${SESSION_ID}/query/sql" \
     -H "Content-Type: application/json" \
     -d "{
         \"model_id\": \"${MODEL_ID}\",
@@ -203,7 +203,7 @@ else
 fi
 
 # 12. Validate model
-api POST "/sessions/${SESSION_ID}/validate" \
+api POST "/v1/sessions/${SESSION_ID}/validate" \
     -H "Content-Type: application/json" \
     -d "{\"model_yaml\": ${MODEL_YAML}}"
 if [[ "$HTTP_CODE" == "200" ]]; then
@@ -213,7 +213,7 @@ else
 fi
 
 # 13. Invalid query returns error (unknown dimension)
-api POST "/sessions/${SESSION_ID}/query/sql" \
+api POST "/v1/sessions/${SESSION_ID}/query/sql" \
     -H "Content-Type: application/json" \
     -d "{
         \"model_id\": \"${MODEL_ID}\",
@@ -232,7 +232,7 @@ else
 fi
 
 # 14. Delete model
-api DELETE "/sessions/${SESSION_ID}/models/${MODEL_ID}"
+api DELETE "/v1/sessions/${SESSION_ID}/models/${MODEL_ID}"
 if [[ "$HTTP_CODE" == "200" ]] || [[ "$HTTP_CODE" == "204" ]]; then
     pass "DELETE /sessions/{id}/models/{mid} removes model"
 else
@@ -240,7 +240,7 @@ else
 fi
 
 # 15. Delete session
-api DELETE "/sessions/${SESSION_ID}"
+api DELETE "/v1/sessions/${SESSION_ID}"
 if [[ "$HTTP_CODE" == "200" ]] || [[ "$HTTP_CODE" == "204" ]]; then
     pass "DELETE /sessions/{id} closes session"
 else

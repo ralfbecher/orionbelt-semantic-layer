@@ -49,7 +49,7 @@ class TestHealthEndpoint:
 
 class TestDialectsEndpoint:
     async def test_list_dialects(self, client: AsyncClient) -> None:
-        response = await client.get("/dialects")
+        response = await client.get("/v1/dialects")
         assert response.status_code == 200
         data = response.json()
         names = [d["name"] for d in data["dialects"]]
@@ -62,7 +62,7 @@ class TestDialectsEndpoint:
 
 class TestSettingsEndpoint:
     async def test_settings_default(self, client: AsyncClient) -> None:
-        response = await client.get("/settings")
+        response = await client.get("/v1/settings")
         assert response.status_code == 200
         data = response.json()
         assert data["single_model_mode"] is False
@@ -70,7 +70,7 @@ class TestSettingsEndpoint:
         assert data["session_ttl_seconds"] == 3600  # from fixture
 
     async def test_settings_single_model(self, single_model_client: AsyncClient) -> None:
-        response = await single_model_client.get("/settings")
+        response = await single_model_client.get("/v1/settings")
         assert response.status_code == 200
         data = response.json()
         assert data["single_model_mode"] is True
@@ -86,30 +86,30 @@ class TestSettingsEndpoint:
 
 class TestSessionEndpoints:
     async def test_create_session(self, client: AsyncClient) -> None:
-        response = await client.post("/sessions")
+        response = await client.post("/v1/sessions")
         assert response.status_code == 201
         data = response.json()
         assert "session_id" in data
         assert data["model_count"] == 0
 
     async def test_create_session_with_metadata(self, client: AsyncClient) -> None:
-        response = await client.post("/sessions", json={"metadata": {"env": "test"}})
+        response = await client.post("/v1/sessions", json={"metadata": {"env": "test"}})
         assert response.status_code == 201
         data = response.json()
         assert data["metadata"] == {"env": "test"}
 
     async def test_list_sessions(self, client: AsyncClient) -> None:
-        await client.post("/sessions")
-        await client.post("/sessions")
-        response = await client.get("/sessions")
+        await client.post("/v1/sessions")
+        await client.post("/v1/sessions")
+        response = await client.get("/v1/sessions")
         assert response.status_code == 200
         data = response.json()
         assert len(data["sessions"]) == 2
 
     async def test_get_session(self, client: AsyncClient) -> None:
-        create = await client.post("/sessions")
+        create = await client.post("/v1/sessions")
         sid = create.json()["session_id"]
-        response = await client.get(f"/sessions/{sid}")
+        response = await client.get(f"/v1/sessions/{sid}")
         assert response.status_code == 200
         assert response.json()["session_id"] == sid
 
@@ -118,12 +118,12 @@ class TestSessionEndpoints:
         assert response.status_code == 404
 
     async def test_delete_session(self, client: AsyncClient) -> None:
-        create = await client.post("/sessions")
+        create = await client.post("/v1/sessions")
         sid = create.json()["session_id"]
-        response = await client.delete(f"/sessions/{sid}")
+        response = await client.delete(f"/v1/sessions/{sid}")
         assert response.status_code == 204
         # Verify it's gone
-        response = await client.get(f"/sessions/{sid}")
+        response = await client.get(f"/v1/sessions/{sid}")
         assert response.status_code == 404
 
     async def test_delete_missing_session(self, client: AsyncClient) -> None:
@@ -138,9 +138,9 @@ class TestSessionEndpoints:
 
 class TestSessionModelFlow:
     async def test_load_model(self, client: AsyncClient) -> None:
-        sid = (await client.post("/sessions")).json()["session_id"]
+        sid = (await client.post("/v1/sessions")).json()["session_id"]
         response = await client.post(
-            f"/sessions/{sid}/models",
+            f"/v1/sessions/{sid}/models",
             json={"model_yaml": SAMPLE_MODEL_YAML},
         )
         assert response.status_code == 201
@@ -151,53 +151,53 @@ class TestSessionModelFlow:
         assert data["measures"] == 3
 
     async def test_list_models(self, client: AsyncClient) -> None:
-        sid = (await client.post("/sessions")).json()["session_id"]
-        await client.post(f"/sessions/{sid}/models", json={"model_yaml": SAMPLE_MODEL_YAML})
-        response = await client.get(f"/sessions/{sid}/models")
+        sid = (await client.post("/v1/sessions")).json()["session_id"]
+        await client.post(f"/v1/sessions/{sid}/models", json={"model_yaml": SAMPLE_MODEL_YAML})
+        response = await client.get(f"/v1/sessions/{sid}/models")
         assert response.status_code == 200
         models = response.json()
         assert len(models) == 1
 
     async def test_describe_model(self, client: AsyncClient) -> None:
-        sid = (await client.post("/sessions")).json()["session_id"]
-        load = await client.post(f"/sessions/{sid}/models", json={"model_yaml": SAMPLE_MODEL_YAML})
+        sid = (await client.post("/v1/sessions")).json()["session_id"]
+        load = await client.post(f"/v1/sessions/{sid}/models", json={"model_yaml": SAMPLE_MODEL_YAML})
         mid = load.json()["model_id"]
-        response = await client.get(f"/sessions/{sid}/models/{mid}")
+        response = await client.get(f"/v1/sessions/{sid}/models/{mid}")
         assert response.status_code == 200
         data = response.json()
         assert data["model_id"] == mid
         assert len(data["data_objects"]) == 2
 
     async def test_describe_missing_model(self, client: AsyncClient) -> None:
-        sid = (await client.post("/sessions")).json()["session_id"]
-        response = await client.get(f"/sessions/{sid}/models/nonexist")
+        sid = (await client.post("/v1/sessions")).json()["session_id"]
+        response = await client.get(f"/v1/sessions/{sid}/models/nonexist")
         assert response.status_code == 404
 
     async def test_remove_model(self, client: AsyncClient) -> None:
-        sid = (await client.post("/sessions")).json()["session_id"]
-        load = await client.post(f"/sessions/{sid}/models", json={"model_yaml": SAMPLE_MODEL_YAML})
+        sid = (await client.post("/v1/sessions")).json()["session_id"]
+        load = await client.post(f"/v1/sessions/{sid}/models", json={"model_yaml": SAMPLE_MODEL_YAML})
         mid = load.json()["model_id"]
-        response = await client.delete(f"/sessions/{sid}/models/{mid}")
+        response = await client.delete(f"/v1/sessions/{sid}/models/{mid}")
         assert response.status_code == 204
         # Verify it's gone
-        response = await client.get(f"/sessions/{sid}/models/{mid}")
+        response = await client.get(f"/v1/sessions/{sid}/models/{mid}")
         assert response.status_code == 404
 
     async def test_validate_in_session(self, client: AsyncClient) -> None:
-        sid = (await client.post("/sessions")).json()["session_id"]
+        sid = (await client.post("/v1/sessions")).json()["session_id"]
         response = await client.post(
-            f"/sessions/{sid}/validate",
+            f"/v1/sessions/{sid}/validate",
             json={"model_yaml": SAMPLE_MODEL_YAML},
         )
         assert response.status_code == 200
         assert response.json()["valid"] is True
 
     async def test_compile_query_in_session(self, client: AsyncClient) -> None:
-        sid = (await client.post("/sessions")).json()["session_id"]
-        load = await client.post(f"/sessions/{sid}/models", json={"model_yaml": SAMPLE_MODEL_YAML})
+        sid = (await client.post("/v1/sessions")).json()["session_id"]
+        load = await client.post(f"/v1/sessions/{sid}/models", json={"model_yaml": SAMPLE_MODEL_YAML})
         mid = load.json()["model_id"]
         response = await client.post(
-            f"/sessions/{sid}/query/sql",
+            f"/v1/sessions/{sid}/query/sql",
             json={
                 "model_id": mid,
                 "query": {
@@ -215,9 +215,9 @@ class TestSessionModelFlow:
         assert data["dialect"] == "postgres"
 
     async def test_load_invalid_model(self, client: AsyncClient) -> None:
-        sid = (await client.post("/sessions")).json()["session_id"]
+        sid = (await client.post("/v1/sessions")).json()["session_id"]
         response = await client.post(
-            f"/sessions/{sid}/models",
+            f"/v1/sessions/{sid}/models",
             json={"model_yaml": "}{bad"},
         )
         assert response.status_code == 422
@@ -230,10 +230,10 @@ class TestSessionModelFlow:
 
 class TestDiagramEndpoint:
     async def test_diagram_er(self, client: AsyncClient) -> None:
-        sid = (await client.post("/sessions")).json()["session_id"]
-        load = await client.post(f"/sessions/{sid}/models", json={"model_yaml": SAMPLE_MODEL_YAML})
+        sid = (await client.post("/v1/sessions")).json()["session_id"]
+        load = await client.post(f"/v1/sessions/{sid}/models", json={"model_yaml": SAMPLE_MODEL_YAML})
         mid = load.json()["model_id"]
-        response = await client.get(f"/sessions/{sid}/models/{mid}/diagram/er")
+        response = await client.get(f"/v1/sessions/{sid}/models/{mid}/diagram/er")
         assert response.status_code == 200
         data = response.json()
         assert "mermaid" in data
@@ -245,11 +245,11 @@ class TestDiagramEndpoint:
         assert "}o--||" in mermaid
 
     async def test_diagram_er_hide_columns(self, client: AsyncClient) -> None:
-        sid = (await client.post("/sessions")).json()["session_id"]
-        load = await client.post(f"/sessions/{sid}/models", json={"model_yaml": SAMPLE_MODEL_YAML})
+        sid = (await client.post("/v1/sessions")).json()["session_id"]
+        load = await client.post(f"/v1/sessions/{sid}/models", json={"model_yaml": SAMPLE_MODEL_YAML})
         mid = load.json()["model_id"]
         response = await client.get(
-            f"/sessions/{sid}/models/{mid}/diagram/er",
+            f"/v1/sessions/{sid}/models/{mid}/diagram/er",
             params={"show_columns": False},
         )
         assert response.status_code == 200
@@ -258,8 +258,8 @@ class TestDiagramEndpoint:
         assert "{" not in mermaid.split("\n", 1)[-1].split("}o")[0]
 
     async def test_diagram_er_missing_model(self, client: AsyncClient) -> None:
-        sid = (await client.post("/sessions")).json()["session_id"]
-        response = await client.get(f"/sessions/{sid}/models/nonexist/diagram/er")
+        sid = (await client.post("/v1/sessions")).json()["session_id"]
+        response = await client.get(f"/v1/sessions/{sid}/models/nonexist/diagram/er")
         assert response.status_code == 404
 
 
@@ -272,30 +272,30 @@ class TestRequestBodyLimit:
     """Verify RequestBodyLimitMiddleware rejects oversized payloads."""
 
     async def test_model_endpoint_rejects_body_over_5mb(self, client: AsyncClient) -> None:
-        sid = (await client.post("/sessions")).json()["session_id"]
+        sid = (await client.post("/v1/sessions")).json()["session_id"]
         oversized = "x" * (5 * 1024 * 1024 + 1)
         response = await client.post(
-            f"/sessions/{sid}/models",
+            f"/v1/sessions/{sid}/models",
             json={"model_yaml": oversized},
         )
         assert response.status_code == 413
         assert "too large" in response.json()["detail"]
 
     async def test_validate_endpoint_rejects_body_over_5mb(self, client: AsyncClient) -> None:
-        sid = (await client.post("/sessions")).json()["session_id"]
+        sid = (await client.post("/v1/sessions")).json()["session_id"]
         oversized = "x" * (5 * 1024 * 1024 + 1)
         response = await client.post(
-            f"/sessions/{sid}/validate",
+            f"/v1/sessions/{sid}/validate",
             json={"model_yaml": oversized},
         )
         assert response.status_code == 413
         assert "too large" in response.json()["detail"]
 
     async def test_query_endpoint_rejects_body_over_1mb(self, client: AsyncClient) -> None:
-        sid = (await client.post("/sessions")).json()["session_id"]
+        sid = (await client.post("/v1/sessions")).json()["session_id"]
         oversized = "x" * (1 * 1024 * 1024 + 1)
         response = await client.post(
-            f"/sessions/{sid}/query/sql",
+            f"/v1/sessions/{sid}/query/sql",
             content=oversized,
             headers={"content-type": "application/json"},
         )
@@ -303,9 +303,9 @@ class TestRequestBodyLimit:
         assert "too large" in response.json()["detail"]
 
     async def test_small_payload_passes(self, client: AsyncClient) -> None:
-        sid = (await client.post("/sessions")).json()["session_id"]
+        sid = (await client.post("/v1/sessions")).json()["session_id"]
         response = await client.post(
-            f"/sessions/{sid}/validate",
+            f"/v1/sessions/{sid}/validate",
             json={"model_yaml": "version: '1'"},
         )
         # Not 413 — body is small enough
@@ -313,9 +313,9 @@ class TestRequestBodyLimit:
 
     async def test_content_length_header_checked_first(self, client: AsyncClient) -> None:
         """A spoofed Content-Length > limit triggers 413 before body is read."""
-        sid = (await client.post("/sessions")).json()["session_id"]
+        sid = (await client.post("/v1/sessions")).json()["session_id"]
         response = await client.post(
-            f"/sessions/{sid}/query/sql",
+            f"/v1/sessions/{sid}/query/sql",
             content=b"small",
             headers={
                 "content-type": "application/json",
@@ -327,13 +327,13 @@ class TestRequestBodyLimit:
 
 class TestSessionIsolation:
     async def test_models_in_session_a_not_visible_in_b(self, client: AsyncClient) -> None:
-        sid_a = (await client.post("/sessions")).json()["session_id"]
-        sid_b = (await client.post("/sessions")).json()["session_id"]
+        sid_a = (await client.post("/v1/sessions")).json()["session_id"]
+        sid_b = (await client.post("/v1/sessions")).json()["session_id"]
 
-        await client.post(f"/sessions/{sid_a}/models", json={"model_yaml": SAMPLE_MODEL_YAML})
+        await client.post(f"/v1/sessions/{sid_a}/models", json={"model_yaml": SAMPLE_MODEL_YAML})
 
-        models_a = (await client.get(f"/sessions/{sid_a}/models")).json()
-        models_b = (await client.get(f"/sessions/{sid_b}/models")).json()
+        models_a = (await client.get(f"/v1/sessions/{sid_a}/models")).json()
+        models_b = (await client.get(f"/v1/sessions/{sid_b}/models")).json()
 
         assert len(models_a) == 1
         assert len(models_b) == 0
@@ -379,36 +379,36 @@ class TestSingleModelMode:
     async def test_session_created_with_preloaded_model(
         self, single_model_client: AsyncClient
     ) -> None:
-        response = await single_model_client.post("/sessions")
+        response = await single_model_client.post("/v1/sessions")
         assert response.status_code == 201
         data = response.json()
         assert data["model_count"] == 1
 
     async def test_model_upload_blocked(self, single_model_client: AsyncClient) -> None:
-        sid = (await single_model_client.post("/sessions")).json()["session_id"]
+        sid = (await single_model_client.post("/v1/sessions")).json()["session_id"]
         response = await single_model_client.post(
-            f"/sessions/{sid}/models",
+            f"/v1/sessions/{sid}/models",
             json={"model_yaml": SAMPLE_MODEL_YAML},
         )
         assert response.status_code == 403
         assert "model upload is disabled" in response.json()["detail"]
 
     async def test_model_removal_blocked(self, single_model_client: AsyncClient) -> None:
-        sid = (await single_model_client.post("/sessions")).json()["session_id"]
-        models = (await single_model_client.get(f"/sessions/{sid}/models")).json()
+        sid = (await single_model_client.post("/v1/sessions")).json()["session_id"]
+        models = (await single_model_client.get(f"/v1/sessions/{sid}/models")).json()
         mid = models[0]["model_id"]
-        response = await single_model_client.delete(f"/sessions/{sid}/models/{mid}")
+        response = await single_model_client.delete(f"/v1/sessions/{sid}/models/{mid}")
         assert response.status_code == 403
         assert "model removal is disabled" in response.json()["detail"]
 
     async def test_query_works_with_preloaded_model(
         self, single_model_client: AsyncClient
     ) -> None:
-        sid = (await single_model_client.post("/sessions")).json()["session_id"]
-        models = (await single_model_client.get(f"/sessions/{sid}/models")).json()
+        sid = (await single_model_client.post("/v1/sessions")).json()["session_id"]
+        models = (await single_model_client.get(f"/v1/sessions/{sid}/models")).json()
         mid = models[0]["model_id"]
         response = await single_model_client.post(
-            f"/sessions/{sid}/query/sql",
+            f"/v1/sessions/{sid}/query/sql",
             json={
                 "model_id": mid,
                 "query": {
@@ -427,19 +427,19 @@ class TestSingleModelMode:
         self, single_model_client: AsyncClient
     ) -> None:
         """Each session gets its own copy of the preloaded model."""
-        sid_a = (await single_model_client.post("/sessions")).json()["session_id"]
-        sid_b = (await single_model_client.post("/sessions")).json()["session_id"]
-        models_a = (await single_model_client.get(f"/sessions/{sid_a}/models")).json()
-        models_b = (await single_model_client.get(f"/sessions/{sid_b}/models")).json()
+        sid_a = (await single_model_client.post("/v1/sessions")).json()["session_id"]
+        sid_b = (await single_model_client.post("/v1/sessions")).json()["session_id"]
+        models_a = (await single_model_client.get(f"/v1/sessions/{sid_a}/models")).json()
+        models_b = (await single_model_client.get(f"/v1/sessions/{sid_b}/models")).json()
         assert len(models_a) == 1
         assert len(models_b) == 1
         # Different model IDs (separate ModelStore instances)
         assert models_a[0]["model_id"] != models_b[0]["model_id"]
 
     async def test_validate_still_works(self, single_model_client: AsyncClient) -> None:
-        sid = (await single_model_client.post("/sessions")).json()["session_id"]
+        sid = (await single_model_client.post("/v1/sessions")).json()["session_id"]
         response = await single_model_client.post(
-            f"/sessions/{sid}/validate",
+            f"/v1/sessions/{sid}/validate",
             json={"model_yaml": SAMPLE_MODEL_YAML},
         )
         assert response.status_code == 200
@@ -448,6 +448,6 @@ class TestSingleModelMode:
     async def test_delete_session_still_works(
         self, single_model_client: AsyncClient
     ) -> None:
-        sid = (await single_model_client.post("/sessions")).json()["session_id"]
-        response = await single_model_client.delete(f"/sessions/{sid}")
+        sid = (await single_model_client.post("/v1/sessions")).json()["session_id"]
+        response = await single_model_client.delete(f"/v1/sessions/{sid}")
         assert response.status_code == 204

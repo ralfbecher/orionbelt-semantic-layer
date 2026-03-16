@@ -17,6 +17,29 @@ class ResolvedInfoResponse(BaseModel):
     measures: list[str] = Field(default_factory=list)
 
 
+class ExplainJoinResponse(BaseModel):
+    """Explanation of a single join step."""
+
+    from_object: str
+    to_object: str
+    join_columns: list[str] = Field(default_factory=list)
+    reason: str
+
+
+class ExplainPlanResponse(BaseModel):
+    """Full query plan explanation with reasoning."""
+
+    planner: str
+    planner_reason: str
+    base_object: str
+    base_object_reason: str
+    joins: list[ExplainJoinResponse] = Field(default_factory=list)
+    where_filter_count: int = 0
+    having_filter_count: int = 0
+    has_totals: bool = False
+    cfl_legs: int = 0
+
+
 class QueryCompileResponse(BaseModel):
     """Response body for POST /query/sql."""
 
@@ -25,6 +48,7 @@ class QueryCompileResponse(BaseModel):
     resolved: ResolvedInfoResponse
     warnings: list[str] = Field(default_factory=list)
     sql_valid: bool = True
+    explain: ExplainPlanResponse | None = None
 
 
 class ValidateRequest(BaseModel):
@@ -195,3 +219,147 @@ class ConvertResponse(BaseModel):
     validation: ValidationDetail = Field(
         default_factory=ValidationDetail, description="Validation results"
     )
+
+
+# ---------------------------------------------------------------------------
+# Model discovery schemas
+# ---------------------------------------------------------------------------
+
+
+class ColumnDetail(BaseModel):
+    """Detail of a data object column."""
+
+    name: str
+    code: str
+    abstract_type: str
+    num_class: str | None = None
+    comment: str | None = None
+    owner: str | None = None
+    synonyms: list[str] = Field(default_factory=list)
+
+
+class DataObjectDetail(BaseModel):
+    """Detail of a data object."""
+
+    name: str
+    code: str
+    database: str
+    schema_name: str = Field(alias="schema")
+    columns: list[ColumnDetail] = Field(default_factory=list)
+    join_targets: list[str] = Field(default_factory=list)
+    comment: str | None = None
+    owner: str | None = None
+    synonyms: list[str] = Field(default_factory=list)
+
+    model_config = {"populate_by_name": True}
+
+
+class DimensionDetail(BaseModel):
+    """Detail of a dimension."""
+
+    name: str
+    data_object: str
+    column: str
+    result_type: str
+    time_grain: str | None = None
+    format: str | None = None
+    owner: str | None = None
+    synonyms: list[str] = Field(default_factory=list)
+
+
+class MeasureDetail(BaseModel):
+    """Detail of a measure."""
+
+    name: str
+    result_type: str
+    aggregation: str
+    expression: str | None = None
+    columns: list[dict[str, str]] = Field(default_factory=list)
+    distinct: bool = False
+    total: bool = False
+    format: str | None = None
+    owner: str | None = None
+    synonyms: list[str] = Field(default_factory=list)
+
+
+class MetricDetail(BaseModel):
+    """Detail of a metric."""
+
+    name: str
+    expression: str
+    component_measures: list[str] = Field(default_factory=list)
+    format: str | None = None
+    owner: str | None = None
+    synonyms: list[str] = Field(default_factory=list)
+
+
+class SchemaResponse(BaseModel):
+    """Response for GET /schema — full model structure."""
+
+    model_id: str
+    version: float = 1.0
+    owner: str | None = None
+    data_objects: list[DataObjectDetail] = Field(default_factory=list)
+    dimensions: list[DimensionDetail] = Field(default_factory=list)
+    measures: list[MeasureDetail] = Field(default_factory=list)
+    metrics: list[MetricDetail] = Field(default_factory=list)
+
+
+class ExplainLineageItem(BaseModel):
+    """A single item in the lineage chain."""
+
+    type: str
+    name: str
+    detail: str | None = None
+
+
+class ExplainResponse(BaseModel):
+    """Response for GET /explain/{name} — lineage & composition."""
+
+    name: str
+    type: str
+    lineage: list[ExplainLineageItem] = Field(default_factory=list)
+
+
+class SearchRequest(BaseModel):
+    """Request body for POST /find."""
+
+    query: str = Field(description="Search term")
+    types: list[str] = Field(
+        default_factory=lambda: ["dimension", "measure", "metric", "data_object"],
+        description="Object types to search (dimension, measure, metric, data_object)",
+    )
+
+
+class SearchResultItem(BaseModel):
+    """A single search result."""
+
+    type: str
+    name: str
+    match_field: str
+    score: float = 1.0
+
+
+class SearchResponse(BaseModel):
+    """Response for POST /find."""
+
+    results: list[SearchResultItem] = Field(default_factory=list)
+
+
+class JoinEdge(BaseModel):
+    """A single edge in the join graph."""
+
+    from_object: str
+    to_object: str
+    cardinality: str
+    columns_from: list[str] = Field(default_factory=list)
+    columns_to: list[str] = Field(default_factory=list)
+    secondary: bool = False
+    path_name: str | None = None
+
+
+class JoinGraphResponse(BaseModel):
+    """Response for GET /join-graph — adjacency list."""
+
+    nodes: list[str] = Field(default_factory=list)
+    edges: list[JoinEdge] = Field(default_factory=list)

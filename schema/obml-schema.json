@@ -57,6 +57,10 @@
         "comment": {
           "type": "string"
         },
+        "owner": {
+          "type": "string",
+          "description": "Owner or responsible party for this data object"
+        },
         "synonyms": {
           "type": "array",
           "description": "Alternative names or terms for this data object (LLM hints)",
@@ -125,6 +129,10 @@
         },
         "comment": {
           "type": "string"
+        },
+        "owner": {
+          "type": "string",
+          "description": "Owner or responsible party for this column"
         },
         "synonyms": {
           "type": "array",
@@ -415,6 +423,10 @@
           },
           "minItems": 2
         },
+        "owner": {
+          "type": "string",
+          "description": "Owner or responsible party for this dimension"
+        },
         "synonyms": {
           "type": "array",
           "description": "Alternative names or terms for this dimension (LLM hints)",
@@ -502,6 +514,10 @@
         "filter": {
           "$ref": "#/definitions/filter"
         },
+        "owner": {
+          "type": "string",
+          "description": "Owner or responsible party for this measure"
+        },
         "synonyms": {
           "type": "array",
           "description": "Alternative names or terms for this measure (LLM hints)",
@@ -529,6 +545,10 @@
         },
         "format": {
           "type": "string"
+        },
+        "owner": {
+          "type": "string",
+          "description": "Owner or responsible party for this metric"
         },
         "synonyms": {
           "type": "array",
@@ -699,6 +719,10 @@
     },
     "locale": {
       "$ref": "#/definitions/locale"
+    },
+    "owner": {
+      "type": "string",
+      "description": "Owner or responsible party for this model"
     },
     "customExtensions": {
       "type": "array",

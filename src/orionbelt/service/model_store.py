@@ -39,6 +39,7 @@ class DataObjectInfo:
     columns: list[str]
     join_targets: list[str]
     synonyms: list[str]
+    owner: str | None = None
 
 
 @dataclass
@@ -51,6 +52,7 @@ class DimensionInfo:
     column: str
     time_grain: str | None
     synonyms: list[str]
+    owner: str | None = None
 
 
 @dataclass
@@ -62,6 +64,7 @@ class MeasureInfo:
     aggregation: str
     expression: str | None
     synonyms: list[str]
+    owner: str | None = None
 
 
 @dataclass
@@ -71,6 +74,7 @@ class MetricInfo:
     name: str
     expression: str
     synonyms: list[str]
+    owner: str | None = None
 
 
 @dataclass
@@ -254,6 +258,7 @@ class ModelStore:
                 columns=list(obj.columns.keys()),
                 join_targets=[j.join_to for j in obj.joins],
                 synonyms=obj.synonyms,
+                owner=obj.owner,
             )
             for obj in model.data_objects.values()
         ]
@@ -266,6 +271,7 @@ class ModelStore:
                 column=dim.column,
                 time_grain=dim.time_grain.value if dim.time_grain else None,
                 synonyms=dim.synonyms,
+                owner=dim.owner,
             )
             for dim in model.dimensions.values()
         ]
@@ -277,12 +283,18 @@ class ModelStore:
                 aggregation=m.aggregation,
                 expression=m.expression,
                 synonyms=m.synonyms,
+                owner=m.owner,
             )
             for m in model.measures.values()
         ]
 
         metrics = [
-            MetricInfo(name=met.label, expression=met.expression, synonyms=met.synonyms)
+            MetricInfo(
+                name=met.label,
+                expression=met.expression,
+                synonyms=met.synonyms,
+                owner=met.owner,
+            )
             for met in model.metrics.values()
         ]
 

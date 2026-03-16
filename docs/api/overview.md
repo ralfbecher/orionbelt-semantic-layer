@@ -20,22 +20,26 @@ Content-Type: application/json
 
 ### Routers
 
+All API routes are prefixed with `/v1/` except `/health` and `/robots.txt`.
+
 | Prefix | Tag | Description |
 |--------|-----|-------------|
-| `/sessions` | sessions | Session-scoped model management, validation, and query compilation |
-| `/convert` | convert | OSI ↔ OBML format conversion with validation |
-| `/dialects` | dialects | Available SQL dialect info |
-| `/settings` | settings | Public configuration (single-model mode, TTL) |
-| `/health` | health | Health check |
+| `/v1/sessions` | sessions | Session-scoped model management, validation, and query compilation |
+| `/v1/sessions/.../models/.../` | model-discovery | Schema, dimensions, measures, metrics, explain, find, join-graph |
+| `/v1/schema`, `/v1/dimensions`, ... | model-discovery | Top-level shortcuts (auto-resolve single session/model) |
+| `/v1/convert` | convert | OSI ↔ OBML format conversion with validation |
+| `/v1/dialects` | dialects | Available SQL dialect info |
+| `/v1/settings` | settings | Public configuration (single-model mode, TTL) |
+| `/health` | health | Health check (no prefix) |
 
 ### Session-Based Workflow
 
 The primary API workflow uses sessions to manage model state:
 
-1. **Create a session** — `POST /sessions` returns a `session_id`
-2. **Load models** — `POST /sessions/{id}/models` with OBML YAML
-3. **Query** — `POST /sessions/{id}/query/sql` against loaded models
-4. **Close** — `DELETE /sessions/{id}` when done (or let TTL expire)
+1. **Create a session** — `POST /v1/sessions` returns a `session_id`
+2. **Load models** — `POST /v1/sessions/{id}/models` with OBML YAML
+3. **Query** — `POST /v1/sessions/{id}/query/sql` against loaded models
+4. **Close** — `DELETE /v1/sessions/{id}` when done (or let TTL expire)
 
 Sessions automatically expire after 30 minutes of inactivity (configurable via `SESSION_TTL_SECONDS`).
 
@@ -43,12 +47,12 @@ Sessions automatically expire after 30 minutes of inactivity (configurable via `
 
 When the `MODEL_FILE` environment variable is set, the server runs in **single-model mode**:
 
-1. **Create a session** — `POST /sessions` returns a `session_id` with the model already loaded (`model_count: 1`)
-2. **List the model** — `GET /sessions/{id}/models` to get the pre-loaded `model_id`
-3. **Query** — `POST /sessions/{id}/query/sql` against the pre-loaded model
-4. **Close** — `DELETE /sessions/{id}` when done (or let TTL expire)
+1. **Create a session** — `POST /v1/sessions` returns a `session_id` with the model already loaded (`model_count: 1`)
+2. **List the model** — `GET /v1/sessions/{id}/models` to get the pre-loaded `model_id`
+3. **Query** — `POST /v1/sessions/{id}/query/sql` against the pre-loaded model
+4. **Close** — `DELETE /v1/sessions/{id}` when done (or let TTL expire)
 
-Model upload (`POST /sessions/{id}/models`) and removal (`DELETE /sessions/{id}/models/{mid}`) return **403 Forbidden** in this mode. All other endpoints work normally.
+Model upload (`POST /v1/sessions/{id}/models`) and removal (`DELETE /v1/sessions/{id}/models/{mid}`) return **403 Forbidden** in this mode. All other endpoints work normally.
 
 ## Error Responses
 

@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from orionbelt.compiler.cfl import CFLPlanner
 from orionbelt.compiler.codegen import CodeGenerator
 from orionbelt.compiler.fanout import detect_fanout
-from orionbelt.compiler.resolution import QueryResolver
+from orionbelt.compiler.resolution import QueryResolver, ResolvedQuery
 from orionbelt.compiler.star import StarSchemaPlanner
 from orionbelt.compiler.total_wrap import wrap_with_totals
 from orionbelt.compiler.validator import validate_sql
@@ -26,6 +26,31 @@ class ResolvedInfo:
 
 
 @dataclass
+class ExplainJoin:
+    """Explanation of a single join step in the query plan."""
+
+    from_object: str
+    to_object: str
+    join_columns: list[str]
+    reason: str
+
+
+@dataclass
+class ExplainPlan:
+    """Full explanation of the query planner decisions."""
+
+    planner: str
+    planner_reason: str
+    base_object: str
+    base_object_reason: str
+    joins: list[ExplainJoin] = field(default_factory=list)
+    where_filter_count: int = 0
+    having_filter_count: int = 0
+    has_totals: bool = False
+    cfl_legs: int = 0
+
+
+@dataclass
 class CompilationResult:
     """The result of compiling a query to SQL."""
 
@@ -34,6 +59,7 @@ class CompilationResult:
     resolved: ResolvedInfo
     warnings: list[str] = field(default_factory=list)
     sql_valid: bool = True
+    explain: ExplainPlan | None = None
 
 
 class CompilationPipeline:
@@ -65,7 +91,8 @@ class CompilationPipeline:
         )
 
         # Phase 2: Planning (star schema or CFL)
-        if resolved.requires_cfl or resolved.dimensions_exclude:
+        use_cfl = resolved.requires_cfl or resolved.dimensions_exclude
+        if use_cfl:
             plan = self._cfl_planner.plan(resolved, model, qualify_table=qualify_table)
         else:
             plan = self._star_planner.plan(resolved, model, qualify_table=qualify_table)
@@ -84,6 +111,9 @@ class CompilationPipeline:
         if not sql_valid:
             warnings = warnings + [f"SQL validation: {e}" for e in validation_errors]
 
+        # Build explain plan
+        explain = self._build_explain(resolved, model, use_cfl)
+
         return CompilationResult(
             sql=sql,
             dialect=dialect_name,
@@ -94,4 +124,85 @@ class CompilationPipeline:
             ),
             warnings=warnings,
             sql_valid=sql_valid,
+            explain=explain,
+        )
+
+    def _build_explain(
+        self,
+        resolved: ResolvedQuery,
+        model: SemanticModel,
+        use_cfl: bool,
+    ) -> ExplainPlan:
+        """Build the explain plan from resolution results."""
+
+        # Planner choice
+        if use_cfl:
+            if resolved.dimensions_exclude:
+                planner = "CFL"
+                planner_reason = (
+                    "Dimensions span independent branches — "
+                    "Composite Fact Layer produces one leg per branch"
+                )
+            else:
+                planner = "CFL"
+                planner_reason = (
+                    f"Measures reference independent fact tables "
+                    f"({', '.join(sorted(resolved.measure_source_objects))}) — "
+                    f"Composite Fact Layer merges them via UNION ALL"
+                )
+        else:
+            planner = "Star Schema"
+            planner_reason = (
+                "All requested objects are reachable from a single base via directed joins"
+            )
+
+        # Base object
+        base = resolved.base_object
+        base_obj = model.data_objects.get(base)
+        if base_obj and base_obj.joins:
+            base_reason = (
+                f"'{base}' selected as base because it has the most joins "
+                f"({len(base_obj.joins)}) among measure source objects"
+            )
+        elif resolved.measure_source_objects:
+            base_reason = f"'{base}' selected as the primary measure source object"
+        else:
+            base_reason = f"'{base}' selected as base for dimension-only query"
+
+        # Joins
+        explain_joins: list[ExplainJoin] = []
+        for step in resolved.join_steps:
+            join_cols = [
+                f"{fc} = {tc}"
+                for fc, tc in zip(step.from_columns, step.to_columns, strict=True)
+            ]
+            if step.reversed:
+                reason = (
+                    f"Reversed join from '{step.from_object}' to '{step.to_object}' — "
+                    f"original join was defined in the opposite direction"
+                )
+            else:
+                reason = (
+                    f"Join '{step.from_object}' → '{step.to_object}' to include "
+                    f"columns needed by the query"
+                )
+            explain_joins.append(
+                ExplainJoin(
+                    from_object=step.from_object,
+                    to_object=step.to_object,
+                    join_columns=join_cols,
+                    reason=reason,
+                )
+            )
+
+        return ExplainPlan(
+            planner=planner,
+            planner_reason=planner_reason,
+            base_object=base,
+            base_object_reason=base_reason,
+            joins=explain_joins,
+            where_filter_count=len(resolved.where_filters),
+            having_filter_count=len(resolved.having_filters),
+            has_totals=resolved.has_totals,
+            cfl_legs=len(resolved.measure_source_objects) if use_cfl else 0,
         )

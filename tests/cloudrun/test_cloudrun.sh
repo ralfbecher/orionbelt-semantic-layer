@@ -53,7 +53,7 @@ json_len() {
 cleanup() {
     # Best-effort: delete session if it was created
     if [[ -n "$SESSION_ID" ]]; then
-        curl -s -X DELETE "${BASE_URL}/sessions/${SESSION_ID}" >/dev/null 2>&1 || true
+        curl -s -X DELETE "${BASE_URL}/v1/sessions/${SESSION_ID}" >/dev/null 2>&1 || true
     fi
 }
 trap cleanup EXIT
@@ -84,7 +84,7 @@ fi
 
 # ── 3. Dialects ──────────────────────────────────────────────────────
 
-api GET /dialects
+api GET /v1/dialects
 DIALECT_COUNT=$(json_len "['dialects']" 2>/dev/null || echo "0")
 if [[ "$HTTP_CODE" == "200" ]] && [[ "$DIALECT_COUNT" -ge 5 ]]; then
     pass "GET /dialects returns $DIALECT_COUNT dialects"
@@ -94,7 +94,7 @@ fi
 
 # ── 4. Create session ───────────────────────────────────────────────
 
-api POST /sessions -H "Content-Type: application/json" -d '{"metadata":{"env":"cloudrun-test"}}'
+api POST /v1/sessions -H "Content-Type: application/json" -d '{"metadata":{"env":"cloudrun-test"}}'
 SESSION_ID=$(json_field "['session_id']" 2>/dev/null || echo "")
 if [[ "$HTTP_CODE" == "200" || "$HTTP_CODE" == "201" ]] && [[ -n "$SESSION_ID" ]]; then
     pass "POST /sessions creates session ($SESSION_ID)"
@@ -104,7 +104,7 @@ fi
 
 # ── 5. List sessions ────────────────────────────────────────────────
 
-api GET /sessions
+api GET /v1/sessions
 SESSION_COUNT=$(json_len "['sessions']" 2>/dev/null || echo "0")
 if [[ "$HTTP_CODE" == "200" ]] && [[ "$SESSION_COUNT" -ge 1 ]]; then
     pass "GET /sessions lists $SESSION_COUNT session(s)"
@@ -114,7 +114,7 @@ fi
 
 # ── 6. Get session ──────────────────────────────────────────────────
 
-api GET "/sessions/${SESSION_ID}"
+api GET "/v1/sessions/${SESSION_ID}"
 GOT_SID=$(json_field "['session_id']" 2>/dev/null || echo "")
 GOT_META=$(json_field "['metadata']['env']" 2>/dev/null || echo "")
 if [[ "$HTTP_CODE" == "200" ]] && [[ "$GOT_SID" == "$SESSION_ID" ]]; then
@@ -133,7 +133,7 @@ fi
 # ── 8. Load model ───────────────────────────────────────────────────
 
 MODEL_YAML=$(python3 -c "import json; print(json.dumps(open('$MODEL_FILE').read()))")
-api POST "/sessions/${SESSION_ID}/models" \
+api POST "/v1/sessions/${SESSION_ID}/models" \
     -H "Content-Type: application/json" \
     -d "{\"model_id\": \"test\", \"model_yaml\": ${MODEL_YAML}}"
 MODEL_ID=$(json_field "['model_id']" 2>/dev/null || echo "")
@@ -149,7 +149,7 @@ fi
 
 # ── 9. List models ──────────────────────────────────────────────────
 
-api GET "/sessions/${SESSION_ID}/models"
+api GET "/v1/sessions/${SESSION_ID}/models"
 MODEL_COUNT=$(json_len "" 2>/dev/null || echo "0")
 if [[ "$HTTP_CODE" == "200" ]] && [[ "$MODEL_COUNT" -ge 1 ]]; then
     pass "GET /sessions/{id}/models lists $MODEL_COUNT model(s)"
@@ -159,7 +159,7 @@ fi
 
 # ── 10. Describe model ──────────────────────────────────────────────
 
-api GET "/sessions/${SESSION_ID}/models/${MODEL_ID}"
+api GET "/v1/sessions/${SESSION_ID}/models/${MODEL_ID}"
 DESC_OBJS=$(json_len "['data_objects']" 2>/dev/null || echo "0")
 DESC_DIMS=$(json_len "['dimensions']" 2>/dev/null || echo "0")
 DESC_MSRS=$(json_len "['measures']" 2>/dev/null || echo "0")
@@ -172,7 +172,7 @@ fi
 
 # ── 11. Validate model ──────────────────────────────────────────────
 
-api POST "/sessions/${SESSION_ID}/validate" \
+api POST "/v1/sessions/${SESSION_ID}/validate" \
     -H "Content-Type: application/json" \
     -d "{\"model_yaml\": ${MODEL_YAML}}"
 VALID=$(json_field "['valid']" 2>/dev/null || echo "")
@@ -183,7 +183,7 @@ else
 fi
 
 # 12. Validate invalid YAML — returns 200 with valid=false
-api POST "/sessions/${SESSION_ID}/validate" \
+api POST "/v1/sessions/${SESSION_ID}/validate" \
     -H "Content-Type: application/json" \
     -d '{"model_yaml": "key: [unclosed"}'
 VALID_BAD=$(json_field "['valid']" 2>/dev/null || echo "")
@@ -198,7 +198,7 @@ fi
 
 compile_query() {
     local test_name=$1 dialect=$2 query_json=$3 expect_pattern=$4
-    api POST "/sessions/${SESSION_ID}/query/sql" \
+    api POST "/v1/sessions/${SESSION_ID}/query/sql" \
         -H "Content-Type: application/json" \
         -d "{
             \"model_id\": \"${MODEL_ID}\",
@@ -271,7 +271,7 @@ compile_query "Purchases fact table query" "dremio" "$PURCHASE_QUERY" "purchases
 # ── Error handling ───────────────────────────────────────────────────
 
 # 22. Unknown dimension
-api POST "/sessions/${SESSION_ID}/query/sql" \
+api POST "/v1/sessions/${SESSION_ID}/query/sql" \
     -H "Content-Type: application/json" \
     -d "{
         \"model_id\": \"${MODEL_ID}\",
@@ -290,7 +290,7 @@ else
 fi
 
 # 23. Unknown measure
-api POST "/sessions/${SESSION_ID}/query/sql" \
+api POST "/v1/sessions/${SESSION_ID}/query/sql" \
     -H "Content-Type: application/json" \
     -d "{
         \"model_id\": \"${MODEL_ID}\",
@@ -309,7 +309,7 @@ else
 fi
 
 # 24. Unknown model ID
-api POST "/sessions/${SESSION_ID}/query/sql" \
+api POST "/v1/sessions/${SESSION_ID}/query/sql" \
     -H "Content-Type: application/json" \
     -d '{
         "model_id": "nonexist",
@@ -328,7 +328,7 @@ else
 fi
 
 # 25. Unknown dialect
-api POST "/sessions/${SESSION_ID}/query/sql" \
+api POST "/v1/sessions/${SESSION_ID}/query/sql" \
     -H "Content-Type: application/json" \
     -d "{
         \"model_id\": \"${MODEL_ID}\",
@@ -357,7 +357,7 @@ fi
 # ── Cleanup ──────────────────────────────────────────────────────────
 
 # 27. Delete model
-api DELETE "/sessions/${SESSION_ID}/models/${MODEL_ID}"
+api DELETE "/v1/sessions/${SESSION_ID}/models/${MODEL_ID}"
 if [[ "$HTTP_CODE" == "200" ]] || [[ "$HTTP_CODE" == "204" ]]; then
     pass "DELETE /sessions/{id}/models/{mid} removes model"
 else
@@ -365,7 +365,7 @@ else
 fi
 
 # 28. Verify model gone
-api GET "/sessions/${SESSION_ID}/models/${MODEL_ID}"
+api GET "/v1/sessions/${SESSION_ID}/models/${MODEL_ID}"
 if [[ "$HTTP_CODE" == "404" ]]; then
     pass "Deleted model returns 404"
 else
@@ -373,7 +373,7 @@ else
 fi
 
 # 29. Delete session
-api DELETE "/sessions/${SESSION_ID}"
+api DELETE "/v1/sessions/${SESSION_ID}"
 if [[ "$HTTP_CODE" == "200" ]] || [[ "$HTTP_CODE" == "204" ]]; then
     pass "DELETE /sessions/{id} closes session"
     SESSION_ID=""  # Prevent cleanup trap from re-deleting

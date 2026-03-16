@@ -13,7 +13,7 @@ Returns the service status and version.
 ```json
 {
   "status": "ok",
-  "version": "0.1.0"
+  "version": "1.0.0"
 }
 ```
 
@@ -21,7 +21,7 @@ Returns the service status and version.
 
 ## Sessions
 
-### `POST /sessions`
+### `POST /v1/sessions`
 
 Create a new session. Each session has its own model store.
 
@@ -51,7 +51,7 @@ Create a new session. Each session has its own model store.
 }
 ```
 
-### `GET /sessions`
+### `GET /v1/sessions`
 
 List all active sessions.
 
@@ -71,7 +71,7 @@ List all active sessions.
 }
 ```
 
-### `GET /sessions/{session_id}`
+### `GET /v1/sessions/{session_id}`
 
 Get info for a specific session. Also refreshes the session's last-accessed time.
 
@@ -79,7 +79,7 @@ Get info for a specific session. Also refreshes the session's last-accessed time
 
 **Error (404):** Session not found or expired.
 
-### `DELETE /sessions/{session_id}`
+### `DELETE /v1/sessions/{session_id}`
 
 Close a session and release its resources.
 
@@ -91,7 +91,7 @@ Close a session and release its resources.
 
 ## Session Models
 
-### `POST /sessions/{session_id}/models`
+### `POST /v1/sessions/{session_id}/models`
 
 Load an OBML semantic model into a session. The model is parsed, validated, and stored.
 
@@ -125,7 +125,7 @@ Load an OBML semantic model into a session. The model is parsed, validated, and 
 
 **Error (404):** Session not found.
 
-### `GET /sessions/{session_id}/models`
+### `GET /v1/sessions/{session_id}/models`
 
 List all models loaded in a session.
 
@@ -143,7 +143,7 @@ List all models loaded in a session.
 ]
 ```
 
-### `GET /sessions/{session_id}/models/{model_id}`
+### `GET /v1/sessions/{session_id}/models/{model_id}`
 
 Describe a model's contents — data objects (with fields and joins), dimensions, measures, and metrics.
 
@@ -176,7 +176,7 @@ Describe a model's contents — data objects (with fields and joins), dimensions
 
 **Error (404):** Model or session not found.
 
-### `DELETE /sessions/{session_id}/models/{model_id}`
+### `DELETE /v1/sessions/{session_id}/models/{model_id}`
 
 Remove a model from a session.
 
@@ -193,7 +193,7 @@ Remove a model from a session.
 
 ## Session Validation
 
-### `POST /sessions/{session_id}/validate`
+### `POST /v1/sessions/{session_id}/validate`
 
 Validate OBML YAML within a session context. Does not store the model.
 
@@ -235,7 +235,7 @@ Validate OBML YAML within a session context. Does not store the model.
 
 ## Session Query Compilation
 
-### `POST /sessions/{session_id}/query/sql`
+### `POST /v1/sessions/{session_id}/query/sql`
 
 Compile a semantic query against a model loaded in the session.
 
@@ -271,10 +271,24 @@ Compile a semantic query against a model loaded in the session.
 {
   "sql": "SELECT ...",
   "dialect": "postgres",
-  "resolved": {
-    "fact_tables": ["Orders"],
-    "dimensions": ["Customer Country"],
-    "measures": ["Revenue"]
+  "sql_valid": true,
+  "explain": {
+    "planner": "Star Schema",
+    "planner_reason": "All measures come from a single fact table",
+    "base_object": "Orders",
+    "base_object_reason": "Orders has the most joins and contains all requested measures",
+    "joins": [
+      {
+        "from_object": "Orders",
+        "to_object": "Customers",
+        "join_columns": ["CUSTOMER_ID"],
+        "reason": "Required for dimension 'Customer Country'"
+      }
+    ],
+    "where_filter_count": 1,
+    "having_filter_count": 0,
+    "has_totals": false,
+    "cfl_legs": 0
   },
   "warnings": []
 }
@@ -294,7 +308,7 @@ Compile a semantic query against a model loaded in the session.
 
 Stateless endpoints for converting between [OSI (Open Semantic Interchange)](https://github.com/open-semantic-interchange/OSI) and OBML formats. No session required.
 
-### `POST /convert/osi-to-obml`
+### `POST /v1/convert/osi-to-obml`
 
 Convert an OSI YAML model to OBML format.
 
@@ -328,7 +342,7 @@ Convert an OSI YAML model to OBML format.
 
 **Error (422):** Conversion failed (e.g. unsupported OSI structure).
 
-### `POST /convert/obml-to-osi`
+### `POST /v1/convert/obml-to-osi`
 
 Convert an OBML YAML model to OSI format.
 
@@ -345,7 +359,7 @@ Convert an OBML YAML model to OSI format.
 
 The `model_name`, `model_description`, and `ai_instructions` fields are optional (defaults: `"semantic_model"`, `""`, `""`).
 
-**Response (200):** Same structure as `POST /convert/osi-to-obml`.
+**Response (200):** Same structure as `POST /v1/convert/osi-to-obml`.
 
 **Error (400):** Invalid YAML input.
 
@@ -353,9 +367,204 @@ The `model_name`, `model_description`, and `ai_instructions` fields are optional
 
 ---
 
+## Model Discovery
+
+These endpoints provide structured access to model metadata. All fields include an optional `owner` property when set in the OBML model.
+
+### `GET /v1/sessions/{session_id}/models/{model_id}/schema`
+
+Full model structure as JSON, including all data objects, dimensions, measures, and metrics.
+
+**Response (200):**
+
+```json
+{
+  "model_id": "abcd1234",
+  "version": 1.0,
+  "owner": "team-data",
+  "data_objects": [
+    {
+      "name": "Orders",
+      "code": "ORDERS",
+      "database": "WAREHOUSE",
+      "schema": "PUBLIC",
+      "columns": [
+        { "name": "Price", "code": "PRICE", "abstract_type": "float" }
+      ],
+      "join_targets": ["Customers"],
+      "owner": "team-sales"
+    }
+  ],
+  "dimensions": [
+    { "name": "Country", "data_object": "Customers", "column": "Country", "result_type": "string" }
+  ],
+  "measures": [
+    { "name": "Revenue", "aggregation": "sum", "result_type": "float", "columns": [...] }
+  ],
+  "metrics": [
+    { "name": "Revenue per Order", "expression": "...", "component_measures": ["Revenue", "Order Count"] }
+  ]
+}
+```
+
+### `GET /v1/sessions/{session_id}/models/{model_id}/dimensions`
+
+List all dimensions.
+
+**Response (200):** Array of dimension objects.
+
+### `GET /v1/sessions/{session_id}/models/{model_id}/dimensions/{name}`
+
+Get a single dimension by name.
+
+**Response (200):**
+
+```json
+{
+  "name": "Country",
+  "data_object": "Customers",
+  "column": "Country",
+  "result_type": "string",
+  "time_grain": null,
+  "owner": null
+}
+```
+
+**Error (404):** Dimension not found.
+
+### `GET /v1/sessions/{session_id}/models/{model_id}/measures`
+
+List all measures.
+
+**Response (200):** Array of measure objects.
+
+### `GET /v1/sessions/{session_id}/models/{model_id}/measures/{name}`
+
+Get a single measure by name.
+
+**Response (200):**
+
+```json
+{
+  "name": "Revenue",
+  "aggregation": "sum",
+  "result_type": "float",
+  "columns": [
+    { "data_object": "Orders", "column": "Price" }
+  ],
+  "expression": "{[Orders].[Price]} * {[Orders].[Quantity]}",
+  "total": false,
+  "owner": null
+}
+```
+
+**Error (404):** Measure not found.
+
+### `GET /v1/sessions/{session_id}/models/{model_id}/metrics`
+
+List all metrics.
+
+**Response (200):** Array of metric objects.
+
+### `GET /v1/sessions/{session_id}/models/{model_id}/metrics/{name}`
+
+Get a single metric by name. Returns the expression formula and its component measures.
+
+**Error (404):** Metric not found.
+
+### `GET /v1/sessions/{session_id}/models/{model_id}/explain/{name}`
+
+Explain the lineage of a dimension, measure, or metric — traces back through the dependency chain to the underlying data objects and columns.
+
+**Response (200):**
+
+```json
+{
+  "name": "Revenue",
+  "type": "measure",
+  "lineage": [
+    { "type": "data_object", "name": "Orders" },
+    { "type": "column", "name": "Price", "detail": "referenced in expression" },
+    { "type": "column", "name": "Quantity", "detail": "referenced in expression" }
+  ]
+}
+```
+
+**Error (404):** Name not found in model.
+
+### `POST /v1/sessions/{session_id}/models/{model_id}/find`
+
+Search across model artefacts by name or synonym.
+
+**Request:**
+
+```json
+{
+  "query": "Revenue",
+  "types": ["measure", "metric"]
+}
+```
+
+The `types` filter is optional. Valid types: `dimension`, `measure`, `metric`, `data_object`.
+
+**Response (200):**
+
+```json
+{
+  "results": [
+    { "name": "Revenue", "type": "measure", "match": "name" },
+    { "name": "Revenue per Order", "type": "metric", "match": "name" }
+  ]
+}
+```
+
+### `GET /v1/sessions/{session_id}/models/{model_id}/join-graph`
+
+Return the join graph as nodes and edges.
+
+**Response (200):**
+
+```json
+{
+  "nodes": ["Orders", "Customers", "Products"],
+  "edges": [
+    {
+      "from_object": "Orders",
+      "to_object": "Customers",
+      "cardinality": "many-to-one",
+      "secondary": false
+    }
+  ]
+}
+```
+
+---
+
+## Top-level Shortcuts
+
+These endpoints auto-resolve the session and model when only one exists. They mirror the session-scoped model discovery endpoints without requiring session/model IDs.
+
+Returns **404** if no sessions exist, **409 Conflict** if multiple sessions or models exist.
+
+| Shortcut | Equivalent |
+|----------|------------|
+| `GET /v1/schema` | `GET /v1/sessions/{id}/models/{mid}/schema` |
+| `GET /v1/dimensions` | `GET /v1/sessions/{id}/models/{mid}/dimensions` |
+| `GET /v1/dimensions/{name}` | `GET /v1/sessions/{id}/models/{mid}/dimensions/{name}` |
+| `GET /v1/measures` | `GET /v1/sessions/{id}/models/{mid}/measures` |
+| `GET /v1/measures/{name}` | `GET /v1/sessions/{id}/models/{mid}/measures/{name}` |
+| `GET /v1/metrics` | `GET /v1/sessions/{id}/models/{mid}/metrics` |
+| `GET /v1/metrics/{name}` | `GET /v1/sessions/{id}/models/{mid}/metrics/{name}` |
+| `GET /v1/explain/{name}` | `GET /v1/sessions/{id}/models/{mid}/explain/{name}` |
+| `POST /v1/find` | `POST /v1/sessions/{id}/models/{mid}/find` |
+| `GET /v1/join-graph` | `GET /v1/sessions/{id}/models/{mid}/join-graph` |
+| `POST /v1/query/sql` | `POST /v1/sessions/{id}/query/sql` (auto-resolves model_id) |
+
+---
+
 ## Settings
 
-### `GET /settings`
+### `GET /v1/settings`
 
 Return public configuration for API clients (UI, MCP, etc.).
 
@@ -389,7 +598,7 @@ When `MODEL_FILE` is configured:
 
 ## Dialects
 
-### `GET /dialects`
+### `GET /v1/dialects`
 
 List all available SQL dialects and their capability flags.
 
