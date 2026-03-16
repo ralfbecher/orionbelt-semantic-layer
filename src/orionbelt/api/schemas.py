@@ -26,6 +26,16 @@ class ExplainJoinResponse(BaseModel):
     reason: str
 
 
+class ExplainCflLegResponse(BaseModel):
+    """Explanation of a single CFL leg."""
+
+    measure_source: str
+    common_root: str
+    reason: str
+    measures: list[str] = Field(default_factory=list)
+    joins: list[str] = Field(default_factory=list)
+
+
 class ExplainPlanResponse(BaseModel):
     """Full query plan explanation with reasoning."""
 
@@ -37,7 +47,7 @@ class ExplainPlanResponse(BaseModel):
     where_filter_count: int = 0
     having_filter_count: int = 0
     has_totals: bool = False
-    cfl_legs: int = 0
+    cfl_legs: list[ExplainCflLegResponse] = Field(default_factory=list)
 
 
 class QueryCompileResponse(BaseModel):

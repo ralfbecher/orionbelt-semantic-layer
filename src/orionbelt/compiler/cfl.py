@@ -25,9 +25,9 @@ from orionbelt.ast.nodes import (
     UnionAll,
 )
 from orionbelt.compiler.fanout import FanoutError
-from orionbelt.compiler.graph import JoinGraph
+from orionbelt.compiler.graph import JoinGraph, JoinStep
 from orionbelt.compiler.resolution import ResolvedDimension, ResolvedMeasure, ResolvedQuery
-from orionbelt.compiler.star import QueryPlan
+from orionbelt.compiler.star import CflLegInfo, QueryPlan
 from orionbelt.models.semantic import DataObject, SemanticModel
 
 __all__ = ["CFLPlanner", "FanoutError"]
@@ -356,6 +356,7 @@ class CFLPlanner:
         # table — the graph-central node that can reach all dimension objects
         # and the measure's source object with minimal hops.
         union_legs: list[Select] = []
+        leg_infos: list[CflLegInfo] = []
         for obj_name, measures in measures_by_object.items():
             leg_builder = QueryBuilder()
             this_measure_names = {m.name for m in measures}
@@ -426,6 +427,7 @@ class CFLPlanner:
 
             # JOINs: all required objects reachable from the lead
             join_targets = leg_required - {lead}
+            steps: list[JoinStep] = []
             if join_targets:
                 steps = graph.find_join_path({lead}, leg_required)
                 for step in steps:
@@ -438,6 +440,30 @@ class CFLPlanner:
                             join_type=step.join_type,
                             alias=step.to_object,
                         )
+
+            # Capture leg info for explain
+            leg_join_strs = (
+                [f"{s.from_object} → {s.to_object}" for s in steps] if join_targets else []
+            )
+            if lead == obj_name:
+                leg_reason = (
+                    f'"{lead}" is the measure source — '
+                    f"all required dimension objects are reachable from it"
+                )
+            else:
+                leg_reason = (
+                    f'"{lead}" is the deepest common root that can reach '
+                    f'measure source "{obj_name}" and all reachable dimension objects'
+                )
+            leg_infos.append(
+                CflLegInfo(
+                    measure_source=obj_name,
+                    common_root=lead,
+                    reason=leg_reason,
+                    measures=[m.name for m in measures],
+                    joins=leg_join_strs,
+                )
+            )
 
             # Apply WHERE filters to each leg
             for wf in resolved.where_filters:
@@ -524,7 +550,7 @@ class CFLPlanner:
             ctes=[union_cte],
         )
 
-        return QueryPlan(ast=final)
+        return QueryPlan(ast=final, cfl_legs=leg_infos)
 
     # -- dimensionsExclude: EXCEPT-based anti-join ----------------------------
 

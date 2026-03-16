@@ -427,6 +427,7 @@ _INJECT_UPLOAD_JS = (
         patchDownloads('ob-model', 'obml.yml');
         patchDownloads('ob-query', 'query.yml');
         patchDownloads('ob-sql', 'query.sql');
+        patchDownloads('ob-explain', 'explain-query.yml');
         if (++attempts >= 10) clearInterval(iv);
     }, 300);
 
@@ -504,10 +505,10 @@ def _format_convert_status(
     return "\n".join(lines)
 
 
-def _import_osi(osi_yaml: str, api_base: str) -> tuple[str, str]:
-    """Convert OSI YAML to OBML via the API. Returns ``(obml_yaml, status)``."""
+def _import_osi(osi_yaml: str, api_base: str) -> tuple[str, str, str]:
+    """Convert OSI YAML to OBML via the API. Returns ``(obml_yaml, status, explain)``."""
     if not osi_yaml or not osi_yaml.strip():
-        return "", "Error: No OSI YAML content provided"
+        return "", "Error: No OSI YAML content provided", ""
 
     try:
         resp = httpx.post(
@@ -518,21 +519,21 @@ def _import_osi(osi_yaml: str, api_base: str) -> tuple[str, str]:
         )
         if resp.status_code != 200:
             detail = resp.json().get("detail", resp.text)
-            return "", f"Error: {detail}"
+            return "", f"Error: {detail}", ""
         data = resp.json()
     except Exception as exc:
-        return "", f"Error: OSI → OBML conversion failed\n{exc}"
+        return "", f"Error: OSI → OBML conversion failed\n{exc}", ""
 
     status = _format_convert_status(
         "OSI → OBML Import", data.get("warnings", []), data.get("validation", {})
     )
-    return data.get("output_yaml", ""), status
+    return data.get("output_yaml", ""), status, ""
 
 
-def _export_to_osi(obml_yaml: str, api_base: str) -> str:
-    """Convert OBML YAML to OSI via the API. Returns status + OSI YAML."""
+def _export_to_osi(obml_yaml: str, api_base: str) -> tuple[str, str]:
+    """Convert OBML YAML to OSI via the API. Returns ``(status, explain)``."""
     if not obml_yaml or not obml_yaml.strip():
-        return "Error: No OBML model YAML to export"
+        return "Error: No OBML model YAML to export", ""
 
     try:
         resp = httpx.post(
@@ -543,16 +544,16 @@ def _export_to_osi(obml_yaml: str, api_base: str) -> str:
         )
         if resp.status_code != 200:
             detail = resp.json().get("detail", resp.text)
-            return f"Error: {detail}"
+            return f"Error: {detail}", ""
         data = resp.json()
     except Exception as exc:
-        return f"Error: OBML → OSI conversion failed\n{exc}"
+        return f"Error: OBML → OSI conversion failed\n{exc}", ""
 
     status = _format_convert_status(
         "OBML → OSI Export", data.get("warnings", []), data.get("validation", {})
     )
     output: str = data.get("output_yaml", "")
-    return status + "\nCopy the OSI YAML output below.\n\n" + output
+    return status + "\nCopy the OSI YAML output below.\n\n" + output, ""
 
 
 def _format_sql(sql: str) -> str:
@@ -786,6 +787,72 @@ def _cleanup_session(session_state: dict[str, str] | None) -> None:
             )
 
 
+def _build_explain_yaml(data: dict[str, Any]) -> str:
+    """Build a human-readable YAML string from the compile response."""
+    explain: dict[str, Any] = {}
+
+    # Resolved info
+    resolved = data.get("resolved")
+    if resolved:
+        explain["resolved"] = {}
+        if resolved.get("fact_tables"):
+            explain["resolved"]["fact_tables"] = resolved["fact_tables"]
+        if resolved.get("dimensions"):
+            explain["resolved"]["dimensions"] = resolved["dimensions"]
+        if resolved.get("measures"):
+            explain["resolved"]["measures"] = resolved["measures"]
+
+    # Query plan explanation
+    plan = data.get("explain")
+    if plan:
+        explain["plan"] = {}
+        explain["plan"]["planner"] = plan.get("planner", "")
+        explain["plan"]["planner_reason"] = plan.get("planner_reason", "")
+        explain["plan"]["base_object"] = plan.get("base_object", "")
+        explain["plan"]["base_object_reason"] = plan.get("base_object_reason", "")
+        if plan.get("joins"):
+            explain["plan"]["joins"] = [
+                {
+                    "from": j["from_object"],
+                    "to": j["to_object"],
+                    "columns": j.get("join_columns", []),
+                    "reason": j.get("reason", ""),
+                }
+                for j in plan["joins"]
+            ]
+        if plan.get("where_filter_count"):
+            explain["plan"]["where_filters"] = plan["where_filter_count"]
+        if plan.get("having_filter_count"):
+            explain["plan"]["having_filters"] = plan["having_filter_count"]
+        if plan.get("has_totals"):
+            explain["plan"]["has_totals"] = True
+        if plan.get("cfl_legs"):
+            explain["plan"]["cfl_legs"] = [
+                {
+                    "measure_source": leg["measure_source"],
+                    "common_root": leg["common_root"],
+                    "reason": leg.get("reason", ""),
+                    "measures": leg.get("measures", []),
+                    "joins": leg.get("joins", []),
+                }
+                for leg in plan["cfl_legs"]
+            ]
+
+    # Validation
+    validation: dict[str, Any] = {}
+    if not data.get("sql_valid", True):
+        validation["sql_valid"] = False
+    warnings = data.get("warnings", [])
+    if warnings:
+        validation["warnings"] = warnings
+    if validation:
+        explain["validation"] = validation
+
+    if not explain:
+        return ""
+    return yaml.dump(explain, default_flow_style=False, sort_keys=False, allow_unicode=True)
+
+
 def compile_sql(
     model_yaml: str,
     query_yaml: str,
@@ -793,10 +860,10 @@ def compile_sql(
     api_url: str,
     session_state: dict[str, str] | None,
     model_state: dict[str, str] | None,
-) -> tuple[str, dict[str, str] | None, dict[str, str] | None]:
+) -> tuple[str, str, dict[str, str] | None, dict[str, str] | None]:
     """Compile SQL by calling the OrionBelt REST API.
 
-    Returns ``(sql_output, updated_session_state, updated_model_state)``.
+    Returns ``(sql_output, explain_yaml, updated_session_state, updated_model_state)``.
     """
     try:
         client, session_id, model_id, session_state, model_state = _ensure_session_and_model(
@@ -807,11 +874,12 @@ def compile_sql(
         try:
             query_dict = yaml.safe_load(query_yaml)
         except yaml.YAMLError as exc:
-            return f"Error: Invalid query YAML\n{exc}", session_state, model_state
+            return f"Error: Invalid query YAML\n{exc}", "", session_state, model_state
 
         if not isinstance(query_dict, dict):
             return (
                 "Error: Query YAML must be a mapping (dict), not a scalar or list",
+                "",
                 session_state,
                 model_state,
             )
@@ -838,6 +906,7 @@ def compile_sql(
             detail = resp.json().get("detail", resp.text)
             return (
                 f"Error: Query compilation failed\n{_format_api_errors(detail)}",
+                "",
                 session_state,
                 model_state,
             )
@@ -845,6 +914,7 @@ def compile_sql(
         data = resp.json()
         sql: str = data["sql"]
         formatted = _format_sql(sql)
+        explain_yaml = _build_explain_yaml(data)
 
         # Surface validation state and warnings above the SQL output
         warnings: list[str] = data.get("warnings", [])
@@ -856,12 +926,18 @@ def compile_sql(
             header_lines.append(f"-- WARNING: {w}")
         if header_lines:
             header_lines.append("")  # blank line before SQL
-            return "\n".join(header_lines) + "\n" + formatted, session_state, model_state
-        return formatted, session_state, model_state
+            return (
+                "\n".join(header_lines) + "\n" + formatted,
+                explain_yaml,
+                session_state,
+                model_state,
+            )
+        return formatted, explain_yaml, session_state, model_state
 
     except _ModelValidationError as exc:
         return (
             f"Error: Model validation failed\n{_format_api_errors(exc.detail)}",
+            "",
             session_state,
             model_state,
         )
@@ -870,17 +946,19 @@ def compile_sql(
         return (
             f"Error: Cannot connect to API at {api}\n"
             "Make sure the server is running: uv run orionbelt-api",
+            "",
             session_state,
             model_state,
         )
     except httpx.HTTPStatusError as exc:
         return (
             f"Error: HTTP {exc.response.status_code}\n{exc.response.text}",
+            "",
             session_state,
             model_state,
         )
     except Exception as exc:
-        return f"Error: {exc}", session_state, model_state
+        return f"Error: {exc}", "", session_state, model_state
 
 
 def create_blocks(default_api_url: str | None = None) -> Any:
@@ -1022,14 +1100,23 @@ def create_blocks(default_api_url: str | None = None) -> Any:
                     "Compile SQL", variant="primary", elem_classes=["purple-btn"]
                 )
 
-                sql_output = gr.Code(
-                    language="sql",
-                    label="Generated SQL",
-                    interactive=False,
-                    lines=3,
-                    elem_classes=["sql-output"],
-                    elem_id="ob-sql",
-                )
+                with gr.Row():
+                    sql_output = gr.Code(
+                        language="sql",
+                        label="Generated SQL",
+                        interactive=False,
+                        lines=3,
+                        elem_classes=["sql-output"],
+                        elem_id="ob-sql",
+                    )
+                    explain_output = gr.Code(
+                        language="yaml",
+                        label="Query Explain",
+                        interactive=False,
+                        lines=3,
+                        elem_classes=["sql-output"],
+                        elem_id="ob-explain",
+                    )
 
                 compile_btn.click(
                     fn=compile_sql,
@@ -1041,19 +1128,19 @@ def create_blocks(default_api_url: str | None = None) -> Any:
                         session_state,
                         model_state,
                     ],
-                    outputs=[sql_output, session_state, model_state],
+                    outputs=[sql_output, explain_output, session_state, model_state],
                 )
 
                 # Wire OSI bridge + export after sql_output exists
                 osi_bridge.change(
                     fn=_import_osi,
                     inputs=[osi_bridge, api_url],
-                    outputs=[model_input, sql_output],
+                    outputs=[model_input, sql_output, explain_output],
                 )
                 export_osi_btn.click(
                     fn=_export_to_osi,
                     inputs=[model_input, api_url],
-                    outputs=[sql_output],
+                    outputs=[sql_output, explain_output],
                 )
 
             with gr.Tab("ER Diagram", id=1) as er_tab:

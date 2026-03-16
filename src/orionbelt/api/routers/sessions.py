@@ -15,6 +15,7 @@ from orionbelt.api.deps import (
 from orionbelt.api.schemas import (
     DiagramResponse,
     ErrorDetail,
+    ExplainCflLegResponse,
     ExplainJoinResponse,
     ExplainPlanResponse,
     ModelLoadRequest,
@@ -299,7 +300,16 @@ async def compile_query(
             where_filter_count=result.explain.where_filter_count,
             having_filter_count=result.explain.having_filter_count,
             has_totals=result.explain.has_totals,
-            cfl_legs=result.explain.cfl_legs,
+            cfl_legs=[
+                ExplainCflLegResponse(
+                    measure_source=leg.measure_source,
+                    common_root=leg.common_root,
+                    reason=leg.reason,
+                    measures=leg.measures,
+                    joins=leg.joins,
+                )
+                for leg in result.explain.cfl_legs
+            ],
         )
     return QueryCompileResponse(
         sql=result.sql,

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from orionbelt.ast.builder import QueryBuilder
 from orionbelt.ast.nodes import (
@@ -34,10 +34,22 @@ def _substitute_measure_refs(
 
 
 @dataclass
+class CflLegInfo:
+    """Information about a single CFL leg for explain output."""
+
+    measure_source: str
+    common_root: str
+    reason: str
+    measures: list[str]
+    joins: list[str]
+
+
+@dataclass
 class QueryPlan:
     """A planned query ready for AST construction."""
 
     ast: Select
+    cfl_legs: list[CflLegInfo] = field(default_factory=list)
 
 
 class StarSchemaPlanner:

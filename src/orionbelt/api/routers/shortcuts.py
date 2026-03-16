@@ -23,6 +23,7 @@ from orionbelt.api.routers.model_api import (
 )
 from orionbelt.api.schemas import (
     DimensionDetail,
+    ExplainCflLegResponse,
     ExplainJoinResponse,
     ExplainPlanResponse,
     ExplainResponse,
@@ -294,7 +295,16 @@ async def shortcut_compile_query(
             where_filter_count=result.explain.where_filter_count,
             having_filter_count=result.explain.having_filter_count,
             has_totals=result.explain.has_totals,
-            cfl_legs=result.explain.cfl_legs,
+            cfl_legs=[
+                ExplainCflLegResponse(
+                    measure_source=leg.measure_source,
+                    common_root=leg.common_root,
+                    reason=leg.reason,
+                    measures=leg.measures,
+                    joins=leg.joins,
+                )
+                for leg in result.explain.cfl_legs
+            ],
         )
     return QueryCompileResponse(
         sql=result.sql,
