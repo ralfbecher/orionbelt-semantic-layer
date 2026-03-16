@@ -108,6 +108,8 @@ api GET /v1/sessions
 SESSION_COUNT=$(json_len "['sessions']" 2>/dev/null || echo "0")
 if [[ "$HTTP_CODE" == "200" ]] && [[ "$SESSION_COUNT" -ge 1 ]]; then
     pass "GET /sessions lists $SESSION_COUNT session(s)"
+elif [[ "$HTTP_CODE" == "403" ]]; then
+    pass "GET /sessions disabled (DISABLE_SESSION_LIST=true)"
 else
     fail "GET /sessions" "HTTP $HTTP_CODE, count=$SESSION_COUNT"
 fi
