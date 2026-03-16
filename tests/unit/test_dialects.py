@@ -22,23 +22,32 @@ from orionbelt.ast.nodes import (
     WindowFunction,
 )
 from orionbelt.dialect import DialectRegistry
+from orionbelt.dialect.bigquery import BigQueryDialect
 from orionbelt.dialect.clickhouse import ClickHouseDialect
 from orionbelt.dialect.databricks import DatabricksDialect
 from orionbelt.dialect.dremio import DremioDialect
+from orionbelt.dialect.duckdb import DuckDBDialect
 from orionbelt.dialect.postgres import PostgresDialect
 from orionbelt.dialect.registry import UnsupportedDialectError
 from orionbelt.dialect.snowflake import SnowflakeDialect
 from orionbelt.models.semantic import TimeGrain
 
+ALL_DIALECTS = [
+    "bigquery",
+    "clickhouse",
+    "databricks",
+    "dremio",
+    "duckdb",
+    "postgres",
+    "snowflake",
+]
+
 
 class TestDialectRegistry:
     def test_available_dialects(self) -> None:
         available = DialectRegistry.available()
-        assert "postgres" in available
-        assert "snowflake" in available
-        assert "clickhouse" in available
-        assert "dremio" in available
-        assert "databricks" in available
+        for name in ALL_DIALECTS:
+            assert name in available
 
     def test_get_postgres(self) -> None:
         dialect = DialectRegistry.get("postgres")
@@ -258,6 +267,88 @@ class TestDremioDialect:
         assert dialect.capabilities.supports_ilike is False
 
 
+class TestBigQueryDialect:
+    @pytest.fixture
+    def dialect(self) -> BigQueryDialect:
+        return BigQueryDialect()
+
+    def test_name(self, dialect: BigQueryDialect) -> None:
+        assert dialect.name == "bigquery"
+
+    def test_capabilities(self, dialect: BigQueryDialect) -> None:
+        assert dialect.capabilities.supports_cte is True
+        assert dialect.capabilities.supports_qualify is True
+        assert dialect.capabilities.supports_arrays is True
+        assert dialect.capabilities.supports_semi_structured is True
+        assert dialect.capabilities.supports_ilike is False
+
+    def test_backtick_quoting(self, dialect: BigQueryDialect) -> None:
+        assert dialect.quote_identifier("col") == "`col`"
+
+    def test_time_grain(self, dialect: BigQueryDialect) -> None:
+        result = dialect.render_time_grain(col("dt"), TimeGrain.MONTH)
+        assert isinstance(result, FunctionCall)
+        assert result.name == "DATE_TRUNC"
+
+    def test_time_grain_week(self, dialect: BigQueryDialect) -> None:
+        result = dialect.render_time_grain(col("dt"), TimeGrain.WEEK)
+        assert isinstance(result, FunctionCall)
+        assert result.name == "DATE_TRUNC"
+        # BigQuery uses ISOWEEK for week truncation
+        sql = dialect.compile_expr(result)
+        assert "ISOWEEK" in sql
+
+    def test_type_map(self, dialect: BigQueryDialect) -> None:
+        assert dialect._resolve_type_name("string") == "STRING"
+        assert dialect._resolve_type_name("int") == "INT64"
+        assert dialect._resolve_type_name("float") == "FLOAT64"
+        assert dialect._resolve_type_name("boolean") == "BOOL"
+        assert dialect._resolve_type_name("json") == "JSON"
+
+    def test_median(self, dialect: BigQueryDialect) -> None:
+        expr = FunctionCall(name="MEDIAN", args=[ColumnRef(name="price")])
+        sql = dialect.compile_expr(expr)
+        assert "APPROX_QUANTILES" in sql
+
+    def test_mode(self, dialect: BigQueryDialect) -> None:
+        expr = FunctionCall(name="MODE", args=[ColumnRef(name="status")])
+        sql = dialect.compile_expr(expr)
+        assert "APPROX_TOP_COUNT" in sql
+
+
+class TestDuckDBDialect:
+    @pytest.fixture
+    def dialect(self) -> DuckDBDialect:
+        return DuckDBDialect()
+
+    def test_name(self, dialect: DuckDBDialect) -> None:
+        assert dialect.name == "duckdb"
+
+    def test_capabilities(self, dialect: DuckDBDialect) -> None:
+        assert dialect.capabilities.supports_cte is True
+        assert dialect.capabilities.supports_qualify is True
+        assert dialect.capabilities.supports_arrays is True
+        assert dialect.capabilities.supports_ilike is True
+
+    def test_quote_identifier(self, dialect: DuckDBDialect) -> None:
+        assert dialect.quote_identifier("col") == '"col"'
+        assert dialect.quote_identifier('has"quote') == '"has""quote"'
+
+    def test_time_grain(self, dialect: DuckDBDialect) -> None:
+        result = dialect.render_time_grain(col("dt"), TimeGrain.MONTH)
+        assert isinstance(result, FunctionCall)
+        assert result.name == "date_trunc"
+
+    def test_two_part_table_ref(self, dialect: DuckDBDialect) -> None:
+        ref = dialect.format_table_ref("db", "main", "orders")
+        assert ref == "main.orders"
+
+    def test_string_contains_ilike(self, dialect: DuckDBDialect) -> None:
+        result = dialect.render_string_contains(col("name"), lit("foo"))
+        sql = dialect.compile_expr(result)
+        assert "ILIKE" in sql
+
+
 class TestCrossDialectConsistency:
     """Ensure the same query produces valid SQL across all dialects."""
 
@@ -279,9 +370,7 @@ class TestCrossDialectConsistency:
             .build()
         )
 
-    @pytest.mark.parametrize(
-        "dialect_name", ["postgres", "snowflake", "clickhouse", "dremio", "databricks"]
-    )
+    @pytest.mark.parametrize("dialect_name", ALL_DIALECTS)
     def test_all_dialects_produce_valid_sql(self, dialect_name: str) -> None:
         ast = self._build_test_query()
         dialect = DialectRegistry.get(dialect_name)
@@ -299,9 +388,7 @@ class TestCrossDialectConsistency:
 class TestWindowFunctionRendering:
     """Test window function rendering across all dialects."""
 
-    @pytest.mark.parametrize(
-        "dialect_name", ["postgres", "snowflake", "clickhouse", "dremio", "databricks"]
-    )
+    @pytest.mark.parametrize("dialect_name", ALL_DIALECTS)
     def test_sum_over_empty(self, dialect_name: str) -> None:
         """SUM(x) OVER () — grand total."""
         dialect = DialectRegistry.get(dialect_name)
@@ -310,9 +397,7 @@ class TestWindowFunctionRendering:
         assert "SUM(" in sql
         assert "OVER ()" in sql
 
-    @pytest.mark.parametrize(
-        "dialect_name", ["postgres", "snowflake", "clickhouse", "dremio", "databricks"]
-    )
+    @pytest.mark.parametrize("dialect_name", ALL_DIALECTS)
     def test_count_distinct_over_empty(self, dialect_name: str) -> None:
         """COUNT(DISTINCT x) OVER ()."""
         dialect = DialectRegistry.get(dialect_name)
@@ -325,9 +410,7 @@ class TestWindowFunctionRendering:
         assert "COUNT(DISTINCT" in sql
         assert "OVER ()" in sql
 
-    @pytest.mark.parametrize(
-        "dialect_name", ["postgres", "snowflake", "clickhouse", "dremio", "databricks"]
-    )
+    @pytest.mark.parametrize("dialect_name", ALL_DIALECTS)
     def test_with_partition_by(self, dialect_name: str) -> None:
         """SUM(x) OVER (PARTITION BY dept)."""
         dialect = DialectRegistry.get(dialect_name)
@@ -371,11 +454,13 @@ class TestWindowFunctionRendering:
 @pytest.mark.parametrize(
     ("dialect_name", "expected_date_fn", "expected_add_fn"),
     [
-        ("postgres", "CURRENT_DATE", "INTERVAL"),
-        ("snowflake", "CURRENT_DATE()", "DATEADD('day'"),
+        ("bigquery", "CURRENT_DATE()", "DATE_ADD"),
         ("clickhouse", "today()", "addDays"),
         ("databricks", "current_date()", "date_add("),
         ("dremio", "CURRENT_DATE", "DATE_ADD"),
+        ("duckdb", "CURRENT_DATE", "INTERVAL"),
+        ("postgres", "CURRENT_DATE", "INTERVAL"),
+        ("snowflake", "CURRENT_DATE()", "DATEADD('day'"),
     ],
 )
 def test_relative_date_range_compiles(
@@ -396,16 +481,18 @@ def test_relative_date_range_compiles(
 
 
 class TestListaggRendering:
-    """Test LISTAGG rendering across all 5 dialects."""
+    """Test LISTAGG rendering across all dialects."""
 
     @pytest.mark.parametrize(
         ("dialect_name", "expected"),
         [
+            ("bigquery", "STRING_AGG"),
+            ("clickhouse", "arrayStringConcat(groupArray("),
+            ("databricks", "ARRAY_JOIN(COLLECT_LIST("),
+            ("dremio", "LISTAGG"),
+            ("duckdb", "STRING_AGG"),
             ("postgres", "STRING_AGG"),
             ("snowflake", "LISTAGG"),
-            ("clickhouse", "arrayStringConcat(groupArray("),
-            ("dremio", "LISTAGG"),
-            ("databricks", "ARRAY_JOIN(COLLECT_LIST("),
         ],
     )
     def test_basic_listagg(self, dialect_name: str, expected: str) -> None:
@@ -423,11 +510,13 @@ class TestListaggRendering:
     @pytest.mark.parametrize(
         ("dialect_name", "expected"),
         [
+            ("bigquery", "STRING_AGG(DISTINCT"),
+            ("clickhouse", "groupUniqArray("),
+            ("databricks", "ARRAY_JOIN(COLLECT_SET("),
+            ("dremio", "LISTAGG(DISTINCT"),
+            ("duckdb", "STRING_AGG(DISTINCT"),
             ("postgres", "STRING_AGG(DISTINCT"),
             ("snowflake", "LISTAGG(DISTINCT"),
-            ("clickhouse", "groupUniqArray("),
-            ("dremio", "LISTAGG(DISTINCT"),
-            ("databricks", "ARRAY_JOIN(COLLECT_SET("),
         ],
     )
     def test_listagg_distinct(self, dialect_name: str, expected: str) -> None:
@@ -445,11 +534,13 @@ class TestListaggRendering:
     @pytest.mark.parametrize(
         ("dialect_name", "expected"),
         [
+            ("bigquery", "ORDER BY"),
+            ("clickhouse", "arraySort(groupArray("),
+            ("databricks", "SORT_ARRAY(COLLECT_LIST("),
+            ("dremio", "WITHIN GROUP (ORDER BY"),
+            ("duckdb", "ORDER BY"),
             ("postgres", "ORDER BY"),
             ("snowflake", "WITHIN GROUP (ORDER BY"),
-            ("clickhouse", "arraySort(groupArray("),
-            ("dremio", "WITHIN GROUP (ORDER BY"),
-            ("databricks", "SORT_ARRAY(COLLECT_LIST("),
         ],
     )
     def test_listagg_order_by(self, dialect_name: str, expected: str) -> None:
@@ -468,11 +559,13 @@ class TestListaggRendering:
     @pytest.mark.parametrize(
         ("dialect_name", "expected_distinct", "expected_order"),
         [
+            ("bigquery", "STRING_AGG(DISTINCT", "ORDER BY"),
+            ("clickhouse", "arrayReverseSort(groupUniqArray(", ""),
+            ("databricks", "SORT_ARRAY(COLLECT_SET(", ""),
+            ("dremio", "LISTAGG(DISTINCT", "WITHIN GROUP (ORDER BY"),
+            ("duckdb", "STRING_AGG(DISTINCT", "ORDER BY"),
             ("postgres", "STRING_AGG(DISTINCT", "ORDER BY"),
             ("snowflake", "LISTAGG(DISTINCT", "WITHIN GROUP (ORDER BY"),
-            ("clickhouse", "arrayReverseSort(groupUniqArray(", ""),
-            ("dremio", "LISTAGG(DISTINCT", "WITHIN GROUP (ORDER BY"),
-            ("databricks", "SORT_ARRAY(COLLECT_SET(", ""),
         ],
     )
     def test_listagg_distinct_order_by(
@@ -543,16 +636,18 @@ class TestListaggRendering:
 
 
 class TestAnyValueRendering:
-    """Test ANY_VALUE rendering across all 5 dialects."""
+    """Test ANY_VALUE rendering across all dialects."""
 
     @pytest.mark.parametrize(
         ("dialect_name", "expected"),
         [
+            ("bigquery", "ANY_VALUE("),
+            ("clickhouse", "any("),
+            ("databricks", "ANY_VALUE("),
+            ("dremio", "ANY_VALUE("),
+            ("duckdb", "ANY_VALUE("),
             ("postgres", "ANY_VALUE("),
             ("snowflake", "ANY_VALUE("),
-            ("clickhouse", "any("),
-            ("dremio", "ANY_VALUE("),
-            ("databricks", "ANY_VALUE("),
         ],
     )
     def test_any_value(self, dialect_name: str, expected: str) -> None:
@@ -568,10 +663,12 @@ class TestModeRendering:
     @pytest.mark.parametrize(
         ("dialect_name", "expected"),
         [
-            ("postgres", "MODE() WITHIN GROUP (ORDER BY"),
-            ("snowflake", "MODE("),
+            ("bigquery", "APPROX_TOP_COUNT("),
             ("clickhouse", "topK(1)("),
             ("databricks", "MODE("),
+            ("duckdb", "MODE("),
+            ("postgres", "MODE() WITHIN GROUP (ORDER BY"),
+            ("snowflake", "MODE("),
         ],
     )
     def test_mode(self, dialect_name: str, expected: str) -> None:
@@ -589,16 +686,18 @@ class TestModeRendering:
 
 
 class TestMedianRendering:
-    """Test MEDIAN rendering across all 5 dialects."""
+    """Test MEDIAN rendering across all dialects."""
 
     @pytest.mark.parametrize(
         ("dialect_name", "expected"),
         [
+            ("bigquery", "APPROX_QUANTILES("),
+            ("clickhouse", "MEDIAN("),
+            ("databricks", "MEDIAN("),
+            ("dremio", "MEDIAN("),
+            ("duckdb", "MEDIAN("),
             ("postgres", "PERCENTILE_DISC(0.5) WITHIN GROUP (ORDER BY"),
             ("snowflake", "MEDIAN("),
-            ("clickhouse", "MEDIAN("),
-            ("dremio", "MEDIAN("),
-            ("databricks", "MEDIAN("),
         ],
     )
     def test_median(self, dialect_name: str, expected: str) -> None:

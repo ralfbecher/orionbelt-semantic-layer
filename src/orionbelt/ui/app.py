@@ -11,7 +11,15 @@ import sqlparse
 import yaml
 
 _DEFAULT_API_URL = "http://localhost:8000"
-_FALLBACK_DIALECTS = ["postgres", "snowflake", "clickhouse", "dremio", "databricks"]
+_FALLBACK_DIALECTS = [
+    "bigquery",
+    "clickhouse",
+    "databricks",
+    "dremio",
+    "duckdb",
+    "postgres",
+    "snowflake",
+]
 _API_HEADERS = {"User-Agent": "OrionBelt-UI/1.0"}
 
 

@@ -6,7 +6,7 @@
 
 **Compile YAML semantic models into analytical SQL across multiple database dialects.**
 
-OrionBelt is a semantic layer engine that transforms declarative YAML model definitions into optimized SQL for Postgres, Snowflake, ClickHouse, Dremio, and Databricks. Query using business concepts — dimensions, measures, and metrics — instead of raw SQL.
+OrionBelt Semantic Layer is an **API-first** semantic engine and query planner for AI agents that transforms declarative YAML model definitions into optimized SQL for BigQuery, ClickHouse, Databricks, Dremio, DuckDB/MotherDuck, Postgres, and Snowflake. Query using business concepts — dimensions, measures, and metrics — instead of raw SQL.
 
 ## Why OrionBelt?
 
@@ -19,17 +19,17 @@ OrionBelt is a semantic layer engine that transforms declarative YAML model defi
 
 ## Key Features
 
-| Feature | Description |
-|---------|-------------|
-| 5 SQL Dialects | Postgres, Snowflake, ClickHouse, Dremio, Databricks SQL |
-| OrionBelt ML (OBML) | YAML-based data objects, dimensions, measures, metrics, joins |
-| Star Schema & CFL | Automatic fact selection and join path resolution |
-| Session Management | TTL-scoped per-client sessions for the REST API |
-| REST API | FastAPI endpoints for session-based model management, validation, compilation, and OSI conversion |
-| Gradio UI | Interactive web interface for model editing, query testing, SQL compilation, ER diagrams, and OSI import/export |
-| Custom Extensions | Vendor-specific metadata at all model levels (model, data object, column, dimension, measure, metric) |
-| Plugin Architecture | Extensible dialect system with capability flags |
-| Source Tracking | Error messages with YAML line/column positions |
+| Feature             | Description                                                                                                     |
+| ------------------- | --------------------------------------------------------------------------------------------------------------- |
+| 7 SQL Dialects      | BigQuery, ClickHouse, Databricks, Dremio, DuckDB/MotherDuck, Postgres, Snowflake                                |
+| OrionBelt ML (OBML) | YAML-based data objects, dimensions, measures, metrics, joins                                                   |
+| Star Schema & CFL   | Automatic fact selection and join path resolution                                                               |
+| Session Management  | TTL-scoped per-client sessions for the REST API                                                                 |
+| REST API            | FastAPI endpoints for session-based model management, validation, compilation, and OSI conversion               |
+| Gradio UI           | Interactive web interface for model editing, query testing, SQL compilation, ER diagrams, and OSI import/export |
+| Custom Extensions   | Vendor-specific metadata at all model levels (model, data object, column, dimension, measure, metric)           |
+| Plugin Architecture | Extensible dialect system with capability flags                                                                 |
+| Source Tracking     | Error messages with YAML line/column positions                                                                  |
 
 ## Quick Example
 
@@ -86,7 +86,7 @@ measures:
   Revenue:
     resultType: float
     aggregation: sum
-    expression: '{[Orders].[Price]} * {[Orders].[Quantity]}'
+    expression: "{[Orders].[Price]} * {[Orders].[Quantity]}"
 ```
 
 Compile a query to SQL:

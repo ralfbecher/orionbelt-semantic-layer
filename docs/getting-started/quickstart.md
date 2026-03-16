@@ -162,11 +162,17 @@ LIMIT 1000
 Simply change the dialect parameter:
 
 ```python
+# BigQuery
+result = pipeline.compile(query, model, "bigquery")
+
 # Snowflake
 result = pipeline.compile(query, model, "snowflake")
 
 # ClickHouse
 result = pipeline.compile(query, model, "clickhouse")
+
+# DuckDB / MotherDuck
+result = pipeline.compile(query, model, "duckdb")
 
 # Databricks
 result = pipeline.compile(query, model, "databricks")

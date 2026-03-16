@@ -109,7 +109,7 @@ orionbelt-semantic-layer/
 │   │   └── routers/    # sessions, validate, query, dialects
 │   ├── ast/            # SQL AST nodes, builder, visitor
 │   ├── compiler/       # Resolution, planning (star/CFL), codegen pipeline
-│   ├── dialect/        # 5 SQL dialect implementations
+│   ├── dialect/        # 7 SQL dialect implementations
 │   ├── models/         # Pydantic models (semantic, query, errors)
 │   ├── parser/         # YAML loader, reference resolver, validator
 │   ├── service/        # ModelStore, SessionManager

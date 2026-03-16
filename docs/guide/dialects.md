@@ -1,44 +1,92 @@
 # SQL Dialects
 
-OrionBelt compiles semantic queries into SQL for five database dialects. Each dialect has its own identifier quoting, function names, and SQL syntax. The plugin architecture allows adding new dialects without modifying the core compiler.
+OrionBelt compiles semantic queries into SQL for seven database dialects. Each dialect has its own identifier quoting, function names, and SQL syntax. The plugin architecture allows adding new dialects without modifying the core compiler.
 
 ## Supported Dialects
 
 | Dialect | Identifier | Description |
 |---------|-----------|-------------|
+| BigQuery | `bigquery` | Google Cloud analytics warehouse with QUALIFY, STRUCT/ARRAY, semi-structured types |
+| ClickHouse | `clickhouse` | Column-oriented OLAP with custom date/aggregation functions |
+| Databricks SQL | `databricks` | Spark SQL semantics with backtick identifiers |
+| Dremio | `dremio` | Data lakehouse with reduced function surface |
+| DuckDB / MotherDuck | `duckdb` | Embedded analytics engine with PostgreSQL-like syntax, QUALIFY, UNION ALL BY NAME |
 | PostgreSQL | `postgres` | Standard PostgreSQL with strict GROUP BY |
 | Snowflake | `snowflake` | Cloud data warehouse with QUALIFY, semi-structured types |
-| ClickHouse | `clickhouse` | Column-oriented OLAP with custom date/aggregation functions |
-| Dremio | `dremio` | Data lakehouse with reduced function surface |
-| Databricks SQL | `databricks` | Spark SQL semantics with backtick identifiers |
 
 ## Capabilities Matrix
 
 Each dialect declares capability flags that the compiler uses to choose SQL generation strategies.
 
-| Capability | Postgres | Snowflake | ClickHouse | Dremio | Databricks |
-|-----------|----------|-----------|------------|--------|------------|
-| `supports_cte` | Yes | Yes | Yes | Yes | Yes |
-| `supports_qualify` | No | Yes | No | No | No |
-| `supports_arrays` | Yes | Yes | Yes | No | Yes |
-| `supports_window_filters` | No | Yes | No | No | No |
-| `supports_ilike` | Yes | Yes | Yes | No | No |
-| `supports_time_travel` | No | Yes | No | No | No |
-| `supports_semi_structured` | No | Yes | No | No | No |
+| Capability | BigQuery | ClickHouse | Databricks | Dremio | DuckDB | Postgres | Snowflake |
+|-----------|----------|------------|------------|--------|--------|----------|-----------|
+| `supports_cte` | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
+| `supports_qualify` | Yes | No | No | No | Yes | No | Yes |
+| `supports_arrays` | Yes | Yes | Yes | No | Yes | Yes | Yes |
+| `supports_window_filters` | Yes | No | No | No | Yes | No | Yes |
+| `supports_ilike` | No | Yes | No | No | Yes | Yes | Yes |
+| `supports_time_travel` | No | No | No | No | No | No | Yes |
+| `supports_semi_structured` | Yes | No | No | No | No | No | Yes |
 
 ## Identifier Quoting
 
 | Dialect | Style | Example |
 |---------|-------|---------|
+| BigQuery | Backticks | `` `column_name` `` |
+| ClickHouse | Double quotes | `"column_name"` |
+| Databricks | Backticks | `` `column_name` `` |
+| Dremio | Double quotes | `"column_name"` |
+| DuckDB | Double quotes | `"column_name"` |
 | Postgres | Double quotes | `"column_name"` |
 | Snowflake | Double quotes | `"column_name"` |
-| ClickHouse | Double quotes | `"column_name"` |
-| Dremio | Double quotes | `"column_name"` |
-| Databricks | Backticks | `` `column_name` `` |
 
 ## Time Grain Functions
 
 The `timeGrain` is rendered differently per dialect:
+
+=== "BigQuery"
+
+    ```sql
+    DATE_TRUNC(`order_date`, 'month')
+    DATE_TRUNC(`order_date`, 'year')
+    DATE_TRUNC(`order_date`, 'quarter')
+    DATE_TRUNC(`order_date`, 'ISOWEEK')   -- week
+    ```
+
+=== "ClickHouse"
+
+    ```sql
+    toStartOfMonth("order_date")
+    toStartOfYear("order_date")
+    toStartOfQuarter("order_date")
+    toMonday("order_date")        -- week
+    toDate("order_date")          -- day
+    toStartOfHour("order_date")
+    toStartOfMinute("order_date")
+    toStartOfSecond("order_date")
+    ```
+
+=== "Databricks"
+
+    ```sql
+    date_trunc('month', `order_date`)
+    date_trunc('year', `order_date`)
+    ```
+
+=== "Dremio"
+
+    ```sql
+    DATE_TRUNC('month', "order_date")
+    DATE_TRUNC('year', "order_date")
+    ```
+
+=== "DuckDB"
+
+    ```sql
+    date_trunc('month', "order_date")
+    date_trunc('year', "order_date")
+    date_trunc('quarter', "order_date")
+    ```
 
 === "Postgres"
 
@@ -56,36 +104,39 @@ The `timeGrain` is rendered differently per dialect:
     DATE_TRUNC('quarter', "order_date")
     ```
 
+## String Contains
+
+The `contains` filter operator is rendered per dialect:
+
+=== "BigQuery"
+
+    ```sql
+    LOWER(`column`) LIKE '%' || LOWER('search') || '%'
+    ```
+
 === "ClickHouse"
 
     ```sql
-    toStartOfMonth("order_date")
-    toStartOfYear("order_date")
-    toStartOfQuarter("order_date")
-    toMonday("order_date")        -- week
-    toDate("order_date")          -- day
-    toStartOfHour("order_date")
-    toStartOfMinute("order_date")
-    toStartOfSecond("order_date")
-    ```
-
-=== "Dremio"
-
-    ```sql
-    DATE_TRUNC('month', "order_date")
-    DATE_TRUNC('year', "order_date")
+    "column" ILIKE '%' || 'search' || '%'
     ```
 
 === "Databricks"
 
     ```sql
-    date_trunc('month', `order_date`)
-    date_trunc('year', `order_date`)
+    lower(`column`) LIKE '%' || lower('search') || '%'
     ```
 
-## String Contains
+=== "Dremio"
 
-The `contains` filter operator is rendered per dialect:
+    ```sql
+    LOWER("column") LIKE '%' || LOWER('search') || '%'
+    ```
+
+=== "DuckDB"
+
+    ```sql
+    "column" ILIKE '%' || 'search' || '%'
+    ```
 
 === "Postgres"
 
@@ -99,33 +150,17 @@ The `contains` filter operator is rendered per dialect:
     CONTAINS("column", 'search')
     ```
 
-=== "ClickHouse"
-
-    ```sql
-    "column" ILIKE '%' || 'search' || '%'
-    ```
-
-=== "Dremio"
-
-    ```sql
-    LOWER("column") LIKE '%' || LOWER('search') || '%'
-    ```
-
-=== "Databricks"
-
-    ```sql
-    lower(`column`) LIKE '%' || lower('search') || '%'
-    ```
-
 ## CAST Handling
 
-=== "Postgres / Snowflake / Dremio / Databricks"
+=== "BigQuery / Databricks / Dremio / DuckDB / Postgres / Snowflake"
 
     ```sql
     CAST(expr AS INTEGER)
     CAST(expr AS VARCHAR)
     CAST(expr AS DATE)
     ```
+
+    BigQuery uses its own type names (`INT64`, `FLOAT64`, `STRING`, `BOOL`) but standard `CAST` syntax.
 
 === "ClickHouse"
 
@@ -148,41 +183,49 @@ Most aggregations (`SUM`, `COUNT`, `AVG`, `MIN`, `MAX`) compile identically acro
 
 | Dialect | SQL |
 |---------|-----|
+| BigQuery | `ANY_VALUE(col)` |
+| ClickHouse | `any(col)` |
+| Databricks | `ANY_VALUE(col)` |
+| Dremio | `ANY_VALUE(col)` |
+| DuckDB | `ANY_VALUE(col)` |
 | Postgres | `ANY_VALUE(col)` |
 | Snowflake | `ANY_VALUE(col)` |
-| ClickHouse | `any(col)` |
-| Dremio | `ANY_VALUE(col)` |
-| Databricks | `ANY_VALUE(col)` |
 
 ### MEDIAN
 
 | Dialect | SQL |
 |---------|-----|
+| BigQuery | `APPROX_QUANTILES(col, 2)[OFFSET(1)]` |
+| ClickHouse | `MEDIAN(col)` |
+| Databricks | `MEDIAN(col)` |
+| Dremio | `MEDIAN(col)` |
+| DuckDB | `MEDIAN(col)` |
 | Postgres | `PERCENTILE_DISC(0.5) WITHIN GROUP (ORDER BY col)` |
 | Snowflake | `MEDIAN(col)` |
-| ClickHouse | `MEDIAN(col)` |
-| Dremio | `MEDIAN(col)` |
-| Databricks | `MEDIAN(col)` |
 
 ### MODE
 
 | Dialect | SQL |
 |---------|-----|
+| BigQuery | `APPROX_TOP_COUNT(col, 1)[OFFSET(0)].value` |
+| ClickHouse | `topK(1)(col)[1]` |
+| Databricks | `MODE(col)` |
+| Dremio | Not supported |
+| DuckDB | `MODE(col)` |
 | Postgres | `MODE() WITHIN GROUP (ORDER BY col)` |
 | Snowflake | `MODE(col)` |
-| ClickHouse | `topK(1)(col)[1]` |
-| Dremio | Not supported |
-| Databricks | `MODE(col)` |
 
 ### LISTAGG
 
 | Dialect | Base | + DISTINCT | + ORDER BY |
 |---------|------|------------|------------|
+| BigQuery | `STRING_AGG(col, sep)` | `STRING_AGG(DISTINCT col, sep)` | `STRING_AGG(col, sep ORDER BY col)` |
+| ClickHouse | `arrayStringConcat(groupArray(col), sep)` | `arrayStringConcat(groupUniqArray(col), sep)` | `arrayStringConcat(arraySort(groupArray(col)), sep)` |
+| Databricks | `ARRAY_JOIN(COLLECT_LIST(col), sep)` | `ARRAY_JOIN(COLLECT_SET(col), sep)` | `ARRAY_JOIN(SORT_ARRAY(COLLECT_LIST(col)), sep)` |
+| Dremio | `LISTAGG(col, sep)` | `LISTAGG(DISTINCT col, sep)` | `LISTAGG(col, sep) WITHIN GROUP (ORDER BY col)` |
+| DuckDB | `STRING_AGG(col, sep)` | `STRING_AGG(DISTINCT col, sep)` | `STRING_AGG(col, sep ORDER BY col)` |
 | Postgres | `STRING_AGG(col, sep)` | `STRING_AGG(DISTINCT col, sep)` | `STRING_AGG(col, sep ORDER BY col)` |
 | Snowflake | `LISTAGG(col, sep)` | `LISTAGG(DISTINCT col, sep)` | `LISTAGG(col, sep) WITHIN GROUP (ORDER BY col)` |
-| ClickHouse | `arrayStringConcat(groupArray(col), sep)` | `arrayStringConcat(groupUniqArray(col), sep)` | `arrayStringConcat(arraySort(groupArray(col)), sep)` |
-| Dremio | `LISTAGG(col, sep)` | `LISTAGG(DISTINCT col, sep)` | `LISTAGG(col, sep) WITHIN GROUP (ORDER BY col)` |
-| Databricks | `ARRAY_JOIN(COLLECT_LIST(col), sep)` | `ARRAY_JOIN(COLLECT_SET(col), sep)` | `ARRAY_JOIN(SORT_ARRAY(COLLECT_LIST(col)), sep)` |
 
 !!! warning "LISTAGG ordering limitations"
     ClickHouse and Databricks only support self-ordering (sorting by the aggregated column). Ordering by a different column raises an error at compile time.
@@ -255,15 +298,15 @@ curl http://127.0.0.1:8000/dialects
 {
   "dialects": [
     {
-      "name": "postgres",
+      "name": "bigquery",
       "capabilities": {
         "supports_cte": true,
-        "supports_qualify": false,
+        "supports_qualify": true,
         "supports_arrays": true,
-        "supports_window_filters": false,
-        "supports_ilike": true,
+        "supports_window_filters": true,
+        "supports_ilike": false,
         "supports_time_travel": false,
-        "supports_semi_structured": false
+        "supports_semi_structured": true
       }
     },
     ...

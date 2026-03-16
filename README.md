@@ -17,17 +17,19 @@
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://docs.astral.sh/ruff/)
 [![mypy](https://img.shields.io/badge/type--checked-mypy-blue.svg)](https://mypy-lang.org)
 
+[![BigQuery](https://img.shields.io/badge/BigQuery-669DF6.svg?logo=googlebigquery&logoColor=white)](https://cloud.google.com/bigquery)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1.svg?logo=postgresql&logoColor=white)](https://www.postgresql.org)
 [![Snowflake](https://img.shields.io/badge/Snowflake-29B5E8.svg?logo=snowflake&logoColor=white)](https://www.snowflake.com)
 [![ClickHouse](https://img.shields.io/badge/ClickHouse-FFCC01.svg?logo=clickhouse&logoColor=black)](https://clickhouse.com)
 [![Dremio](https://img.shields.io/badge/Dremio-31B48D.svg)](https://www.dremio.com)
 [![Databricks](https://img.shields.io/badge/Databricks-FF3621.svg?logo=databricks&logoColor=white)](https://www.databricks.com)
+[![DuckDB](https://img.shields.io/badge/DuckDB-FFF000.svg?logo=duckdb&logoColor=black)](https://duckdb.org)
 
-OrionBelt Semantic Layer is an **API-first** engine that transforms declarative YAML model definitions into optimized SQL for Postgres, Snowflake, ClickHouse, Dremio, and Databricks. It provides a unified abstraction over your data warehouse, so analysts and applications can query using business concepts (dimensions, measures, metrics) instead of raw SQL. Every capability — model loading, validation, query compilation, and diagram generation — is exposed through a REST API, making OrionBelt easy to integrate into any application, workflow, or AI assistant.
+OrionBelt Semantic Layer is an **API-first** semantic engine and query planner for AI agents that transforms declarative YAML model definitions into optimized SQL for BigQuery, ClickHouse, Databricks, Dremio, DuckDB/MotherDuck, Postgres, and Snowflake. It provides a unified abstraction over your data warehouse, so analysts and applications can query using business concepts (dimensions, measures, metrics) instead of raw SQL. Every capability — model loading, validation, query compilation, and diagram generation — is exposed through a REST API, making OrionBelt easy to integrate into any application, workflow, or AI assistant.
 
 ## Features
 
-- **5 SQL Dialects** — Postgres, Snowflake, ClickHouse, Dremio, Databricks SQL with dialect-specific optimizations
+- **7 SQL Dialects** — BigQuery, ClickHouse, Databricks, Dremio, DuckDB/MotherDuck, Postgres, Snowflake with dialect-specific optimizations
 - **AST-Based SQL Generation** — Custom SQL AST ensures correct, injection-safe SQL (no string concatenation)
 - **OrionBelt ML (OBML)** — YAML-based semantic models with data objects, dimensions, measures, metrics, and joins
 - **Star Schema & CFL Planning** — Automatic join path resolution with Composite Fact Layer support for multi-fact queries and dimension-only queries through intermediate tables
@@ -192,7 +194,7 @@ GROUP BY "Customers"."COUNTRY"
 LIMIT 100
 ```
 
-Change the dialect to `"snowflake"`, `"clickhouse"`, `"dremio"`, or `"databricks"` to get dialect-specific SQL.
+Change the dialect to `"bigquery"`, `"clickhouse"`, `"databricks"`, `"dremio"`, `"duckdb"`, or `"snowflake"` to get dialect-specific SQL.
 
 ### Use the REST API with Sessions
 
@@ -309,7 +311,7 @@ Load Balancer (single IP)
 The UI provides:
 
 - **Side-by-side editors** — OBML model (YAML) and query (YAML) with syntax highlighting
-- **Dialect selector** — Switch between Postgres, Snowflake, ClickHouse, Dremio, and Databricks
+- **Dialect selector** — Switch between BigQuery, ClickHouse, Databricks, Dremio, DuckDB, Postgres, and Snowflake
 - **One-click compilation** — Compile button generates formatted SQL output
 - **SQL validation feedback** — Warnings and validation errors from sqlglot are displayed as comments above the generated SQL
 - **ER Diagram tab** — Visualize the semantic model as a Mermaid ER diagram with left-to-right layout, FK annotations, dotted lines for secondary joins, and an adjustable zoom slider
@@ -361,18 +363,18 @@ The API is available at `http://localhost:8080`. The UI is at `http://localhost:
 
 Configuration is via environment variables or a `.env` file. See `.env.example` for all options:
 
-| Variable                   | Default     | Description                                    |
-| -------------------------- | ----------- | ---------------------------------------------- |
-| `LOG_LEVEL`                | `INFO`      | Logging level                                  |
-| `API_SERVER_HOST`          | `localhost` | REST API bind host                             |
-| `API_SERVER_PORT`          | `8000`      | REST API bind port                             |
-| `PORT`                     | —           | Override port (Cloud Run sets this)             |
-| `DISABLE_SESSION_LIST`     | `false`     | Disable `GET /sessions` endpoint               |
-| `SESSION_TTL_SECONDS`      | `1800`      | Session inactivity timeout (30 min)            |
-| `SESSION_CLEANUP_INTERVAL` | `60`        | Cleanup sweep interval (seconds)               |
-| `MODEL_FILE`               | —           | Path to OBML YAML for single-model mode        |
-| `API_BASE_URL`             | —           | API URL for standalone UI                      |
-| `ROOT_PATH`                | —           | ASGI root path for UI behind LB                |
+| Variable                   | Default     | Description                             |
+| -------------------------- | ----------- | --------------------------------------- |
+| `LOG_LEVEL`                | `INFO`      | Logging level                           |
+| `API_SERVER_HOST`          | `localhost` | REST API bind host                      |
+| `API_SERVER_PORT`          | `8000`      | REST API bind port                      |
+| `PORT`                     | —           | Override port (Cloud Run sets this)     |
+| `DISABLE_SESSION_LIST`     | `false`     | Disable `GET /sessions` endpoint        |
+| `SESSION_TTL_SECONDS`      | `1800`      | Session inactivity timeout (30 min)     |
+| `SESSION_CLEANUP_INTERVAL` | `60`        | Cleanup sweep interval (seconds)        |
+| `MODEL_FILE`               | —           | Path to OBML YAML for single-model mode |
+| `API_BASE_URL`             | —           | API URL for standalone UI               |
+| `ROOT_PATH`                | —           | ASGI root path for UI behind LB         |
 
 ### Single-Model Mode
 

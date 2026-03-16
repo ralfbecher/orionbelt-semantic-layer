@@ -115,7 +115,8 @@ class TestEndToEndCompilation:
         assert "SELECT" in result.sql
 
     @pytest.mark.parametrize(
-        "dialect", ["postgres", "snowflake", "clickhouse", "dremio", "databricks"]
+        "dialect",
+        ["bigquery", "clickhouse", "databricks", "dremio", "duckdb", "postgres", "snowflake"]
     )
     def test_all_dialects(
         self, model: SemanticModel, pipeline: CompilationPipeline, dialect: str
@@ -131,7 +132,8 @@ class TestEndToEndCompilation:
         assert result.dialect == dialect
 
     @pytest.mark.parametrize(
-        "dialect", ["postgres", "snowflake", "clickhouse", "dremio", "databricks"]
+        "dialect",
+        ["bigquery", "clickhouse", "databricks", "dremio", "duckdb", "postgres", "snowflake"]
     )
     def test_metric_revenue_per_order_all_dialects(
         self, model: SemanticModel, pipeline: CompilationPipeline, dialect: str
@@ -167,7 +169,8 @@ class TestEndToEndCompilation:
         assert "_ref_" not in sql
 
     @pytest.mark.parametrize(
-        "dialect", ["postgres", "snowflake", "clickhouse", "dremio", "databricks"]
+        "dialect",
+        ["bigquery", "clickhouse", "databricks", "dremio", "duckdb", "postgres", "snowflake"]
     )
     def test_total_measure_all_dialects(
         self, model: SemanticModel, pipeline: CompilationPipeline, dialect: str
@@ -186,7 +189,8 @@ class TestEndToEndCompilation:
         assert result.dialect == dialect
 
     @pytest.mark.parametrize(
-        "dialect", ["postgres", "snowflake", "clickhouse", "dremio", "databricks"]
+        "dialect",
+        ["bigquery", "clickhouse", "databricks", "dremio", "duckdb", "postgres", "snowflake"]
     )
     def test_total_with_regular_measure_all_dialects(
         self, model: SemanticModel, pipeline: CompilationPipeline, dialect: str
@@ -205,7 +209,8 @@ class TestEndToEndCompilation:
         assert "Revenue" in sql
 
     @pytest.mark.parametrize(
-        "dialect", ["postgres", "snowflake", "clickhouse", "dremio", "databricks"]
+        "dialect",
+        ["bigquery", "clickhouse", "databricks", "dremio", "duckdb", "postgres", "snowflake"]
     )
     def test_revenue_share_metric_all_dialects(
         self, model: SemanticModel, pipeline: CompilationPipeline, dialect: str

@@ -390,6 +390,81 @@ query = QueryObject(
 
 ### Multi-Dialect Output
 
+=== "BigQuery"
+
+    ```sql
+    SELECT
+      DATE_TRUNC(`date_dim`.`D_DATE`, 'quarter') AS `Sale Date`,
+      SUM(`store_sales`.`SS_NET_PROFIT`) AS `Net Profit`
+    FROM TPCDS.PUBLIC.STORE_SALES AS `store_sales`
+    LEFT JOIN TPCDS.PUBLIC.DATE_DIM AS `date_dim`
+      ON `store_sales`.`SS_SOLD_DATE_SK` = `date_dim`.`D_DATE_SK`
+    GROUP BY DATE_TRUNC(`date_dim`.`D_DATE`, 'quarter')
+    ORDER BY `Sale Date` ASC
+    ```
+
+    **Key traits:** Backtick identifiers, `DATE_TRUNC()` with column-first argument order.
+
+=== "ClickHouse"
+
+    ```sql
+    SELECT
+      toStartOfQuarter("date_dim"."D_DATE") AS "Sale Date",
+      SUM("store_sales"."SS_NET_PROFIT") AS "Net Profit"
+    FROM TPCDS.PUBLIC.STORE_SALES AS "store_sales"
+    LEFT JOIN TPCDS.PUBLIC.DATE_DIM AS "date_dim"
+      ON "store_sales"."SS_SOLD_DATE_SK" = "date_dim"."D_DATE_SK"
+    GROUP BY toStartOfQuarter("date_dim"."D_DATE")
+    ORDER BY "Sale Date" ASC
+    ```
+
+    **Key traits:** ClickHouse uses native `toStartOfQuarter()` instead of `date_trunc`.
+
+=== "Databricks"
+
+    ```sql
+    SELECT
+      date_trunc('quarter', `date_dim`.`D_DATE`) AS `Sale Date`,
+      SUM(`store_sales`.`SS_NET_PROFIT`) AS `Net Profit`
+    FROM TPCDS.PUBLIC.STORE_SALES AS `store_sales`
+    LEFT JOIN TPCDS.PUBLIC.DATE_DIM AS `date_dim`
+      ON `store_sales`.`SS_SOLD_DATE_SK` = `date_dim`.`D_DATE_SK`
+    GROUP BY date_trunc('quarter', `date_dim`.`D_DATE`)
+    ORDER BY `Sale Date` ASC
+    ```
+
+    **Key traits:** Backtick-quoted identifiers (Spark SQL), lowercase `date_trunc`.
+
+=== "Dremio"
+
+    ```sql
+    SELECT
+      DATE_TRUNC('quarter', "date_dim"."D_DATE") AS "Sale Date",
+      SUM("store_sales"."SS_NET_PROFIT") AS "Net Profit"
+    FROM TPCDS.PUBLIC.STORE_SALES AS "store_sales"
+    LEFT JOIN TPCDS.PUBLIC.DATE_DIM AS "date_dim"
+      ON "store_sales"."SS_SOLD_DATE_SK" = "date_dim"."D_DATE_SK"
+    GROUP BY DATE_TRUNC('quarter', "date_dim"."D_DATE")
+    ORDER BY "Sale Date" ASC
+    ```
+
+    **Key traits:** `DATE_TRUNC()` uppercase, same quoting as Postgres/Snowflake.
+
+=== "DuckDB"
+
+    ```sql
+    SELECT
+      date_trunc('quarter', "date_dim"."D_DATE") AS "Sale Date",
+      SUM("store_sales"."SS_NET_PROFIT") AS "Net Profit"
+    FROM PUBLIC.STORE_SALES AS "store_sales"
+    LEFT JOIN PUBLIC.DATE_DIM AS "date_dim"
+      ON "store_sales"."SS_SOLD_DATE_SK" = "date_dim"."D_DATE_SK"
+    GROUP BY date_trunc('quarter', "date_dim"."D_DATE")
+    ORDER BY "Sale Date" ASC
+    ```
+
+    **Key traits:** PostgreSQL-compatible syntax, two-part table refs, `ILIKE`, `UNION ALL BY NAME`.
+
 === "PostgreSQL"
 
     ```sql
@@ -419,51 +494,6 @@ query = QueryObject(
     ```
 
     **Key traits:** `DATE_TRUNC()` in uppercase, double-quoted identifiers.
-
-=== "ClickHouse"
-
-    ```sql
-    SELECT
-      toStartOfQuarter("date_dim"."D_DATE") AS "Sale Date",
-      SUM("store_sales"."SS_NET_PROFIT") AS "Net Profit"
-    FROM TPCDS.PUBLIC.STORE_SALES AS "store_sales"
-    LEFT JOIN TPCDS.PUBLIC.DATE_DIM AS "date_dim"
-      ON "store_sales"."SS_SOLD_DATE_SK" = "date_dim"."D_DATE_SK"
-    GROUP BY toStartOfQuarter("date_dim"."D_DATE")
-    ORDER BY "Sale Date" ASC
-    ```
-
-    **Key traits:** ClickHouse uses native `toStartOfQuarter()` instead of `date_trunc`.
-
-=== "Dremio"
-
-    ```sql
-    SELECT
-      DATE_TRUNC('quarter', "date_dim"."D_DATE") AS "Sale Date",
-      SUM("store_sales"."SS_NET_PROFIT") AS "Net Profit"
-    FROM TPCDS.PUBLIC.STORE_SALES AS "store_sales"
-    LEFT JOIN TPCDS.PUBLIC.DATE_DIM AS "date_dim"
-      ON "store_sales"."SS_SOLD_DATE_SK" = "date_dim"."D_DATE_SK"
-    GROUP BY DATE_TRUNC('quarter', "date_dim"."D_DATE")
-    ORDER BY "Sale Date" ASC
-    ```
-
-    **Key traits:** `DATE_TRUNC()` uppercase, same quoting as Postgres/Snowflake.
-
-=== "Databricks"
-
-    ```sql
-    SELECT
-      date_trunc('quarter', `date_dim`.`D_DATE`) AS `Sale Date`,
-      SUM(`store_sales`.`SS_NET_PROFIT`) AS `Net Profit`
-    FROM TPCDS.PUBLIC.STORE_SALES AS `store_sales`
-    LEFT JOIN TPCDS.PUBLIC.DATE_DIM AS `date_dim`
-      ON `store_sales`.`SS_SOLD_DATE_SK` = `date_dim`.`D_DATE_SK`
-    GROUP BY date_trunc('quarter', `date_dim`.`D_DATE`)
-    ORDER BY `Sale Date` ASC
-    ```
-
-    **Key traits:** Backtick-quoted identifiers (Spark SQL), lowercase `date_trunc`.
 
 ## Query 4: Return Rate Metric (CFL)
 
@@ -523,7 +553,7 @@ from orionbelt.compiler.pipeline import CompilationPipeline
 
 pipeline = CompilationPipeline()
 
-for dialect in ["postgres", "snowflake", "clickhouse", "dremio", "databricks"]:
+for dialect in ["bigquery", "clickhouse", "databricks", "dremio", "duckdb", "postgres", "snowflake"]:
     result = pipeline.compile(query, model, dialect)
     print(f"--- {dialect} ---")
     print(result.sql)

@@ -399,21 +399,34 @@ List all available SQL dialects and their capability flags.
 {
   "dialects": [
     {
-      "name": "postgres",
+      "name": "bigquery",
       "capabilities": {
         "supports_cte": true,
-        "supports_qualify": false,
+        "supports_qualify": true,
         "supports_arrays": true,
-        "supports_window_filters": false,
+        "supports_window_filters": true,
+        "supports_ilike": false,
+        "supports_time_travel": false,
+        "supports_semi_structured": true
+      }
+    },
+    { "name": "clickhouse", "capabilities": { "..." : true } },
+    { "name": "databricks", "capabilities": { "..." : true } },
+    { "name": "dremio", "capabilities": { "..." : true } },
+    {
+      "name": "duckdb",
+      "capabilities": {
+        "supports_cte": true,
+        "supports_qualify": true,
+        "supports_arrays": true,
+        "supports_window_filters": true,
         "supports_ilike": true,
         "supports_time_travel": false,
         "supports_semi_structured": false
       }
     },
-    {
-      "name": "snowflake",
-      "capabilities": { "..." : true }
-    }
+    { "name": "postgres", "capabilities": { "..." : true } },
+    { "name": "snowflake", "capabilities": { "..." : true } }
   ]
 }
 ```

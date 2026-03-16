@@ -1,0 +1,110 @@
+"""BigQuery dialect implementation."""
+
+from __future__ import annotations
+
+from orionbelt.ast.nodes import Cast, Expr, FunctionCall, Literal, OrderByItem
+from orionbelt.dialect.base import Dialect, DialectCapabilities
+from orionbelt.dialect.registry import DialectRegistry
+from orionbelt.models.semantic import TimeGrain
+
+
+@DialectRegistry.register
+class BigQueryDialect(Dialect):
+    """BigQuery dialect — backtick identifiers, STRUCT/ARRAY support, SAFE functions."""
+
+    _ABSTRACT_TYPE_MAP: dict[str, str] = {
+        "string": "STRING",
+        "json": "JSON",
+        "int": "INT64",
+        "float": "FLOAT64",
+        "date": "DATE",
+        "time": "TIME",
+        "time_tz": "TIME",
+        "timestamp": "TIMESTAMP",
+        "timestamp_tz": "TIMESTAMP",
+        "boolean": "BOOL",
+    }
+
+    @property
+    def name(self) -> str:
+        return "bigquery"
+
+    @property
+    def capabilities(self) -> DialectCapabilities:
+        return DialectCapabilities(
+            supports_cte=True,
+            supports_qualify=True,
+            supports_arrays=True,
+            supports_window_filters=True,
+            supports_ilike=False,
+            supports_semi_structured=True,
+        )
+
+    def quote_identifier(self, name: str) -> str:
+        escaped = name.replace("`", "\\`")
+        return f"`{escaped}`"
+
+    def format_table_ref(self, database: str, schema: str, code: str) -> str:
+        """BigQuery: three-part ``project.dataset.table``."""
+        return f"{database}.{schema}.{code}"
+
+    def render_time_grain(self, column: Expr, grain: TimeGrain) -> Expr:
+        if grain == TimeGrain.WEEK:
+            return FunctionCall(name="DATE_TRUNC", args=[column, Literal.string("ISOWEEK")])
+        return FunctionCall(name="DATE_TRUNC", args=[column, Literal.string(grain.value)])
+
+    def render_cast(self, expr: Expr, target_type: str) -> Expr:
+        return Cast(expr=expr, type_name=target_type)
+
+    def render_string_contains(self, column: Expr, pattern: Expr) -> Expr:
+        from orionbelt.ast.nodes import BinaryOp
+
+        return BinaryOp(
+            left=FunctionCall(name="LOWER", args=[column]),
+            op="LIKE",
+            right=BinaryOp(
+                left=BinaryOp(
+                    left=Literal.string("%"),
+                    op="||",
+                    right=FunctionCall(name="LOWER", args=[pattern]),
+                ),
+                op="||",
+                right=Literal.string("%"),
+            ),
+        )
+
+    def _compile_median(self, args: list[Expr]) -> str:
+        """BigQuery: PERCENTILE_DISC(col, 0.5) OVER()  — but as an aggregate
+        we use APPROX_QUANTILES(col, 2)[OFFSET(1)]."""
+        col_sql = self.compile_expr(args[0]) if args else "NULL"
+        return f"APPROX_QUANTILES({col_sql}, 2)[OFFSET(1)]"
+
+    def _compile_mode(self, args: list[Expr]) -> str:
+        """BigQuery: APPROX_TOP_COUNT(col, 1)[OFFSET(0)].value."""
+        col_sql = self.compile_expr(args[0]) if args else "NULL"
+        return f"APPROX_TOP_COUNT({col_sql}, 1)[OFFSET(0)].value"
+
+    def _compile_listagg(
+        self,
+        args: list[Expr],
+        distinct: bool,
+        order_by: list[OrderByItem],
+        separator: str | None,
+    ) -> str:
+        """BigQuery: STRING_AGG([DISTINCT] col, sep [ORDER BY ...])."""
+        sep = separator if separator is not None else ","
+        col_sql = self.compile_expr(args[0]) if args else "''"
+        distinct_sql = "DISTINCT " if distinct else ""
+        escaped_sep = sep.replace("'", "''")
+        inner = f"{distinct_sql}{col_sql}, '{escaped_sep}'"
+        if order_by:
+            ob = ", ".join(self.compile_order_by(o) for o in order_by)
+            inner += f" ORDER BY {ob}"
+        return f"STRING_AGG({inner})"
+
+    def current_date_sql(self) -> str:
+        return "CURRENT_DATE()"
+
+    def date_add_sql(self, date_sql: str, unit: str, count: int) -> str:
+        unit_sql = unit.upper()
+        return f"DATE_ADD({date_sql}, INTERVAL {count} {unit_sql})"
