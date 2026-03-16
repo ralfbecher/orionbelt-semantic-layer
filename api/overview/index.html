@@ -971,7 +971,7 @@
 </nav>
 <div class="obml-version-badge">
   OBML v1.0<br>
-  OrionBelt v0.8.0
+  OrionBelt v1.0.0
 </div>
       
     </li>
@@ -1474,7 +1474,7 @@
 </nav>
 <div class="obml-version-badge">
   OBML v1.0<br>
-  OrionBelt v0.8.0
+  OrionBelt v1.0.0
 </div>
                   </div>
                 </div>
@@ -1504,6 +1504,7 @@
 <div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>Content-Type: application/json
 </span></code></pre></div>
 <h3 id="routers">Routers<a class="headerlink" href="#routers" title="Permanent link">&para;</a></h3>
+<p>All API routes are prefixed with <code>/v1/</code> except <code>/health</code> and <code>/robots.txt</code>.</p>
 <table>
 <thead>
 <tr>
@@ -1514,50 +1515,60 @@
 </thead>
 <tbody>
 <tr>
-<td><code>/sessions</code></td>
+<td><code>/v1/sessions</code></td>
 <td>sessions</td>
 <td>Session-scoped model management, validation, and query compilation</td>
 </tr>
 <tr>
-<td><code>/convert</code></td>
+<td><code>/v1/sessions/.../models/.../</code></td>
+<td>model-discovery</td>
+<td>Schema, dimensions, measures, metrics, explain, find, join-graph</td>
+</tr>
+<tr>
+<td><code>/v1/schema</code>, <code>/v1/dimensions</code>, ...</td>
+<td>model-discovery</td>
+<td>Top-level shortcuts (auto-resolve single session/model)</td>
+</tr>
+<tr>
+<td><code>/v1/convert</code></td>
 <td>convert</td>
 <td>OSI ↔ OBML format conversion with validation</td>
 </tr>
 <tr>
-<td><code>/dialects</code></td>
+<td><code>/v1/dialects</code></td>
 <td>dialects</td>
 <td>Available SQL dialect info</td>
 </tr>
 <tr>
-<td><code>/settings</code></td>
+<td><code>/v1/settings</code></td>
 <td>settings</td>
 <td>Public configuration (single-model mode, TTL)</td>
 </tr>
 <tr>
 <td><code>/health</code></td>
 <td>health</td>
-<td>Health check</td>
+<td>Health check (no prefix)</td>
 </tr>
 </tbody>
 </table>
 <h3 id="session-based-workflow">Session-Based Workflow<a class="headerlink" href="#session-based-workflow" title="Permanent link">&para;</a></h3>
 <p>The primary API workflow uses sessions to manage model state:</p>
 <ol>
-<li><strong>Create a session</strong> — <code>POST /sessions</code> returns a <code>session_id</code></li>
-<li><strong>Load models</strong> — <code>POST /sessions/{id}/models</code> with OBML YAML</li>
-<li><strong>Query</strong> — <code>POST /sessions/{id}/query/sql</code> against loaded models</li>
-<li><strong>Close</strong> — <code>DELETE /sessions/{id}</code> when done (or let TTL expire)</li>
+<li><strong>Create a session</strong> — <code>POST /v1/sessions</code> returns a <code>session_id</code></li>
+<li><strong>Load models</strong> — <code>POST /v1/sessions/{id}/models</code> with OBML YAML</li>
+<li><strong>Query</strong> — <code>POST /v1/sessions/{id}/query/sql</code> against loaded models</li>
+<li><strong>Close</strong> — <code>DELETE /v1/sessions/{id}</code> when done (or let TTL expire)</li>
 </ol>
 <p>Sessions automatically expire after 30 minutes of inactivity (configurable via <code>SESSION_TTL_SECONDS</code>).</p>
 <h3 id="single-model-mode">Single-Model Mode<a class="headerlink" href="#single-model-mode" title="Permanent link">&para;</a></h3>
 <p>When the <code>MODEL_FILE</code> environment variable is set, the server runs in <strong>single-model mode</strong>:</p>
 <ol>
-<li><strong>Create a session</strong> — <code>POST /sessions</code> returns a <code>session_id</code> with the model already loaded (<code>model_count: 1</code>)</li>
-<li><strong>List the model</strong> — <code>GET /sessions/{id}/models</code> to get the pre-loaded <code>model_id</code></li>
-<li><strong>Query</strong> — <code>POST /sessions/{id}/query/sql</code> against the pre-loaded model</li>
-<li><strong>Close</strong> — <code>DELETE /sessions/{id}</code> when done (or let TTL expire)</li>
+<li><strong>Create a session</strong> — <code>POST /v1/sessions</code> returns a <code>session_id</code> with the model already loaded (<code>model_count: 1</code>)</li>
+<li><strong>List the model</strong> — <code>GET /v1/sessions/{id}/models</code> to get the pre-loaded <code>model_id</code></li>
+<li><strong>Query</strong> — <code>POST /v1/sessions/{id}/query/sql</code> against the pre-loaded model</li>
+<li><strong>Close</strong> — <code>DELETE /v1/sessions/{id}</code> when done (or let TTL expire)</li>
 </ol>
-<p>Model upload (<code>POST /sessions/{id}/models</code>) and removal (<code>DELETE /sessions/{id}/models/{mid}</code>) return <strong>403 Forbidden</strong> in this mode. All other endpoints work normally.</p>
+<p>Model upload (<code>POST /v1/sessions/{id}/models</code>) and removal (<code>DELETE /v1/sessions/{id}/models/{mid}</code>) return <strong>403 Forbidden</strong> in this mode. All other endpoints work normally.</p>
 <h2 id="error-responses">Error Responses<a class="headerlink" href="#error-responses" title="Permanent link">&para;</a></h2>
 <p>All errors follow a consistent format:</p>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="p">{</span>
@@ -1658,7 +1669,7 @@
       <div class="md-copyright">
   
     <div class="md-copyright__highlight">
-      Copyright &copy; 2025 RALFORION d.o.o. — Apache 2.0
+      Copyright &copy; 2025 RALFORION d.o.o. — BSL 1.1
     </div>
   
   

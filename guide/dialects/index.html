@@ -881,7 +881,7 @@
 </nav>
 <div class="obml-version-badge">
   OBML v1.0<br>
-  OrionBelt v0.8.0
+  OrionBelt v1.0.0
 </div>
       
     </li>
@@ -1528,7 +1528,7 @@
 </nav>
 <div class="obml-version-badge">
   OBML v1.0<br>
-  OrionBelt v0.8.0
+  OrionBelt v1.0.0
 </div>
                   </div>
                 </div>
@@ -1548,7 +1548,7 @@
 
 
 <h1 id="sql-dialects">SQL Dialects<a class="headerlink" href="#sql-dialects" title="Permanent link">&para;</a></h1>
-<p>OrionBelt compiles semantic queries into SQL for five database dialects. Each dialect has its own identifier quoting, function names, and SQL syntax. The plugin architecture allows adding new dialects without modifying the core compiler.</p>
+<p>OrionBelt compiles semantic queries into SQL for seven database dialects. Each dialect has its own identifier quoting, function names, and SQL syntax. The plugin architecture allows adding new dialects without modifying the core compiler.</p>
 <h2 id="supported-dialects">Supported Dialects<a class="headerlink" href="#supported-dialects" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -1560,6 +1560,31 @@
 </thead>
 <tbody>
 <tr>
+<td>BigQuery</td>
+<td><code>bigquery</code></td>
+<td>Google Cloud analytics warehouse with QUALIFY, STRUCT/ARRAY, semi-structured types</td>
+</tr>
+<tr>
+<td>ClickHouse</td>
+<td><code>clickhouse</code></td>
+<td>Column-oriented OLAP with custom date/aggregation functions</td>
+</tr>
+<tr>
+<td>Databricks SQL</td>
+<td><code>databricks</code></td>
+<td>Spark SQL semantics with backtick identifiers</td>
+</tr>
+<tr>
+<td>Dremio</td>
+<td><code>dremio</code></td>
+<td>Data lakehouse with reduced function surface</td>
+</tr>
+<tr>
+<td>DuckDB / MotherDuck</td>
+<td><code>duckdb</code></td>
+<td>Embedded analytics engine with PostgreSQL-like syntax, QUALIFY, UNION ALL BY NAME</td>
+</tr>
+<tr>
 <td>PostgreSQL</td>
 <td><code>postgres</code></td>
 <td>Standard PostgreSQL with strict GROUP BY</td>
@@ -1569,21 +1594,6 @@
 <td><code>snowflake</code></td>
 <td>Cloud data warehouse with QUALIFY, semi-structured types</td>
 </tr>
-<tr>
-<td>ClickHouse</td>
-<td><code>clickhouse</code></td>
-<td>Column-oriented OLAP with custom date/aggregation functions</td>
-</tr>
-<tr>
-<td>Dremio</td>
-<td><code>dremio</code></td>
-<td>Data lakehouse with reduced function surface</td>
-</tr>
-<tr>
-<td>Databricks SQL</td>
-<td><code>databricks</code></td>
-<td>Spark SQL semantics with backtick identifiers</td>
-</tr>
 </tbody>
 </table>
 <h2 id="capabilities-matrix">Capabilities Matrix<a class="headerlink" href="#capabilities-matrix" title="Permanent link">&para;</a></h2>
@@ -1592,11 +1602,13 @@
 <thead>
 <tr>
 <th>Capability</th>
+<th>BigQuery</th>
+<th>ClickHouse</th>
+<th>Databricks</th>
+<th>Dremio</th>
+<th>DuckDB</th>
 <th>Postgres</th>
 <th>Snowflake</th>
-<th>ClickHouse</th>
-<th>Dremio</th>
-<th>Databricks</th>
 </tr>
 </thead>
 <tbody>
@@ -1607,14 +1619,18 @@
 <td>Yes</td>
 <td>Yes</td>
 <td>Yes</td>
+<td>Yes</td>
+<td>Yes</td>
 </tr>
 <tr>
 <td><code>supports_qualify</code></td>
-<td>No</td>
 <td>Yes</td>
 <td>No</td>
 <td>No</td>
 <td>No</td>
+<td>Yes</td>
+<td>No</td>
+<td>Yes</td>
 </tr>
 <tr>
 <td><code>supports_arrays</code></td>
@@ -1623,38 +1639,48 @@
 <td>Yes</td>
 <td>No</td>
 <td>Yes</td>
+<td>Yes</td>
+<td>Yes</td>
 </tr>
 <tr>
 <td><code>supports_window_filters</code></td>
-<td>No</td>
 <td>Yes</td>
 <td>No</td>
 <td>No</td>
 <td>No</td>
+<td>Yes</td>
+<td>No</td>
+<td>Yes</td>
 </tr>
 <tr>
 <td><code>supports_ilike</code></td>
-<td>Yes</td>
-<td>Yes</td>
+<td>No</td>
 <td>Yes</td>
 <td>No</td>
 <td>No</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>Yes</td>
 </tr>
 <tr>
 <td><code>supports_time_travel</code></td>
 <td>No</td>
+<td>No</td>
+<td>No</td>
+<td>No</td>
+<td>No</td>
+<td>No</td>
 <td>Yes</td>
-<td>No</td>
-<td>No</td>
-<td>No</td>
 </tr>
 <tr>
 <td><code>supports_semi_structured</code></td>
-<td>No</td>
 <td>Yes</td>
 <td>No</td>
 <td>No</td>
 <td>No</td>
+<td>No</td>
+<td>No</td>
+<td>Yes</td>
 </tr>
 </tbody>
 </table>
@@ -1669,6 +1695,31 @@
 </thead>
 <tbody>
 <tr>
+<td>BigQuery</td>
+<td>Backticks</td>
+<td><code>`column_name`</code></td>
+</tr>
+<tr>
+<td>ClickHouse</td>
+<td>Double quotes</td>
+<td><code>"column_name"</code></td>
+</tr>
+<tr>
+<td>Databricks</td>
+<td>Backticks</td>
+<td><code>`column_name`</code></td>
+</tr>
+<tr>
+<td>Dremio</td>
+<td>Double quotes</td>
+<td><code>"column_name"</code></td>
+</tr>
+<tr>
+<td>DuckDB</td>
+<td>Double quotes</td>
+<td><code>"column_name"</code></td>
+</tr>
+<tr>
 <td>Postgres</td>
 <td>Double quotes</td>
 <td><code>"column_name"</code></td>
@@ -1678,48 +1729,33 @@
 <td>Double quotes</td>
 <td><code>"column_name"</code></td>
 </tr>
-<tr>
-<td>ClickHouse</td>
-<td>Double quotes</td>
-<td><code>"column_name"</code></td>
-</tr>
-<tr>
-<td>Dremio</td>
-<td>Double quotes</td>
-<td><code>"column_name"</code></td>
-</tr>
-<tr>
-<td>Databricks</td>
-<td>Backticks</td>
-<td><code>`column_name`</code></td>
-</tr>
 </tbody>
 </table>
 <h2 id="time-grain-functions">Time Grain Functions<a class="headerlink" href="#time-grain-functions" title="Permanent link">&para;</a></h2>
 <p>The <code>timeGrain</code> is rendered differently per dialect:</p>
-<div class="tabbed-set tabbed-alternate" data-tabs="1:5"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><input id="__tabbed_1_3" name="__tabbed_1" type="radio" /><input id="__tabbed_1_4" name="__tabbed_1" type="radio" /><input id="__tabbed_1_5" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Postgres</label><label for="__tabbed_1_2">Snowflake</label><label for="__tabbed_1_3">ClickHouse</label><label for="__tabbed_1_4">Dremio</label><label for="__tabbed_1_5">Databricks</label></div>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:7"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><input id="__tabbed_1_3" name="__tabbed_1" type="radio" /><input id="__tabbed_1_4" name="__tabbed_1" type="radio" /><input id="__tabbed_1_5" name="__tabbed_1" type="radio" /><input id="__tabbed_1_6" name="__tabbed_1" type="radio" /><input id="__tabbed_1_7" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">BigQuery</label><label for="__tabbed_1_2">ClickHouse</label><label for="__tabbed_1_3">Databricks</label><label for="__tabbed_1_4">Dremio</label><label for="__tabbed_1_5">DuckDB</label><label for="__tabbed_1_6">Postgres</label><label for="__tabbed_1_7">Snowflake</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
-<div class="language-sql highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">date_trunc</span><span class="p">(</span><span class="s1">&#39;month&#39;</span><span class="p">,</span><span class="w"> </span><span class="ss">&quot;order_date&quot;</span><span class="p">)</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="n">date_trunc</span><span class="p">(</span><span class="s1">&#39;year&#39;</span><span class="p">,</span><span class="w"> </span><span class="ss">&quot;order_date&quot;</span><span class="p">)</span>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="n">date_trunc</span><span class="p">(</span><span class="s1">&#39;quarter&#39;</span><span class="p">,</span><span class="w"> </span><span class="ss">&quot;order_date&quot;</span><span class="p">)</span>
+<div class="language-sql highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">DATE_TRUNC</span><span class="p">(</span><span class="o">`</span><span class="n">order_date</span><span class="o">`</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;month&#39;</span><span class="p">)</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="n">DATE_TRUNC</span><span class="p">(</span><span class="o">`</span><span class="n">order_date</span><span class="o">`</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;year&#39;</span><span class="p">)</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="n">DATE_TRUNC</span><span class="p">(</span><span class="o">`</span><span class="n">order_date</span><span class="o">`</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;quarter&#39;</span><span class="p">)</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="n">DATE_TRUNC</span><span class="p">(</span><span class="o">`</span><span class="n">order_date</span><span class="o">`</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;ISOWEEK&#39;</span><span class="p">)</span><span class="w">   </span><span class="c1">-- week</span>
 </span></code></pre></div>
 </div>
 <div class="tabbed-block">
-<div class="language-sql highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">DATE_TRUNC</span><span class="p">(</span><span class="s1">&#39;month&#39;</span><span class="p">,</span><span class="w"> </span><span class="ss">&quot;order_date&quot;</span><span class="p">)</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="n">DATE_TRUNC</span><span class="p">(</span><span class="s1">&#39;year&#39;</span><span class="p">,</span><span class="w"> </span><span class="ss">&quot;order_date&quot;</span><span class="p">)</span>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="n">DATE_TRUNC</span><span class="p">(</span><span class="s1">&#39;quarter&#39;</span><span class="p">,</span><span class="w"> </span><span class="ss">&quot;order_date&quot;</span><span class="p">)</span>
+<div class="language-sql highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">toStartOfMonth</span><span class="p">(</span><span class="ss">&quot;order_date&quot;</span><span class="p">)</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="n">toStartOfYear</span><span class="p">(</span><span class="ss">&quot;order_date&quot;</span><span class="p">)</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="n">toStartOfQuarter</span><span class="p">(</span><span class="ss">&quot;order_date&quot;</span><span class="p">)</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="n">toMonday</span><span class="p">(</span><span class="ss">&quot;order_date&quot;</span><span class="p">)</span><span class="w">        </span><span class="c1">-- week</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="n">toDate</span><span class="p">(</span><span class="ss">&quot;order_date&quot;</span><span class="p">)</span><span class="w">          </span><span class="c1">-- day</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="n">toStartOfHour</span><span class="p">(</span><span class="ss">&quot;order_date&quot;</span><span class="p">)</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="n">toStartOfMinute</span><span class="p">(</span><span class="ss">&quot;order_date&quot;</span><span class="p">)</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="n">toStartOfSecond</span><span class="p">(</span><span class="ss">&quot;order_date&quot;</span><span class="p">)</span>
 </span></code></pre></div>
 </div>
 <div class="tabbed-block">
-<div class="language-sql highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">toStartOfMonth</span><span class="p">(</span><span class="ss">&quot;order_date&quot;</span><span class="p">)</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="n">toStartOfYear</span><span class="p">(</span><span class="ss">&quot;order_date&quot;</span><span class="p">)</span>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="n">toStartOfQuarter</span><span class="p">(</span><span class="ss">&quot;order_date&quot;</span><span class="p">)</span>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="n">toMonday</span><span class="p">(</span><span class="ss">&quot;order_date&quot;</span><span class="p">)</span><span class="w">        </span><span class="c1">-- week</span>
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="n">toDate</span><span class="p">(</span><span class="ss">&quot;order_date&quot;</span><span class="p">)</span><span class="w">          </span><span class="c1">-- day</span>
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="n">toStartOfHour</span><span class="p">(</span><span class="ss">&quot;order_date&quot;</span><span class="p">)</span>
-</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="n">toStartOfMinute</span><span class="p">(</span><span class="ss">&quot;order_date&quot;</span><span class="p">)</span>
-</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="n">toStartOfSecond</span><span class="p">(</span><span class="ss">&quot;order_date&quot;</span><span class="p">)</span>
+<div class="language-sql highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">date_trunc</span><span class="p">(</span><span class="s1">&#39;month&#39;</span><span class="p">,</span><span class="w"> </span><span class="o">`</span><span class="n">order_date</span><span class="o">`</span><span class="p">)</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="n">date_trunc</span><span class="p">(</span><span class="s1">&#39;year&#39;</span><span class="p">,</span><span class="w"> </span><span class="o">`</span><span class="n">order_date</span><span class="o">`</span><span class="p">)</span>
 </span></code></pre></div>
 </div>
 <div class="tabbed-block">
@@ -1728,55 +1764,77 @@
 </span></code></pre></div>
 </div>
 <div class="tabbed-block">
-<div class="language-sql highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">date_trunc</span><span class="p">(</span><span class="s1">&#39;month&#39;</span><span class="p">,</span><span class="w"> </span><span class="o">`</span><span class="n">order_date</span><span class="o">`</span><span class="p">)</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="n">date_trunc</span><span class="p">(</span><span class="s1">&#39;year&#39;</span><span class="p">,</span><span class="w"> </span><span class="o">`</span><span class="n">order_date</span><span class="o">`</span><span class="p">)</span>
+<div class="language-sql highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">date_trunc</span><span class="p">(</span><span class="s1">&#39;month&#39;</span><span class="p">,</span><span class="w"> </span><span class="ss">&quot;order_date&quot;</span><span class="p">)</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="n">date_trunc</span><span class="p">(</span><span class="s1">&#39;year&#39;</span><span class="p">,</span><span class="w"> </span><span class="ss">&quot;order_date&quot;</span><span class="p">)</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="n">date_trunc</span><span class="p">(</span><span class="s1">&#39;quarter&#39;</span><span class="p">,</span><span class="w"> </span><span class="ss">&quot;order_date&quot;</span><span class="p">)</span>
+</span></code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="language-sql highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">date_trunc</span><span class="p">(</span><span class="s1">&#39;month&#39;</span><span class="p">,</span><span class="w"> </span><span class="ss">&quot;order_date&quot;</span><span class="p">)</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="n">date_trunc</span><span class="p">(</span><span class="s1">&#39;year&#39;</span><span class="p">,</span><span class="w"> </span><span class="ss">&quot;order_date&quot;</span><span class="p">)</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="n">date_trunc</span><span class="p">(</span><span class="s1">&#39;quarter&#39;</span><span class="p">,</span><span class="w"> </span><span class="ss">&quot;order_date&quot;</span><span class="p">)</span>
+</span></code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="language-sql highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="n">DATE_TRUNC</span><span class="p">(</span><span class="s1">&#39;month&#39;</span><span class="p">,</span><span class="w"> </span><span class="ss">&quot;order_date&quot;</span><span class="p">)</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="n">DATE_TRUNC</span><span class="p">(</span><span class="s1">&#39;year&#39;</span><span class="p">,</span><span class="w"> </span><span class="ss">&quot;order_date&quot;</span><span class="p">)</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="n">DATE_TRUNC</span><span class="p">(</span><span class="s1">&#39;quarter&#39;</span><span class="p">,</span><span class="w"> </span><span class="ss">&quot;order_date&quot;</span><span class="p">)</span>
 </span></code></pre></div>
 </div>
 </div>
 </div>
 <h2 id="string-contains">String Contains<a class="headerlink" href="#string-contains" title="Permanent link">&para;</a></h2>
 <p>The <code>contains</code> filter operator is rendered per dialect:</p>
-<div class="tabbed-set tabbed-alternate" data-tabs="2:5"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><input id="__tabbed_2_3" name="__tabbed_2" type="radio" /><input id="__tabbed_2_4" name="__tabbed_2" type="radio" /><input id="__tabbed_2_5" name="__tabbed_2" type="radio" /><div class="tabbed-labels"><label for="__tabbed_2_1">Postgres</label><label for="__tabbed_2_2">Snowflake</label><label for="__tabbed_2_3">ClickHouse</label><label for="__tabbed_2_4">Dremio</label><label for="__tabbed_2_5">Databricks</label></div>
+<div class="tabbed-set tabbed-alternate" data-tabs="2:7"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><input id="__tabbed_2_3" name="__tabbed_2" type="radio" /><input id="__tabbed_2_4" name="__tabbed_2" type="radio" /><input id="__tabbed_2_5" name="__tabbed_2" type="radio" /><input id="__tabbed_2_6" name="__tabbed_2" type="radio" /><input id="__tabbed_2_7" name="__tabbed_2" type="radio" /><div class="tabbed-labels"><label for="__tabbed_2_1">BigQuery</label><label for="__tabbed_2_2">ClickHouse</label><label for="__tabbed_2_3">Databricks</label><label for="__tabbed_2_4">Dremio</label><label for="__tabbed_2_5">DuckDB</label><label for="__tabbed_2_6">Postgres</label><label for="__tabbed_2_7">Snowflake</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
-<div class="language-sql highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="ss">&quot;column&quot;</span><span class="w"> </span><span class="k">ILIKE</span><span class="w"> </span><span class="s1">&#39;%&#39;</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="s1">&#39;search&#39;</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="s1">&#39;%&#39;</span>
+<div class="language-sql highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="k">LOWER</span><span class="p">(</span><span class="o">`</span><span class="k">column</span><span class="o">`</span><span class="p">)</span><span class="w"> </span><span class="k">LIKE</span><span class="w"> </span><span class="s1">&#39;%&#39;</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="k">LOWER</span><span class="p">(</span><span class="s1">&#39;search&#39;</span><span class="p">)</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="s1">&#39;%&#39;</span>
 </span></code></pre></div>
 </div>
 <div class="tabbed-block">
-<div class="language-sql highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="k">CONTAINS</span><span class="p">(</span><span class="ss">&quot;column&quot;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;search&#39;</span><span class="p">)</span>
-</span></code></pre></div>
-</div>
-<div class="tabbed-block">
-<div class="language-sql highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="ss">&quot;column&quot;</span><span class="w"> </span><span class="k">ILIKE</span><span class="w"> </span><span class="s1">&#39;%&#39;</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="s1">&#39;search&#39;</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="s1">&#39;%&#39;</span>
-</span></code></pre></div>
-</div>
-<div class="tabbed-block">
-<div class="language-sql highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="k">LOWER</span><span class="p">(</span><span class="ss">&quot;column&quot;</span><span class="p">)</span><span class="w"> </span><span class="k">LIKE</span><span class="w"> </span><span class="s1">&#39;%&#39;</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="k">LOWER</span><span class="p">(</span><span class="s1">&#39;search&#39;</span><span class="p">)</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="s1">&#39;%&#39;</span>
+<div class="language-sql highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="ss">&quot;column&quot;</span><span class="w"> </span><span class="k">ILIKE</span><span class="w"> </span><span class="s1">&#39;%&#39;</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="s1">&#39;search&#39;</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="s1">&#39;%&#39;</span>
 </span></code></pre></div>
 </div>
 <div class="tabbed-block">
 <div class="language-sql highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="k">lower</span><span class="p">(</span><span class="o">`</span><span class="k">column</span><span class="o">`</span><span class="p">)</span><span class="w"> </span><span class="k">LIKE</span><span class="w"> </span><span class="s1">&#39;%&#39;</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="k">lower</span><span class="p">(</span><span class="s1">&#39;search&#39;</span><span class="p">)</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="s1">&#39;%&#39;</span>
 </span></code></pre></div>
 </div>
-</div>
-</div>
-<h2 id="cast-handling">CAST Handling<a class="headerlink" href="#cast-handling" title="Permanent link">&para;</a></h2>
-<div class="tabbed-set tabbed-alternate" data-tabs="3:2"><input checked="checked" id="__tabbed_3_1" name="__tabbed_3" type="radio" /><input id="__tabbed_3_2" name="__tabbed_3" type="radio" /><div class="tabbed-labels"><label for="__tabbed_3_1">Postgres / Snowflake / Dremio / Databricks</label><label for="__tabbed_3_2">ClickHouse</label></div>
-<div class="tabbed-content">
 <div class="tabbed-block">
-<div class="language-sql highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="k">CAST</span><span class="p">(</span><span class="n">expr</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="nb">INTEGER</span><span class="p">)</span>
-</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="k">CAST</span><span class="p">(</span><span class="n">expr</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="nb">VARCHAR</span><span class="p">)</span>
-</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="k">CAST</span><span class="p">(</span><span class="n">expr</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="nb">DATE</span><span class="p">)</span>
+<div class="language-sql highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="k">LOWER</span><span class="p">(</span><span class="ss">&quot;column&quot;</span><span class="p">)</span><span class="w"> </span><span class="k">LIKE</span><span class="w"> </span><span class="s1">&#39;%&#39;</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="k">LOWER</span><span class="p">(</span><span class="s1">&#39;search&#39;</span><span class="p">)</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="s1">&#39;%&#39;</span>
 </span></code></pre></div>
 </div>
 <div class="tabbed-block">
+<div class="language-sql highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="ss">&quot;column&quot;</span><span class="w"> </span><span class="k">ILIKE</span><span class="w"> </span><span class="s1">&#39;%&#39;</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="s1">&#39;search&#39;</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="s1">&#39;%&#39;</span>
+</span></code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="language-sql highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="ss">&quot;column&quot;</span><span class="w"> </span><span class="k">ILIKE</span><span class="w"> </span><span class="s1">&#39;%&#39;</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="s1">&#39;search&#39;</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="s1">&#39;%&#39;</span>
+</span></code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="language-sql highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="k">CONTAINS</span><span class="p">(</span><span class="ss">&quot;column&quot;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;search&#39;</span><span class="p">)</span>
+</span></code></pre></div>
+</div>
+</div>
+</div>
+<h2 id="cast-handling">CAST Handling<a class="headerlink" href="#cast-handling" title="Permanent link">&para;</a></h2>
+<div class="tabbed-set tabbed-alternate" data-tabs="3:2"><input checked="checked" id="__tabbed_3_1" name="__tabbed_3" type="radio" /><input id="__tabbed_3_2" name="__tabbed_3" type="radio" /><div class="tabbed-labels"><label for="__tabbed_3_1">BigQuery / Databricks / Dremio / DuckDB / Postgres / Snowflake</label><label for="__tabbed_3_2">ClickHouse</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="language-sql highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="k">CAST</span><span class="p">(</span><span class="n">expr</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="nb">INTEGER</span><span class="p">)</span>
+</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="k">CAST</span><span class="p">(</span><span class="n">expr</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="nb">VARCHAR</span><span class="p">)</span>
+</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="k">CAST</span><span class="p">(</span><span class="n">expr</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="nb">DATE</span><span class="p">)</span>
+</span></code></pre></div>
+<p>BigQuery uses its own type names (<code>INT64</code>, <code>FLOAT64</code>, <code>STRING</code>, <code>BOOL</code>) but standard <code>CAST</code> syntax.</p>
+</div>
+<div class="tabbed-block">
 <p>ClickHouse uses native conversion functions:</p>
-<div class="language-sql highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="n">toInt64</span><span class="p">(</span><span class="n">expr</span><span class="p">)</span><span class="w">      </span><span class="c1">-- int / integer</span>
-</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="n">toFloat64</span><span class="p">(</span><span class="n">expr</span><span class="p">)</span><span class="w">    </span><span class="c1">-- float / double</span>
-</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="n">toString</span><span class="p">(</span><span class="n">expr</span><span class="p">)</span><span class="w">     </span><span class="c1">-- string / varchar</span>
-</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="n">toDate</span><span class="p">(</span><span class="n">expr</span><span class="p">)</span><span class="w">       </span><span class="c1">-- date</span>
-</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="c1">-- Other types fall back to CAST</span>
-</span><span id="__span-11-6"><a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="k">CAST</span><span class="p">(</span><span class="n">expr</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">DateTime</span><span class="p">)</span>
+<div class="language-sql highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="n">toInt64</span><span class="p">(</span><span class="n">expr</span><span class="p">)</span><span class="w">      </span><span class="c1">-- int / integer</span>
+</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="n">toFloat64</span><span class="p">(</span><span class="n">expr</span><span class="p">)</span><span class="w">    </span><span class="c1">-- float / double</span>
+</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="n">toString</span><span class="p">(</span><span class="n">expr</span><span class="p">)</span><span class="w">     </span><span class="c1">-- string / varchar</span>
+</span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="n">toDate</span><span class="p">(</span><span class="n">expr</span><span class="p">)</span><span class="w">       </span><span class="c1">-- date</span>
+</span><span id="__span-15-5"><a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a><span class="c1">-- Other types fall back to CAST</span>
+</span><span id="__span-15-6"><a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a><span class="k">CAST</span><span class="p">(</span><span class="n">expr</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">DateTime</span><span class="p">)</span>
 </span></code></pre></div>
 </div>
 </div>
@@ -1793,11 +1851,7 @@
 </thead>
 <tbody>
 <tr>
-<td>Postgres</td>
-<td><code>ANY_VALUE(col)</code></td>
-</tr>
-<tr>
-<td>Snowflake</td>
+<td>BigQuery</td>
 <td><code>ANY_VALUE(col)</code></td>
 </tr>
 <tr>
@@ -1805,11 +1859,23 @@
 <td><code>any(col)</code></td>
 </tr>
 <tr>
+<td>Databricks</td>
+<td><code>ANY_VALUE(col)</code></td>
+</tr>
+<tr>
 <td>Dremio</td>
 <td><code>ANY_VALUE(col)</code></td>
 </tr>
 <tr>
-<td>Databricks</td>
+<td>DuckDB</td>
+<td><code>ANY_VALUE(col)</code></td>
+</tr>
+<tr>
+<td>Postgres</td>
+<td><code>ANY_VALUE(col)</code></td>
+</tr>
+<tr>
+<td>Snowflake</td>
 <td><code>ANY_VALUE(col)</code></td>
 </tr>
 </tbody>
@@ -1824,15 +1890,15 @@
 </thead>
 <tbody>
 <tr>
-<td>Postgres</td>
-<td><code>PERCENTILE_DISC(0.5) WITHIN GROUP (ORDER BY col)</code></td>
-</tr>
-<tr>
-<td>Snowflake</td>
-<td><code>MEDIAN(col)</code></td>
+<td>BigQuery</td>
+<td><code>APPROX_QUANTILES(col, 2)[OFFSET(1)]</code></td>
 </tr>
 <tr>
 <td>ClickHouse</td>
+<td><code>MEDIAN(col)</code></td>
+</tr>
+<tr>
+<td>Databricks</td>
 <td><code>MEDIAN(col)</code></td>
 </tr>
 <tr>
@@ -1840,7 +1906,15 @@
 <td><code>MEDIAN(col)</code></td>
 </tr>
 <tr>
-<td>Databricks</td>
+<td>DuckDB</td>
+<td><code>MEDIAN(col)</code></td>
+</tr>
+<tr>
+<td>Postgres</td>
+<td><code>PERCENTILE_DISC(0.5) WITHIN GROUP (ORDER BY col)</code></td>
+</tr>
+<tr>
+<td>Snowflake</td>
 <td><code>MEDIAN(col)</code></td>
 </tr>
 </tbody>
@@ -1855,23 +1929,31 @@
 </thead>
 <tbody>
 <tr>
-<td>Postgres</td>
-<td><code>MODE() WITHIN GROUP (ORDER BY col)</code></td>
-</tr>
-<tr>
-<td>Snowflake</td>
-<td><code>MODE(col)</code></td>
+<td>BigQuery</td>
+<td><code>APPROX_TOP_COUNT(col, 1)[OFFSET(0)].value</code></td>
 </tr>
 <tr>
 <td>ClickHouse</td>
 <td><code>topK(1)(col)[1]</code></td>
 </tr>
 <tr>
+<td>Databricks</td>
+<td><code>MODE(col)</code></td>
+</tr>
+<tr>
 <td>Dremio</td>
 <td>Not supported</td>
 </tr>
 <tr>
-<td>Databricks</td>
+<td>DuckDB</td>
+<td><code>MODE(col)</code></td>
+</tr>
+<tr>
+<td>Postgres</td>
+<td><code>MODE() WITHIN GROUP (ORDER BY col)</code></td>
+</tr>
+<tr>
+<td>Snowflake</td>
 <td><code>MODE(col)</code></td>
 </tr>
 </tbody>
@@ -1888,6 +1970,36 @@
 </thead>
 <tbody>
 <tr>
+<td>BigQuery</td>
+<td><code>STRING_AGG(col, sep)</code></td>
+<td><code>STRING_AGG(DISTINCT col, sep)</code></td>
+<td><code>STRING_AGG(col, sep ORDER BY col)</code></td>
+</tr>
+<tr>
+<td>ClickHouse</td>
+<td><code>arrayStringConcat(groupArray(col), sep)</code></td>
+<td><code>arrayStringConcat(groupUniqArray(col), sep)</code></td>
+<td><code>arrayStringConcat(arraySort(groupArray(col)), sep)</code></td>
+</tr>
+<tr>
+<td>Databricks</td>
+<td><code>ARRAY_JOIN(COLLECT_LIST(col), sep)</code></td>
+<td><code>ARRAY_JOIN(COLLECT_SET(col), sep)</code></td>
+<td><code>ARRAY_JOIN(SORT_ARRAY(COLLECT_LIST(col)), sep)</code></td>
+</tr>
+<tr>
+<td>Dremio</td>
+<td><code>LISTAGG(col, sep)</code></td>
+<td><code>LISTAGG(DISTINCT col, sep)</code></td>
+<td><code>LISTAGG(col, sep) WITHIN GROUP (ORDER BY col)</code></td>
+</tr>
+<tr>
+<td>DuckDB</td>
+<td><code>STRING_AGG(col, sep)</code></td>
+<td><code>STRING_AGG(DISTINCT col, sep)</code></td>
+<td><code>STRING_AGG(col, sep ORDER BY col)</code></td>
+</tr>
+<tr>
 <td>Postgres</td>
 <td><code>STRING_AGG(col, sep)</code></td>
 <td><code>STRING_AGG(DISTINCT col, sep)</code></td>
@@ -1898,24 +2010,6 @@
 <td><code>LISTAGG(col, sep)</code></td>
 <td><code>LISTAGG(DISTINCT col, sep)</code></td>
 <td><code>LISTAGG(col, sep) WITHIN GROUP (ORDER BY col)</code></td>
-</tr>
-<tr>
-<td>ClickHouse</td>
-<td><code>arrayStringConcat(groupArray(col), sep)</code></td>
-<td><code>arrayStringConcat(groupUniqArray(col), sep)</code></td>
-<td><code>arrayStringConcat(arraySort(groupArray(col)), sep)</code></td>
-</tr>
-<tr>
-<td>Dremio</td>
-<td><code>LISTAGG(col, sep)</code></td>
-<td><code>LISTAGG(DISTINCT col, sep)</code></td>
-<td><code>LISTAGG(col, sep) WITHIN GROUP (ORDER BY col)</code></td>
-</tr>
-<tr>
-<td>Databricks</td>
-<td><code>ARRAY_JOIN(COLLECT_LIST(col), sep)</code></td>
-<td><code>ARRAY_JOIN(COLLECT_SET(col), sep)</code></td>
-<td><code>ARRAY_JOIN(SORT_ARRAY(COLLECT_LIST(col)), sep)</code></td>
 </tr>
 </tbody>
 </table>
@@ -1929,41 +2023,41 @@
 </div>
 <h2 id="dialect-plugin-architecture">Dialect Plugin Architecture<a class="headerlink" href="#dialect-plugin-architecture" title="Permanent link">&para;</a></h2>
 <p>Each dialect implements the abstract <code>Dialect</code> base class:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">Dialect</span><span class="p">(</span><span class="n">ABC</span><span class="p">):</span>
-</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>    <span class="nd">@property</span>
-</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>    <span class="nd">@abstractmethod</span>
-</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">name</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span> <span class="o">...</span>
-</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>
-</span><span id="__span-12-6"><a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>    <span class="nd">@property</span>
-</span><span id="__span-12-7"><a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a>    <span class="nd">@abstractmethod</span>
-</span><span id="__span-12-8"><a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">capabilities</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DialectCapabilities</span><span class="p">:</span> <span class="o">...</span>
-</span><span id="__span-12-9"><a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a>
-</span><span id="__span-12-10"><a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a>    <span class="nd">@abstractmethod</span>
-</span><span id="__span-12-11"><a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">quote_identifier</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span> <span class="o">...</span>
-</span><span id="__span-12-12"><a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a>
-</span><span id="__span-12-13"><a id="__codelineno-12-13" name="__codelineno-12-13" href="#__codelineno-12-13"></a>    <span class="nd">@abstractmethod</span>
-</span><span id="__span-12-14"><a id="__codelineno-12-14" name="__codelineno-12-14" href="#__codelineno-12-14"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">render_time_grain</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">column</span><span class="p">:</span> <span class="n">Expr</span><span class="p">,</span> <span class="n">grain</span><span class="p">:</span> <span class="n">TimeGrain</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Expr</span><span class="p">:</span> <span class="o">...</span>
-</span><span id="__span-12-15"><a id="__codelineno-12-15" name="__codelineno-12-15" href="#__codelineno-12-15"></a>
-</span><span id="__span-12-16"><a id="__codelineno-12-16" name="__codelineno-12-16" href="#__codelineno-12-16"></a>    <span class="nd">@abstractmethod</span>
-</span><span id="__span-12-17"><a id="__codelineno-12-17" name="__codelineno-12-17" href="#__codelineno-12-17"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">render_cast</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">expr</span><span class="p">:</span> <span class="n">Expr</span><span class="p">,</span> <span class="n">target_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Expr</span><span class="p">:</span> <span class="o">...</span>
-</span><span id="__span-12-18"><a id="__codelineno-12-18" name="__codelineno-12-18" href="#__codelineno-12-18"></a>
-</span><span id="__span-12-19"><a id="__codelineno-12-19" name="__codelineno-12-19" href="#__codelineno-12-19"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">render_string_contains</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">column</span><span class="p">:</span> <span class="n">Expr</span><span class="p">,</span> <span class="n">pattern</span><span class="p">:</span> <span class="n">Expr</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Expr</span><span class="p">:</span> <span class="o">...</span>
-</span><span id="__span-12-20"><a id="__codelineno-12-20" name="__codelineno-12-20" href="#__codelineno-12-20"></a>
-</span><span id="__span-12-21"><a id="__codelineno-12-21" name="__codelineno-12-21" href="#__codelineno-12-21"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">compile</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ast</span><span class="p">:</span> <span class="n">Select</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span> <span class="o">...</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">Dialect</span><span class="p">(</span><span class="n">ABC</span><span class="p">):</span>
+</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>    <span class="nd">@property</span>
+</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>    <span class="nd">@abstractmethod</span>
+</span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">name</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span> <span class="o">...</span>
+</span><span id="__span-16-5"><a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a>
+</span><span id="__span-16-6"><a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a>    <span class="nd">@property</span>
+</span><span id="__span-16-7"><a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a>    <span class="nd">@abstractmethod</span>
+</span><span id="__span-16-8"><a id="__codelineno-16-8" name="__codelineno-16-8" href="#__codelineno-16-8"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">capabilities</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DialectCapabilities</span><span class="p">:</span> <span class="o">...</span>
+</span><span id="__span-16-9"><a id="__codelineno-16-9" name="__codelineno-16-9" href="#__codelineno-16-9"></a>
+</span><span id="__span-16-10"><a id="__codelineno-16-10" name="__codelineno-16-10" href="#__codelineno-16-10"></a>    <span class="nd">@abstractmethod</span>
+</span><span id="__span-16-11"><a id="__codelineno-16-11" name="__codelineno-16-11" href="#__codelineno-16-11"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">quote_identifier</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span> <span class="o">...</span>
+</span><span id="__span-16-12"><a id="__codelineno-16-12" name="__codelineno-16-12" href="#__codelineno-16-12"></a>
+</span><span id="__span-16-13"><a id="__codelineno-16-13" name="__codelineno-16-13" href="#__codelineno-16-13"></a>    <span class="nd">@abstractmethod</span>
+</span><span id="__span-16-14"><a id="__codelineno-16-14" name="__codelineno-16-14" href="#__codelineno-16-14"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">render_time_grain</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">column</span><span class="p">:</span> <span class="n">Expr</span><span class="p">,</span> <span class="n">grain</span><span class="p">:</span> <span class="n">TimeGrain</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Expr</span><span class="p">:</span> <span class="o">...</span>
+</span><span id="__span-16-15"><a id="__codelineno-16-15" name="__codelineno-16-15" href="#__codelineno-16-15"></a>
+</span><span id="__span-16-16"><a id="__codelineno-16-16" name="__codelineno-16-16" href="#__codelineno-16-16"></a>    <span class="nd">@abstractmethod</span>
+</span><span id="__span-16-17"><a id="__codelineno-16-17" name="__codelineno-16-17" href="#__codelineno-16-17"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">render_cast</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">expr</span><span class="p">:</span> <span class="n">Expr</span><span class="p">,</span> <span class="n">target_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Expr</span><span class="p">:</span> <span class="o">...</span>
+</span><span id="__span-16-18"><a id="__codelineno-16-18" name="__codelineno-16-18" href="#__codelineno-16-18"></a>
+</span><span id="__span-16-19"><a id="__codelineno-16-19" name="__codelineno-16-19" href="#__codelineno-16-19"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">render_string_contains</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">column</span><span class="p">:</span> <span class="n">Expr</span><span class="p">,</span> <span class="n">pattern</span><span class="p">:</span> <span class="n">Expr</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Expr</span><span class="p">:</span> <span class="o">...</span>
+</span><span id="__span-16-20"><a id="__codelineno-16-20" name="__codelineno-16-20" href="#__codelineno-16-20"></a>
+</span><span id="__span-16-21"><a id="__codelineno-16-21" name="__codelineno-16-21" href="#__codelineno-16-21"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">compile</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ast</span><span class="p">:</span> <span class="n">Select</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span> <span class="o">...</span>
 </span></code></pre></div>
 <p>Dialects register themselves via the <code>@DialectRegistry.register</code> decorator:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="nd">@DialectRegistry</span><span class="o">.</span><span class="n">register</span>
-</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="k">class</span><span class="w"> </span><span class="nc">PostgresDialect</span><span class="p">(</span><span class="n">Dialect</span><span class="p">):</span>
-</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>    <span class="nd">@property</span>
-</span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">name</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-</span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>        <span class="k">return</span> <span class="s2">&quot;postgres&quot;</span>
-</span><span id="__span-13-6"><a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a>    <span class="o">...</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="nd">@DialectRegistry</span><span class="o">.</span><span class="n">register</span>
+</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="k">class</span><span class="w"> </span><span class="nc">PostgresDialect</span><span class="p">(</span><span class="n">Dialect</span><span class="p">):</span>
+</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>    <span class="nd">@property</span>
+</span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">name</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+</span><span id="__span-17-5"><a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a>        <span class="k">return</span> <span class="s2">&quot;postgres&quot;</span>
+</span><span id="__span-17-6"><a id="__codelineno-17-6" name="__codelineno-17-6" href="#__codelineno-17-6"></a>    <span class="o">...</span>
 </span></code></pre></div>
 <p>The registry provides lookup by name:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">orionbelt.dialect.registry</span><span class="w"> </span><span class="kn">import</span> <span class="n">DialectRegistry</span>
-</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>
-</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="n">dialect</span> <span class="o">=</span> <span class="n">DialectRegistry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;snowflake&quot;</span><span class="p">)</span>
-</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="n">sql</span> <span class="o">=</span> <span class="n">dialect</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">ast</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">orionbelt.dialect.registry</span><span class="w"> </span><span class="kn">import</span> <span class="n">DialectRegistry</span>
+</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>
+</span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a><span class="n">dialect</span> <span class="o">=</span> <span class="n">DialectRegistry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;snowflake&quot;</span><span class="p">)</span>
+</span><span id="__span-18-4"><a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a><span class="n">sql</span> <span class="o">=</span> <span class="n">dialect</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">ast</span><span class="p">)</span>
 </span></code></pre></div>
 <h3 id="adding-a-new-dialect">Adding a New Dialect<a class="headerlink" href="#adding-a-new-dialect" title="Permanent link">&para;</a></h3>
 <ol>
@@ -1973,25 +2067,25 @@
 <li>The dialect is automatically available via <code>DialectRegistry.get("my_dialect")</code></li>
 </ol>
 <h2 id="querying-dialect-info-via-api">Querying Dialect Info via API<a class="headerlink" href="#querying-dialect-info-via-api" title="Permanent link">&para;</a></h2>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>curl<span class="w"> </span>http://127.0.0.1:8000/dialects
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>curl<span class="w"> </span>http://127.0.0.1:8000/v1/dialects
 </span></code></pre></div>
-<div class="language-json highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="p">{</span>
-</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="w">  </span><span class="nt">&quot;dialects&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="w">    </span><span class="p">{</span>
-</span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="w">      </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;postgres&quot;</span><span class="p">,</span>
-</span><span id="__span-16-5"><a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a><span class="w">      </span><span class="nt">&quot;capabilities&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-16-6"><a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a><span class="w">        </span><span class="nt">&quot;supports_cte&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-</span><span id="__span-16-7"><a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a><span class="w">        </span><span class="nt">&quot;supports_qualify&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
-</span><span id="__span-16-8"><a id="__codelineno-16-8" name="__codelineno-16-8" href="#__codelineno-16-8"></a><span class="w">        </span><span class="nt">&quot;supports_arrays&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-</span><span id="__span-16-9"><a id="__codelineno-16-9" name="__codelineno-16-9" href="#__codelineno-16-9"></a><span class="w">        </span><span class="nt">&quot;supports_window_filters&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
-</span><span id="__span-16-10"><a id="__codelineno-16-10" name="__codelineno-16-10" href="#__codelineno-16-10"></a><span class="w">        </span><span class="nt">&quot;supports_ilike&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-</span><span id="__span-16-11"><a id="__codelineno-16-11" name="__codelineno-16-11" href="#__codelineno-16-11"></a><span class="w">        </span><span class="nt">&quot;supports_time_travel&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
-</span><span id="__span-16-12"><a id="__codelineno-16-12" name="__codelineno-16-12" href="#__codelineno-16-12"></a><span class="w">        </span><span class="nt">&quot;supports_semi_structured&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span>
-</span><span id="__span-16-13"><a id="__codelineno-16-13" name="__codelineno-16-13" href="#__codelineno-16-13"></a><span class="w">      </span><span class="p">}</span>
-</span><span id="__span-16-14"><a id="__codelineno-16-14" name="__codelineno-16-14" href="#__codelineno-16-14"></a><span class="w">    </span><span class="p">},</span>
-</span><span id="__span-16-15"><a id="__codelineno-16-15" name="__codelineno-16-15" href="#__codelineno-16-15"></a><span class="w">    </span><span class="err">...</span>
-</span><span id="__span-16-16"><a id="__codelineno-16-16" name="__codelineno-16-16" href="#__codelineno-16-16"></a><span class="w">  </span><span class="p">]</span>
-</span><span id="__span-16-17"><a id="__codelineno-16-17" name="__codelineno-16-17" href="#__codelineno-16-17"></a><span class="p">}</span>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="p">{</span>
+</span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a><span class="w">  </span><span class="nt">&quot;dialects&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+</span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a><span class="w">    </span><span class="p">{</span>
+</span><span id="__span-20-4"><a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a><span class="w">      </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;bigquery&quot;</span><span class="p">,</span>
+</span><span id="__span-20-5"><a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a><span class="w">      </span><span class="nt">&quot;capabilities&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-20-6"><a id="__codelineno-20-6" name="__codelineno-20-6" href="#__codelineno-20-6"></a><span class="w">        </span><span class="nt">&quot;supports_cte&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+</span><span id="__span-20-7"><a id="__codelineno-20-7" name="__codelineno-20-7" href="#__codelineno-20-7"></a><span class="w">        </span><span class="nt">&quot;supports_qualify&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+</span><span id="__span-20-8"><a id="__codelineno-20-8" name="__codelineno-20-8" href="#__codelineno-20-8"></a><span class="w">        </span><span class="nt">&quot;supports_arrays&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+</span><span id="__span-20-9"><a id="__codelineno-20-9" name="__codelineno-20-9" href="#__codelineno-20-9"></a><span class="w">        </span><span class="nt">&quot;supports_window_filters&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+</span><span id="__span-20-10"><a id="__codelineno-20-10" name="__codelineno-20-10" href="#__codelineno-20-10"></a><span class="w">        </span><span class="nt">&quot;supports_ilike&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
+</span><span id="__span-20-11"><a id="__codelineno-20-11" name="__codelineno-20-11" href="#__codelineno-20-11"></a><span class="w">        </span><span class="nt">&quot;supports_time_travel&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
+</span><span id="__span-20-12"><a id="__codelineno-20-12" name="__codelineno-20-12" href="#__codelineno-20-12"></a><span class="w">        </span><span class="nt">&quot;supports_semi_structured&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
+</span><span id="__span-20-13"><a id="__codelineno-20-13" name="__codelineno-20-13" href="#__codelineno-20-13"></a><span class="w">      </span><span class="p">}</span>
+</span><span id="__span-20-14"><a id="__codelineno-20-14" name="__codelineno-20-14" href="#__codelineno-20-14"></a><span class="w">    </span><span class="p">},</span>
+</span><span id="__span-20-15"><a id="__codelineno-20-15" name="__codelineno-20-15" href="#__codelineno-20-15"></a><span class="w">    </span><span class="err">...</span>
+</span><span id="__span-20-16"><a id="__codelineno-20-16" name="__codelineno-20-16" href="#__codelineno-20-16"></a><span class="w">  </span><span class="p">]</span>
+</span><span id="__span-20-17"><a id="__codelineno-20-17" name="__codelineno-20-17" href="#__codelineno-20-17"></a><span class="p">}</span>
 </span></code></pre></div>
 
 
@@ -2030,7 +2124,7 @@
       <div class="md-copyright">
   
     <div class="md-copyright__highlight">
-      Copyright &copy; 2025 RALFORION d.o.o. — Apache 2.0
+      Copyright &copy; 2025 RALFORION d.o.o. — BSL 1.1
     </div>
   
   

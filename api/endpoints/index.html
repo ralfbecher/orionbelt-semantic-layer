@@ -896,10 +896,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#post-sessions" class="md-nav__link">
+  <a href="#post-v1sessions" class="md-nav__link">
     <span class="md-ellipsis">
       
-        POST /sessions
+        POST /v1/sessions
       
     </span>
   </a>
@@ -907,10 +907,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#get-sessions" class="md-nav__link">
+  <a href="#get-v1sessions" class="md-nav__link">
     <span class="md-ellipsis">
       
-        GET /sessions
+        GET /v1/sessions
       
     </span>
   </a>
@@ -918,10 +918,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#get-sessionssession_id" class="md-nav__link">
+  <a href="#get-v1sessionssession_id" class="md-nav__link">
     <span class="md-ellipsis">
       
-        GET /sessions/{session_id}
+        GET /v1/sessions/{session_id}
       
     </span>
   </a>
@@ -929,10 +929,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#delete-sessionssession_id" class="md-nav__link">
+  <a href="#delete-v1sessionssession_id" class="md-nav__link">
     <span class="md-ellipsis">
       
-        DELETE /sessions/{session_id}
+        DELETE /v1/sessions/{session_id}
       
     </span>
   </a>
@@ -957,10 +957,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#post-sessionssession_idmodels" class="md-nav__link">
+  <a href="#post-v1sessionssession_idmodels" class="md-nav__link">
     <span class="md-ellipsis">
       
-        POST /sessions/{session_id}/models
+        POST /v1/sessions/{session_id}/models
       
     </span>
   </a>
@@ -968,10 +968,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#get-sessionssession_idmodels" class="md-nav__link">
+  <a href="#get-v1sessionssession_idmodels" class="md-nav__link">
     <span class="md-ellipsis">
       
-        GET /sessions/{session_id}/models
+        GET /v1/sessions/{session_id}/models
       
     </span>
   </a>
@@ -979,10 +979,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#get-sessionssession_idmodelsmodel_id" class="md-nav__link">
+  <a href="#get-v1sessionssession_idmodelsmodel_id" class="md-nav__link">
     <span class="md-ellipsis">
       
-        GET /sessions/{session_id}/models/{model_id}
+        GET /v1/sessions/{session_id}/models/{model_id}
       
     </span>
   </a>
@@ -990,10 +990,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#delete-sessionssession_idmodelsmodel_id" class="md-nav__link">
+  <a href="#delete-v1sessionssession_idmodelsmodel_id" class="md-nav__link">
     <span class="md-ellipsis">
       
-        DELETE /sessions/{session_id}/models/{model_id}
+        DELETE /v1/sessions/{session_id}/models/{model_id}
       
     </span>
   </a>
@@ -1018,10 +1018,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#post-sessionssession_idvalidate" class="md-nav__link">
+  <a href="#post-v1sessionssession_idvalidate" class="md-nav__link">
     <span class="md-ellipsis">
       
-        POST /sessions/{session_id}/validate
+        POST /v1/sessions/{session_id}/validate
       
     </span>
   </a>
@@ -1046,10 +1046,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#post-sessionssession_idquerysql" class="md-nav__link">
+  <a href="#post-v1sessionssession_idquerysql" class="md-nav__link">
     <span class="md-ellipsis">
       
-        POST /sessions/{session_id}/query/sql
+        POST /v1/sessions/{session_id}/query/sql
       
     </span>
   </a>
@@ -1074,10 +1074,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#post-convertosi-to-obml" class="md-nav__link">
+  <a href="#post-v1convertosi-to-obml" class="md-nav__link">
     <span class="md-ellipsis">
       
-        POST /convert/osi-to-obml
+        POST /v1/convert/osi-to-obml
       
     </span>
   </a>
@@ -1085,10 +1085,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#post-convertobml-to-osi" class="md-nav__link">
+  <a href="#post-v1convertobml-to-osi" class="md-nav__link">
     <span class="md-ellipsis">
       
-        POST /convert/obml-to-osi
+        POST /v1/convert/obml-to-osi
       
     </span>
   </a>
@@ -1097,6 +1097,144 @@
         
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#model-discovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Model Discovery
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Model Discovery">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#get-v1sessionssession_idmodelsmodel_idschema" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GET /v1/sessions/{session_id}/models/{model_id}/schema
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get-v1sessionssession_idmodelsmodel_iddimensions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GET /v1/sessions/{session_id}/models/{model_id}/dimensions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get-v1sessionssession_idmodelsmodel_iddimensionsname" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GET /v1/sessions/{session_id}/models/{model_id}/dimensions/{name}
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get-v1sessionssession_idmodelsmodel_idmeasures" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GET /v1/sessions/{session_id}/models/{model_id}/measures
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get-v1sessionssession_idmodelsmodel_idmeasuresname" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GET /v1/sessions/{session_id}/models/{model_id}/measures/{name}
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get-v1sessionssession_idmodelsmodel_idmetrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GET /v1/sessions/{session_id}/models/{model_id}/metrics
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get-v1sessionssession_idmodelsmodel_idmetricsname" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GET /v1/sessions/{session_id}/models/{model_id}/metrics/{name}
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get-v1sessionssession_idmodelsmodel_idexplainname" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GET /v1/sessions/{session_id}/models/{model_id}/explain/{name}
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#post-v1sessionssession_idmodelsmodel_idfind" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        POST /v1/sessions/{session_id}/models/{model_id}/find
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get-v1sessionssession_idmodelsmodel_idjoin-graph" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GET /v1/sessions/{session_id}/models/{model_id}/join-graph
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#top-level-shortcuts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Top-level Shortcuts
+      
+    </span>
+  </a>
   
 </li>
       
@@ -1113,10 +1251,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#get-settings" class="md-nav__link">
+  <a href="#get-v1settings" class="md-nav__link">
     <span class="md-ellipsis">
       
-        GET /settings
+        GET /v1/settings
       
     </span>
   </a>
@@ -1141,10 +1279,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#get-dialects" class="md-nav__link">
+  <a href="#get-v1dialects" class="md-nav__link">
     <span class="md-ellipsis">
       
-        GET /dialects
+        GET /v1/dialects
       
     </span>
   </a>
@@ -1161,7 +1299,7 @@
 </nav>
 <div class="obml-version-badge">
   OBML v1.0<br>
-  OrionBelt v0.8.0
+  OrionBelt v1.0.0
 </div>
       
     </li>
@@ -1533,10 +1671,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#post-sessions" class="md-nav__link">
+  <a href="#post-v1sessions" class="md-nav__link">
     <span class="md-ellipsis">
       
-        POST /sessions
+        POST /v1/sessions
       
     </span>
   </a>
@@ -1544,10 +1682,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#get-sessions" class="md-nav__link">
+  <a href="#get-v1sessions" class="md-nav__link">
     <span class="md-ellipsis">
       
-        GET /sessions
+        GET /v1/sessions
       
     </span>
   </a>
@@ -1555,10 +1693,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#get-sessionssession_id" class="md-nav__link">
+  <a href="#get-v1sessionssession_id" class="md-nav__link">
     <span class="md-ellipsis">
       
-        GET /sessions/{session_id}
+        GET /v1/sessions/{session_id}
       
     </span>
   </a>
@@ -1566,10 +1704,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#delete-sessionssession_id" class="md-nav__link">
+  <a href="#delete-v1sessionssession_id" class="md-nav__link">
     <span class="md-ellipsis">
       
-        DELETE /sessions/{session_id}
+        DELETE /v1/sessions/{session_id}
       
     </span>
   </a>
@@ -1594,10 +1732,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#post-sessionssession_idmodels" class="md-nav__link">
+  <a href="#post-v1sessionssession_idmodels" class="md-nav__link">
     <span class="md-ellipsis">
       
-        POST /sessions/{session_id}/models
+        POST /v1/sessions/{session_id}/models
       
     </span>
   </a>
@@ -1605,10 +1743,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#get-sessionssession_idmodels" class="md-nav__link">
+  <a href="#get-v1sessionssession_idmodels" class="md-nav__link">
     <span class="md-ellipsis">
       
-        GET /sessions/{session_id}/models
+        GET /v1/sessions/{session_id}/models
       
     </span>
   </a>
@@ -1616,10 +1754,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#get-sessionssession_idmodelsmodel_id" class="md-nav__link">
+  <a href="#get-v1sessionssession_idmodelsmodel_id" class="md-nav__link">
     <span class="md-ellipsis">
       
-        GET /sessions/{session_id}/models/{model_id}
+        GET /v1/sessions/{session_id}/models/{model_id}
       
     </span>
   </a>
@@ -1627,10 +1765,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#delete-sessionssession_idmodelsmodel_id" class="md-nav__link">
+  <a href="#delete-v1sessionssession_idmodelsmodel_id" class="md-nav__link">
     <span class="md-ellipsis">
       
-        DELETE /sessions/{session_id}/models/{model_id}
+        DELETE /v1/sessions/{session_id}/models/{model_id}
       
     </span>
   </a>
@@ -1655,10 +1793,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#post-sessionssession_idvalidate" class="md-nav__link">
+  <a href="#post-v1sessionssession_idvalidate" class="md-nav__link">
     <span class="md-ellipsis">
       
-        POST /sessions/{session_id}/validate
+        POST /v1/sessions/{session_id}/validate
       
     </span>
   </a>
@@ -1683,10 +1821,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#post-sessionssession_idquerysql" class="md-nav__link">
+  <a href="#post-v1sessionssession_idquerysql" class="md-nav__link">
     <span class="md-ellipsis">
       
-        POST /sessions/{session_id}/query/sql
+        POST /v1/sessions/{session_id}/query/sql
       
     </span>
   </a>
@@ -1711,10 +1849,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#post-convertosi-to-obml" class="md-nav__link">
+  <a href="#post-v1convertosi-to-obml" class="md-nav__link">
     <span class="md-ellipsis">
       
-        POST /convert/osi-to-obml
+        POST /v1/convert/osi-to-obml
       
     </span>
   </a>
@@ -1722,10 +1860,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#post-convertobml-to-osi" class="md-nav__link">
+  <a href="#post-v1convertobml-to-osi" class="md-nav__link">
     <span class="md-ellipsis">
       
-        POST /convert/obml-to-osi
+        POST /v1/convert/obml-to-osi
       
     </span>
   </a>
@@ -1734,6 +1872,144 @@
         
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#model-discovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Model Discovery
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Model Discovery">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#get-v1sessionssession_idmodelsmodel_idschema" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GET /v1/sessions/{session_id}/models/{model_id}/schema
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get-v1sessionssession_idmodelsmodel_iddimensions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GET /v1/sessions/{session_id}/models/{model_id}/dimensions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get-v1sessionssession_idmodelsmodel_iddimensionsname" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GET /v1/sessions/{session_id}/models/{model_id}/dimensions/{name}
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get-v1sessionssession_idmodelsmodel_idmeasures" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GET /v1/sessions/{session_id}/models/{model_id}/measures
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get-v1sessionssession_idmodelsmodel_idmeasuresname" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GET /v1/sessions/{session_id}/models/{model_id}/measures/{name}
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get-v1sessionssession_idmodelsmodel_idmetrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GET /v1/sessions/{session_id}/models/{model_id}/metrics
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get-v1sessionssession_idmodelsmodel_idmetricsname" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GET /v1/sessions/{session_id}/models/{model_id}/metrics/{name}
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get-v1sessionssession_idmodelsmodel_idexplainname" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GET /v1/sessions/{session_id}/models/{model_id}/explain/{name}
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#post-v1sessionssession_idmodelsmodel_idfind" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        POST /v1/sessions/{session_id}/models/{model_id}/find
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get-v1sessionssession_idmodelsmodel_idjoin-graph" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GET /v1/sessions/{session_id}/models/{model_id}/join-graph
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#top-level-shortcuts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Top-level Shortcuts
+      
+    </span>
+  </a>
   
 </li>
       
@@ -1750,10 +2026,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#get-settings" class="md-nav__link">
+  <a href="#get-v1settings" class="md-nav__link">
     <span class="md-ellipsis">
       
-        GET /settings
+        GET /v1/settings
       
     </span>
   </a>
@@ -1778,10 +2054,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#get-dialects" class="md-nav__link">
+  <a href="#get-v1dialects" class="md-nav__link">
     <span class="md-ellipsis">
       
-        GET /dialects
+        GET /v1/dialects
       
     </span>
   </a>
@@ -1798,7 +2074,7 @@
 </nav>
 <div class="obml-version-badge">
   OBML v1.0<br>
-  OrionBelt v0.8.0
+  OrionBelt v1.0.0
 </div>
                   </div>
                 </div>
@@ -1825,12 +2101,12 @@
 <p><strong>Response:</strong></p>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="p">{</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ok&quot;</span><span class="p">,</span>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span><span class="nt">&quot;version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0.1.0&quot;</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span><span class="nt">&quot;version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1.0.0&quot;</span>
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="p">}</span>
 </span></code></pre></div>
 <hr />
 <h2 id="sessions">Sessions<a class="headerlink" href="#sessions" title="Permanent link">&para;</a></h2>
-<h3 id="post-sessions"><code>POST /sessions</code><a class="headerlink" href="#post-sessions" title="Permanent link">&para;</a></h3>
+<h3 id="post-v1sessions"><code>POST /v1/sessions</code><a class="headerlink" href="#post-v1sessions" title="Permanent link">&para;</a></h3>
 <p>Create a new session. Each session has its own model store.</p>
 <p><strong>Request (optional):</strong></p>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="p">{</span>
@@ -1852,7 +2128,7 @@
 </span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">  </span><span class="p">}</span>
 </span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="p">}</span>
 </span></code></pre></div>
-<h3 id="get-sessions"><code>GET /sessions</code><a class="headerlink" href="#get-sessions" title="Permanent link">&para;</a></h3>
+<h3 id="get-v1sessions"><code>GET /v1/sessions</code><a class="headerlink" href="#get-v1sessions" title="Permanent link">&para;</a></h3>
 <p>List all active sessions.</p>
 <p><strong>Response (200):</strong></p>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="p">{</span>
@@ -1867,17 +2143,17 @@
 </span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="w">  </span><span class="p">]</span>
 </span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="p">}</span>
 </span></code></pre></div>
-<h3 id="get-sessionssession_id"><code>GET /sessions/{session_id}</code><a class="headerlink" href="#get-sessionssession_id" title="Permanent link">&para;</a></h3>
+<h3 id="get-v1sessionssession_id"><code>GET /v1/sessions/{session_id}</code><a class="headerlink" href="#get-v1sessionssession_id" title="Permanent link">&para;</a></h3>
 <p>Get info for a specific session. Also refreshes the session's last-accessed time.</p>
 <p><strong>Response (200):</strong> Same as single session in list response.</p>
 <p><strong>Error (404):</strong> Session not found or expired.</p>
-<h3 id="delete-sessionssession_id"><code>DELETE /sessions/{session_id}</code><a class="headerlink" href="#delete-sessionssession_id" title="Permanent link">&para;</a></h3>
+<h3 id="delete-v1sessionssession_id"><code>DELETE /v1/sessions/{session_id}</code><a class="headerlink" href="#delete-v1sessionssession_id" title="Permanent link">&para;</a></h3>
 <p>Close a session and release its resources.</p>
 <p><strong>Response (204):</strong> No content.</p>
 <p><strong>Error (404):</strong> Session not found.</p>
 <hr />
 <h2 id="session-models">Session Models<a class="headerlink" href="#session-models" title="Permanent link">&para;</a></h2>
-<h3 id="post-sessionssession_idmodels"><code>POST /sessions/{session_id}/models</code><a class="headerlink" href="#post-sessionssession_idmodels" title="Permanent link">&para;</a></h3>
+<h3 id="post-v1sessionssession_idmodels"><code>POST /v1/sessions/{session_id}/models</code><a class="headerlink" href="#post-v1sessionssession_idmodels" title="Permanent link">&para;</a></h3>
 <p>Load an OBML semantic model into a session. The model is parsed, validated, and stored.</p>
 <div class="admonition note">
 <p class="admonition-title">Single-model mode</p>
@@ -1901,7 +2177,7 @@
 <p><strong>Error (403):</strong> Single-model mode: model upload is disabled.</p>
 <p><strong>Error (422):</strong> Model has validation errors.</p>
 <p><strong>Error (404):</strong> Session not found.</p>
-<h3 id="get-sessionssession_idmodels"><code>GET /sessions/{session_id}/models</code><a class="headerlink" href="#get-sessionssession_idmodels" title="Permanent link">&para;</a></h3>
+<h3 id="get-v1sessionssession_idmodels"><code>GET /v1/sessions/{session_id}/models</code><a class="headerlink" href="#get-v1sessionssession_idmodels" title="Permanent link">&para;</a></h3>
 <p>List all models loaded in a session.</p>
 <p><strong>Response (200):</strong></p>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="p">[</span>
@@ -1914,7 +2190,7 @@
 </span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">  </span><span class="p">}</span>
 </span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="p">]</span>
 </span></code></pre></div>
-<h3 id="get-sessionssession_idmodelsmodel_id"><code>GET /sessions/{session_id}/models/{model_id}</code><a class="headerlink" href="#get-sessionssession_idmodelsmodel_id" title="Permanent link">&para;</a></h3>
+<h3 id="get-v1sessionssession_idmodelsmodel_id"><code>GET /v1/sessions/{session_id}/models/{model_id}</code><a class="headerlink" href="#get-v1sessionssession_idmodelsmodel_id" title="Permanent link">&para;</a></h3>
 <p>Describe a model's contents — data objects (with fields and joins), dimensions, measures, and metrics.</p>
 <p><strong>Response (200):</strong></p>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="p">{</span>
@@ -1941,7 +2217,7 @@
 </span><span id="__span-7-22"><a id="__codelineno-7-22" name="__codelineno-7-22" href="#__codelineno-7-22"></a><span class="p">}</span>
 </span></code></pre></div>
 <p><strong>Error (404):</strong> Model or session not found.</p>
-<h3 id="delete-sessionssession_idmodelsmodel_id"><code>DELETE /sessions/{session_id}/models/{model_id}</code><a class="headerlink" href="#delete-sessionssession_idmodelsmodel_id" title="Permanent link">&para;</a></h3>
+<h3 id="delete-v1sessionssession_idmodelsmodel_id"><code>DELETE /v1/sessions/{session_id}/models/{model_id}</code><a class="headerlink" href="#delete-v1sessionssession_idmodelsmodel_id" title="Permanent link">&para;</a></h3>
 <p>Remove a model from a session.</p>
 <div class="admonition note">
 <p class="admonition-title">Single-model mode</p>
@@ -1952,7 +2228,7 @@
 <p><strong>Error (404):</strong> Model or session not found.</p>
 <hr />
 <h2 id="session-validation">Session Validation<a class="headerlink" href="#session-validation" title="Permanent link">&para;</a></h2>
-<h3 id="post-sessionssession_idvalidate"><code>POST /sessions/{session_id}/validate</code><a class="headerlink" href="#post-sessionssession_idvalidate" title="Permanent link">&para;</a></h3>
+<h3 id="post-v1sessionssession_idvalidate"><code>POST /v1/sessions/{session_id}/validate</code><a class="headerlink" href="#post-v1sessionssession_idvalidate" title="Permanent link">&para;</a></h3>
 <p>Validate OBML YAML within a session context. Does not store the model.</p>
 <p><strong>Request:</strong></p>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="p">{</span>
@@ -1981,7 +2257,7 @@
 </span></code></pre></div>
 <hr />
 <h2 id="session-query-compilation">Session Query Compilation<a class="headerlink" href="#session-query-compilation" title="Permanent link">&para;</a></h2>
-<h3 id="post-sessionssession_idquerysql"><code>POST /sessions/{session_id}/query/sql</code><a class="headerlink" href="#post-sessionssession_idquerysql" title="Permanent link">&para;</a></h3>
+<h3 id="post-v1sessionssession_idquerysql"><code>POST /v1/sessions/{session_id}/query/sql</code><a class="headerlink" href="#post-v1sessionssession_idquerysql" title="Permanent link">&para;</a></h3>
 <p>Compile a semantic query against a model loaded in the session.</p>
 <p><strong>Request:</strong></p>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="p">{</span>
@@ -2010,13 +2286,27 @@
 <div class="language-json highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="p">{</span>
 </span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">  </span><span class="nt">&quot;sql&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;SELECT ...&quot;</span><span class="p">,</span>
 </span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">  </span><span class="nt">&quot;dialect&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;postgres&quot;</span><span class="p">,</span>
-</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="w">  </span><span class="nt">&quot;resolved&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="w">    </span><span class="nt">&quot;fact_tables&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Orders&quot;</span><span class="p">],</span>
-</span><span id="__span-12-6"><a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="w">    </span><span class="nt">&quot;dimensions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Customer Country&quot;</span><span class="p">],</span>
-</span><span id="__span-12-7"><a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="w">    </span><span class="nt">&quot;measures&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Revenue&quot;</span><span class="p">]</span>
-</span><span id="__span-12-8"><a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a><span class="w">  </span><span class="p">},</span>
-</span><span id="__span-12-9"><a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a><span class="w">  </span><span class="nt">&quot;warnings&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span>
-</span><span id="__span-12-10"><a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a><span class="p">}</span>
+</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="w">  </span><span class="nt">&quot;sql_valid&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="w">  </span><span class="nt">&quot;explain&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-12-6"><a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="w">    </span><span class="nt">&quot;planner&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Star Schema&quot;</span><span class="p">,</span>
+</span><span id="__span-12-7"><a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="w">    </span><span class="nt">&quot;planner_reason&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;All measures come from a single fact table&quot;</span><span class="p">,</span>
+</span><span id="__span-12-8"><a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a><span class="w">    </span><span class="nt">&quot;base_object&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Orders&quot;</span><span class="p">,</span>
+</span><span id="__span-12-9"><a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a><span class="w">    </span><span class="nt">&quot;base_object_reason&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Orders has the most joins and contains all requested measures&quot;</span><span class="p">,</span>
+</span><span id="__span-12-10"><a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a><span class="w">    </span><span class="nt">&quot;joins&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+</span><span id="__span-12-11"><a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a><span class="w">      </span><span class="p">{</span>
+</span><span id="__span-12-12"><a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a><span class="w">        </span><span class="nt">&quot;from_object&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Orders&quot;</span><span class="p">,</span>
+</span><span id="__span-12-13"><a id="__codelineno-12-13" name="__codelineno-12-13" href="#__codelineno-12-13"></a><span class="w">        </span><span class="nt">&quot;to_object&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Customers&quot;</span><span class="p">,</span>
+</span><span id="__span-12-14"><a id="__codelineno-12-14" name="__codelineno-12-14" href="#__codelineno-12-14"></a><span class="w">        </span><span class="nt">&quot;join_columns&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;CUSTOMER_ID&quot;</span><span class="p">],</span>
+</span><span id="__span-12-15"><a id="__codelineno-12-15" name="__codelineno-12-15" href="#__codelineno-12-15"></a><span class="w">        </span><span class="nt">&quot;reason&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Required for dimension &#39;Customer Country&#39;&quot;</span>
+</span><span id="__span-12-16"><a id="__codelineno-12-16" name="__codelineno-12-16" href="#__codelineno-12-16"></a><span class="w">      </span><span class="p">}</span>
+</span><span id="__span-12-17"><a id="__codelineno-12-17" name="__codelineno-12-17" href="#__codelineno-12-17"></a><span class="w">    </span><span class="p">],</span>
+</span><span id="__span-12-18"><a id="__codelineno-12-18" name="__codelineno-12-18" href="#__codelineno-12-18"></a><span class="w">    </span><span class="nt">&quot;where_filter_count&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+</span><span id="__span-12-19"><a id="__codelineno-12-19" name="__codelineno-12-19" href="#__codelineno-12-19"></a><span class="w">    </span><span class="nt">&quot;having_filter_count&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+</span><span id="__span-12-20"><a id="__codelineno-12-20" name="__codelineno-12-20" href="#__codelineno-12-20"></a><span class="w">    </span><span class="nt">&quot;has_totals&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
+</span><span id="__span-12-21"><a id="__codelineno-12-21" name="__codelineno-12-21" href="#__codelineno-12-21"></a><span class="w">    </span><span class="nt">&quot;cfl_legs&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span>
+</span><span id="__span-12-22"><a id="__codelineno-12-22" name="__codelineno-12-22" href="#__codelineno-12-22"></a><span class="w">  </span><span class="p">},</span>
+</span><span id="__span-12-23"><a id="__codelineno-12-23" name="__codelineno-12-23" href="#__codelineno-12-23"></a><span class="w">  </span><span class="nt">&quot;warnings&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span>
+</span><span id="__span-12-24"><a id="__codelineno-12-24" name="__codelineno-12-24" href="#__codelineno-12-24"></a><span class="p">}</span>
 </span></code></pre></div>
 <p><strong>Error responses:</strong></p>
 <table>
@@ -2044,7 +2334,7 @@
 <hr />
 <h2 id="osi-obml-conversion">OSI ↔ OBML Conversion<a class="headerlink" href="#osi-obml-conversion" title="Permanent link">&para;</a></h2>
 <p>Stateless endpoints for converting between <a href="https://github.com/open-semantic-interchange/OSI">OSI (Open Semantic Interchange)</a> and OBML formats. No session required.</p>
-<h3 id="post-convertosi-to-obml"><code>POST /convert/osi-to-obml</code><a class="headerlink" href="#post-convertosi-to-obml" title="Permanent link">&para;</a></h3>
+<h3 id="post-v1convertosi-to-obml"><code>POST /v1/convert/osi-to-obml</code><a class="headerlink" href="#post-v1convertosi-to-obml" title="Permanent link">&para;</a></h3>
 <p>Convert an OSI YAML model to OBML format.</p>
 <p><strong>Request:</strong></p>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="p">{</span>
@@ -2068,7 +2358,7 @@
 </span></code></pre></div>
 <p><strong>Error (400):</strong> Invalid YAML input.</p>
 <p><strong>Error (422):</strong> Conversion failed (e.g. unsupported OSI structure).</p>
-<h3 id="post-convertobml-to-osi"><code>POST /convert/obml-to-osi</code><a class="headerlink" href="#post-convertobml-to-osi" title="Permanent link">&para;</a></h3>
+<h3 id="post-v1convertobml-to-osi"><code>POST /v1/convert/obml-to-osi</code><a class="headerlink" href="#post-v1convertobml-to-osi" title="Permanent link">&para;</a></h3>
 <p>Convert an OBML YAML model to OSI format.</p>
 <p><strong>Request:</strong></p>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="p">{</span>
@@ -2079,26 +2369,205 @@
 </span><span id="__span-15-6"><a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a><span class="p">}</span>
 </span></code></pre></div>
 <p>The <code>model_name</code>, <code>model_description</code>, and <code>ai_instructions</code> fields are optional (defaults: <code>"semantic_model"</code>, <code>""</code>, <code>""</code>).</p>
-<p><strong>Response (200):</strong> Same structure as <code>POST /convert/osi-to-obml</code>.</p>
+<p><strong>Response (200):</strong> Same structure as <code>POST /v1/convert/osi-to-obml</code>.</p>
 <p><strong>Error (400):</strong> Invalid YAML input.</p>
 <p><strong>Error (422):</strong> Conversion failed.</p>
 <hr />
-<h2 id="settings">Settings<a class="headerlink" href="#settings" title="Permanent link">&para;</a></h2>
-<h3 id="get-settings"><code>GET /settings</code><a class="headerlink" href="#get-settings" title="Permanent link">&para;</a></h3>
-<p>Return public configuration for API clients (UI, MCP, etc.).</p>
+<h2 id="model-discovery">Model Discovery<a class="headerlink" href="#model-discovery" title="Permanent link">&para;</a></h2>
+<p>These endpoints provide structured access to model metadata. All fields include an optional <code>owner</code> property when set in the OBML model.</p>
+<h3 id="get-v1sessionssession_idmodelsmodel_idschema"><code>GET /v1/sessions/{session_id}/models/{model_id}/schema</code><a class="headerlink" href="#get-v1sessionssession_idmodelsmodel_idschema" title="Permanent link">&para;</a></h3>
+<p>Full model structure as JSON, including all data objects, dimensions, measures, and metrics.</p>
 <p><strong>Response (200):</strong></p>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="p">{</span>
-</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="w">  </span><span class="nt">&quot;single_model_mode&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
-</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="w">  </span><span class="nt">&quot;model_yaml&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span>
-</span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="w">  </span><span class="nt">&quot;session_ttl_seconds&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1800</span>
-</span><span id="__span-16-5"><a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a><span class="p">}</span>
+</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="w">  </span><span class="nt">&quot;model_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;abcd1234&quot;</span><span class="p">,</span>
+</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="w">  </span><span class="nt">&quot;version&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">1.0</span><span class="p">,</span>
+</span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="w">  </span><span class="nt">&quot;owner&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;team-data&quot;</span><span class="p">,</span>
+</span><span id="__span-16-5"><a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a><span class="w">  </span><span class="nt">&quot;data_objects&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+</span><span id="__span-16-6"><a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a><span class="w">    </span><span class="p">{</span>
+</span><span id="__span-16-7"><a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a><span class="w">      </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Orders&quot;</span><span class="p">,</span>
+</span><span id="__span-16-8"><a id="__codelineno-16-8" name="__codelineno-16-8" href="#__codelineno-16-8"></a><span class="w">      </span><span class="nt">&quot;code&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ORDERS&quot;</span><span class="p">,</span>
+</span><span id="__span-16-9"><a id="__codelineno-16-9" name="__codelineno-16-9" href="#__codelineno-16-9"></a><span class="w">      </span><span class="nt">&quot;database&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;WAREHOUSE&quot;</span><span class="p">,</span>
+</span><span id="__span-16-10"><a id="__codelineno-16-10" name="__codelineno-16-10" href="#__codelineno-16-10"></a><span class="w">      </span><span class="nt">&quot;schema&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;PUBLIC&quot;</span><span class="p">,</span>
+</span><span id="__span-16-11"><a id="__codelineno-16-11" name="__codelineno-16-11" href="#__codelineno-16-11"></a><span class="w">      </span><span class="nt">&quot;columns&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+</span><span id="__span-16-12"><a id="__codelineno-16-12" name="__codelineno-16-12" href="#__codelineno-16-12"></a><span class="w">        </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Price&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;code&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;PRICE&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;abstract_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;float&quot;</span><span class="w"> </span><span class="p">}</span>
+</span><span id="__span-16-13"><a id="__codelineno-16-13" name="__codelineno-16-13" href="#__codelineno-16-13"></a><span class="w">      </span><span class="p">],</span>
+</span><span id="__span-16-14"><a id="__codelineno-16-14" name="__codelineno-16-14" href="#__codelineno-16-14"></a><span class="w">      </span><span class="nt">&quot;join_targets&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Customers&quot;</span><span class="p">],</span>
+</span><span id="__span-16-15"><a id="__codelineno-16-15" name="__codelineno-16-15" href="#__codelineno-16-15"></a><span class="w">      </span><span class="nt">&quot;owner&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;team-sales&quot;</span>
+</span><span id="__span-16-16"><a id="__codelineno-16-16" name="__codelineno-16-16" href="#__codelineno-16-16"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-16-17"><a id="__codelineno-16-17" name="__codelineno-16-17" href="#__codelineno-16-17"></a><span class="w">  </span><span class="p">],</span>
+</span><span id="__span-16-18"><a id="__codelineno-16-18" name="__codelineno-16-18" href="#__codelineno-16-18"></a><span class="w">  </span><span class="nt">&quot;dimensions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+</span><span id="__span-16-19"><a id="__codelineno-16-19" name="__codelineno-16-19" href="#__codelineno-16-19"></a><span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Country&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;data_object&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Customers&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;column&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Country&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;result_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span><span class="w"> </span><span class="p">}</span>
+</span><span id="__span-16-20"><a id="__codelineno-16-20" name="__codelineno-16-20" href="#__codelineno-16-20"></a><span class="w">  </span><span class="p">],</span>
+</span><span id="__span-16-21"><a id="__codelineno-16-21" name="__codelineno-16-21" href="#__codelineno-16-21"></a><span class="w">  </span><span class="nt">&quot;measures&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+</span><span id="__span-16-22"><a id="__codelineno-16-22" name="__codelineno-16-22" href="#__codelineno-16-22"></a><span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Revenue&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;aggregation&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;sum&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;result_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;float&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;columns&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="err">...</span><span class="p">]</span><span class="w"> </span><span class="p">}</span>
+</span><span id="__span-16-23"><a id="__codelineno-16-23" name="__codelineno-16-23" href="#__codelineno-16-23"></a><span class="w">  </span><span class="p">],</span>
+</span><span id="__span-16-24"><a id="__codelineno-16-24" name="__codelineno-16-24" href="#__codelineno-16-24"></a><span class="w">  </span><span class="nt">&quot;metrics&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+</span><span id="__span-16-25"><a id="__codelineno-16-25" name="__codelineno-16-25" href="#__codelineno-16-25"></a><span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Revenue per Order&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;expression&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;...&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;component_measures&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Revenue&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Order Count&quot;</span><span class="p">]</span><span class="w"> </span><span class="p">}</span>
+</span><span id="__span-16-26"><a id="__codelineno-16-26" name="__codelineno-16-26" href="#__codelineno-16-26"></a><span class="w">  </span><span class="p">]</span>
+</span><span id="__span-16-27"><a id="__codelineno-16-27" name="__codelineno-16-27" href="#__codelineno-16-27"></a><span class="p">}</span>
+</span></code></pre></div>
+<h3 id="get-v1sessionssession_idmodelsmodel_iddimensions"><code>GET /v1/sessions/{session_id}/models/{model_id}/dimensions</code><a class="headerlink" href="#get-v1sessionssession_idmodelsmodel_iddimensions" title="Permanent link">&para;</a></h3>
+<p>List all dimensions.</p>
+<p><strong>Response (200):</strong> Array of dimension objects.</p>
+<h3 id="get-v1sessionssession_idmodelsmodel_iddimensionsname"><code>GET /v1/sessions/{session_id}/models/{model_id}/dimensions/{name}</code><a class="headerlink" href="#get-v1sessionssession_idmodelsmodel_iddimensionsname" title="Permanent link">&para;</a></h3>
+<p>Get a single dimension by name.</p>
+<p><strong>Response (200):</strong></p>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="p">{</span>
+</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="w">  </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Country&quot;</span><span class="p">,</span>
+</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="w">  </span><span class="nt">&quot;data_object&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Customers&quot;</span><span class="p">,</span>
+</span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="w">  </span><span class="nt">&quot;column&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Country&quot;</span><span class="p">,</span>
+</span><span id="__span-17-5"><a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a><span class="w">  </span><span class="nt">&quot;result_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span><span class="p">,</span>
+</span><span id="__span-17-6"><a id="__codelineno-17-6" name="__codelineno-17-6" href="#__codelineno-17-6"></a><span class="w">  </span><span class="nt">&quot;time_grain&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span>
+</span><span id="__span-17-7"><a id="__codelineno-17-7" name="__codelineno-17-7" href="#__codelineno-17-7"></a><span class="w">  </span><span class="nt">&quot;owner&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span>
+</span><span id="__span-17-8"><a id="__codelineno-17-8" name="__codelineno-17-8" href="#__codelineno-17-8"></a><span class="p">}</span>
+</span></code></pre></div>
+<p><strong>Error (404):</strong> Dimension not found.</p>
+<h3 id="get-v1sessionssession_idmodelsmodel_idmeasures"><code>GET /v1/sessions/{session_id}/models/{model_id}/measures</code><a class="headerlink" href="#get-v1sessionssession_idmodelsmodel_idmeasures" title="Permanent link">&para;</a></h3>
+<p>List all measures.</p>
+<p><strong>Response (200):</strong> Array of measure objects.</p>
+<h3 id="get-v1sessionssession_idmodelsmodel_idmeasuresname"><code>GET /v1/sessions/{session_id}/models/{model_id}/measures/{name}</code><a class="headerlink" href="#get-v1sessionssession_idmodelsmodel_idmeasuresname" title="Permanent link">&para;</a></h3>
+<p>Get a single measure by name.</p>
+<p><strong>Response (200):</strong></p>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="p">{</span>
+</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="w">  </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Revenue&quot;</span><span class="p">,</span>
+</span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a><span class="w">  </span><span class="nt">&quot;aggregation&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;sum&quot;</span><span class="p">,</span>
+</span><span id="__span-18-4"><a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a><span class="w">  </span><span class="nt">&quot;result_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;float&quot;</span><span class="p">,</span>
+</span><span id="__span-18-5"><a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a><span class="w">  </span><span class="nt">&quot;columns&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+</span><span id="__span-18-6"><a id="__codelineno-18-6" name="__codelineno-18-6" href="#__codelineno-18-6"></a><span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;data_object&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Orders&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;column&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Price&quot;</span><span class="w"> </span><span class="p">}</span>
+</span><span id="__span-18-7"><a id="__codelineno-18-7" name="__codelineno-18-7" href="#__codelineno-18-7"></a><span class="w">  </span><span class="p">],</span>
+</span><span id="__span-18-8"><a id="__codelineno-18-8" name="__codelineno-18-8" href="#__codelineno-18-8"></a><span class="w">  </span><span class="nt">&quot;expression&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;{[Orders].[Price]} * {[Orders].[Quantity]}&quot;</span><span class="p">,</span>
+</span><span id="__span-18-9"><a id="__codelineno-18-9" name="__codelineno-18-9" href="#__codelineno-18-9"></a><span class="w">  </span><span class="nt">&quot;total&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
+</span><span id="__span-18-10"><a id="__codelineno-18-10" name="__codelineno-18-10" href="#__codelineno-18-10"></a><span class="w">  </span><span class="nt">&quot;owner&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span>
+</span><span id="__span-18-11"><a id="__codelineno-18-11" name="__codelineno-18-11" href="#__codelineno-18-11"></a><span class="p">}</span>
+</span></code></pre></div>
+<p><strong>Error (404):</strong> Measure not found.</p>
+<h3 id="get-v1sessionssession_idmodelsmodel_idmetrics"><code>GET /v1/sessions/{session_id}/models/{model_id}/metrics</code><a class="headerlink" href="#get-v1sessionssession_idmodelsmodel_idmetrics" title="Permanent link">&para;</a></h3>
+<p>List all metrics.</p>
+<p><strong>Response (200):</strong> Array of metric objects.</p>
+<h3 id="get-v1sessionssession_idmodelsmodel_idmetricsname"><code>GET /v1/sessions/{session_id}/models/{model_id}/metrics/{name}</code><a class="headerlink" href="#get-v1sessionssession_idmodelsmodel_idmetricsname" title="Permanent link">&para;</a></h3>
+<p>Get a single metric by name. Returns the expression formula and its component measures.</p>
+<p><strong>Error (404):</strong> Metric not found.</p>
+<h3 id="get-v1sessionssession_idmodelsmodel_idexplainname"><code>GET /v1/sessions/{session_id}/models/{model_id}/explain/{name}</code><a class="headerlink" href="#get-v1sessionssession_idmodelsmodel_idexplainname" title="Permanent link">&para;</a></h3>
+<p>Explain the lineage of a dimension, measure, or metric — traces back through the dependency chain to the underlying data objects and columns.</p>
+<p><strong>Response (200):</strong></p>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="p">{</span>
+</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a><span class="w">  </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Revenue&quot;</span><span class="p">,</span>
+</span><span id="__span-19-3"><a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a><span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;measure&quot;</span><span class="p">,</span>
+</span><span id="__span-19-4"><a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a><span class="w">  </span><span class="nt">&quot;lineage&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+</span><span id="__span-19-5"><a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a><span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;data_object&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Orders&quot;</span><span class="w"> </span><span class="p">},</span>
+</span><span id="__span-19-6"><a id="__codelineno-19-6" name="__codelineno-19-6" href="#__codelineno-19-6"></a><span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;column&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Price&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;detail&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;referenced in expression&quot;</span><span class="w"> </span><span class="p">},</span>
+</span><span id="__span-19-7"><a id="__codelineno-19-7" name="__codelineno-19-7" href="#__codelineno-19-7"></a><span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;column&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Quantity&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;detail&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;referenced in expression&quot;</span><span class="w"> </span><span class="p">}</span>
+</span><span id="__span-19-8"><a id="__codelineno-19-8" name="__codelineno-19-8" href="#__codelineno-19-8"></a><span class="w">  </span><span class="p">]</span>
+</span><span id="__span-19-9"><a id="__codelineno-19-9" name="__codelineno-19-9" href="#__codelineno-19-9"></a><span class="p">}</span>
+</span></code></pre></div>
+<p><strong>Error (404):</strong> Name not found in model.</p>
+<h3 id="post-v1sessionssession_idmodelsmodel_idfind"><code>POST /v1/sessions/{session_id}/models/{model_id}/find</code><a class="headerlink" href="#post-v1sessionssession_idmodelsmodel_idfind" title="Permanent link">&para;</a></h3>
+<p>Search across model artefacts by name or synonym.</p>
+<p><strong>Request:</strong></p>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="p">{</span>
+</span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a><span class="w">  </span><span class="nt">&quot;query&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Revenue&quot;</span><span class="p">,</span>
+</span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a><span class="w">  </span><span class="nt">&quot;types&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;measure&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;metric&quot;</span><span class="p">]</span>
+</span><span id="__span-20-4"><a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a><span class="p">}</span>
+</span></code></pre></div>
+<p>The <code>types</code> filter is optional. Valid types: <code>dimension</code>, <code>measure</code>, <code>metric</code>, <code>data_object</code>.</p>
+<p><strong>Response (200):</strong></p>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="p">{</span>
+</span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a><span class="w">  </span><span class="nt">&quot;results&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+</span><span id="__span-21-3"><a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a><span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Revenue&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;measure&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;match&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;name&quot;</span><span class="w"> </span><span class="p">},</span>
+</span><span id="__span-21-4"><a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a><span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Revenue per Order&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;metric&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;match&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;name&quot;</span><span class="w"> </span><span class="p">}</span>
+</span><span id="__span-21-5"><a id="__codelineno-21-5" name="__codelineno-21-5" href="#__codelineno-21-5"></a><span class="w">  </span><span class="p">]</span>
+</span><span id="__span-21-6"><a id="__codelineno-21-6" name="__codelineno-21-6" href="#__codelineno-21-6"></a><span class="p">}</span>
+</span></code></pre></div>
+<h3 id="get-v1sessionssession_idmodelsmodel_idjoin-graph"><code>GET /v1/sessions/{session_id}/models/{model_id}/join-graph</code><a class="headerlink" href="#get-v1sessionssession_idmodelsmodel_idjoin-graph" title="Permanent link">&para;</a></h3>
+<p>Return the join graph as nodes and edges.</p>
+<p><strong>Response (200):</strong></p>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="p">{</span>
+</span><span id="__span-22-2"><a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a><span class="w">  </span><span class="nt">&quot;nodes&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Orders&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Customers&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Products&quot;</span><span class="p">],</span>
+</span><span id="__span-22-3"><a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a><span class="w">  </span><span class="nt">&quot;edges&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+</span><span id="__span-22-4"><a id="__codelineno-22-4" name="__codelineno-22-4" href="#__codelineno-22-4"></a><span class="w">    </span><span class="p">{</span>
+</span><span id="__span-22-5"><a id="__codelineno-22-5" name="__codelineno-22-5" href="#__codelineno-22-5"></a><span class="w">      </span><span class="nt">&quot;from_object&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Orders&quot;</span><span class="p">,</span>
+</span><span id="__span-22-6"><a id="__codelineno-22-6" name="__codelineno-22-6" href="#__codelineno-22-6"></a><span class="w">      </span><span class="nt">&quot;to_object&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Customers&quot;</span><span class="p">,</span>
+</span><span id="__span-22-7"><a id="__codelineno-22-7" name="__codelineno-22-7" href="#__codelineno-22-7"></a><span class="w">      </span><span class="nt">&quot;cardinality&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;many-to-one&quot;</span><span class="p">,</span>
+</span><span id="__span-22-8"><a id="__codelineno-22-8" name="__codelineno-22-8" href="#__codelineno-22-8"></a><span class="w">      </span><span class="nt">&quot;secondary&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span>
+</span><span id="__span-22-9"><a id="__codelineno-22-9" name="__codelineno-22-9" href="#__codelineno-22-9"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-22-10"><a id="__codelineno-22-10" name="__codelineno-22-10" href="#__codelineno-22-10"></a><span class="w">  </span><span class="p">]</span>
+</span><span id="__span-22-11"><a id="__codelineno-22-11" name="__codelineno-22-11" href="#__codelineno-22-11"></a><span class="p">}</span>
+</span></code></pre></div>
+<hr />
+<h2 id="top-level-shortcuts">Top-level Shortcuts<a class="headerlink" href="#top-level-shortcuts" title="Permanent link">&para;</a></h2>
+<p>These endpoints auto-resolve the session and model when only one exists. They mirror the session-scoped model discovery endpoints without requiring session/model IDs.</p>
+<p>Returns <strong>404</strong> if no sessions exist, <strong>409 Conflict</strong> if multiple sessions or models exist.</p>
+<table>
+<thead>
+<tr>
+<th>Shortcut</th>
+<th>Equivalent</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GET /v1/schema</code></td>
+<td><code>GET /v1/sessions/{id}/models/{mid}/schema</code></td>
+</tr>
+<tr>
+<td><code>GET /v1/dimensions</code></td>
+<td><code>GET /v1/sessions/{id}/models/{mid}/dimensions</code></td>
+</tr>
+<tr>
+<td><code>GET /v1/dimensions/{name}</code></td>
+<td><code>GET /v1/sessions/{id}/models/{mid}/dimensions/{name}</code></td>
+</tr>
+<tr>
+<td><code>GET /v1/measures</code></td>
+<td><code>GET /v1/sessions/{id}/models/{mid}/measures</code></td>
+</tr>
+<tr>
+<td><code>GET /v1/measures/{name}</code></td>
+<td><code>GET /v1/sessions/{id}/models/{mid}/measures/{name}</code></td>
+</tr>
+<tr>
+<td><code>GET /v1/metrics</code></td>
+<td><code>GET /v1/sessions/{id}/models/{mid}/metrics</code></td>
+</tr>
+<tr>
+<td><code>GET /v1/metrics/{name}</code></td>
+<td><code>GET /v1/sessions/{id}/models/{mid}/metrics/{name}</code></td>
+</tr>
+<tr>
+<td><code>GET /v1/explain/{name}</code></td>
+<td><code>GET /v1/sessions/{id}/models/{mid}/explain/{name}</code></td>
+</tr>
+<tr>
+<td><code>POST /v1/find</code></td>
+<td><code>POST /v1/sessions/{id}/models/{mid}/find</code></td>
+</tr>
+<tr>
+<td><code>GET /v1/join-graph</code></td>
+<td><code>GET /v1/sessions/{id}/models/{mid}/join-graph</code></td>
+</tr>
+<tr>
+<td><code>POST /v1/query/sql</code></td>
+<td><code>POST /v1/sessions/{id}/query/sql</code> (auto-resolves model_id)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="settings">Settings<a class="headerlink" href="#settings" title="Permanent link">&para;</a></h2>
+<h3 id="get-v1settings"><code>GET /v1/settings</code><a class="headerlink" href="#get-v1settings" title="Permanent link">&para;</a></h3>
+<p>Return public configuration for API clients (UI, MCP, etc.).</p>
+<p><strong>Response (200):</strong></p>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="p">{</span>
+</span><span id="__span-23-2"><a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a><span class="w">  </span><span class="nt">&quot;single_model_mode&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
+</span><span id="__span-23-3"><a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a><span class="w">  </span><span class="nt">&quot;model_yaml&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span>
+</span><span id="__span-23-4"><a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a><span class="w">  </span><span class="nt">&quot;session_ttl_seconds&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1800</span>
+</span><span id="__span-23-5"><a id="__codelineno-23-5" name="__codelineno-23-5" href="#__codelineno-23-5"></a><span class="p">}</span>
 </span></code></pre></div>
 <p>When <code>MODEL_FILE</code> is configured:</p>
-<div class="language-json highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="p">{</span>
-</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="w">  </span><span class="nt">&quot;single_model_mode&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="w">  </span><span class="nt">&quot;model_yaml&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;version: 1.0\ndataObjects:\n  ...&quot;</span><span class="p">,</span>
-</span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="w">  </span><span class="nt">&quot;session_ttl_seconds&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1800</span>
-</span><span id="__span-17-5"><a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a><span class="p">}</span>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a><span class="p">{</span>
+</span><span id="__span-24-2"><a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a><span class="w">  </span><span class="nt">&quot;single_model_mode&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+</span><span id="__span-24-3"><a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a><span class="w">  </span><span class="nt">&quot;model_yaml&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;version: 1.0\ndataObjects:\n  ...&quot;</span><span class="p">,</span>
+</span><span id="__span-24-4"><a id="__codelineno-24-4" name="__codelineno-24-4" href="#__codelineno-24-4"></a><span class="w">  </span><span class="nt">&quot;session_ttl_seconds&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1800</span>
+</span><span id="__span-24-5"><a id="__codelineno-24-5" name="__codelineno-24-5" href="#__codelineno-24-5"></a><span class="p">}</span>
 </span></code></pre></div>
 <table>
 <thead>
@@ -2128,29 +2597,42 @@
 </table>
 <hr />
 <h2 id="dialects">Dialects<a class="headerlink" href="#dialects" title="Permanent link">&para;</a></h2>
-<h3 id="get-dialects"><code>GET /dialects</code><a class="headerlink" href="#get-dialects" title="Permanent link">&para;</a></h3>
+<h3 id="get-v1dialects"><code>GET /v1/dialects</code><a class="headerlink" href="#get-v1dialects" title="Permanent link">&para;</a></h3>
 <p>List all available SQL dialects and their capability flags.</p>
 <p><strong>Response (200):</strong></p>
-<div class="language-json highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="p">{</span>
-</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="w">  </span><span class="nt">&quot;dialects&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-</span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a><span class="w">    </span><span class="p">{</span>
-</span><span id="__span-18-4"><a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a><span class="w">      </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;postgres&quot;</span><span class="p">,</span>
-</span><span id="__span-18-5"><a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a><span class="w">      </span><span class="nt">&quot;capabilities&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-18-6"><a id="__codelineno-18-6" name="__codelineno-18-6" href="#__codelineno-18-6"></a><span class="w">        </span><span class="nt">&quot;supports_cte&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-</span><span id="__span-18-7"><a id="__codelineno-18-7" name="__codelineno-18-7" href="#__codelineno-18-7"></a><span class="w">        </span><span class="nt">&quot;supports_qualify&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
-</span><span id="__span-18-8"><a id="__codelineno-18-8" name="__codelineno-18-8" href="#__codelineno-18-8"></a><span class="w">        </span><span class="nt">&quot;supports_arrays&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-</span><span id="__span-18-9"><a id="__codelineno-18-9" name="__codelineno-18-9" href="#__codelineno-18-9"></a><span class="w">        </span><span class="nt">&quot;supports_window_filters&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
-</span><span id="__span-18-10"><a id="__codelineno-18-10" name="__codelineno-18-10" href="#__codelineno-18-10"></a><span class="w">        </span><span class="nt">&quot;supports_ilike&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-</span><span id="__span-18-11"><a id="__codelineno-18-11" name="__codelineno-18-11" href="#__codelineno-18-11"></a><span class="w">        </span><span class="nt">&quot;supports_time_travel&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
-</span><span id="__span-18-12"><a id="__codelineno-18-12" name="__codelineno-18-12" href="#__codelineno-18-12"></a><span class="w">        </span><span class="nt">&quot;supports_semi_structured&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span>
-</span><span id="__span-18-13"><a id="__codelineno-18-13" name="__codelineno-18-13" href="#__codelineno-18-13"></a><span class="w">      </span><span class="p">}</span>
-</span><span id="__span-18-14"><a id="__codelineno-18-14" name="__codelineno-18-14" href="#__codelineno-18-14"></a><span class="w">    </span><span class="p">},</span>
-</span><span id="__span-18-15"><a id="__codelineno-18-15" name="__codelineno-18-15" href="#__codelineno-18-15"></a><span class="w">    </span><span class="p">{</span>
-</span><span id="__span-18-16"><a id="__codelineno-18-16" name="__codelineno-18-16" href="#__codelineno-18-16"></a><span class="w">      </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;snowflake&quot;</span><span class="p">,</span>
-</span><span id="__span-18-17"><a id="__codelineno-18-17" name="__codelineno-18-17" href="#__codelineno-18-17"></a><span class="w">      </span><span class="nt">&quot;capabilities&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;...&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w"> </span><span class="p">}</span>
-</span><span id="__span-18-18"><a id="__codelineno-18-18" name="__codelineno-18-18" href="#__codelineno-18-18"></a><span class="w">    </span><span class="p">}</span>
-</span><span id="__span-18-19"><a id="__codelineno-18-19" name="__codelineno-18-19" href="#__codelineno-18-19"></a><span class="w">  </span><span class="p">]</span>
-</span><span id="__span-18-20"><a id="__codelineno-18-20" name="__codelineno-18-20" href="#__codelineno-18-20"></a><span class="p">}</span>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a><span class="p">{</span>
+</span><span id="__span-25-2"><a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a><span class="w">  </span><span class="nt">&quot;dialects&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+</span><span id="__span-25-3"><a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a><span class="w">    </span><span class="p">{</span>
+</span><span id="__span-25-4"><a id="__codelineno-25-4" name="__codelineno-25-4" href="#__codelineno-25-4"></a><span class="w">      </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;bigquery&quot;</span><span class="p">,</span>
+</span><span id="__span-25-5"><a id="__codelineno-25-5" name="__codelineno-25-5" href="#__codelineno-25-5"></a><span class="w">      </span><span class="nt">&quot;capabilities&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-25-6"><a id="__codelineno-25-6" name="__codelineno-25-6" href="#__codelineno-25-6"></a><span class="w">        </span><span class="nt">&quot;supports_cte&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+</span><span id="__span-25-7"><a id="__codelineno-25-7" name="__codelineno-25-7" href="#__codelineno-25-7"></a><span class="w">        </span><span class="nt">&quot;supports_qualify&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+</span><span id="__span-25-8"><a id="__codelineno-25-8" name="__codelineno-25-8" href="#__codelineno-25-8"></a><span class="w">        </span><span class="nt">&quot;supports_arrays&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+</span><span id="__span-25-9"><a id="__codelineno-25-9" name="__codelineno-25-9" href="#__codelineno-25-9"></a><span class="w">        </span><span class="nt">&quot;supports_window_filters&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+</span><span id="__span-25-10"><a id="__codelineno-25-10" name="__codelineno-25-10" href="#__codelineno-25-10"></a><span class="w">        </span><span class="nt">&quot;supports_ilike&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
+</span><span id="__span-25-11"><a id="__codelineno-25-11" name="__codelineno-25-11" href="#__codelineno-25-11"></a><span class="w">        </span><span class="nt">&quot;supports_time_travel&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
+</span><span id="__span-25-12"><a id="__codelineno-25-12" name="__codelineno-25-12" href="#__codelineno-25-12"></a><span class="w">        </span><span class="nt">&quot;supports_semi_structured&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
+</span><span id="__span-25-13"><a id="__codelineno-25-13" name="__codelineno-25-13" href="#__codelineno-25-13"></a><span class="w">      </span><span class="p">}</span>
+</span><span id="__span-25-14"><a id="__codelineno-25-14" name="__codelineno-25-14" href="#__codelineno-25-14"></a><span class="w">    </span><span class="p">},</span>
+</span><span id="__span-25-15"><a id="__codelineno-25-15" name="__codelineno-25-15" href="#__codelineno-25-15"></a><span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;clickhouse&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;capabilities&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;...&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">},</span>
+</span><span id="__span-25-16"><a id="__codelineno-25-16" name="__codelineno-25-16" href="#__codelineno-25-16"></a><span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;databricks&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;capabilities&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;...&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">},</span>
+</span><span id="__span-25-17"><a id="__codelineno-25-17" name="__codelineno-25-17" href="#__codelineno-25-17"></a><span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;dremio&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;capabilities&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;...&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">},</span>
+</span><span id="__span-25-18"><a id="__codelineno-25-18" name="__codelineno-25-18" href="#__codelineno-25-18"></a><span class="w">    </span><span class="p">{</span>
+</span><span id="__span-25-19"><a id="__codelineno-25-19" name="__codelineno-25-19" href="#__codelineno-25-19"></a><span class="w">      </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;duckdb&quot;</span><span class="p">,</span>
+</span><span id="__span-25-20"><a id="__codelineno-25-20" name="__codelineno-25-20" href="#__codelineno-25-20"></a><span class="w">      </span><span class="nt">&quot;capabilities&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-25-21"><a id="__codelineno-25-21" name="__codelineno-25-21" href="#__codelineno-25-21"></a><span class="w">        </span><span class="nt">&quot;supports_cte&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+</span><span id="__span-25-22"><a id="__codelineno-25-22" name="__codelineno-25-22" href="#__codelineno-25-22"></a><span class="w">        </span><span class="nt">&quot;supports_qualify&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+</span><span id="__span-25-23"><a id="__codelineno-25-23" name="__codelineno-25-23" href="#__codelineno-25-23"></a><span class="w">        </span><span class="nt">&quot;supports_arrays&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+</span><span id="__span-25-24"><a id="__codelineno-25-24" name="__codelineno-25-24" href="#__codelineno-25-24"></a><span class="w">        </span><span class="nt">&quot;supports_window_filters&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+</span><span id="__span-25-25"><a id="__codelineno-25-25" name="__codelineno-25-25" href="#__codelineno-25-25"></a><span class="w">        </span><span class="nt">&quot;supports_ilike&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+</span><span id="__span-25-26"><a id="__codelineno-25-26" name="__codelineno-25-26" href="#__codelineno-25-26"></a><span class="w">        </span><span class="nt">&quot;supports_time_travel&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
+</span><span id="__span-25-27"><a id="__codelineno-25-27" name="__codelineno-25-27" href="#__codelineno-25-27"></a><span class="w">        </span><span class="nt">&quot;supports_semi_structured&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span>
+</span><span id="__span-25-28"><a id="__codelineno-25-28" name="__codelineno-25-28" href="#__codelineno-25-28"></a><span class="w">      </span><span class="p">}</span>
+</span><span id="__span-25-29"><a id="__codelineno-25-29" name="__codelineno-25-29" href="#__codelineno-25-29"></a><span class="w">    </span><span class="p">},</span>
+</span><span id="__span-25-30"><a id="__codelineno-25-30" name="__codelineno-25-30" href="#__codelineno-25-30"></a><span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;postgres&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;capabilities&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;...&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">},</span>
+</span><span id="__span-25-31"><a id="__codelineno-25-31" name="__codelineno-25-31" href="#__codelineno-25-31"></a><span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;snowflake&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;capabilities&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;...&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span>
+</span><span id="__span-25-32"><a id="__codelineno-25-32" name="__codelineno-25-32" href="#__codelineno-25-32"></a><span class="w">  </span><span class="p">]</span>
+</span><span id="__span-25-33"><a id="__codelineno-25-33" name="__codelineno-25-33" href="#__codelineno-25-33"></a><span class="p">}</span>
 </span></code></pre></div>
 
 
@@ -2189,7 +2671,7 @@
       <div class="md-copyright">
   
     <div class="md-copyright__highlight">
-      Copyright &copy; 2025 RALFORION d.o.o. — Apache 2.0
+      Copyright &copy; 2025 RALFORION d.o.o. — BSL 1.1
     </div>
   
   
