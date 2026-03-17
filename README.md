@@ -17,7 +17,6 @@
 [![sqlglot](https://img.shields.io/badge/sqlglot-26.0+-4B8BBE.svg)](https://github.com/tobymao/sqlglot)
 [![Arrow Flight SQL](https://img.shields.io/badge/Arrow_Flight_SQL-ready-D22128.svg?logo=apachearrow&logoColor=white)](https://arrow.apache.org/docs/format/FlightSql.html)
 [![DB-API 2.0](https://img.shields.io/badge/DB--API_2.0-PEP_249-3776AB.svg?logo=python&logoColor=white)](https://peps.python.org/pep-0249/)
-[![Docker](https://img.shields.io/badge/Docker-ready-2496ED.svg?logo=docker&logoColor=white)](https://docs.docker.com)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://docs.astral.sh/ruff/)
 [![mypy](https://img.shields.io/badge/type--checked-mypy-blue.svg)](https://mypy-lang.org)
 
