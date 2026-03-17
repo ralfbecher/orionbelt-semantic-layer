@@ -5,30 +5,39 @@
 On-premise / Docker on LAN. Single Docker container running orionbelt-api
 exposes two protocols simultaneously:
 
-  Port 8000  — FastAPI REST API (existing, unchanged)
-  Port 8815  — Arrow Flight SQL (new, background thread in same process)
+  Port 8080  — FastAPI REST API (existing, unchanged)
+  Port 8815  — Arrow Flight SQL (background thread in same process)
 
 No additional containers. No extra processes. One deployment unit.
 
-## Repository Structure
+## Package Structure
 
 ```
-ob-drivers/
+drivers/
 ├── ARCHITECTURE.md              ← this file
 │
-├── ob-flight-extension/         ← Flight SQL server, embedded into orionbelt-api
-│   └── src/ob_flight/
-│       ├── server.py            ← pyarrow FlightServerBase subclass
-│       ├── handlers.py          ← GetFlightInfo, DoGet, GetSchema
-│       ├── catalog.py           ← ListFlights → OB model data objects
-│       ├── auth.py              ← optional token auth middleware
-│       └── startup.py           ← background thread launcher for orionbelt-api
+├── ob-driver-core/              ← shared foundation (PEP 249 exceptions, type codes,
+│   └── src/ob_driver_core/         OBML detection, REST compilation bridge)
+│       ├── detection.py         ← is_obml(), parse_obml()
+│       ├── compiler.py          ← compile_obml() via POST /v1/query/sql
+│       ├── exceptions.py        ← PEP 249 exception hierarchy
+│       └── type_codes.py        ← PEP 249 type objects (STRING, NUMBER, etc.)
 │
-├── ob-snowflake/                ← DB-API 2.0 driver for Snowflake
+├── ob-duckdb/                   ← DB-API 2.0 driver for DuckDB
 ├── ob-postgres/                 ← DB-API 2.0 driver for PostgreSQL
+├── ob-snowflake/                ← DB-API 2.0 driver for Snowflake
 ├── ob-clickhouse/               ← DB-API 2.0 driver for ClickHouse
 ├── ob-dremio/                   ← DB-API 2.0 driver for Dremio
-└── ob-databricks/               ← DB-API 2.0 driver for Databricks
+├── ob-databricks/               ← DB-API 2.0 driver for Databricks
+│
+└── ob-flight-extension/         ← Arrow Flight SQL server, embedded into orionbelt-api
+    └── src/ob_flight/
+        ├── server.py            ← pyarrow FlightServerBase subclass
+        ├── catalog.py           ← ListFlights → OB model data objects
+        ├── converters.py        ← DB rows → Arrow RecordBatch
+        ├── db_router.py         ← vendor routing (dialect → native connector)
+        ├── auth.py              ← optional token auth middleware
+        └── startup.py           ← background thread launcher for orionbelt-api
 ```
 
 ## Protocol Coverage
@@ -38,93 +47,83 @@ ob-drivers/
 | DBeaver             | Flight SQL       | port 8815                |
 | Tableau             | Flight SQL JDBC  | port 8815 via .jar       |
 | Power BI            | ODBC bridge      | port 8815 via Flight ODBC|
-| pandas / Jupyter    | DB-API 2.0       | ob-snowflake / ob-postgres|
-| dbt                 | SQLAlchemy       | ob+snowflake:// dialect  |
-| Superset / Metabase | SQLAlchemy       | ob+postgres:// dialect   |
-| REST / MCP / AI     | HTTP REST        | port 8000 (unchanged)    |
+| Python apps         | DB-API 2.0       | ob-duckdb / ob-postgres / etc. |
+| REST / MCP / AI     | HTTP REST        | port 8080 (unchanged)    |
 
-## Flight SQL — Internal Call Path (no HTTP hop)
+## DB-API 2.0 Drivers — REST-Only Compilation
+
+All vendor drivers work against the OrionBelt REST API in **single-model mode**
+(`MODEL_FILE` set). They do NOT import the compilation pipeline directly.
+
+```
+Python App
+    │
+    │  cur.execute(obml_query)
+    ▼
+ob-driver-core/compiler.py
+    │
+    │  POST /v1/query/sql?dialect=<vendor>
+    ▼
+OrionBelt REST API (port 8080)
+    │
+    │  compiled SQL
+    ▼
+Native connector (psycopg2, snowflake-connector, etc.)
+    │
+    ▼
+Database
+```
+
+OBML queries are detected by `is_obml()` (starts with `select:` + has
+`dimensions`/`measures`). Plain SQL bypasses the API entirely.
+
+## Flight SQL — Direct Python Call (no HTTP hop)
+
+The Flight server runs inside the API process. It uses `CompilationPipeline`
+directly — no REST call for compilation, no session management.
 
 ```
 DBeaver sends OBML YAML or plain SQL
     │
     ▼
-ob_flight.handlers.OBFlightHandler.get_flight_info()
+ob_flight.server.OBFlightServer.get_flight_info()
     │
     ├─ is_obml(query)?
-    │   YES → from orionbelt.compiler.pipeline import CompilationPipeline
-    │          pipeline.compile(query, model, dialect)  ← direct Python call
+    │   YES → CompilationPipeline.compile()  ← direct Python call
     │   NO  → pass SQL through unchanged
     │
     ▼
-native DB connector (snowflake-connector-python / psycopg2 / etc.)
+db_router.connect(dialect) → native connector
     │
     ▼
-Arrow record batches streamed back via DoGet
+Arrow RecordBatch streamed back via DoGet
 ```
 
-The Flight handler imports CompilationPipeline directly — same process,
-zero network overhead, no session management needed.
+## Query Execution via REST
 
-## Model Resolution
+The `POST /v1/query/execute` endpoint compiles OBML and executes the SQL
+against the configured database, returning JSON results. Gated by
+`FLIGHT_ENABLED=true` (uses the same `db_router` as the Flight server).
 
-DBeaver connection "Database" field → ob_model_id or model name.
-
-Resolution order:
-1. Exact match on model_id (UUID)
-2. Case-insensitive match on model name
-3. Fall back to DEFAULT_MODEL env var
-4. Raise FlightUnavailableError with helpful message
-
-Model is loaded once per server startup (or on first use) and cached
-in process memory. Reloaded on SIGHUP or via REST endpoint
-POST /admin/flight/reload-models.
-
-## Docker Compose Integration
-
-```yaml
-# docker-compose.yml addition to existing orionbelt-api service
-services:
-  orionbelt:
-    image: orionbelt-api:latest
-    ports:
-      - "8000:8000"    # REST API
-      - "8815:8815"    # Arrow Flight SQL  ← ADD THIS
-    environment:
-      FLIGHT_ENABLED: "true"
-      FLIGHT_PORT: "8815"
-      FLIGHT_AUTH_MODE: "none"       # or "token"
-      FLIGHT_DEFAULT_MODEL: ""       # optional fallback model id
-      FLIGHT_PRELOAD_MODELS: ""      # comma-sep .obml.yaml paths to load at startup
 ```
-
-## Vendor DB-API Packages
-
-Each vendor package is independent, minimal, and follows the same pattern:
-
-  connect(**kwargs) → Connection → Cursor
+UI / MCP / any client
+    │  POST /v1/query/execute
+    ▼
+REST API → CompilationPipeline → db_router.connect(DB_VENDOR)
     │
-    ├─ is_obml(query) → OB CompilationPipeline.compile() → SQL
-    └─ plain SQL → native connector directly
+    ▼
+JSON response: { columns, rows, row_count, sql, ... }
+```
 
-The OB compilation call is a **direct Python import**, not a REST call,
-when used in the same process as orionbelt-api. When used standalone
-(e.g. in a Jupyter notebook), it calls the REST API via httpx.
+## Docker
 
-Auto-detection: if `orionbelt.compiler.pipeline` is importable → direct call.
-Otherwise → REST API via ob_api_url parameter.
+Single image, single container, two ports:
 
-## Shared ob-core Package (extract if needed)
+```bash
+docker build -f Dockerfile.flight -t orionbelt-flight .
+docker run -p 8080:8080 -p 8815:8815 --env-file .env orionbelt-flight
+```
 
-If the YAML detection + compilation bridge logic is duplicated across all
-5 vendor packages, extract it to a shared `ob-core` package:
-
-  ob-core/
-    src/ob_core/
-      detection.py     ← is_obml(), parse_obml()
-      compiler.py      ← direct call or REST fallback
-      exceptions.py    ← PEP 249 exception hierarchy
-      type_codes.py    ← PEP 249 type objects
-
-All vendor packages depend on ob-core. This is the recommended approach
-once all 5 drivers are stable.
+The container makes **outbound** connections to the database — no extra
+port mapping needed. Works with cloud databases (Snowflake, Databricks, etc.)
+out of the box.
