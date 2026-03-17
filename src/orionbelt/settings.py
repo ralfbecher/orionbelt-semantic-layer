@@ -40,3 +40,10 @@ class Settings(BaseSettings):
     # Single-model mode — path to an OBML YAML file that is pre-loaded into
     # every new session.  When set, model upload/removal endpoints return 403.
     model_file: str | None = None
+
+    # Arrow Flight SQL server (requires ob-flight-extension)
+    flight_enabled: bool = False
+    flight_port: int = 8815
+    flight_auth_mode: str = "none"  # "none" or "token"
+    flight_api_token: str | None = None
+    db_vendor: str = "duckdb"  # default vendor driver for Flight query execution

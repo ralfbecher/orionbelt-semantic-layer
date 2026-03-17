@@ -22,6 +22,7 @@ from orionbelt.api.routers.model_api import (
     _search_model,
 )
 from orionbelt.api.schemas import (
+    ColumnMetadata,
     DimensionDetail,
     ExplainCflLegResponse,
     ExplainJoinResponse,
@@ -31,6 +32,7 @@ from orionbelt.api.schemas import (
     MeasureDetail,
     MetricDetail,
     QueryCompileResponse,
+    QueryExecuteResponse,
     ResolvedInfoResponse,
     SchemaResponse,
     SearchRequest,
@@ -41,6 +43,7 @@ from orionbelt.compiler.resolution import ResolutionError
 from orionbelt.dialect.registry import UnsupportedDialectError
 from orionbelt.models.query import QueryObject
 from orionbelt.models.semantic import SemanticModel
+from orionbelt.service.db_executor import ExecutionError, ExecutionUnavailableError, execute_sql
 from orionbelt.service.model_store import ModelStore
 from orionbelt.service.session_manager import SessionManager
 
@@ -317,4 +320,95 @@ async def shortcut_compile_query(
         warnings=result.warnings,
         sql_valid=result.sql_valid,
         explain=explain_resp,
+    )
+
+
+# Default limit enforced on /query/execute when the query has no explicit limit
+_EXECUTE_DEFAULT_LIMIT = 10000
+
+
+class ShortcutQueryExecuteRequest(QueryObject):
+    """Query request body for the execute shortcut (query body only, dialect as param)."""
+
+    pass
+
+
+@router.post("/query/execute", response_model=QueryExecuteResponse, tags=["query"])
+async def shortcut_execute_query(
+    body: ShortcutQueryExecuteRequest,
+    dialect: str | None = None,
+    mgr: SessionManager = Depends(get_session_manager),  # noqa: B008
+) -> QueryExecuteResponse:
+    """Compile and execute a query (auto-resolves session/model).
+
+    Requires FLIGHT_ENABLED=true. If ``dialect`` is omitted, uses ``DB_VENDOR``.
+    Enforces a default limit of 10 000 rows if the query has no explicit limit.
+    """
+    from orionbelt.api.deps import get_flight_info
+
+    fi = get_flight_info()
+    if not fi:
+        raise HTTPException(
+            status_code=503,
+            detail="Query execution is not available. Set FLIGHT_ENABLED=true "
+            "and configure DB_VENDOR + credentials.",
+        )
+
+    store, model_id = _resolve_store_and_model(mgr)
+
+    # Auto-detect dialect from DB_VENDOR when not provided
+    if dialect is None:
+        dialect = str(fi["db_vendor"])
+
+    # Enforce a default limit if the query has none
+    query: QueryObject = body
+    if query.limit is None:
+        query = query.model_copy(update={"limit": _EXECUTE_DEFAULT_LIMIT})
+
+    try:
+        result = store.compile_query(model_id, query, dialect)
+    except KeyError:
+        raise HTTPException(status_code=404, detail=f"Model '{model_id}' not found") from None
+    except UnsupportedDialectError:
+        raise HTTPException(status_code=400, detail=f"Unsupported dialect: '{dialect}'") from None
+    except ResolutionError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "error": "Query resolution failed",
+                "errors": [
+                    {"code": e.code, "message": e.message, "path": e.path} for e in exc.errors
+                ],
+            },
+        ) from None
+    except FanoutError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail={"error": "Query fanout detected", "message": exc.message},
+        ) from None
+
+    try:
+        exec_result = execute_sql(result.sql, dialect=dialect)
+    except ExecutionUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from None
+    except ExecutionError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from None
+
+    from orionbelt.api.routers.sessions import _build_explain_response
+
+    return QueryExecuteResponse(
+        sql=result.sql,
+        dialect=result.dialect,
+        columns=[ColumnMetadata(name=c.name, type=c.type_hint) for c in exec_result.columns],
+        rows=exec_result.rows,
+        row_count=exec_result.row_count,
+        execution_time_ms=exec_result.execution_time_ms,
+        resolved=ResolvedInfoResponse(
+            fact_tables=result.resolved.fact_tables,
+            dimensions=result.resolved.dimensions,
+            measures=result.resolved.measures,
+        ),
+        warnings=result.warnings,
+        sql_valid=result.sql_valid,
+        explain=_build_explain_response(result),
     )

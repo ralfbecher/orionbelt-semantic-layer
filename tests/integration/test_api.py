@@ -68,6 +68,7 @@ class TestSettingsEndpoint:
         assert data["single_model_mode"] is False
         assert data["model_yaml"] is None
         assert data["session_ttl_seconds"] == 3600  # from fixture
+        assert data["flight"] is None  # not enabled by default
 
     async def test_settings_single_model(self, single_model_client: AsyncClient) -> None:
         response = await single_model_client.get("/v1/settings")
@@ -77,6 +78,38 @@ class TestSettingsEndpoint:
         assert data["model_yaml"] is not None
         assert "dataObjects" in data["model_yaml"]
         assert data["session_ttl_seconds"] == 3600  # from fixture
+
+    async def test_settings_flight_enabled(self) -> None:
+        """When flight_info is passed, GET /settings includes the flight block."""
+        settings = Settings(session_ttl_seconds=3600, session_cleanup_interval=9999)
+        app = create_app(settings=settings)
+        mgr = SessionManager(
+            ttl_seconds=settings.session_ttl_seconds,
+            cleanup_interval=settings.session_cleanup_interval,
+        )
+        init_session_manager(
+            mgr,
+            flight_info={
+                "enabled": True,
+                "port": 8815,
+                "auth_mode": "token",
+                "db_vendor": "postgres",
+            },
+        )
+        try:
+            transport = ASGITransport(app=app)
+            async with AsyncClient(transport=transport, base_url="http://test") as c:
+                response = await c.get("/v1/settings")
+            assert response.status_code == 200
+            data = response.json()
+            flight = data["flight"]
+            assert flight is not None
+            assert flight["enabled"] is True
+            assert flight["port"] == 8815
+            assert flight["auth_mode"] == "token"
+            assert flight["db_vendor"] == "postgres"
+        finally:
+            reset_session_manager()
 
 
 # ---------------------------------------------------------------------------
@@ -455,3 +488,154 @@ class TestSingleModelMode:
         sid = (await single_model_client.post("/v1/sessions")).json()["session_id"]
         response = await single_model_client.delete(f"/v1/sessions/{sid}")
         assert response.status_code == 204
+
+
+# ---------------------------------------------------------------------------
+# Query execution endpoint
+# ---------------------------------------------------------------------------
+
+
+class TestQueryExecuteEndpoint:
+    """Tests for POST /query/execute — gated by FLIGHT_ENABLED."""
+
+    async def test_execute_returns_503_without_flight(self, client: AsyncClient) -> None:
+        """Execution endpoint returns 503 when FLIGHT_ENABLED is not set."""
+        sid = (await client.post("/v1/sessions")).json()["session_id"]
+        load = await client.post(
+            f"/v1/sessions/{sid}/models",
+            json={"model_yaml": SAMPLE_MODEL_YAML},
+        )
+        mid = load.json()["model_id"]
+        response = await client.post(
+            f"/v1/sessions/{sid}/query/execute",
+            json={
+                "model_id": mid,
+                "query": {
+                    "select": {
+                        "dimensions": ["Customer Country"],
+                        "measures": ["Total Revenue"],
+                    },
+                },
+                "dialect": "duckdb",
+            },
+        )
+        assert response.status_code == 503
+        assert "FLIGHT_ENABLED" in response.json()["detail"]
+
+    async def test_execute_shortcut_returns_503_without_flight(
+        self, single_model_client: AsyncClient
+    ) -> None:
+        """Shortcut execution endpoint returns 503 without FLIGHT_ENABLED."""
+        await single_model_client.post("/v1/sessions")
+        response = await single_model_client.post(
+            "/v1/query/execute",
+            json={
+                "select": {
+                    "dimensions": ["Customer Country"],
+                    "measures": ["Total Revenue"],
+                },
+            },
+            params={"dialect": "duckdb"},
+        )
+        assert response.status_code == 503
+        assert "FLIGHT_ENABLED" in response.json()["detail"]
+
+    async def test_execute_compilation_error_returns_422(self) -> None:
+        """Compilation errors are returned before attempting execution."""
+        settings = Settings(session_ttl_seconds=3600, session_cleanup_interval=9999)
+        app = create_app(settings=settings)
+        mgr = SessionManager(
+            ttl_seconds=settings.session_ttl_seconds,
+            cleanup_interval=settings.session_cleanup_interval,
+        )
+        init_session_manager(
+            mgr,
+            flight_info={"enabled": True, "port": 8815, "auth_mode": "none", "db_vendor": "duckdb"},
+        )
+        try:
+            transport = ASGITransport(app=app)
+            async with AsyncClient(transport=transport, base_url="http://test") as c:
+                sid = (await c.post("/v1/sessions")).json()["session_id"]
+                load = await c.post(
+                    f"/v1/sessions/{sid}/models",
+                    json={"model_yaml": SAMPLE_MODEL_YAML},
+                )
+                mid = load.json()["model_id"]
+                response = await c.post(
+                    f"/v1/sessions/{sid}/query/execute",
+                    json={
+                        "model_id": mid,
+                        "query": {
+                            "select": {
+                                "dimensions": ["Nonexistent Dimension"],
+                                "measures": ["Total Revenue"],
+                            },
+                        },
+                        "dialect": "duckdb",
+                    },
+                )
+            assert response.status_code == 422
+        finally:
+            reset_session_manager()
+
+
+# ---------------------------------------------------------------------------
+# Query offset support
+# ---------------------------------------------------------------------------
+
+
+class TestQueryOffset:
+    async def test_compile_with_offset(self, client: AsyncClient) -> None:
+        """OFFSET is included in compiled SQL when specified."""
+        sid = (await client.post("/v1/sessions")).json()["session_id"]
+        load = await client.post(
+            f"/v1/sessions/{sid}/models",
+            json={"model_yaml": SAMPLE_MODEL_YAML},
+        )
+        mid = load.json()["model_id"]
+        response = await client.post(
+            f"/v1/sessions/{sid}/query/sql",
+            json={
+                "model_id": mid,
+                "query": {
+                    "select": {
+                        "dimensions": ["Customer Country"],
+                        "measures": ["Total Revenue"],
+                    },
+                    "limit": 10,
+                    "offset": 20,
+                },
+                "dialect": "postgres",
+            },
+        )
+        assert response.status_code == 200
+        sql = response.json()["sql"]
+        assert "LIMIT 10" in sql
+        assert "OFFSET 20" in sql
+
+    async def test_compile_without_offset(self, client: AsyncClient) -> None:
+        """OFFSET is omitted from SQL when not specified."""
+        sid = (await client.post("/v1/sessions")).json()["session_id"]
+        load = await client.post(
+            f"/v1/sessions/{sid}/models",
+            json={"model_yaml": SAMPLE_MODEL_YAML},
+        )
+        mid = load.json()["model_id"]
+        response = await client.post(
+            f"/v1/sessions/{sid}/query/sql",
+            json={
+                "model_id": mid,
+                "query": {
+                    "select": {
+                        "dimensions": ["Customer Country"],
+                        "measures": ["Total Revenue"],
+                    },
+                    "limit": 10,
+                },
+                "dialect": "postgres",
+            },
+        )
+        assert response.status_code == 200
+        sql = response.json()["sql"]
+        assert "LIMIT 10" in sql
+        assert "OFFSET" not in sql

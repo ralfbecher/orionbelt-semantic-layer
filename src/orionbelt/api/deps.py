@@ -8,6 +8,7 @@ _session_manager: SessionManager | None = None
 _disable_session_list: bool = False
 _single_model_mode: bool = False
 _preload_model_yaml: str | None = None
+_flight_info: dict[str, object] | None = None
 
 
 def init_session_manager(
@@ -15,14 +16,16 @@ def init_session_manager(
     *,
     disable_session_list: bool = False,
     preload_model_yaml: str | None = None,
+    flight_info: dict[str, object] | None = None,
 ) -> None:
     """Set the global SessionManager (called at app startup)."""
     global _session_manager, _disable_session_list  # noqa: PLW0603
-    global _single_model_mode, _preload_model_yaml  # noqa: PLW0603
+    global _single_model_mode, _preload_model_yaml, _flight_info  # noqa: PLW0603
     _session_manager = manager
     _disable_session_list = disable_session_list
     _single_model_mode = preload_model_yaml is not None
     _preload_model_yaml = preload_model_yaml
+    _flight_info = flight_info
 
 
 def get_session_manager() -> SessionManager:
@@ -47,11 +50,17 @@ def get_preload_model_yaml() -> str | None:
     return _preload_model_yaml
 
 
+def get_flight_info() -> dict[str, object] | None:
+    """Return Flight SQL settings dict, or None if Flight is not enabled."""
+    return _flight_info
+
+
 def reset_session_manager() -> None:
     """Clear the global SessionManager (for tests)."""
     global _session_manager, _disable_session_list  # noqa: PLW0603
-    global _single_model_mode, _preload_model_yaml  # noqa: PLW0603
+    global _single_model_mode, _preload_model_yaml, _flight_info  # noqa: PLW0603
     _session_manager = None
     _disable_session_list = False
     _single_model_mode = False
     _preload_model_yaml = None
+    _flight_info = None

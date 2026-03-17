@@ -1,0 +1,68 @@
+# --- Build stage: install dependencies with Flight + vendor drivers ---
+FROM python:3.12-slim AS builder
+
+ENV PYTHONDONTWRITEBYTECODE=1
+
+WORKDIR /app
+
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+
+# Copy workspace package metadata first (cached layer)
+COPY pyproject.toml uv.lock README.md ./
+COPY drivers/ob-driver-core/pyproject.toml drivers/ob-driver-core/README.md drivers/ob-driver-core/
+COPY drivers/ob-flight-extension/pyproject.toml drivers/ob-flight-extension/README.md drivers/ob-flight-extension/
+COPY drivers/ob-duckdb/pyproject.toml drivers/ob-duckdb/README.md drivers/ob-duckdb/
+COPY drivers/ob-postgres/pyproject.toml drivers/ob-postgres/README.md drivers/ob-postgres/
+COPY drivers/ob-snowflake/pyproject.toml drivers/ob-snowflake/README.md drivers/ob-snowflake/
+COPY drivers/ob-clickhouse/pyproject.toml drivers/ob-clickhouse/README.md drivers/ob-clickhouse/
+COPY drivers/ob-dremio/pyproject.toml drivers/ob-dremio/README.md drivers/ob-dremio/
+COPY drivers/ob-databricks/pyproject.toml drivers/ob-databricks/README.md drivers/ob-databricks/
+RUN uv sync --no-dev --no-install-project --extra flight --frozen
+
+# Copy source and install everything
+COPY src/ src/
+COPY schema/ schema/
+COPY osi-obml/osi_obml_converter.py osi-obml/
+COPY osi-obml/osi-schema.json osi-obml/
+COPY drivers/ drivers/
+RUN uv sync --no-dev --no-editable --extra flight --frozen
+
+# --- Runtime stage: minimal image ---
+FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+WORKDIR /app
+
+# Create non-root user
+RUN groupadd -r app && useradd -r -g app -d /app -s /sbin/nologin app
+
+# Copy installed virtualenv from builder
+COPY --from=builder --chown=app:app /app/.venv /app/.venv
+ENV PATH="/app/.venv/bin:$PATH"
+
+# Copy schema (needed at runtime for validation)
+COPY --from=builder --chown=app:app /app/schema schema/
+
+# Copy OSI converter (needed at runtime for /convert endpoints)
+COPY --from=builder --chown=app:app /app/osi-obml osi-obml/
+
+USER app
+
+# REST API on 8080, Flight SQL on 8815
+ENV PORT=8080 \
+    API_SERVER_HOST=0.0.0.0 \
+    LOG_LEVEL=INFO \
+    LOG_FORMAT=json \
+    FLIGHT_ENABLED=true \
+    FLIGHT_PORT=8815 \
+    FLIGHT_AUTH_MODE=none \
+    DB_VENDOR=duckdb
+
+EXPOSE 8080 8815
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen(f'http://localhost:{__import__(\"os\").environ[\"PORT\"]}/health')"
+
+CMD ["sh", "-c", "uvicorn orionbelt.api.app:create_app --factory --host 0.0.0.0 --port $PORT --log-level info --proxy-headers --forwarded-allow-ips='*' --no-access-log"]

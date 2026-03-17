@@ -149,6 +149,11 @@
       "description": "Maximum number of rows to return",
       "minimum": 1
     },
+    "offset": {
+      "type": "integer",
+      "description": "Number of rows to skip before returning results",
+      "minimum": 0
+    },
     "usePathNames": {
       "type": "array",
       "description": "Override default join paths with named secondary join paths",

@@ -1,5 +1,5 @@
 site_name: OrionBelt Semantic Layer
-site_description: Compile YAML semantic models into analytical SQL across multiple database dialects.
+site_description: Compile and execute YAML semantic models as analytical SQL across multiple database dialects.
 site_url: https://ralfbecher.github.io/orionbelt-semantic-layer/
 repo_url: https://github.com/ralfbecher/orionbelt-semantic-layer
 repo_name: orionbelt-semantic-layer

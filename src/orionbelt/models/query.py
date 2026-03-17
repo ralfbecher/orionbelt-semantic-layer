@@ -108,6 +108,7 @@ class QueryObject(BaseModel):
     having: list[QueryFilter] = []
     order_by: list[QueryOrderBy] = Field([], alias="order_by")
     limit: int | None = None
+    offset: int | None = None
     use_path_names: list[UsePathName] = Field([], alias="usePathNames")
     dimensions_exclude: bool = Field(False, alias="dimensionsExclude")
 

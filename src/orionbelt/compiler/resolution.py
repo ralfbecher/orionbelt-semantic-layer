@@ -67,6 +67,7 @@ class ResolvedQuery:
     having_filters: list[ResolvedFilter] = field(default_factory=list)
     order_by_exprs: list[tuple[Expr, bool]] = field(default_factory=list)
     limit: int | None = None
+    offset: int | None = None
     warnings: list[str] = field(default_factory=list)
     requires_cfl: bool = False
     measure_source_objects: set[str] = field(default_factory=set)
@@ -113,6 +114,7 @@ class QueryResolver:
             model=model,
             result=ResolvedQuery(
                 limit=query.limit,
+                offset=query.offset,
                 use_path_names=list(query.use_path_names),
             ),
         )

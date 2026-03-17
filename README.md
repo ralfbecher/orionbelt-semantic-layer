@@ -4,7 +4,7 @@
 
 <h1 align="center">OrionBelt Semantic Layer</h1>
 
-<p align="center"><strong>Compile YAML semantic models into analytical SQL across multiple database dialects</strong></p>
+<p align="center"><strong>Compile and execute YAML semantic models as analytical SQL across multiple database dialects</strong></p>
 
 [![Version 1.0.0](https://img.shields.io/badge/version-1.0.0-purple.svg)](https://github.com/ralfbecher/orionbelt-semantic-layer/releases)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
@@ -25,7 +25,7 @@
 [![Databricks](https://img.shields.io/badge/Databricks-FF3621.svg?logo=databricks&logoColor=white)](https://www.databricks.com)
 [![DuckDB](https://img.shields.io/badge/DuckDB-FFF000.svg?logo=duckdb&logoColor=black)](https://duckdb.org)
 
-OrionBelt Semantic Layer is an **API-first** semantic engine and query planner for AI agents that transforms declarative YAML model definitions into optimized SQL for BigQuery, ClickHouse, Databricks, Dremio, DuckDB/MotherDuck, Postgres, and Snowflake. It provides a unified abstraction over your data warehouse, so analysts and applications can query using business concepts (dimensions, measures, metrics) instead of raw SQL. Every capability — model loading, validation, query compilation, and diagram generation — is exposed through a REST API, making OrionBelt easy to integrate into any application, workflow, or AI assistant.
+OrionBelt Semantic Layer is an **API-first** semantic engine and query planner for AI agents that compiles and executes declarative YAML model definitions as optimized SQL for BigQuery, ClickHouse, Databricks, Dremio, DuckDB/MotherDuck, Postgres, and Snowflake. It provides a unified abstraction over your data warehouse, so analysts and applications can query using business concepts (dimensions, measures, metrics) instead of raw SQL. Every capability — model loading, validation, query compilation and execution, and diagram generation — is exposed through a REST API, making OrionBelt easy to integrate into any application, workflow, or AI assistant.
 
 ## Features
 
@@ -38,7 +38,7 @@ OrionBelt Semantic Layer is an **API-first** semantic engine and query planner f
 - **Validation with Source Positions** — Precise error reporting with line/column numbers from YAML source, including join graph analysis (cycle and multipath detection, secondary join constraints)
 - **Session Management** — TTL-scoped sessions with per-client model stores
 - **ER Diagram Generation** — Mermaid ER diagrams via API and Gradio UI with theme support, zoom, and secondary join visualization
-- **REST API** — FastAPI-powered session endpoints for model loading, validation, compilation, diagram generation, and management
+- **REST API** — FastAPI-powered session endpoints for model loading, validation, compilation, execution, diagram generation, and management
 - **MCP Server** — Available as a separate thin client in [orionbelt-semantic-layer-mcp](https://github.com/ralfbecher/orionbelt-semantic-layer-mcp) — delegates to the REST API via HTTP, deployable independently (e.g. to Prefect Horizon)
 - **Gradio UI** — Interactive web interface for model editing, query testing, and SQL compilation with live validation feedback
 - **[OSI](https://github.com/open-semantic-interchange/OSI) Interoperability** — Bidirectional conversion between OBML and the Open Semantic Interchange format via REST API (`/convert`) and Gradio UI, with validation for both directions
@@ -359,6 +359,43 @@ The API is available at `http://localhost:8080`. The UI is at `http://localhost:
 ./tests/cloudrun/test_cloudrun.sh https://orionbelt-semantic-layer-mw2bqg2mva-ew.a.run.app
 ```
 
+## DB-API 2.0 Drivers & Arrow Flight SQL
+
+OrionBelt provides **PEP 249 DB-API 2.0 drivers** for 6 databases and an **Arrow Flight SQL server** that enables BI tools like DBeaver, Tableau, and Power BI to run OBML queries directly.
+
+| Package | Database | Native Connector |
+|---------|----------|------------------|
+| `ob-driver-core` | — (shared foundation) | — |
+| `ob-duckdb` | DuckDB | `duckdb` |
+| `ob-postgres` | PostgreSQL | `psycopg2` |
+| `ob-snowflake` | Snowflake | `snowflake-connector-python` |
+| `ob-clickhouse` | ClickHouse | `clickhouse-connect` |
+| `ob-dremio` | Dremio | `pyarrow.flight` |
+| `ob-databricks` | Databricks | `databricks-sql-connector` |
+| `ob-flight-extension` | Arrow Flight SQL server | `pyarrow.flight` |
+
+All drivers work against the OrionBelt REST API in **single-model mode** (`MODEL_FILE` set). OBML queries are compiled transparently via `POST /v1/query/sql` — the user writes OBML, the driver returns SQL results. Plain SQL queries bypass the API entirely.
+
+```python
+import ob_duckdb
+
+conn = ob_duckdb.connect(database=":memory:")
+with conn.cursor() as cur:
+    # OBML query — compiled via API, executed on DuckDB
+    cur.execute("select:\n  dimensions:\n    - Region\n  measures:\n    - Revenue\n")
+    print(cur.fetchall())
+```
+
+The **Arrow Flight SQL server** (`ob-flight-extension`) runs inside the API process as a daemon thread, enabling JDBC/ODBC BI tools to connect directly. It is designed for on-premise or hybrid deployments — Cloud Run uses the standard API-only image.
+
+```bash
+# On-premise with Flight SQL enabled
+docker build -f Dockerfile.flight -t orionbelt-flight .
+docker run -p 8080:8080 -p 8815:8815 --env-file .env orionbelt-flight
+```
+
+See **[Drivers Documentation](docs/drivers.md)** for full usage examples, connect() parameters, Flight SQL configuration, Docker Compose setup, and DBeaver/Tableau instructions.
+
 ## Configuration
 
 Configuration is via environment variables or a `.env` file. See `.env.example` for all options:
@@ -458,7 +495,7 @@ OrionBelt Analytics is an ontology-based MCP server that analyzes relational dat
 Together, the two projects form a powerful combination for AI-guided analytical workflows:
 
 - **OrionBelt Analytics** gives the AI contextual knowledge of your database schema, relationships, and business semantics
-- **OrionBelt Semantic Layer** ensures correct, optimized SQL generation from business concepts (dimensions, measures, metrics)
+- **OrionBelt Semantic Layer** ensures correct, optimized SQL compilation and execution from business concepts (dimensions, measures, metrics)
 
 By combining both, an AI assistant can navigate your data landscape through ontologies and compile safe, dialect-aware analytical SQL — enabling a seamless end-to-end analytical journey.
 

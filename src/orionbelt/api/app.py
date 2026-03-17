@@ -64,14 +64,52 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
         cleanup_interval=settings.session_cleanup_interval,
     )
     mgr.start()
+
+    # Build Flight info dict if enabled (exposed via GET /v1/settings)
+    flight_info: dict[str, object] | None = None
+    if settings.flight_enabled:
+        flight_info = {
+            "enabled": True,
+            "port": settings.flight_port,
+            "auth_mode": settings.flight_auth_mode,
+            "db_vendor": settings.db_vendor,
+        }
+
     init_session_manager(
         mgr,
         disable_session_list=settings.disable_session_list,
         preload_model_yaml=preload_yaml,
+        flight_info=flight_info,
     )
+
+    # Optionally start Arrow Flight SQL server in a daemon thread
+    flight_thread = None
+    if settings.flight_enabled:
+        try:
+            from ob_flight.startup import start_flight_background
+
+            flight_thread = start_flight_background(
+                session_manager=mgr,
+                port=settings.flight_port,
+            )
+            logger.info(
+                "Flight SQL server started on port %d (vendor=%s)",
+                settings.flight_port,
+                settings.db_vendor,
+            )
+        except ImportError:
+            logger.warning(
+                "FLIGHT_ENABLED=true but ob-flight-extension is not installed. "
+                "Install with: uv sync --extra flight"
+            )
+
     try:
         yield
     finally:
+        if flight_thread is not None:
+            from ob_flight.startup import stop_flight_server
+
+            stop_flight_server()
         mgr.stop()
         reset_session_manager()
 
@@ -83,7 +121,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app = FastAPI(
         title="OrionBelt Semantic Layer",
-        description="Compiles YAML semantic models into analytical SQL across multiple dialects.",
+        description=(
+            "Compiles and executes YAML semantic models as analytical SQL"
+            " across multiple dialects."
+        ),
         version=__version__,
         lifespan=lifespan,
     )

@@ -534,6 +534,8 @@ class CFLPlanner:
             outer_builder.order_by(self._remap_cfl_order_by(expr, resolved), desc=desc)
         if resolved.limit is not None:
             outer_builder.limit(resolved.limit)
+        if resolved.offset is not None:
+            outer_builder.offset(resolved.offset)
 
         outer_select = outer_builder.build()
 
@@ -547,6 +549,7 @@ class CFLPlanner:
             having=outer_select.having,
             order_by=outer_select.order_by,
             limit=outer_select.limit,
+            offset=outer_select.offset,
             ctes=[union_cte],
         )
 
@@ -621,6 +624,8 @@ class CFLPlanner:
             outer_builder.order_by(self._remap_cfl_order_by(expr, resolved), desc=desc)
         if resolved.limit is not None:
             outer_builder.limit(resolved.limit)
+        if resolved.offset is not None:
+            outer_builder.offset(resolved.offset)
 
         outer = outer_builder.build()
         final = Select(
@@ -629,6 +634,7 @@ class CFLPlanner:
             joins=outer.joins,
             order_by=outer.order_by,
             limit=outer.limit,
+            offset=outer.offset,
             ctes=ctes,
         )
         return QueryPlan(ast=final)

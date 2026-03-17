@@ -1,0 +1,56 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ob-flight-extension"
+version = "0.1.0"
+description = "Arrow Flight SQL server extension for orionbelt-api (DBeaver, Tableau, Power BI)"
+readme = "README.md"
+license = { text = "Apache-2.0" }
+authors = [{ name = "Ralfo Becher", email = "info@orionbelt.ai" }]
+keywords = ["arrow", "flight-sql", "dbeaver", "tableau", "orionbelt", "semantic-layer"]
+requires-python = ">=3.12"
+dependencies = [
+    "pyarrow>=16.0",
+    "pyyaml>=6.0",
+    "ob-driver-core>=0.1",
+]
+
+[project.optional-dependencies]
+snowflake   = ["ob-snowflake>=0.1"]
+postgres    = ["ob-postgres>=0.1"]
+clickhouse  = ["ob-clickhouse>=0.1"]
+dremio      = ["ob-dremio>=0.1"]
+databricks  = ["ob-databricks>=0.1"]
+all = [
+    "ob-snowflake>=0.1",
+    "ob-postgres>=0.1",
+    "ob-clickhouse>=0.1",
+    "ob-dremio>=0.1",
+    "ob-databricks>=0.1",
+]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "mypy>=1.10",
+    "ruff>=0.4",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ob_flight"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+files = ["src/ob_flight"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+markers = ["integration: requires running orionbelt-api + DBeaver"]
+addopts = "-m 'not integration'"

@@ -233,7 +233,7 @@ Validate OBML YAML within a session context. Does not store the model.
 
 ---
 
-## Session Query Compilation
+## Session Query Compilation & Execution
 
 ### `POST /v1/sessions/{session_id}/query/sql`
 
@@ -301,6 +301,67 @@ Compile a semantic query against a model loaded in the session.
 | 400 | Unsupported dialect |
 | 404 | Model or session not found |
 | 422 | Resolution error |
+
+### `POST /v1/sessions/{session_id}/query/execute`
+
+Compile **and execute** a semantic query against the configured database. Requires `FLIGHT_ENABLED=true` with `DB_VENDOR` and vendor credentials configured.
+
+If the query has no explicit `limit`, a default of 10,000 rows is enforced.
+
+**Request:**
+
+```json
+{
+  "model_id": "abcd1234",
+  "query": {
+    "select": {
+      "dimensions": ["Customer Country"],
+      "measures": ["Revenue"]
+    },
+    "limit": 100
+  },
+  "dialect": "postgres"
+}
+```
+
+**Response (200):**
+
+```json
+{
+  "sql": "SELECT ...",
+  "dialect": "postgres",
+  "columns": [
+    {"name": "Customer Country", "type": "string"},
+    {"name": "Revenue", "type": "number"}
+  ],
+  "rows": [
+    ["US", 15230.50],
+    ["UK", 9870.00]
+  ],
+  "row_count": 2,
+  "execution_time_ms": 42.5,
+  "resolved": {
+    "fact_tables": ["Orders"],
+    "dimensions": ["Customer Country"],
+    "measures": ["Revenue"]
+  },
+  "sql_valid": true,
+  "warnings": [],
+  "explain": { "..." : "..." }
+}
+```
+
+**Error responses:**
+
+| Status | Cause |
+|--------|-------|
+| 400 | Unsupported dialect |
+| 404 | Model or session not found |
+| 422 | Resolution error |
+| 502 | Database execution failed |
+| 503 | Query execution not available (`FLIGHT_ENABLED` not set) |
+
+**Top-level shortcut:** `POST /v1/query/execute` — auto-resolves session/model, auto-detects dialect from `DB_VENDOR`.
 
 ---
 

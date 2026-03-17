@@ -4,13 +4,13 @@
 
 # OrionBelt Semantic Layer
 
-**Compile YAML semantic models into analytical SQL across multiple database dialects.**
+**Compile and execute YAML semantic models as analytical SQL across multiple database dialects.**
 
-OrionBelt Semantic Layer is an **API-first** semantic engine and query planner for AI agents that transforms declarative YAML model definitions into optimized SQL for BigQuery, ClickHouse, Databricks, Dremio, DuckDB/MotherDuck, Postgres, and Snowflake. Query using business concepts — dimensions, measures, and metrics — instead of raw SQL.
+OrionBelt Semantic Layer is an **API-first** semantic engine and query planner for AI agents that compiles and executes declarative YAML model definitions as optimized SQL for BigQuery, ClickHouse, Databricks, Dremio, DuckDB/MotherDuck, Postgres, and Snowflake. Query using business concepts — dimensions, measures, and metrics — instead of raw SQL.
 
 ## Why OrionBelt?
 
-- **One model, many dialects** — Define your semantic model once in YAML, compile to SQL for any supported warehouse
+- **One model, many dialects** — Define your semantic model once in YAML, compile and execute SQL for any supported warehouse
 - **Safe by construction** — AST-based SQL generation prevents injection and ensures syntactic correctness
 - **Precise error reporting** — Validation errors include line and column numbers from your YAML source
 - **Automatic join resolution** — Declare relationships between data objects; OrionBelt finds optimal join paths using graph algorithms
@@ -25,7 +25,7 @@ OrionBelt Semantic Layer is an **API-first** semantic engine and query planner f
 | OrionBelt ML (OBML) | YAML-based data objects, dimensions, measures, metrics, joins                                                   |
 | Star Schema & CFL   | Automatic fact selection and join path resolution                                                               |
 | Session Management  | TTL-scoped per-client sessions for the REST API                                                                 |
-| REST API            | FastAPI endpoints for session-based model management, validation, compilation, and OSI conversion               |
+| REST API            | FastAPI endpoints for session-based model management, validation, compilation, execution, and OSI conversion               |
 | Gradio UI           | Interactive web interface for model editing, query testing, SQL compilation, ER diagrams, and OSI import/export |
 | Custom Extensions   | Vendor-specific metadata at all model levels (model, data object, column, dimension, measure, metric)           |
 | Plugin Architecture | Extensible dialect system with capability flags                                                                 |

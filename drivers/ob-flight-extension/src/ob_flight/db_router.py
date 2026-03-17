@@ -1,0 +1,121 @@
+"""Vendor database routing for Flight SQL query execution."""
+
+from __future__ import annotations
+
+import importlib
+import os
+from typing import Any
+
+
+# Dialect name -> Python module name for the OB driver
+VENDOR_MAP: dict[str, str] = {
+    "duckdb": "ob_duckdb",
+    "postgres": "ob_postgres",
+    "snowflake": "ob_snowflake",
+    "clickhouse": "ob_clickhouse",
+    "dremio": "ob_dremio",
+    "databricks": "ob_databricks",
+}
+
+# Environment variable prefixes for vendor credentials
+_CREDENTIAL_KEYS: dict[str, list[str]] = {
+    "duckdb": ["DUCKDB_DATABASE"],
+    "postgres": [
+        "POSTGRES_HOST",
+        "POSTGRES_PORT",
+        "POSTGRES_DBNAME",
+        "POSTGRES_USER",
+        "POSTGRES_PASSWORD",
+    ],
+    "snowflake": [
+        "SNOWFLAKE_ACCOUNT",
+        "SNOWFLAKE_USER",
+        "SNOWFLAKE_PASSWORD",
+        "SNOWFLAKE_DATABASE",
+        "SNOWFLAKE_SCHEMA",
+        "SNOWFLAKE_WAREHOUSE",
+    ],
+    "clickhouse": [
+        "CLICKHOUSE_HOST",
+        "CLICKHOUSE_PORT",
+        "CLICKHOUSE_USERNAME",
+        "CLICKHOUSE_PASSWORD",
+        "CLICKHOUSE_DATABASE",
+    ],
+    "dremio": [
+        "DREMIO_HOST",
+        "DREMIO_PORT",
+        "DREMIO_USERNAME",
+        "DREMIO_PASSWORD",
+    ],
+    "databricks": [
+        "DATABRICKS_SERVER_HOSTNAME",
+        "DATABRICKS_HTTP_PATH",
+        "DATABRICKS_ACCESS_TOKEN",
+    ],
+}
+
+# Env var name -> connect() kwarg name mapping
+_ENV_TO_KWARG: dict[str, str] = {
+    "DUCKDB_DATABASE": "database",
+    "POSTGRES_HOST": "host",
+    "POSTGRES_PORT": "port",
+    "POSTGRES_DBNAME": "dbname",
+    "POSTGRES_USER": "user",
+    "POSTGRES_PASSWORD": "password",
+    "SNOWFLAKE_ACCOUNT": "account",
+    "SNOWFLAKE_USER": "user",
+    "SNOWFLAKE_PASSWORD": "password",
+    "SNOWFLAKE_DATABASE": "database",
+    "SNOWFLAKE_SCHEMA": "schema",
+    "SNOWFLAKE_WAREHOUSE": "warehouse",
+    "CLICKHOUSE_HOST": "host",
+    "CLICKHOUSE_PORT": "port",
+    "CLICKHOUSE_USERNAME": "username",
+    "CLICKHOUSE_PASSWORD": "password",
+    "CLICKHOUSE_DATABASE": "database",
+    "DREMIO_HOST": "host",
+    "DREMIO_PORT": "port",
+    "DREMIO_USERNAME": "username",
+    "DREMIO_PASSWORD": "password",
+    "DATABRICKS_SERVER_HOSTNAME": "server_hostname",
+    "DATABRICKS_HTTP_PATH": "http_path",
+    "DATABRICKS_ACCESS_TOKEN": "access_token",
+}
+
+
+def get_credentials(dialect: str) -> dict[str, Any]:
+    """Read vendor credentials from environment variables.
+
+    Returns a dict of kwargs suitable for the vendor's connect() function.
+    Only includes env vars that are actually set.
+    """
+    creds: dict[str, Any] = {}
+    keys = _CREDENTIAL_KEYS.get(dialect, [])
+    for env_key in keys:
+        value = os.getenv(env_key)
+        if value is not None:
+            kwarg_name = _ENV_TO_KWARG.get(env_key, env_key.lower())
+            # Convert port to int
+            if env_key.endswith("_PORT"):
+                value = int(value)
+            creds[kwarg_name] = value
+    return creds
+
+
+def connect(dialect: str, **overrides: Any) -> Any:
+    """Connect to a vendor database using the appropriate OB driver.
+
+    Credentials come from environment variables, overridden by **kwargs.
+    Returns a PEP 249 Connection object.
+
+    Raises KeyError if dialect is not supported.
+    """
+    if dialect not in VENDOR_MAP:
+        raise KeyError(
+            f"Unsupported dialect: {dialect!r}. Supported: {sorted(VENDOR_MAP)}"
+        )
+    module = importlib.import_module(VENDOR_MAP[dialect])
+    kwargs = get_credentials(dialect)
+    kwargs.update(overrides)
+    return module.connect(**kwargs)

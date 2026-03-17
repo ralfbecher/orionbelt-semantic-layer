@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**OrionBelt Semantic Layer** is a SaaS semantic layer engine that compiles YAML semantic models (OBML format) into analytical SQL across 7 database dialects: BigQuery, ClickHouse, Databricks, Dremio, DuckDB, Postgres, Snowflake. It exposes all capabilities through a REST API (FastAPI). An MCP server is available as a separate thin client in [orionbelt-semantic-layer-mcp](https://github.com/ralfbecher/orionbelt-semantic-layer-mcp).
+**OrionBelt Semantic Layer** is a SaaS semantic layer engine that compiles and executes YAML semantic models (OBML format) as analytical SQL across 7 database dialects: BigQuery, ClickHouse, Databricks, Dremio, DuckDB, Postgres, Snowflake. It exposes all capabilities through a REST API (FastAPI). An MCP server is available as a separate thin client in [orionbelt-semantic-layer-mcp](https://github.com/ralfbecher/orionbelt-semantic-layer-mcp).
 
 ## Commands
 
@@ -172,6 +172,7 @@ All API routes are prefixed with `/v1/` except `/health` and `/robots.txt`.
 | DELETE | `/v1/sessions/{id}/models/{mid}` | Remove model |
 | POST | `/v1/sessions/{id}/validate` | Validate YAML |
 | POST | `/v1/sessions/{id}/query/sql` | Compile query (includes explain) |
+| POST | `/v1/sessions/{id}/query/execute` | Compile and execute query (requires FLIGHT_ENABLED) |
 | GET | `/v1/sessions/{id}/models/{mid}/diagram/er` | Mermaid ER diagram |
 | GET | `/v1/sessions/{id}/models/{mid}/schema` | Full model as JSON |
 | GET | `/v1/sessions/{id}/models/{mid}/dimensions` | List dimensions |
@@ -186,7 +187,7 @@ All API routes are prefixed with `/v1/` except `/health` and `/robots.txt`.
 | POST | `/v1/convert/osi-to-obml` | Convert OSI YAML → OBML YAML |
 | POST | `/v1/convert/obml-to-osi` | Convert OBML YAML → OSI YAML |
 
-Top-level shortcuts (auto-resolve when single session/model): `/v1/schema`, `/v1/dimensions`, `/v1/measures`, `/v1/metrics`, `/v1/explain/{name}`, `/v1/find`, `/v1/join-graph`, `/v1/query/sql`.
+Top-level shortcuts (auto-resolve when single session/model): `/v1/schema`, `/v1/dimensions`, `/v1/measures`, `/v1/metrics`, `/v1/explain/{name}`, `/v1/find`, `/v1/join-graph`, `/v1/query/sql`, `/v1/query/execute`.
 
 ## Configuration
 

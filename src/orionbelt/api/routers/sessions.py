@@ -3,16 +3,19 @@
 from __future__ import annotations
 
 from dataclasses import asdict
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
 
 from orionbelt.api.deps import (
+    get_flight_info,
     get_preload_model_yaml,
     get_session_manager,
     is_session_list_disabled,
     is_single_model_mode,
 )
 from orionbelt.api.schemas import (
+    ColumnMetadata,
     DiagramResponse,
     ErrorDetail,
     ExplainCflLegResponse,
@@ -22,9 +25,11 @@ from orionbelt.api.schemas import (
     ModelLoadResponse,
     ModelSummaryResponse,
     QueryCompileResponse,
+    QueryExecuteResponse,
     ResolvedInfoResponse,
     SessionCreateRequest,
     SessionListResponse,
+    SessionQueryExecuteRequest,
     SessionQueryRequest,
     SessionResponse,
     ValidateRequest,
@@ -33,11 +38,15 @@ from orionbelt.api.schemas import (
 from orionbelt.compiler.fanout import FanoutError
 from orionbelt.compiler.resolution import ResolutionError
 from orionbelt.dialect.registry import UnsupportedDialectError
+from orionbelt.service.db_executor import ExecutionError, ExecutionUnavailableError, execute_sql
 from orionbelt.service.diagram import generate_mermaid_er
 from orionbelt.service.model_store import ModelStore, ModelValidationError
 from orionbelt.service.session_manager import SessionInfo, SessionManager, SessionNotFoundError
 
 router = APIRouter()
+
+# Default limit enforced on /query/execute when the query has no explicit limit
+_EXECUTE_DEFAULT_LIMIT = 10000
 
 
 # -- helpers -----------------------------------------------------------------
@@ -322,4 +331,110 @@ async def compile_query(
         warnings=result.warnings,
         sql_valid=result.sql_valid,
         explain=explain_resp,
+    )
+
+
+def _build_explain_response(result: Any) -> ExplainPlanResponse | None:
+    """Build an ExplainPlanResponse from a CompilationResult, if explain exists."""
+    if not result.explain:
+        return None
+    return ExplainPlanResponse(
+        planner=result.explain.planner,
+        planner_reason=result.explain.planner_reason,
+        base_object=result.explain.base_object,
+        base_object_reason=result.explain.base_object_reason,
+        joins=[
+            ExplainJoinResponse(
+                from_object=j.from_object,
+                to_object=j.to_object,
+                join_columns=j.join_columns,
+                reason=j.reason,
+            )
+            for j in result.explain.joins
+        ],
+        where_filter_count=result.explain.where_filter_count,
+        having_filter_count=result.explain.having_filter_count,
+        has_totals=result.explain.has_totals,
+        cfl_legs=[
+            ExplainCflLegResponse(
+                measure_source=leg.measure_source,
+                common_root=leg.common_root,
+                reason=leg.reason,
+                measures=leg.measures,
+                joins=leg.joins,
+            )
+            for leg in result.explain.cfl_legs
+        ],
+    )
+
+
+@router.post("/{session_id}/query/execute", response_model=QueryExecuteResponse)
+async def execute_query(
+    session_id: str,
+    body: SessionQueryExecuteRequest,
+    mgr: SessionManager = Depends(get_session_manager),  # noqa: B008
+) -> QueryExecuteResponse:
+    """Compile and execute a query against the configured database.
+
+    Requires FLIGHT_ENABLED=true (configures DB_VENDOR + credentials).
+    """
+    if not get_flight_info():
+        raise HTTPException(
+            status_code=503,
+            detail="Query execution is not available. Set FLIGHT_ENABLED=true "
+            "and configure DB_VENDOR + credentials.",
+        )
+    store = _get_store(session_id, mgr)
+
+    # Enforce a default limit if the query has none
+    query = body.query
+    if query.limit is None:
+        query = query.model_copy(update={"limit": _EXECUTE_DEFAULT_LIMIT})
+
+    try:
+        result = store.compile_query(body.model_id, query, body.dialect)
+    except KeyError:
+        raise HTTPException(status_code=404, detail=f"Model '{body.model_id}' not found") from None
+    except UnsupportedDialectError:
+        raise HTTPException(
+            status_code=400, detail=f"Unsupported dialect: '{body.dialect}'"
+        ) from None
+    except ResolutionError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "error": "Query resolution failed",
+                "errors": [
+                    {"code": e.code, "message": e.message, "path": e.path} for e in exc.errors
+                ],
+            },
+        ) from None
+    except FanoutError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail={"error": "Query fanout detected", "message": exc.message},
+        ) from None
+
+    try:
+        exec_result = execute_sql(result.sql, dialect=body.dialect)
+    except ExecutionUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from None
+    except ExecutionError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from None
+
+    return QueryExecuteResponse(
+        sql=result.sql,
+        dialect=result.dialect,
+        columns=[ColumnMetadata(name=c.name, type=c.type_hint) for c in exec_result.columns],
+        rows=exec_result.rows,
+        row_count=exec_result.row_count,
+        execution_time_ms=exec_result.execution_time_ms,
+        resolved=ResolvedInfoResponse(
+            fact_tables=result.resolved.fact_tables,
+            dimensions=result.resolved.dimensions,
+            measures=result.resolved.measures,
+        ),
+        warnings=result.warnings,
+        sql_valid=result.sql_valid,
+        explain=_build_explain_response(result),
     )
