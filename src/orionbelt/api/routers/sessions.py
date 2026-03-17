@@ -9,10 +9,10 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException
 
 from orionbelt.api.deps import (
-    get_flight_info,
     get_preload_model_yaml,
     get_query_default_limit,
     get_session_manager,
+    is_query_execute_enabled,
     is_session_list_disabled,
     is_single_model_mode,
 )
@@ -375,12 +375,12 @@ async def execute_query(
 ) -> QueryExecuteResponse:
     """Compile and execute a query against the configured database.
 
-    Requires FLIGHT_ENABLED=true (configures DB_VENDOR + credentials).
+    Requires QUERY_EXECUTE=true (or FLIGHT_ENABLED=true) and DB_VENDOR + credentials.
     """
-    if not get_flight_info():
+    if not is_query_execute_enabled():
         raise HTTPException(
             status_code=503,
-            detail="Query execution is not available. Set FLIGHT_ENABLED=true "
+            detail="Query execution is not available. Set QUERY_EXECUTE=true "
             "and configure DB_VENDOR + credentials.",
         )
     store = _get_store(session_id, mgr)

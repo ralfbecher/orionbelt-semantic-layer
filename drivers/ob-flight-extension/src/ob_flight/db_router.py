@@ -130,6 +130,9 @@ def connect(dialect: str, **overrides: Any) -> Any:
     module = importlib.import_module(VENDOR_MAP[dialect])
     kwargs = get_credentials(dialect)
     kwargs.update(overrides)
+    # DuckDB: open read-only to avoid cross-process file lock conflicts
+    if dialect == "duckdb" and "read_only" not in kwargs:
+        kwargs["read_only"] = True
     return module.connect(**kwargs)
 
 

@@ -78,6 +78,7 @@ ui = [
 flight = [
     "pyarrow>=16.0,<20.0",
     "ob-flight-extension>=0.1",
+    "ob-duckdb>=0.1",
 ]
 
 [build-system]

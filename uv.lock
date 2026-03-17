@@ -1952,6 +1952,7 @@ all = [
     { name = "ob-clickhouse" },
     { name = "ob-databricks" },
     { name = "ob-dremio" },
+    { name = "ob-duckdb" },
     { name = "ob-postgres" },
     { name = "ob-snowflake" },
 ]
@@ -1970,6 +1971,9 @@ dev = [
 dremio = [
     { name = "ob-dremio" },
 ]
+duckdb = [
+    { name = "ob-duckdb" },
+]
 postgres = [
     { name = "ob-postgres" },
 ]
@@ -1987,6 +1991,8 @@ requires-dist = [
     { name = "ob-dremio", marker = "extra == 'all'", editable = "drivers/ob-dremio" },
     { name = "ob-dremio", marker = "extra == 'dremio'", editable = "drivers/ob-dremio" },
     { name = "ob-driver-core", editable = "drivers/ob-driver-core" },
+    { name = "ob-duckdb", marker = "extra == 'all'", editable = "drivers/ob-duckdb" },
+    { name = "ob-duckdb", marker = "extra == 'duckdb'", editable = "drivers/ob-duckdb" },
     { name = "ob-postgres", marker = "extra == 'all'", editable = "drivers/ob-postgres" },
     { name = "ob-postgres", marker = "extra == 'postgres'", editable = "drivers/ob-postgres" },
     { name = "ob-snowflake", marker = "extra == 'all'", editable = "drivers/ob-snowflake" },
@@ -1997,7 +2003,7 @@ requires-dist = [
     { name = "pyyaml", specifier = ">=6.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.4" },
 ]
-provides-extras = ["snowflake", "postgres", "clickhouse", "dremio", "databricks", "all", "dev"]
+provides-extras = ["duckdb", "snowflake", "postgres", "clickhouse", "dremio", "databricks", "all", "dev"]
 
 [[package]]
 name = "ob-postgres"
@@ -2130,6 +2136,7 @@ docs = [
     { name = "mkdocstrings", extra = ["python"] },
 ]
 flight = [
+    { name = "ob-duckdb" },
     { name = "ob-flight-extension" },
     { name = "pyarrow" },
 ]
@@ -2155,6 +2162,7 @@ requires-dist = [
     { name = "mkdocstrings", extras = ["python"], marker = "extra == 'docs'", specifier = ">=1.0" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.19" },
     { name = "networkx", specifier = ">=3.6,<4.0" },
+    { name = "ob-duckdb", marker = "extra == 'flight'", editable = "drivers/ob-duckdb" },
     { name = "ob-flight-extension", marker = "extra == 'flight'", editable = "drivers/ob-flight-extension" },
     { name = "opentelemetry-api", specifier = ">=1.39,<2.0" },
     { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=4.5" },

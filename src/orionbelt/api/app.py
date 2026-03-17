@@ -77,11 +77,16 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
             "db_vendor": settings.db_vendor,
         }
 
+    # query/execute is available when explicitly enabled OR when Flight is enabled
+    query_execute_enabled = settings.query_execute or settings.flight_enabled
+
     init_session_manager(
         mgr,
         disable_session_list=settings.disable_session_list,
         preload_model_yaml=preload_yaml,
         flight_info=flight_info,
+        query_execute_enabled=query_execute_enabled,
+        db_vendor=settings.db_vendor,
         query_default_limit=settings.query_default_limit,
     )
 

@@ -161,6 +161,10 @@ class SettingsResponse(BaseModel):
         description="Pre-loaded OBML YAML content (only when single_model_mode is true)",
     )
     session_ttl_seconds: int = 1800
+    query_execute: bool = Field(
+        default=False,
+        description="Whether POST /query/execute is available",
+    )
     flight: FlightSettingsInfo | None = Field(
         default=None,
         description="Arrow Flight SQL server info (present only when Flight is enabled)",

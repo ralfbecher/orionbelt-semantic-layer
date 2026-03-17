@@ -338,16 +338,16 @@ async def shortcut_execute_query(
 ) -> QueryExecuteResponse:
     """Compile and execute a query (auto-resolves session/model).
 
-    Requires FLIGHT_ENABLED=true. If ``dialect`` is omitted, uses ``DB_VENDOR``.
-    Enforces a configurable default row limit if the query has no explicit limit.
+    Requires QUERY_EXECUTE=true (or FLIGHT_ENABLED=true). If ``dialect`` is omitted,
+    uses ``DB_VENDOR``. Enforces a configurable default row limit if the query has
+    no explicit limit.
     """
-    from orionbelt.api.deps import get_flight_info, get_query_default_limit
+    from orionbelt.api.deps import get_db_vendor, get_query_default_limit, is_query_execute_enabled
 
-    fi = get_flight_info()
-    if not fi:
+    if not is_query_execute_enabled():
         raise HTTPException(
             status_code=503,
-            detail="Query execution is not available. Set FLIGHT_ENABLED=true "
+            detail="Query execution is not available. Set QUERY_EXECUTE=true "
             "and configure DB_VENDOR + credentials.",
         )
 
@@ -355,7 +355,7 @@ async def shortcut_execute_query(
 
     # Auto-detect dialect from DB_VENDOR when not provided
     if dialect is None:
-        dialect = str(fi["db_vendor"])
+        dialect = get_db_vendor()
 
     # Enforce a configurable default limit if the query has none
     query: QueryObject = body

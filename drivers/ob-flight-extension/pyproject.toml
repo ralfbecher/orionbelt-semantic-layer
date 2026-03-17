@@ -17,12 +17,14 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+duckdb      = ["ob-duckdb>=0.1"]
 snowflake   = ["ob-snowflake>=0.1"]
 postgres    = ["ob-postgres>=0.1"]
 clickhouse  = ["ob-clickhouse>=0.1"]
 dremio      = ["ob-dremio>=0.1"]
 databricks  = ["ob-databricks>=0.1"]
 all = [
+    "ob-duckdb>=0.1",
     "ob-snowflake>=0.1",
     "ob-postgres>=0.1",
     "ob-clickhouse>=0.1",

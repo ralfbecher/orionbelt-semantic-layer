@@ -95,6 +95,7 @@ class TestSettingsEndpoint:
                 "auth_mode": "token",
                 "db_vendor": "postgres",
             },
+            query_execute_enabled=True,
         )
         try:
             transport = ASGITransport(app=app)
@@ -102,6 +103,7 @@ class TestSettingsEndpoint:
                 response = await c.get("/v1/settings")
             assert response.status_code == 200
             data = response.json()
+            assert data["query_execute"] is True
             flight = data["flight"]
             assert flight is not None
             assert flight["enabled"] is True
@@ -496,10 +498,10 @@ class TestSingleModelMode:
 
 
 class TestQueryExecuteEndpoint:
-    """Tests for POST /query/execute — gated by FLIGHT_ENABLED."""
+    """Tests for POST /query/execute — gated by QUERY_EXECUTE."""
 
-    async def test_execute_returns_503_without_flight(self, client: AsyncClient) -> None:
-        """Execution endpoint returns 503 when FLIGHT_ENABLED is not set."""
+    async def test_execute_returns_503_without_query_execute(self, client: AsyncClient) -> None:
+        """Execution endpoint returns 503 when QUERY_EXECUTE is not set."""
         sid = (await client.post("/v1/sessions")).json()["session_id"]
         load = await client.post(
             f"/v1/sessions/{sid}/models",
@@ -520,12 +522,12 @@ class TestQueryExecuteEndpoint:
             },
         )
         assert response.status_code == 503
-        assert "FLIGHT_ENABLED" in response.json()["detail"]
+        assert "QUERY_EXECUTE" in response.json()["detail"]
 
     async def test_execute_shortcut_returns_503_without_flight(
         self, single_model_client: AsyncClient
     ) -> None:
-        """Shortcut execution endpoint returns 503 without FLIGHT_ENABLED."""
+        """Shortcut execution endpoint returns 503 without QUERY_EXECUTE."""
         await single_model_client.post("/v1/sessions")
         response = await single_model_client.post(
             "/v1/query/execute",
@@ -538,7 +540,7 @@ class TestQueryExecuteEndpoint:
             params={"dialect": "duckdb"},
         )
         assert response.status_code == 503
-        assert "FLIGHT_ENABLED" in response.json()["detail"]
+        assert "QUERY_EXECUTE" in response.json()["detail"]
 
     async def test_execute_compilation_error_returns_422(self) -> None:
         """Compilation errors are returned before attempting execution."""
@@ -550,7 +552,8 @@ class TestQueryExecuteEndpoint:
         )
         init_session_manager(
             mgr,
-            flight_info={"enabled": True, "port": 8815, "auth_mode": "none", "db_vendor": "duckdb"},
+            query_execute_enabled=True,
+            db_vendor="duckdb",
         )
         try:
             transport = ASGITransport(app=app)

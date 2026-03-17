@@ -53,10 +53,11 @@ ENV PORT=8080 \
     LOG_LEVEL=INFO \
     LOG_FORMAT=json \
     MODEL_DIR=/app/models \
+    QUERY_EXECUTE=true \
+    DB_VENDOR=duckdb \
     FLIGHT_ENABLED=true \
     FLIGHT_PORT=8815 \
-    FLIGHT_AUTH_MODE=none \
-    DB_VENDOR=duckdb
+    FLIGHT_AUTH_MODE=none
 
 EXPOSE 8080 8815
 

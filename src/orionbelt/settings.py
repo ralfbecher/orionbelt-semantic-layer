@@ -43,11 +43,12 @@ class Settings(BaseSettings):
     model_file: str | None = None  # filename or absolute path to OBML YAML
 
     # Query execution
+    query_execute: bool = False  # enable POST /v1/query/execute
     query_default_limit: int = 1000  # max rows when query has no LIMIT
     db_pool_size: int = 5  # connection pool size per dialect
 
     # Arrow Flight SQL server (requires ob-flight-extension)
-    flight_enabled: bool = False
+    flight_enabled: bool = False  # start gRPC Flight server on FLIGHT_PORT (implies query_execute)
     flight_port: int = 8815
     flight_auth_mode: str = "none"  # "none" or "token"
     flight_api_token: str | None = None

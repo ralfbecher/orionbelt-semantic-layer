@@ -8,6 +8,7 @@ from orionbelt.api.deps import (
     get_flight_info,
     get_preload_model_yaml,
     get_session_manager,
+    is_query_execute_enabled,
     is_single_model_mode,
 )
 from orionbelt.api.schemas import FlightSettingsInfo, SettingsResponse
@@ -26,5 +27,6 @@ async def get_settings(
         single_model_mode=is_single_model_mode(),
         model_yaml=get_preload_model_yaml() if is_single_model_mode() else None,
         session_ttl_seconds=mgr.ttl,
+        query_execute=is_query_execute_enabled(),
         flight=FlightSettingsInfo(**fi) if fi else None,
     )
