@@ -23,6 +23,7 @@ drivers/
 │       ├── exceptions.py        ← PEP 249 exception hierarchy
 │       └── type_codes.py        ← PEP 249 type objects (STRING, NUMBER, etc.)
 │
+├── ob-bigquery/                 ← DB-API 2.0 driver for BigQuery
 ├── ob-duckdb/                   ← DB-API 2.0 driver for DuckDB
 ├── ob-postgres/                 ← DB-API 2.0 driver for PostgreSQL
 ├── ob-snowflake/                ← DB-API 2.0 driver for Snowflake

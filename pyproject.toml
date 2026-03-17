@@ -113,6 +113,7 @@ dev = [
 [tool.uv.workspace]
 members = [
     "drivers/ob-driver-core",
+    "drivers/ob-bigquery",
     "drivers/ob-snowflake",
     "drivers/ob-postgres",
     "drivers/ob-clickhouse",
@@ -126,6 +127,7 @@ members = [
 # Workspace members reference each other without needing PyPI publication
 orionbelt-semantic-layer = { workspace = true }
 ob-driver-core = { workspace = true }
+ob-bigquery = { workspace = true }
 ob-snowflake = { workspace = true }
 ob-postgres = { workspace = true }
 ob-clickhouse = { workspace = true }

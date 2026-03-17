@@ -9,6 +9,7 @@ from typing import Any
 
 # Dialect name -> Python module name for the OB driver
 VENDOR_MAP: dict[str, str] = {
+    "bigquery": "ob_bigquery",
     "duckdb": "ob_duckdb",
     "postgres": "ob_postgres",
     "snowflake": "ob_snowflake",
@@ -19,6 +20,11 @@ VENDOR_MAP: dict[str, str] = {
 
 # Environment variable prefixes for vendor credentials
 _CREDENTIAL_KEYS: dict[str, list[str]] = {
+    "bigquery": [
+        "BIGQUERY_PROJECT",
+        "BIGQUERY_LOCATION",
+        "BIGQUERY_CREDENTIALS_FILE",
+    ],
     "duckdb": ["DUCKDB_DATABASE"],
     "postgres": [
         "POSTGRES_HOST",
@@ -57,6 +63,9 @@ _CREDENTIAL_KEYS: dict[str, list[str]] = {
 
 # Env var name -> connect() kwarg name mapping
 _ENV_TO_KWARG: dict[str, str] = {
+    "BIGQUERY_PROJECT": "project",
+    "BIGQUERY_LOCATION": "location",
+    "BIGQUERY_CREDENTIALS_FILE": "credentials_file",
     "DUCKDB_DATABASE": "database",
     "POSTGRES_HOST": "host",
     "POSTGRES_PORT": "port",
