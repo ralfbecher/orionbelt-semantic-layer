@@ -6,9 +6,11 @@
 
 <p align="center"><strong>Compile and execute YAML semantic models as analytical SQL across multiple database dialects</strong></p>
 
+[![GitHub stars](https://img.shields.io/github/stars/ralfbecher/orionbelt-semantic-layer?style=social)](https://github.com/ralfbecher/orionbelt-semantic-layer)
 [![Version 1.1.0](https://img.shields.io/badge/version-1.1.0-purple.svg)](https://github.com/ralfbecher/orionbelt-semantic-layer/releases)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![License: BSL 1.1](https://img.shields.io/badge/License-BSL_1.1-orange.svg)](https://github.com/ralfbecher/orionbelt-semantic-layer/blob/main/LICENSE)
+[![Docker Hub](https://img.shields.io/docker/pulls/ralforion/orionbelt-api?logo=docker&label=Docker%20Hub)](https://hub.docker.com/u/ralforion)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.128+-009688.svg?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![Pydantic v2](https://img.shields.io/badge/Pydantic-v2-E92063.svg?logo=pydantic&logoColor=white)](https://docs.pydantic.dev)
 [![Gradio](https://img.shields.io/badge/Gradio-5.0+-F97316.svg?logo=gradio&logoColor=white)](https://www.gradio.app)
@@ -199,6 +201,8 @@ LIMIT 100
 ```
 
 Change the dialect to `"bigquery"`, `"clickhouse"`, `"databricks"`, `"dremio"`, `"duckdb"`, or `"snowflake"` to get dialect-specific SQL.
+
+> **Interactive notebook:** Try the full workflow in [`examples/quickstart.ipynb`](examples/quickstart.ipynb) — uses the TPC-H dataset in DuckDB to demonstrate multi-dialect compilation, query execution, multi-fact CFL, metrics, filters, and ER diagrams.
 
 ### Use the REST API with Sessions
 
