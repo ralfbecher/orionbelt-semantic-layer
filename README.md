@@ -335,7 +335,7 @@ The ER diagram is also available as download (MD, or PNG) or via the REST API.
 
 ## Docker
 
-### Docker Hub
+### [Docker Hub](https://hub.docker.com/repositories/ralforion)
 
 Pre-built multi-platform images (linux/amd64, linux/arm64) are available on Docker Hub:
 
