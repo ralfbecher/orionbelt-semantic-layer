@@ -13,6 +13,8 @@
 [![Pydantic v2](https://img.shields.io/badge/Pydantic-v2-E92063.svg?logo=pydantic&logoColor=white)](https://docs.pydantic.dev)
 [![Gradio](https://img.shields.io/badge/Gradio-5.0+-F97316.svg?logo=gradio&logoColor=white)](https://www.gradio.app)
 [![sqlglot](https://img.shields.io/badge/sqlglot-26.0+-4B8BBE.svg)](https://github.com/tobymao/sqlglot)
+[![Arrow Flight SQL](https://img.shields.io/badge/Arrow_Flight_SQL-ready-D22128.svg?logo=apachearrow&logoColor=white)](https://arrow.apache.org/docs/format/FlightSql.html)
+[![DB-API 2.0](https://img.shields.io/badge/DB--API_2.0-PEP_249-3776AB.svg?logo=python&logoColor=white)](https://peps.python.org/pep-0249/)
 [![Docker](https://img.shields.io/badge/Docker-ready-2496ED.svg?logo=docker&logoColor=white)](https://docs.docker.com)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://docs.astral.sh/ruff/)
 [![mypy](https://img.shields.io/badge/type--checked-mypy-blue.svg)](https://mypy-lang.org)
@@ -42,6 +44,8 @@ OrionBelt Semantic Layer is an **API-first** semantic engine and query planner f
 - **MCP Server** — Available as a separate thin client in [orionbelt-semantic-layer-mcp](https://github.com/ralfbecher/orionbelt-semantic-layer-mcp) — delegates to the REST API via HTTP, deployable independently (e.g. to Prefect Horizon)
 - **Gradio UI** — Interactive web interface for model editing, query testing, and SQL compilation with live validation feedback
 - **[OSI](https://github.com/open-semantic-interchange/OSI) Interoperability** — Bidirectional conversion between OBML and the Open Semantic Interchange format via REST API (`/convert`) and Gradio UI, with validation for both directions
+- **DB-API 2.0 Drivers** — PEP 249 drivers for all 7 databases with transparent OBML-to-SQL compilation via REST API
+- **Arrow Flight SQL** — Embedded gRPC server for DBeaver, Tableau, and Power BI — single container, two ports (8080 + 8815)
 - **Plugin Architecture** — Extensible dialect system with capability flags and registry
 
 ## Quick Start
