@@ -272,13 +272,13 @@ pyyaml = ">=6.0"
 
 [project.optional-dependencies]
 snowflake = ["snowflake-connector-python>=3.0"]
-postgres  = ["psycopg2-binary>=2.9"]
+postgres  = ["adbc-driver-postgresql>=1.0"]
 clickhouse = ["clickhouse-connect>=0.7"]
 dremio    = ["pyarrow>=16.0"]   # Dremio uses Arrow Flight natively
 databricks = ["databricks-sql-connector>=3.0"]
 all = [
     "snowflake-connector-python>=3.0",
-    "psycopg2-binary>=2.9",
+    "adbc-driver-postgresql>=1.0",
     "clickhouse-connect>=0.7",
     "databricks-sql-connector>=3.0",
 ]

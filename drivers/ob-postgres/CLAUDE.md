@@ -2,9 +2,12 @@
 
 ## Purpose
 
-PEP 249 DB-API 2.0 driver wrapping `psycopg2-binary = ">=2.9"` that intercepts OBML YAML
+PEP 249 DB-API 2.0 driver wrapping `adbc-driver-postgresql = ">=1.0"` that intercepts OBML YAML
 queries, compiles them to postgres SQL via the OrionBelt CompilationPipeline
 (direct import) or OB REST API (standalone), and executes them natively.
+
+Uses ADBC (Arrow Database Connectivity) for native Arrow support — `fetch_arrow_table()`
+returns zero-copy PyArrow Tables directly from the PostgreSQL wire protocol.
 
 **OB dialect string:** `"postgres"`
 **Author:** Ralfo Becher / RALFORION d.o.o. (info@orionbelt.ai)
@@ -18,7 +21,7 @@ queries, compiles them to postgres SQL via the OrionBelt CompilationPipeline
 |---|---|
 | `__init__.py` | PEP 249 connect() + module constants |
 | `connection.py` | Connection class |
-| `cursor.py` | Cursor class — OBML detection + execution |
+| `cursor.py` | Cursor class — OBML detection + execution + Arrow |
 | `compiler.py` | Direct OB import or REST fallback |
 | `exceptions.py` | PEP 249 exception hierarchy |
 | `type_codes.py` | PEP 249 type objects |
@@ -67,17 +70,19 @@ def compile_obml(obml: dict, model, dialect: str) -> str:
 
 ## Vendor-Specific Notes
 
-- psycopg2 uses %s paramstyle; set paramstyle="format" in module globals
+- ADBC uses ? (qmark) paramstyle; set paramstyle="qmark" in module globals
+- connect() builds a PostgreSQL URI from keyword args for ADBC
 - commit() and rollback() are meaningful — Postgres uses real transactions
-- Connection default is autocommit=False; set autocommit=True if needed
+- fetch_arrow_table() returns zero-copy PyArrow Table via ADBC native Arrow support
 - orionbelt_1 schema validated against this driver; fan-trap prevention via UNION ALL is critical
 
 ---
 
 ## Type System
 
-Use psycopg2.extensions type OIDs for description.type_code.
-Map common OIDs: 23=INT4, 25=TEXT, 700=FLOAT4, 701=FLOAT8, 1114=TIMESTAMP.
+ADBC cursor description may return OIDs or ADBC type identifiers.
+PG_OID_MAP maps common OIDs: 23=INT4, 25=TEXT, 700=FLOAT4, 701=FLOAT8, 1114=TIMESTAMP.
+Arrow path bypasses type_code mapping entirely — uses Arrow schema types directly.
 
 ---
 
@@ -94,7 +99,8 @@ Session 4: SQLAlchemy dialect (ob+postgres:// URL scheme)
 
 ```toml
 [project.dependencies]
-psycopg2-binary = ">=2.9"
+adbc-driver-postgresql = ">=1.0"
+pyarrow = ">=16.0"
 pyyaml = ">=6.0"
 
 [project.optional-dependencies]

@@ -69,7 +69,7 @@ OrionBelt REST API (port 8080)
     │
     │  compiled SQL
     ▼
-Native connector (psycopg2, snowflake-connector, etc.)
+Native connector (adbc-driver-postgresql, snowflake-connector, etc.)
     │
     ▼
 Database

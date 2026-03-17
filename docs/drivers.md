@@ -6,17 +6,17 @@ All drivers work against the **OrionBelt REST API in single-model mode** (`MODEL
 
 ## Package Overview
 
-| Package | Database | Native Connector | Dialect | paramstyle |
-|---------|----------|-------------------|---------|------------|
-| `ob-driver-core` | — | — | — | — |
-| `ob-bigquery` | BigQuery | `google-cloud-bigquery` | `bigquery` | `pyformat` |
-| `ob-duckdb` | DuckDB | `duckdb` | `duckdb` | `qmark` |
-| `ob-postgres` | PostgreSQL | `psycopg2` | `postgres` | `format` |
-| `ob-snowflake` | Snowflake | `snowflake-connector-python` | `snowflake` | `pyformat` |
-| `ob-clickhouse` | ClickHouse | `clickhouse-connect` | `clickhouse` | `pyformat` |
-| `ob-dremio` | Dremio | `pyarrow.flight` | `dremio` | `qmark` |
-| `ob-databricks` | Databricks | `databricks-sql-connector` | `databricks` | `pyformat` |
-| `ob-flight-extension` | Arrow Flight SQL server | `pyarrow.flight` | all | — |
+| Package | Database | Native Connector | Dialect | paramstyle | Arrow Support |
+|---------|----------|-------------------|---------|------------|---------------|
+| `ob-driver-core` | — | — | — | — | — |
+| `ob-bigquery` | BigQuery | `google-cloud-bigquery` | `bigquery` | `pyformat` | `to_arrow()` |
+| `ob-duckdb` | DuckDB | `duckdb` | `duckdb` | `qmark` | `fetch_arrow_table()` |
+| `ob-postgres` | PostgreSQL | `adbc-driver-postgresql` | `postgres` | `qmark` | ADBC native |
+| `ob-snowflake` | Snowflake | `snowflake-connector-python` | `snowflake` | `pyformat` | `fetch_arrow_all()` |
+| `ob-clickhouse` | ClickHouse | `clickhouse-connect` | `clickhouse` | `pyformat` | `query_arrow()` |
+| `ob-dremio` | Dremio | `pyarrow.flight` | `dremio` | `qmark` | Flight native |
+| `ob-databricks` | Databricks | `databricks-sql-connector` | `databricks` | `pyformat` | `fetchall_arrow()` |
+| `ob-flight-extension` | Arrow Flight SQL server | `pyarrow.flight` | all | — | — |
 
 `ob-driver-core` is the shared foundation — PEP 249 exceptions, type codes, OBML detection, and the REST compilation bridge. All vendor drivers depend on it.
 

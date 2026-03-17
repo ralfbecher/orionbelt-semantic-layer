@@ -367,17 +367,17 @@ The API is available at `http://localhost:8080`. The UI is at `http://localhost:
 
 OrionBelt provides **PEP 249 DB-API 2.0 drivers** for 7 databases and an **Arrow Flight SQL server** that enables BI tools like DBeaver, Tableau, and Power BI to run OBML queries directly.
 
-| Package | Database | Native Connector |
-|---------|----------|------------------|
-| `ob-driver-core` | — (shared foundation) | — |
-| `ob-bigquery` | BigQuery | `google-cloud-bigquery` |
-| `ob-duckdb` | DuckDB | `duckdb` |
-| `ob-postgres` | PostgreSQL | `psycopg2` |
-| `ob-snowflake` | Snowflake | `snowflake-connector-python` |
-| `ob-clickhouse` | ClickHouse | `clickhouse-connect` |
-| `ob-dremio` | Dremio | `pyarrow.flight` |
-| `ob-databricks` | Databricks | `databricks-sql-connector` |
-| `ob-flight-extension` | Arrow Flight SQL server | `pyarrow.flight` |
+| Package | Database | Native Connector | Arrow Support |
+|---------|----------|------------------|---------------|
+| `ob-driver-core` | — (shared foundation) | — | — |
+| `ob-bigquery` | BigQuery | `google-cloud-bigquery` | `to_arrow()` |
+| `ob-duckdb` | DuckDB | `duckdb` | `fetch_arrow_table()` |
+| `ob-postgres` | PostgreSQL | `adbc-driver-postgresql` | ADBC native |
+| `ob-snowflake` | Snowflake | `snowflake-connector-python` | `fetch_arrow_all()` |
+| `ob-clickhouse` | ClickHouse | `clickhouse-connect` | `query_arrow()` |
+| `ob-dremio` | Dremio | `pyarrow.flight` | Flight native |
+| `ob-databricks` | Databricks | `databricks-sql-connector` | `fetchall_arrow()` |
+| `ob-flight-extension` | Arrow Flight SQL server | `pyarrow.flight` | — |
 
 All drivers work against the OrionBelt REST API in **single-model mode** (`MODEL_FILE` set). OBML queries are compiled transparently via `POST /v1/query/sql` — the user writes OBML, the driver returns SQL results. Plain SQL queries bypass the API entirely.
 
