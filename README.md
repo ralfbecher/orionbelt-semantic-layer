@@ -332,7 +332,29 @@ The ER diagram is also available as download (MD, or PNG) or via the REST API.
 
 ## Docker
 
-### Build and Run
+### Docker Hub
+
+Pre-built multi-platform images (linux/amd64, linux/arm64) are available on Docker Hub:
+
+```bash
+# API-only (REST API on :8080)
+docker pull ralforion/orionbelt-api
+docker run -p 8080:8080 ralforion/orionbelt-api
+
+# API + Arrow Flight SQL (REST on :8080, Flight on :8815)
+docker pull ralforion/orionbelt-flight
+docker run -p 8080:8080 -p 8815:8815 --env-file .env ralforion/orionbelt-flight
+
+# UI (Gradio on :7860, connects to API)
+docker pull ralforion/orionbelt-ui
+docker run -p 7860:7860 \
+  -e API_BASE_URL=http://host.docker.internal:8080 \
+  ralforion/orionbelt-ui
+```
+
+See [docs/drivers.md](docs/drivers.md) for Flight SQL configuration and BI tool setup (DBeaver, Tableau, Power BI).
+
+### Build and Run (from source)
 
 Two separate images — API-only (fast) and UI (with Gradio):
 
