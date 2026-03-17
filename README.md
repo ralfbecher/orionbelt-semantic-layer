@@ -6,7 +6,7 @@
 
 <p align="center"><strong>Compile and execute YAML semantic models as analytical SQL across multiple database dialects</strong></p>
 
-[![Version 1.0.0](https://img.shields.io/badge/version-1.0.0-purple.svg)](https://github.com/ralfbecher/orionbelt-semantic-layer/releases)
+[![Version 1.1.0](https://img.shields.io/badge/version-1.1.0-purple.svg)](https://github.com/ralfbecher/orionbelt-semantic-layer/releases)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![License: BSL 1.1](https://img.shields.io/badge/License-BSL_1.1-orange.svg)](https://github.com/ralfbecher/orionbelt-semantic-layer/blob/main/LICENSE)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.128+-009688.svg?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
