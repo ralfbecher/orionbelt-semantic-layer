@@ -361,11 +361,12 @@ The API is available at `http://localhost:8080`. The UI is at `http://localhost:
 
 ## DB-API 2.0 Drivers & Arrow Flight SQL
 
-OrionBelt provides **PEP 249 DB-API 2.0 drivers** for 6 databases and an **Arrow Flight SQL server** that enables BI tools like DBeaver, Tableau, and Power BI to run OBML queries directly.
+OrionBelt provides **PEP 249 DB-API 2.0 drivers** for 7 databases and an **Arrow Flight SQL server** that enables BI tools like DBeaver, Tableau, and Power BI to run OBML queries directly.
 
 | Package | Database | Native Connector |
 |---------|----------|------------------|
 | `ob-driver-core` | — (shared foundation) | — |
+| `ob-bigquery` | BigQuery | `google-cloud-bigquery` |
 | `ob-duckdb` | DuckDB | `duckdb` |
 | `ob-postgres` | PostgreSQL | `psycopg2` |
 | `ob-snowflake` | Snowflake | `snowflake-connector-python` |

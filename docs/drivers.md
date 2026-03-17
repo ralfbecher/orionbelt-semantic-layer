@@ -1,6 +1,6 @@
 # DB-API 2.0 Drivers & Arrow Flight SQL
 
-OrionBelt provides PEP 249 DB-API 2.0 drivers for 6 databases and an Arrow Flight SQL server extension that enables BI tools like DBeaver, Tableau, and Power BI to run OBML queries directly.
+OrionBelt provides PEP 249 DB-API 2.0 drivers for 7 databases and an Arrow Flight SQL server extension that enables BI tools like DBeaver, Tableau, and Power BI to run OBML queries directly.
 
 All drivers work against the **OrionBelt REST API in single-model mode** (`MODEL_FILE` set). OBML queries are compiled transparently via `POST /v1/query/sql` — the user writes OBML, the driver returns SQL results.
 
@@ -9,6 +9,7 @@ All drivers work against the **OrionBelt REST API in single-model mode** (`MODEL
 | Package | Database | Native Connector | Dialect | paramstyle |
 |---------|----------|-------------------|---------|------------|
 | `ob-driver-core` | — | — | — | — |
+| `ob-bigquery` | BigQuery | `google-cloud-bigquery` | `bigquery` | `pyformat` |
 | `ob-duckdb` | DuckDB | `duckdb` | `duckdb` | `qmark` |
 | `ob-postgres` | PostgreSQL | `psycopg2` | `postgres` | `format` |
 | `ob-snowflake` | Snowflake | `snowflake-connector-python` | `snowflake` | `pyformat` |
@@ -203,7 +204,7 @@ Drivers are workspace packages. Tests run without external services — all nati
 uv run --package ob-duckdb --with pytest python -m pytest drivers/ob-duckdb/tests/ -v
 
 # All drivers
-for pkg in ob-driver-core ob-duckdb ob-postgres ob-snowflake ob-clickhouse ob-dremio ob-databricks ob-flight-extension; do
+for pkg in ob-driver-core ob-bigquery ob-duckdb ob-postgres ob-snowflake ob-clickhouse ob-dremio ob-databricks ob-flight-extension; do
   echo "=== $pkg ==="
   uv run --package $pkg --with pytest python -m pytest drivers/$pkg/tests/ -v
 done
