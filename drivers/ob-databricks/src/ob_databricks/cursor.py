@@ -111,6 +111,15 @@ class Cursor:
         rows = self._native.fetchall()
         return [tuple(r) for r in rows]
 
+    def fetch_arrow_table(self) -> Any:  # noqa: ANN401
+        """Fetch all remaining rows as a PyArrow Table.
+
+        Databricks SQL connector returns Arrow natively via its internal
+        Thrift/Arrow result format.  More memory-efficient than ``fetchall()``.
+        """
+        self._check_open()
+        return self._native.fetchall_arrow()
+
     def close(self) -> None:
         """Close the cursor."""
         if not self._closed:

@@ -2,8 +2,13 @@
 
 from __future__ import annotations
 
+import contextlib
 import importlib
 import os
+import queue
+import threading
+from collections.abc import Generator
+from contextlib import contextmanager
 from typing import Any
 
 
@@ -121,10 +126,89 @@ def connect(dialect: str, **overrides: Any) -> Any:
     Raises KeyError if dialect is not supported.
     """
     if dialect not in VENDOR_MAP:
-        raise KeyError(
-            f"Unsupported dialect: {dialect!r}. Supported: {sorted(VENDOR_MAP)}"
-        )
+        raise KeyError(f"Unsupported dialect: {dialect!r}. Supported: {sorted(VENDOR_MAP)}")
     module = importlib.import_module(VENDOR_MAP[dialect])
     kwargs = get_credentials(dialect)
     kwargs.update(overrides)
     return module.connect(**kwargs)
+
+
+# ---------------------------------------------------------------------------
+# Connection pool — reuses connections per dialect to avoid connection storms
+# ---------------------------------------------------------------------------
+
+
+class ConnectionPool:
+    """Thread-safe connection pool for a single dialect.
+
+    Idle connections are held in a bounded queue.  ``acquire()`` returns a
+    pooled connection when available, otherwise creates a new one.
+    ``release()`` returns a connection to the pool (or closes it if full).
+    """
+
+    def __init__(self, dialect: str, max_size: int = 5) -> None:
+        self._dialect = dialect
+        self._pool: queue.Queue[Any] = queue.Queue(maxsize=max_size)
+
+    def acquire(self, **overrides: Any) -> Any:
+        """Get a connection from the pool or create a new one."""
+        try:
+            return self._pool.get_nowait()
+        except queue.Empty:
+            return connect(self._dialect, **overrides)
+
+    def release(self, conn: Any) -> None:
+        """Return a connection to the pool (closes it if pool is full)."""
+        try:
+            self._pool.put_nowait(conn)
+        except queue.Full:
+            with contextlib.suppress(Exception):
+                conn.close()
+
+
+_pools: dict[str, ConnectionPool] = {}
+_pools_lock = threading.Lock()
+
+
+def _get_pool(dialect: str) -> ConnectionPool:
+    """Get or create the pool for a given dialect."""
+    with _pools_lock:
+        if dialect not in _pools:
+            max_size = int(os.getenv("DB_POOL_SIZE", "5"))
+            _pools[dialect] = ConnectionPool(dialect, max_size=max_size)
+        return _pools[dialect]
+
+
+@contextmanager
+def get_connection(dialect: str, **overrides: Any) -> Generator[Any, None, None]:
+    """Context manager that acquires a pooled connection.
+
+    On clean exit the connection is returned to the pool.
+    On exception the connection is discarded (closed).
+    """
+    pool = _get_pool(dialect)
+    conn = pool.acquire(**overrides)
+    ok = False
+    try:
+        yield conn
+        ok = True
+    finally:
+        if ok:
+            pool.release(conn)
+        else:
+            with contextlib.suppress(Exception):
+                conn.close()
+
+
+def close_all_pools() -> None:
+    """Drain all pools and close every idle connection (for shutdown)."""
+    with _pools_lock:
+        for pool in _pools.values():
+            while True:
+                try:
+                    conn = pool._pool.get_nowait()
+                    with contextlib.suppress(Exception):
+                        conn.close()
+                except queue.Empty:
+                    break
+        _pools.clear()

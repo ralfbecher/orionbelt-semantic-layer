@@ -1,5 +1,9 @@
 """ob-postgres — OrionBelt Semantic Layer driver for PostgreSQL (PEP 249 DB-API 2.0).
 
+Uses ``adbc-driver-postgresql`` for native Arrow support.  ADBC provides
+zero-copy Arrow results directly from the PostgreSQL wire protocol, enabling
+efficient Arrow Flight SQL streaming.
+
 Requires the OrionBelt REST API running in single-model mode (MODEL_FILE set).
 OBML queries are compiled to SQL via ``POST /v1/query/sql``.
 
@@ -16,13 +20,14 @@ Usage::
 from __future__ import annotations
 
 from typing import Any
+from urllib.parse import quote_plus, urlencode
 
-import psycopg2
+import adbc_driver_postgresql.dbapi
 
 from ob_postgres.connection import Connection
 from ob_postgres.exceptions import (
-    DataError,
     DatabaseError,
+    DataError,
     Error,
     IntegrityError,
     InterfaceError,
@@ -36,7 +41,30 @@ from ob_postgres.exceptions import (
 # PEP 249 module-level constants
 apilevel = "2.0"
 threadsafety = 1  # threads may share the module but not connections
-paramstyle = "format"  # psycopg2 uses %s placeholders
+paramstyle = "qmark"  # ADBC uses ? placeholders
+
+
+def _build_pg_uri(
+    *,
+    host: str,
+    port: int,
+    dbname: str,
+    user: str | None,
+    password: str | None,
+    sslmode: str | None,
+) -> str:
+    """Build a PostgreSQL connection URI from keyword arguments."""
+    userinfo = ""
+    if user is not None:
+        userinfo = quote_plus(user)
+        if password is not None:
+            userinfo += f":{quote_plus(password)}"
+        userinfo += "@"
+    params: dict[str, str] = {}
+    if sslmode is not None:
+        params["sslmode"] = sslmode
+    query = f"?{urlencode(params)}" if params else ""
+    return f"postgresql://{userinfo}{host}:{port}/{dbname}{query}"
 
 
 def connect(
@@ -53,12 +81,12 @@ def connect(
     ob_api_url: str = "http://localhost:8000",
     ob_timeout: int = 30,
 ) -> Connection:
-    """Open a PostgreSQL connection with OBML support.
+    """Open a PostgreSQL connection with OBML support (ADBC driver).
 
     Parameters
     ----------
     dsn : str, optional
-        Full libpq connection string (overrides individual params).
+        Full PostgreSQL URI (overrides individual params).
     host : str
         PostgreSQL host (default: ``localhost``).
     port : int
@@ -72,29 +100,29 @@ def connect(
     sslmode : str, optional
         SSL mode (``disable``, ``require``, ``verify-full``, etc.).
     options : dict, optional
-        Extra libpq connection options.
+        Extra connection options (added as URI query parameters).
     ob_api_url : str
         OrionBelt REST API URL (must be running in single-model mode).
     ob_timeout : int
         HTTP timeout in seconds for OBML compilation.
     """
-    connect_kwargs: dict[str, Any] = {}
     if dsn is not None:
-        connect_kwargs["dsn"] = dsn
+        uri = dsn
     else:
-        connect_kwargs["host"] = host
-        connect_kwargs["port"] = port
-        connect_kwargs["dbname"] = dbname
-        if user is not None:
-            connect_kwargs["user"] = user
-        if password is not None:
-            connect_kwargs["password"] = password
-        if sslmode is not None:
-            connect_kwargs["sslmode"] = sslmode
-    if options:
-        connect_kwargs["options"] = options
+        uri = _build_pg_uri(
+            host=host,
+            port=port,
+            dbname=dbname,
+            user=user,
+            password=password,
+            sslmode=sslmode,
+        )
+        # Append extra options as query parameters
+        if options:
+            sep = "&" if "?" in uri else "?"
+            uri += sep + urlencode(options)
 
-    native = psycopg2.connect(**connect_kwargs)
+    native = adbc_driver_postgresql.dbapi.connect(uri)
     return Connection(
         native,
         ob_api_url=ob_api_url,

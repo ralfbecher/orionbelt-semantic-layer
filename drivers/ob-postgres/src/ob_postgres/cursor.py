@@ -1,4 +1,9 @@
-"""PEP 249 Cursor with OBML interception for PostgreSQL."""
+"""PEP 249 Cursor with OBML interception for PostgreSQL.
+
+Uses ``adbc-driver-postgresql`` (Arrow Database Connectivity) for native
+Arrow support.  ``fetch_arrow_table()`` returns a PyArrow Table directly
+from the ADBC cursor — zero-copy columnar transfer for Arrow Flight SQL.
+"""
 
 from __future__ import annotations
 
@@ -14,6 +19,9 @@ class Cursor:
 
     If the query is OBML, it is compiled to PostgreSQL SQL via the OrionBelt
     REST API before execution. Plain SQL is passed through unchanged.
+
+    Wraps an ``adbc_driver_postgresql.dbapi`` cursor which natively supports
+    ``fetch_arrow_table()`` for zero-copy Arrow results.
     """
 
     arraysize: int = 1
@@ -40,10 +48,11 @@ class Cursor:
             return None
         cols: list[tuple[str, Any, None, None, None, None, None]] = []
         for col in native_desc:
-            name = col.name
-            oid = col.type_code
-            type_code = PG_OID_MAP.get(oid, STRING)
-            cols.append((name, type_code, None, None, None, None, None))
+            name = col[0]
+            type_code = col[1]
+            # ADBC PG driver may return OIDs or other type identifiers
+            mapped = PG_OID_MAP.get(type_code, STRING) if isinstance(type_code, int) else STRING
+            cols.append((name, mapped, None, None, None, None, None))
         return tuple(cols)
 
     @property
@@ -106,6 +115,16 @@ class Cursor:
         rows = self._native.fetchall()
         return [tuple(r) for r in rows]
 
+    def fetch_arrow_table(self) -> Any:
+        """Fetch all remaining rows as a PyArrow Table (ADBC native).
+
+        ADBC provides zero-copy Arrow results directly from the PostgreSQL
+        wire protocol.  Significantly more memory-efficient than materialising
+        Python row objects and enables efficient Arrow Flight SQL streaming.
+        """
+        self._check_open()
+        return self._native.fetch_arrow_table()
+
     def close(self) -> None:
         """Close the cursor."""
         if not self._closed:
@@ -120,7 +139,7 @@ class Cursor:
 
     @property
     def lastrowid(self) -> None:
-        """PostgreSQL does not expose lastrowid via psycopg2 cursor."""
+        """PostgreSQL does not expose lastrowid via ADBC cursor."""
         return None
 
     def __enter__(self) -> Cursor:

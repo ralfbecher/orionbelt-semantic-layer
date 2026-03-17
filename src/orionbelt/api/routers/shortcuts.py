@@ -10,6 +10,7 @@ Returns 409 Conflict if resolution is ambiguous.
 
 from __future__ import annotations
 
+import asyncio
 import re
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -323,10 +324,6 @@ async def shortcut_compile_query(
     )
 
 
-# Default limit enforced on /query/execute when the query has no explicit limit
-_EXECUTE_DEFAULT_LIMIT = 10000
-
-
 class ShortcutQueryExecuteRequest(QueryObject):
     """Query request body for the execute shortcut (query body only, dialect as param)."""
 
@@ -342,9 +339,9 @@ async def shortcut_execute_query(
     """Compile and execute a query (auto-resolves session/model).
 
     Requires FLIGHT_ENABLED=true. If ``dialect`` is omitted, uses ``DB_VENDOR``.
-    Enforces a default limit of 10 000 rows if the query has no explicit limit.
+    Enforces a configurable default row limit if the query has no explicit limit.
     """
-    from orionbelt.api.deps import get_flight_info
+    from orionbelt.api.deps import get_flight_info, get_query_default_limit
 
     fi = get_flight_info()
     if not fi:
@@ -360,10 +357,10 @@ async def shortcut_execute_query(
     if dialect is None:
         dialect = str(fi["db_vendor"])
 
-    # Enforce a default limit if the query has none
+    # Enforce a configurable default limit if the query has none
     query: QueryObject = body
     if query.limit is None:
-        query = query.model_copy(update={"limit": _EXECUTE_DEFAULT_LIMIT})
+        query = query.model_copy(update={"limit": get_query_default_limit()})
 
     try:
         result = store.compile_query(model_id, query, dialect)
@@ -388,7 +385,7 @@ async def shortcut_execute_query(
         ) from None
 
     try:
-        exec_result = execute_sql(result.sql, dialect=dialect)
+        exec_result = await asyncio.to_thread(execute_sql, result.sql, dialect=dialect)
     except ExecutionUnavailableError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from None
     except ExecutionError as exc:

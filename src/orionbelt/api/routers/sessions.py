@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from dataclasses import asdict
 from typing import Any
 
@@ -10,6 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from orionbelt.api.deps import (
     get_flight_info,
     get_preload_model_yaml,
+    get_query_default_limit,
     get_session_manager,
     is_session_list_disabled,
     is_single_model_mode,
@@ -44,9 +46,6 @@ from orionbelt.service.model_store import ModelStore, ModelValidationError
 from orionbelt.service.session_manager import SessionInfo, SessionManager, SessionNotFoundError
 
 router = APIRouter()
-
-# Default limit enforced on /query/execute when the query has no explicit limit
-_EXECUTE_DEFAULT_LIMIT = 10000
 
 
 # -- helpers -----------------------------------------------------------------
@@ -386,10 +385,10 @@ async def execute_query(
         )
     store = _get_store(session_id, mgr)
 
-    # Enforce a default limit if the query has none
+    # Enforce a configurable default limit if the query has none
     query = body.query
     if query.limit is None:
-        query = query.model_copy(update={"limit": _EXECUTE_DEFAULT_LIMIT})
+        query = query.model_copy(update={"limit": get_query_default_limit()})
 
     try:
         result = store.compile_query(body.model_id, query, body.dialect)
@@ -416,7 +415,7 @@ async def execute_query(
         ) from None
 
     try:
-        exec_result = execute_sql(result.sql, dialect=body.dialect)
+        exec_result = await asyncio.to_thread(execute_sql, result.sql, dialect=body.dialect)
     except ExecutionUnavailableError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from None
     except ExecutionError as exc:

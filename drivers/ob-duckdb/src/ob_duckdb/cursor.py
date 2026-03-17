@@ -120,6 +120,16 @@ class Cursor:
         rows = self._native.fetchall()
         return [tuple(r) for r in rows]
 
+    def fetch_arrow_table(self) -> Any:
+        """Fetch all remaining rows as a PyArrow Table (zero-copy from DuckDB).
+
+        Returns a ``pyarrow.Table``.  This avoids materialising intermediate
+        Python row objects and is significantly more memory-efficient for
+        large result sets.
+        """
+        self._check_open()
+        return self._native.fetch_arrow_table()
+
     def close(self) -> None:
         """Close the cursor."""
         if not self._closed:

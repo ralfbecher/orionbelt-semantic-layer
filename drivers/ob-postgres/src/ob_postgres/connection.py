@@ -1,4 +1,4 @@
-"""PEP 249 Connection wrapping ``psycopg2.extensions.connection``."""
+"""PEP 249 Connection wrapping ``adbc_driver_postgresql.dbapi.Connection``."""
 
 from __future__ import annotations
 
@@ -9,10 +9,11 @@ from ob_postgres.exceptions import ProgrammingError
 
 
 class Connection:
-    """DB-API 2.0 connection that wraps a native psycopg2 connection.
+    """DB-API 2.0 connection that wraps an ADBC PostgreSQL connection.
 
-    OBML queries are compiled to SQL via the OrionBelt REST API
-    (single-model mode, ``/v1/query/sql`` shortcut).
+    ADBC provides native Arrow support — cursors created from this connection
+    support ``fetch_arrow_table()`` for zero-copy Arrow Flight SQL streaming.
+    OBML queries are compiled to SQL via the OrionBelt REST API.
     """
 
     def __init__(

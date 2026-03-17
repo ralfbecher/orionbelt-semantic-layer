@@ -106,6 +106,16 @@ class Cursor:
         rows = self._native.fetchall()
         return [tuple(r) for r in rows]
 
+    def fetch_arrow_table(self) -> Any:
+        """Fetch all remaining rows as a PyArrow Table.
+
+        Snowflake connector returns Arrow natively (zero-copy from the
+        internal result format).  Significantly more memory-efficient
+        than materialising Python row objects via ``fetchall()``.
+        """
+        self._check_open()
+        return self._native.fetch_arrow_all()
+
     def close(self) -> None:
         """Close the cursor."""
         if not self._closed:

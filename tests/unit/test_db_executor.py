@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from contextlib import contextmanager
 from datetime import date, datetime
 from decimal import Decimal
 from unittest.mock import MagicMock, patch
@@ -88,6 +89,16 @@ class TestMapTypeCode:
         assert _map_type_code(None) == "string"
 
 
+def _mock_get_connection(mock_conn: MagicMock):
+    """Create a mock context manager for get_connection."""
+
+    @contextmanager
+    def _cm(dialect: str, **kw):  # noqa: ARG001
+        yield mock_conn
+
+    return _cm
+
+
 class TestExecuteSql:
     def test_import_error_raises_unavailable(self) -> None:
         with (
@@ -103,12 +114,16 @@ class TestExecuteSql:
             ("revenue", "NUMBER", None, None, None, None, None),
         ]
         mock_cursor.fetchall.return_value = [("US", 100), ("UK", 200)]
+        # Disable Arrow path — force PEP 249 fetchall
+        del mock_cursor.fetch_arrow_table
 
         mock_conn = MagicMock()
         mock_conn.cursor.return_value = mock_cursor
 
         with patch(
-            "ob_flight.db_router.connect", return_value=mock_conn, create=True
+            "ob_flight.db_router.get_connection",
+            side_effect=_mock_get_connection(mock_conn),
+            create=True,
         ):
             result = execute_sql("SELECT country, revenue FROM t", dialect="duckdb")
 
@@ -119,40 +134,71 @@ class TestExecuteSql:
         assert result.rows == [["US", 100], ["UK", 200]]
         assert result.execution_time_ms >= 0
         mock_cursor.close.assert_called_once()
-        mock_conn.close.assert_called_once()
 
     def test_db_error_raises_execution_error(self) -> None:
+        mock_cursor = MagicMock()
+        mock_cursor.execute.side_effect = RuntimeError("connection refused")
+        del mock_cursor.fetch_arrow_table
         mock_conn = MagicMock()
-        mock_conn.cursor.return_value.execute.side_effect = RuntimeError("connection refused")
+        mock_conn.cursor.return_value = mock_cursor
 
         with (
-            patch("ob_flight.db_router.connect", return_value=mock_conn, create=True),
+            patch(
+                "ob_flight.db_router.get_connection",
+                side_effect=_mock_get_connection(mock_conn),
+                create=True,
+            ),
             pytest.raises(ExecutionError, match="connection refused"),
         ):
             execute_sql("SELECT 1", dialect="duckdb")
 
     def test_unsupported_dialect_raises_unavailable(self) -> None:
+        @contextmanager
+        def _raise_key_error(dialect: str, **kw):  # noqa: ARG001
+            raise KeyError("Unsupported dialect: 'mysql'")
+            yield  # noqa: RET503 — unreachable, but needed for generator
+
         with (
             patch(
-                "ob_flight.db_router.connect",
-                side_effect=KeyError("Unsupported dialect: 'mysql'"),
+                "ob_flight.db_router.get_connection",
+                side_effect=_raise_key_error,
                 create=True,
             ),
             pytest.raises(ExecutionUnavailableError, match="mysql"),
         ):
             execute_sql("SELECT 1", dialect="mysql")
 
-    def test_cursor_and_conn_closed_on_error(self) -> None:
+    def test_cursor_closed_on_error(self) -> None:
         mock_cursor = MagicMock()
         mock_cursor.execute.side_effect = RuntimeError("boom")
+        del mock_cursor.fetch_arrow_table
         mock_conn = MagicMock()
         mock_conn.cursor.return_value = mock_cursor
 
         with (
-            patch("ob_flight.db_router.connect", return_value=mock_conn, create=True),
+            patch(
+                "ob_flight.db_router.get_connection",
+                side_effect=_mock_get_connection(mock_conn),
+                create=True,
+            ),
             pytest.raises(ExecutionError),
         ):
             execute_sql("SELECT 1", dialect="duckdb")
 
         mock_cursor.close.assert_called_once()
-        mock_conn.close.assert_called_once()
+
+
+class TestExecutionResult:
+    def test_lazy_rows_from_raw(self) -> None:
+        from orionbelt.service.db_executor import ColumnMeta
+
+        result = ExecutionResult(
+            columns=[ColumnMeta("a", "string")],
+            raw_rows=[["x"], ["y"]],
+            row_count=2,
+        )
+        assert result.rows == [["x"], ["y"]]
+
+    def test_empty_result(self) -> None:
+        result = ExecutionResult(columns=[], row_count=0)
+        assert result.rows == []

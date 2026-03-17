@@ -82,6 +82,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
         disable_session_list=settings.disable_session_list,
         preload_model_yaml=preload_yaml,
         flight_info=flight_info,
+        query_default_limit=settings.query_default_limit,
     )
 
     # Optionally start Arrow Flight SQL server in a daemon thread
@@ -112,6 +113,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
             from ob_flight.startup import stop_flight_server
 
             stop_flight_server()
+        # Drain connection pools before stopping sessions
+        try:
+            from ob_flight.db_router import close_all_pools
+
+            close_all_pools()
+        except ImportError:
+            pass
         mgr.stop()
         reset_session_manager()
 
@@ -124,8 +132,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app = FastAPI(
         title="OrionBelt Semantic Layer",
         description=(
-            "Compiles and executes YAML semantic models as analytical SQL"
-            " across multiple dialects."
+            "Compiles and executes YAML semantic models as analytical SQL across multiple dialects."
         ),
         version=__version__,
         lifespan=lifespan,

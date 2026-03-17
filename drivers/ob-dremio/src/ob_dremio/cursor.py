@@ -37,6 +37,7 @@ class Cursor:
         self._closed = False
         self._ob_api_url = ob_api_url
         self._ob_timeout = ob_timeout
+        self._arrow_table: Any = None  # kept until fetch_arrow_table() or fetchall()
         self._rows: list[tuple[Any, ...]] = []
         self._pos: int = 0
         self._description: (
@@ -129,11 +130,18 @@ class Cursor:
         self._check_open()
         sql = self._resolve_sql(operation)
         table = self._execute_sql(sql)
-        self._rows = self._table_to_rows(table)
+        self._arrow_table = table  # keep Arrow — converted lazily
+        self._rows = []
         self._pos = 0
         self._rowcount = table.num_rows
         self._build_description(table.schema)
         return self
+
+    def _ensure_rows(self) -> None:
+        """Materialise Arrow table to rows on first fetch (lazy)."""
+        if self._arrow_table is not None and not self._rows:
+            self._rows = self._table_to_rows(self._arrow_table)
+            self._arrow_table = None  # free Arrow memory
 
     def executemany(self, operation: str, seq_of_parameters: Any) -> None:
         """Execute against all parameter sequences.
@@ -152,9 +160,23 @@ class Cursor:
 
     # -- PEP 249 fetch methods ------------------------------------------------
 
+    def fetch_arrow_table(self) -> Any:
+        """Return the result as a PyArrow Table (zero-copy).
+
+        Dremio uses Arrow Flight natively, so this avoids the overhead of
+        converting to Python row tuples entirely.  After calling this method
+        the Arrow table is consumed — subsequent ``fetchall()`` calls return
+        an empty list.
+        """
+        self._check_open()
+        table = self._arrow_table
+        self._arrow_table = None
+        return table
+
     def fetchone(self) -> tuple[Any, ...] | None:
         """Fetch the next row."""
         self._check_open()
+        self._ensure_rows()
         if self._pos >= len(self._rows):
             return None
         row = self._rows[self._pos]
@@ -164,6 +186,7 @@ class Cursor:
     def fetchmany(self, size: int | None = None) -> list[tuple[Any, ...]]:
         """Fetch the next *size* rows."""
         self._check_open()
+        self._ensure_rows()
         n = size if size is not None else self.arraysize
         rows = self._rows[self._pos : self._pos + n]
         self._pos += len(rows)
@@ -172,6 +195,7 @@ class Cursor:
     def fetchall(self) -> list[tuple[Any, ...]]:
         """Fetch all remaining rows."""
         self._check_open()
+        self._ensure_rows()
         rows = self._rows[self._pos :]
         self._pos = len(self._rows)
         return rows

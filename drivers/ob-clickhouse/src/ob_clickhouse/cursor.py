@@ -5,26 +5,29 @@ clickhouse-connect is **not** DB-API 2.0 — it exposes a ``Client`` with
 adapts that interface to PEP 249 so that OBML-aware code (and plain SQL) can
 use standard cursor semantics.
 
-Each ``execute()`` fetches the entire result set into memory (client-side
-buffering).
+Each ``execute()`` uses ``query_arrow()`` to keep data in Arrow columnar
+format.  ``fetch_arrow_table()`` returns the Arrow table directly for
+zero-copy Flight SQL streaming.
 """
 
 from __future__ import annotations
 
 from typing import Any
 
+import pyarrow as pa
+
 from ob_clickhouse.compiler import compile_obml, is_obml, parse_obml
 from ob_clickhouse.exceptions import NotSupportedError, ProgrammingError
-from ob_clickhouse.type_codes import CH_TYPE_MAP, STRING
+from ob_clickhouse.type_codes import BINARY, DATETIME, NUMBER, STRING
 
 
 class Cursor:
     """DB-API 2.0 cursor wrapping a clickhouse-connect Client.
 
-    The underlying ``Client.query()`` returns a ``QueryResult`` with
-    ``.result_rows``, ``.column_names``, and ``.column_types``.  This cursor
-    stores the full result set after each ``execute()`` and exposes it through
-    the standard ``fetch*()`` methods.
+    ``execute()`` uses ``Client.query_arrow()`` to keep data in Arrow columnar
+    format.  ``fetch_arrow_table()`` returns the Arrow table directly for
+    zero-copy Flight SQL streaming.  ``fetchall()`` and ``fetchone()`` derive
+    Python rows from the Arrow table.
     """
 
     arraysize: int = 1
@@ -46,6 +49,7 @@ class Cursor:
             tuple[tuple[str, Any, None, None, None, None, None], ...] | None
         ) = None
         self._rowcount: int = -1
+        self._arrow_table: Any = None
 
     # -- PEP 249 attributes --------------------------------------------------
 
@@ -84,39 +88,54 @@ class Cursor:
             ob_timeout=self._ob_timeout,
         )
 
-    def _build_description(self, result: Any) -> None:
-        """Build PEP 249 description from a clickhouse-connect QueryResult."""
-        names: list[str] = result.column_names
-        types: list[Any] = result.column_types
+    def _build_description_from_arrow(self, table: pa.Table) -> None:
+        """Build PEP 249 description from a PyArrow Table schema."""
         cols: list[tuple[str, Any, None, None, None, None, None]] = []
-        for i, name in enumerate(names):
-            # column_types are ClickHouseType objects; str() gives e.g.
-            # "Decimal(18,2)", "Nullable(Int64)".  Strip Nullable wrapper
-            # and parenthesised params for the base-type lookup.
-            type_str = str(types[i]) if i < len(types) else ""
-            # Unwrap Nullable(...)
-            if type_str.startswith("Nullable(") and type_str.endswith(")"):
-                type_str = type_str[len("Nullable(") : -1]
-            # Strip parameters — e.g. Decimal(18,2) → Decimal
-            base = type_str.split("(")[0]
-            type_code = CH_TYPE_MAP.get(base, STRING)
-            cols.append((name, type_code, None, None, None, None, None))
+        for field in table.schema:
+            if (
+                pa.types.is_integer(field.type)
+                or pa.types.is_floating(field.type)
+                or pa.types.is_decimal(field.type)
+            ):
+                type_code = NUMBER
+            elif (
+                pa.types.is_timestamp(field.type)
+                or pa.types.is_date(field.type)
+                or pa.types.is_time(field.type)
+            ):
+                type_code = DATETIME
+            elif pa.types.is_binary(field.type) or pa.types.is_large_binary(field.type):
+                type_code = BINARY
+            else:
+                type_code = STRING
+            cols.append((field.name, type_code, None, None, None, None, None))
         self._description = tuple(cols) if cols else None
+
+    @staticmethod
+    def _arrow_to_rows(table: pa.Table) -> list[tuple[Any, ...]]:
+        """Derive Python row tuples from an Arrow table."""
+        pydict = table.to_pydict()
+        col_names = list(pydict.keys())
+        return [tuple(pydict[c][i] for c in col_names) for i in range(table.num_rows)]
 
     # -- PEP 249 execute methods ----------------------------------------------
 
     def execute(self, operation: str, parameters: Any = None) -> Cursor:
-        """Execute a query — OBML YAML or plain SQL."""
+        """Execute a query — OBML YAML or plain SQL.
+
+        Uses ``query_arrow()`` to keep data in Arrow columnar format.
+        """
         self._check_open()
         sql = self._resolve_sql(operation)
         if parameters is not None:
-            result = self._client.query(sql, parameters=parameters)
+            table = self._client.query_arrow(sql, parameters=parameters)
         else:
-            result = self._client.query(sql)
-        self._rows = [tuple(r) for r in result.result_rows]
+            table = self._client.query_arrow(sql)
+        self._arrow_table = table
+        self._rows = self._arrow_to_rows(table)
         self._pos = 0
-        self._rowcount = len(self._rows)
-        self._build_description(result)
+        self._rowcount = table.num_rows
+        self._build_description_from_arrow(table)
         return self
 
     def executemany(self, operation: str, seq_of_parameters: Any) -> None:
@@ -159,6 +178,20 @@ class Cursor:
         rows = self._rows[self._pos :]
         self._pos = len(self._rows)
         return rows
+
+    def fetch_arrow_table(self) -> pa.Table:
+        """Fetch all remaining rows as a PyArrow Table.
+
+        Returns the native Arrow table directly — zero-copy, no intermediate
+        Python row objects.  Significantly more memory-efficient for large
+        result sets and enables efficient Arrow Flight SQL streaming.
+        """
+        self._check_open()
+        if self._arrow_table is None:
+            raise ProgrammingError("No Arrow result available — already consumed.")
+        table = self._arrow_table
+        self._arrow_table = None
+        return table
 
     # -- PEP 249 no-ops -------------------------------------------------------
 
