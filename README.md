@@ -391,14 +391,17 @@ The **Arrow Flight SQL server** (`ob-flight-extension`) runs inside the API proc
 ```bash
 # On-premise with Flight SQL enabled
 docker build -f Dockerfile.flight -t orionbelt-flight .
-docker run -p 8080:8080 -p 8815:8815 --env-file .env orionbelt-flight
+docker run -p 8080:8080 -p 8815:8815 \
+  -v /path/to/models/:/app/models/ \
+  --env-file .env \
+  orionbelt-flight
 ```
 
 See **[Drivers Documentation](docs/drivers.md)** for full usage examples, connect() parameters, Flight SQL configuration, Docker Compose setup, and DBeaver/Tableau instructions.
 
 ## Configuration
 
-Configuration is via environment variables or a `.env` file. See `.env.example` for all options:
+Configuration is via environment variables or a `.env` file. See `.env.template` for all options:
 
 | Variable                   | Default     | Description                             |
 | -------------------------- | ----------- | --------------------------------------- |
@@ -413,6 +416,11 @@ Configuration is via environment variables or a `.env` file. See `.env.example` 
 | `MODEL_FILE`               | —           | Path to OBML YAML for single-model mode |
 | `API_BASE_URL`             | —           | API URL for standalone UI               |
 | `ROOT_PATH`                | —           | ASGI root path for UI behind LB         |
+| `FLIGHT_ENABLED`           | `false`     | Enable Flight SQL + query execution     |
+| `FLIGHT_PORT`              | `8815`      | Arrow Flight SQL gRPC port              |
+| `FLIGHT_AUTH_MODE`         | `none`      | `none` or `token`                       |
+| `FLIGHT_API_TOKEN`         | —           | Static token (when auth mode = token)   |
+| `DB_VENDOR`                | `duckdb`    | Database vendor for query execution     |
 
 ### Single-Model Mode
 

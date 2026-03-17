@@ -29,9 +29,11 @@ from orionbelt.settings import Settings
 logger = logging.getLogger("orionbelt.api")
 
 
-def _read_model_file(path_str: str) -> str:
+def _read_model_file(path_str: str, model_dir: str | None = None) -> str:
     """Read and validate the MODEL_FILE at startup. Raises on error."""
     path = Path(path_str)
+    if not path.is_absolute() and model_dir:
+        path = Path(model_dir) / path
     if not path.is_file():
         raise FileNotFoundError(f"MODEL_FILE not found: {path}")
     yaml_str = path.read_text(encoding="utf-8")
@@ -56,7 +58,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     # Read and validate MODEL_FILE before starting (fail fast)
     preload_yaml: str | None = None
     if settings.model_file:
-        preload_yaml = _read_model_file(settings.model_file)
+        preload_yaml = _read_model_file(settings.model_file, settings.model_dir)
         logger.info("Single-model mode: loaded %s", settings.model_file)
 
     mgr = SessionManager(

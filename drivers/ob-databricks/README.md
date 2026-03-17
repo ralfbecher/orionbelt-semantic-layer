@@ -1,1 +1,0 @@
-# ob-databricks

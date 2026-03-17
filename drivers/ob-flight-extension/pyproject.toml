@@ -6,7 +6,6 @@ build-backend = "hatchling.build"
 name = "ob-flight-extension"
 version = "0.1.0"
 description = "Arrow Flight SQL server extension for orionbelt-api (DBeaver, Tableau, Power BI)"
-readme = "README.md"
 license = { text = "Apache-2.0" }
 authors = [{ name = "Ralfo Becher", email = "info@orionbelt.ai" }]
 keywords = ["arrow", "flight-sql", "dbeaver", "tableau", "orionbelt", "semantic-layer"]

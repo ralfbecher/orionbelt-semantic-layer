@@ -1,1 +1,0 @@
-# ob-duckdb

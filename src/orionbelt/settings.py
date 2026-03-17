@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     """Configuration for OrionBelt REST API server.
 
     Values are read from environment variables and from a ``.env`` file
-    in the working directory.  See ``.env.example`` for all options.
+    in the working directory.  See ``.env.template`` for all options.
     """
 
     model_config = SettingsConfigDict(
@@ -37,9 +37,10 @@ class Settings(BaseSettings):
     session_cleanup_interval: int = 60  # seconds between cleanup sweeps
     disable_session_list: bool = False  # hide GET /sessions endpoint
 
-    # Single-model mode — path to an OBML YAML file that is pre-loaded into
-    # every new session.  When set, model upload/removal endpoints return 403.
-    model_file: str | None = None
+    # Single-model mode — pre-loaded into every new session.
+    # When set, model upload/removal endpoints return 403.
+    model_dir: str | None = None  # base directory for MODEL_FILE (set by Docker)
+    model_file: str | None = None  # filename or absolute path to OBML YAML
 
     # Arrow Flight SQL server (requires ob-flight-extension)
     flight_enabled: bool = False

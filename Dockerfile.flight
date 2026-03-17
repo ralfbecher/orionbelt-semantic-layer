@@ -9,14 +9,7 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
 # Copy workspace package metadata first (cached layer)
 COPY pyproject.toml uv.lock README.md ./
-COPY drivers/ob-driver-core/pyproject.toml drivers/ob-driver-core/README.md drivers/ob-driver-core/
-COPY drivers/ob-flight-extension/pyproject.toml drivers/ob-flight-extension/README.md drivers/ob-flight-extension/
-COPY drivers/ob-duckdb/pyproject.toml drivers/ob-duckdb/README.md drivers/ob-duckdb/
-COPY drivers/ob-postgres/pyproject.toml drivers/ob-postgres/README.md drivers/ob-postgres/
-COPY drivers/ob-snowflake/pyproject.toml drivers/ob-snowflake/README.md drivers/ob-snowflake/
-COPY drivers/ob-clickhouse/pyproject.toml drivers/ob-clickhouse/README.md drivers/ob-clickhouse/
-COPY drivers/ob-dremio/pyproject.toml drivers/ob-dremio/README.md drivers/ob-dremio/
-COPY drivers/ob-databricks/pyproject.toml drivers/ob-databricks/README.md drivers/ob-databricks/
+COPY drivers/ drivers/
 RUN uv sync --no-dev --no-install-project --extra flight --frozen
 
 # Copy source and install everything
@@ -24,7 +17,6 @@ COPY src/ src/
 COPY schema/ schema/
 COPY osi-obml/osi_obml_converter.py osi-obml/
 COPY osi-obml/osi-schema.json osi-obml/
-COPY drivers/ drivers/
 RUN uv sync --no-dev --no-editable --extra flight --frozen
 
 # --- Runtime stage: minimal image ---
@@ -48,13 +40,19 @@ COPY --from=builder --chown=app:app /app/schema schema/
 # Copy OSI converter (needed at runtime for /convert endpoints)
 COPY --from=builder --chown=app:app /app/osi-obml osi-obml/
 
+# Model directory — mount a host directory containing the OBML YAML file:
+#   docker run -v /path/to/models/:/app/models/ -e MODEL_FILE=my-model.obml.yml ...
+RUN mkdir -p /app/models && chown app:app /app/models
+
 USER app
 
 # REST API on 8080, Flight SQL on 8815
+# MODEL_DIR is the fixed mount point; MODEL_FILE (just the filename) is set by the user
 ENV PORT=8080 \
     API_SERVER_HOST=0.0.0.0 \
     LOG_LEVEL=INFO \
     LOG_FORMAT=json \
+    MODEL_DIR=/app/models \
     FLIGHT_ENABLED=true \
     FLIGHT_PORT=8815 \
     FLIGHT_AUTH_MODE=none \
