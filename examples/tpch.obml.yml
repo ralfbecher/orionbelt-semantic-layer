@@ -8,7 +8,7 @@ version: 1.0
 dataObjects:
   # ── Dimension tables ───────────────────────────────────────────────
 
-  Region:
+  Regions:
     code: region
     schema: main
     columns:
@@ -19,7 +19,7 @@ dataObjects:
         code: r_name
         abstractType: string
 
-  Nation:
+  Nations:
     code: nation
     schema: main
     columns:
@@ -34,13 +34,13 @@ dataObjects:
         abstractType: int
     joins:
       - joinType: many-to-one
-        joinTo: Region
+        joinTo: Regions
         columnsFrom:
           - Nation Region Key
         columnsTo:
           - Region Key
 
-  Customer:
+  Customers:
     code: customer
     schema: main
     columns:
@@ -62,13 +62,13 @@ dataObjects:
         numClass: non-additive
     joins:
       - joinType: many-to-one
-        joinTo: Nation
+        joinTo: Nations
         columnsFrom:
           - Customer Nation Key
         columnsTo:
           - Nation Key
 
-  Supplier:
+  Suppliers:
     code: supplier
     schema: main
     columns:
@@ -82,9 +82,9 @@ dataObjects:
         code: s_nationkey
         abstractType: int
     joins:
-      # Secondary: Nation is already reachable via Customer
+      # Secondary: Nations is already reachable via Customers
       - joinType: many-to-one
-        joinTo: Nation
+        joinTo: Nations
         secondary: true
         pathName: supplier_nation
         columnsFrom:
@@ -92,7 +92,7 @@ dataObjects:
         columnsTo:
           - Nation Key
 
-  Part:
+  Parts:
     code: part
     schema: main
     columns:
@@ -149,13 +149,13 @@ dataObjects:
         numClass: additive
     joins:
       - joinType: many-to-one
-        joinTo: Customer
+        joinTo: Customers
         columnsFrom:
           - Order Customer Key
         columnsTo:
           - Customer Key
 
-  Line Item:
+  Line Items:
     code: lineitem
     schema: main
     columns:
@@ -207,13 +207,13 @@ dataObjects:
         columnsTo:
           - Order Key
       - joinType: many-to-one
-        joinTo: Part
+        joinTo: Parts
         columnsFrom:
           - Line Part Key
         columnsTo:
           - Part Key
       - joinType: many-to-one
-        joinTo: Supplier
+        joinTo: Suppliers
         columnsFrom:
           - Line Supplier Key
         columnsTo:
@@ -239,13 +239,13 @@ dataObjects:
         numClass: non-additive
     joins:
       - joinType: many-to-one
-        joinTo: Part
+        joinTo: Parts
         columnsFrom:
           - PS Part Key
         columnsTo:
           - Part Key
       - joinType: many-to-one
-        joinTo: Supplier
+        joinTo: Suppliers
         columnsFrom:
           - PS Supplier Key
         columnsTo:
@@ -255,19 +255,19 @@ dataObjects:
 
 dimensions:
   Region:
-    dataObject: Region
+    dataObject: Regions
     column: Region Name
     resultType: string
   Nation:
-    dataObject: Nation
+    dataObject: Nations
     column: Nation Name
     resultType: string
   Customer:
-    dataObject: Customer
+    dataObject: Customers
     column: Customer Name
     resultType: string
   Market Segment:
-    dataObject: Customer
+    dataObject: Customers
     column: Market Segment
     resultType: string
   Order Date:
@@ -283,23 +283,23 @@ dimensions:
     column: Order Status
     resultType: string
   Brand:
-    dataObject: Part
+    dataObject: Parts
     column: Brand
     resultType: string
   Part Type:
-    dataObject: Part
+    dataObject: Parts
     column: Part Type
     resultType: string
   Ship Mode:
-    dataObject: Line Item
+    dataObject: Line Items
     column: Ship Mode
     resultType: string
   Return Flag:
-    dataObject: Line Item
+    dataObject: Line Items
     column: Return Flag
     resultType: string
   Supplier:
-    dataObject: Supplier
+    dataObject: Suppliers
     column: Supplier Name
     resultType: string
 
@@ -309,12 +309,12 @@ measures:
   Revenue:
     resultType: float
     aggregation: sum
-    expression: "{[Line Item].[Extended Price]} * (1 - {[Line Item].[Discount]})"
+    expression: "{[Line Items].[Extended Price]} * (1 - {[Line Items].[Discount]})"
     synonyms: [sales, income, turnover]
 
   Gross Amount:
     columns:
-      - dataObject: Line Item
+      - dataObject: Line Items
         column: Extended Price
     resultType: float
     aggregation: sum
@@ -322,11 +322,11 @@ measures:
   Total Discount:
     resultType: float
     aggregation: sum
-    expression: "{[Line Item].[Extended Price]} * {[Line Item].[Discount]}"
+    expression: "{[Line Items].[Extended Price]} * {[Line Items].[Discount]}"
 
   Total Quantity:
     columns:
-      - dataObject: Line Item
+      - dataObject: Line Items
         column: Quantity
     resultType: float
     aggregation: sum
@@ -341,7 +341,7 @@ measures:
 
   Line Item Count:
     columns:
-      - dataObject: Line Item
+      - dataObject: Line Items
         column: Line Number
     resultType: int
     aggregation: count

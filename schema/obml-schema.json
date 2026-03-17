@@ -72,7 +72,7 @@
           "items": { "$ref": "#/definitions/customExtension" }
         }
       },
-      "required": ["code", "database", "schema", "columns"],
+      "required": ["code", "columns"],
       "additionalProperties": false
     },
     "dataType": {
