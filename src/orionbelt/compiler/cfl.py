@@ -132,11 +132,12 @@ class CFLPlanner:
                     continue
 
                 # Collect source objects: from explicit columns or expression AST
+                field_objects: set[str]
                 if model_measure.columns:
                     field_objects = {f.view for f in model_measure.columns if f.view}
                 else:
                     # Expression-based measure: extract table refs from the AST
-                    field_objects: set[str] = set()
+                    field_objects = set()
                     self._collect_table_refs(measure.expression, field_objects)
                 if len(field_objects) > 1:
                     # Cross-fact multi-field measure: ensure each
