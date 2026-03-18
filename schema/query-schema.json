@@ -44,11 +44,11 @@
     },
     "queryFilter": {
       "type": "object",
-      "description": "A filter condition. WHERE filters reference a dimension name; HAVING filters reference a measure name. The dimension's data object must be reachable from the query's join graph (auto-joined if needed).",
+      "description": "A filter condition. WHERE filters reference a dimension name or a qualified column (DataObject.Column); HAVING filters reference a measure name. The data object must be reachable from the query's join graph (auto-joined if needed).",
       "properties": {
         "field": {
           "type": "string",
-          "description": "Dimension name (for WHERE) or measure name (for HAVING)"
+          "description": "Dimension name, qualified column as DataObject.Column (for WHERE), or measure name (for HAVING)"
         },
         "op": {
           "$ref": "#/definitions/filterOperator"

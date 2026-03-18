@@ -207,9 +207,14 @@ Filters restrict the result set. **Dimension filters** go in `where` (become SQL
 
 ```yaml
 where:
+  # By dimension name
   - field: Customer Country
     op: equals
     value: Germany
+  # By qualified column (DataObject.Column) — no dimension needed
+  - field: Orders.Order Status
+    op: equals
+    value: F
 
 having:
   - field: Revenue
@@ -221,13 +226,18 @@ having:
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `field` | string | Dimension name (`where`) or measure name (`having`) |
+| `field` | string | Dimension name or `DataObject.Column` (`where`), measure name (`having`) |
 | `op` | string | Filter operator (see table below) |
 | `value` | any | Comparison value (string, number, list, etc.) |
 
 ### Filter Reachability
 
-A `where` filter field must reference a **dimension** whose data object is reachable from the query's join graph. The data object can be:
+A `where` filter field can reference:
+
+- A **dimension name** (e.g. `Order Priority`) — resolves to the dimension's data object and column
+- A **qualified column** using `DataObject.Column` dot notation (e.g. `Orders.Order Priority`) — directly references a column without requiring a dimension definition
+
+The referenced data object must be reachable from the query's join graph:
 
 - Directly joined in the query (base object or any object in the join path)
 - A descendant — reachable via directed joins from any already-joined object

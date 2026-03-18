@@ -522,55 +522,108 @@ class QueryResolver:
 
     # -- filters -------------------------------------------------------------
 
+    def _resolve_filter_object(
+        self,
+        ctx: _ResolutionContext,
+        obj_name: str,
+        filter_path: str,
+        field_label: str,
+    ) -> bool:
+        """Ensure *obj_name* is joined; auto-extend if reachable. Return success."""
+        if obj_name in ctx.joined_objects:
+            return True
+        reachable = False
+        if ctx.graph is not None:
+            for joined_obj in list(ctx.joined_objects):
+                if obj_name in ctx.graph.descendants(joined_obj):
+                    reachable = True
+                    break
+        if not reachable:
+            ctx.errors.append(
+                SemanticError(
+                    code="UNREACHABLE_FILTER_FIELD",
+                    message=(
+                        f"Filter field '{field_label}' references data object "
+                        f"'{obj_name}' which is not reachable from "
+                        f"the query's join graph"
+                    ),
+                    path=filter_path,
+                )
+            )
+            return False
+        if ctx.graph is not None:
+            new_steps = ctx.graph.find_join_path(ctx.joined_objects, {obj_name})
+            for step in new_steps:
+                if step.to_object not in ctx.joined_objects:
+                    ctx.result.join_steps.append(step)
+                    ctx.joined_objects.add(step.to_object)
+                    ctx.result.required_objects.add(step.to_object)
+        return True
+
     def _resolve_filter(
         self, ctx: _ResolutionContext, qf: QueryFilter, *, is_having: bool
     ) -> ResolvedFilter | None:
         """Resolve a query filter to a physical expression.
 
-        Filter fields can reference any dimension whose data object is
-        reachable from the query's join graph (including descendants).
-        If the object is reachable but not yet joined, the join path is
-        auto-extended.
+        Filter fields can reference:
+        1. A dimension name (e.g. ``"Order Priority"``)
+        2. A qualified column ``"DataObject.Column"`` (e.g. ``"Orders.Order Priority"``)
+        3. For HAVING filters, a measure name (e.g. ``"Revenue"``)
+
+        If the referenced data object is reachable but not yet joined, the
+        join path is auto-extended.
         """
         filter_path = "having" if is_having else "where"
 
+        # 1. Try dimension name
         dim = ctx.model.dimensions.get(qf.field)
         if dim:
             obj_name = dim.view
-            if obj_name not in ctx.joined_objects:
-                reachable = False
-                if ctx.graph is not None:
-                    for joined_obj in list(ctx.joined_objects):
-                        if obj_name in ctx.graph.descendants(joined_obj):
-                            reachable = True
-                            break
-                if not reachable:
-                    ctx.errors.append(
-                        SemanticError(
-                            code="UNREACHABLE_FILTER_FIELD",
-                            message=(
-                                f"Filter field '{qf.field}' references data object "
-                                f"'{obj_name}' which is not reachable from "
-                                f"the query's join graph"
-                            ),
-                            path=filter_path,
-                        )
-                    )
-                    return None
-                if ctx.graph is not None:
-                    new_steps = ctx.graph.find_join_path(ctx.joined_objects, {obj_name})
-                    for step in new_steps:
-                        if step.to_object not in ctx.joined_objects:
-                            ctx.result.join_steps.append(step)
-                            ctx.joined_objects.add(step.to_object)
-                            ctx.result.required_objects.add(step.to_object)
-
+            if not self._resolve_filter_object(ctx, obj_name, filter_path, qf.field):
+                return None
             col_name = dim.column
             obj = ctx.model.data_objects.get(obj_name)
             source = obj.columns[col_name].code if obj and col_name in obj.columns else col_name
             col_expr: Expr = ColumnRef(name=source, table=obj_name)
+
+        # 2. HAVING: try measure name
         elif is_having and qf.field in ctx.model.measures:
             col_expr = ColumnRef(name=qf.field)
+
+        # 3. Try qualified column: "DataObject.Column"
+        elif "." in qf.field:
+            parts = qf.field.split(".", 1)
+            obj_name, col_name = parts[0].strip(), parts[1].strip()
+            obj = ctx.model.data_objects.get(obj_name)
+            if obj is None:
+                ctx.errors.append(
+                    SemanticError(
+                        code="UNKNOWN_FILTER_FIELD",
+                        message=(
+                            f"Unknown data object '{obj_name}' in filter "
+                            f"field '{qf.field}'"
+                        ),
+                        path=filter_path,
+                    )
+                )
+                return None
+            if col_name not in obj.columns:
+                ctx.errors.append(
+                    SemanticError(
+                        code="UNKNOWN_FILTER_FIELD",
+                        message=(
+                            f"Unknown column '{col_name}' in data object "
+                            f"'{obj_name}' for filter field '{qf.field}'"
+                        ),
+                        path=filter_path,
+                    )
+                )
+                return None
+            if not self._resolve_filter_object(ctx, obj_name, filter_path, qf.field):
+                return None
+            source = obj.columns[col_name].code
+            col_expr = ColumnRef(name=source, table=obj_name)
+
         else:
             ctx.errors.append(
                 SemanticError(
