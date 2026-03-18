@@ -110,15 +110,21 @@ During OBML → OSI conversion, the `customExtensions` with `vendor: "OSI"` are 
 
 ### 2.5 OBML-Specific Features (Not Representable in OSI)
 
-These OBML features have no direct OSI equivalent and are lost during OBML → OSI export. Where possible, metadata is preserved in OSI `ai_context` or `custom_extensions`:
+These OBML features have no direct OSI equivalent. Where possible, metadata is preserved in OSI `ai_context` or `custom_extensions` (with `vendor_name: "COMMON"` and `obml_`-prefixed keys) for lossless roundtrip:
 
 - Secondary joins with `pathName` (preserved in relationship `ai_context`)
-- `allowFanOut` / `reduceToRelationDimensionality`
-- Dynamic date filters (`dynamicDate`, `dynamicDateRange`)
-- `timeGrain` on dimensions
-- Measure filters
-- Locale settings
-- `abstractType` (OBML type system) — preserved in `custom_extensions` with `vendor_name: "COMMON"`
+- `allowFanOut` — preserved in metric `custom_extensions` (`obml_allow_fan_out`)
+- Dynamic date filters (`dynamicDate`, `dynamicDateRange`) — not yet preserved
+- `timeGrain` on dimensions — preserved in field `custom_extensions` (`obml_time_grain`)
+- Dimension `format` — preserved in field `custom_extensions` (`obml_dimension_format`)
+- Measure filters — preserved in metric `custom_extensions` (`obml_filter`)
+- Measure `total` — preserved in metric `custom_extensions` (`obml_total`)
+- Measure `format` — preserved in metric `custom_extensions` (`obml_format`)
+- Measure `delimiter` — preserved in metric `custom_extensions` (`obml_delimiter`)
+- Measure `withinGroup` — preserved in metric `custom_extensions` (`obml_within_group`)
+- Metric `format` — preserved in metric `custom_extensions` (`obml_format`)
+- Locale settings — not yet preserved
+- `abstractType` (OBML type system) — preserved in field `custom_extensions` (`obml_abstract_type`)
 
 ### 2.6 OSI-Specific Features (Not Representable in OBML)
 
