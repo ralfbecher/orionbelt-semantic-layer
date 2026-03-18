@@ -54,8 +54,13 @@
             "$ref": "#/definitions/join"
           }
         },
+        "description": {
+          "type": "string",
+          "description": "Business description of this data object (semantic layer metadata)"
+        },
         "comment": {
-          "type": "string"
+          "type": "string",
+          "description": "Physical database comment (from COMMENT ON TABLE)"
         },
         "owner": {
           "type": "string",
@@ -127,8 +132,13 @@
         "numClass": {
           "$ref": "#/definitions/numClass"
         },
+        "description": {
+          "type": "string",
+          "description": "Business description of this column (semantic layer metadata)"
+        },
         "comment": {
-          "type": "string"
+          "type": "string",
+          "description": "Physical database comment (from COMMENT ON COLUMN)"
         },
         "owner": {
           "type": "string",
@@ -412,6 +422,10 @@
         "timeGrain": {
           "$ref": "#/definitions/timeGrain"
         },
+        "description": {
+          "type": "string",
+          "description": "Business description of this dimension"
+        },
         "format": {
           "type": "string"
         },
@@ -508,6 +522,10 @@
             "type": "string"
           }
         },
+        "description": {
+          "type": "string",
+          "description": "Business description of this measure"
+        },
         "format": {
           "type": "string"
         },
@@ -542,6 +560,10 @@
         "expression": {
           "type": "string",
           "description": "template string with {[Measure Name]} placeholders referencing defined measures"
+        },
+        "description": {
+          "type": "string",
+          "description": "Business description of this metric"
         },
         "format": {
           "type": "string"
@@ -675,6 +697,10 @@
   "properties": {
     "version": {
       "enum": [1.0]
+    },
+    "description": {
+      "type": "string",
+      "description": "Business description of this semantic model"
     },
 "dataObjects": {
       "type": "object",

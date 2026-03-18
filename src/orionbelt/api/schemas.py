@@ -290,6 +290,7 @@ class ColumnDetail(BaseModel):
     code: str
     abstract_type: str
     num_class: str | None = None
+    description: str | None = None
     comment: str | None = None
     owner: str | None = None
     synonyms: list[str] = Field(default_factory=list)
@@ -304,6 +305,7 @@ class DataObjectDetail(BaseModel):
     schema_name: str = Field(alias="schema")
     columns: list[ColumnDetail] = Field(default_factory=list)
     join_targets: list[str] = Field(default_factory=list)
+    description: str | None = None
     comment: str | None = None
     owner: str | None = None
     synonyms: list[str] = Field(default_factory=list)
@@ -319,6 +321,7 @@ class DimensionDetail(BaseModel):
     column: str
     result_type: str
     time_grain: str | None = None
+    description: str | None = None
     format: str | None = None
     owner: str | None = None
     synonyms: list[str] = Field(default_factory=list)
@@ -334,6 +337,7 @@ class MeasureDetail(BaseModel):
     columns: list[dict[str, str]] = Field(default_factory=list)
     distinct: bool = False
     total: bool = False
+    description: str | None = None
     format: str | None = None
     owner: str | None = None
     synonyms: list[str] = Field(default_factory=list)
@@ -345,6 +349,7 @@ class MetricDetail(BaseModel):
     name: str
     expression: str
     component_measures: list[str] = Field(default_factory=list)
+    description: str | None = None
     format: str | None = None
     owner: str | None = None
     synonyms: list[str] = Field(default_factory=list)
@@ -355,6 +360,7 @@ class SchemaResponse(BaseModel):
 
     model_id: str
     version: float = 1.0
+    description: str | None = None
     owner: str | None = None
     data_objects: list[DataObjectDetail] = Field(default_factory=list)
     dimensions: list[DimensionDetail] = Field(default_factory=list)

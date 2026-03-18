@@ -95,6 +95,7 @@ class DataObjectColumn(BaseModel):
     sql_precision: int | None = Field(None, alias="sqlPrecision")
     sql_scale: int | None = Field(None, alias="sqlScale")
     num_class: NumClass | None = Field(None, alias="numClass")
+    description: str | None = None
     comment: str | None = None
     owner: str | None = None
     synonyms: list[str] = Field(default_factory=list)
@@ -125,6 +126,7 @@ class DataObject(BaseModel):
     schema_name: str = Field(alias="schema")
     columns: dict[str, DataObjectColumn] = {}
     joins: list[DataObjectJoin] = []
+    description: str | None = None
     comment: str | None = None
     owner: str | None = None
     synonyms: list[str] = Field(default_factory=list)
@@ -146,6 +148,7 @@ class Dimension(BaseModel):
     column: str = ""
     result_type: DataType = Field(DataType.STRING, alias="resultType")
     time_grain: TimeGrain | None = Field(None, alias="timeGrain")
+    description: str | None = None
     format: str | None = None
     owner: str | None = None
     synonyms: list[str] = Field(default_factory=list)
@@ -198,6 +201,7 @@ class Measure(BaseModel):
     distinct: bool = False
     total: bool = False
     filter: MeasureFilter | None = None
+    description: str | None = None
     format: str | None = None
     allow_fan_out: bool = Field(False, alias="allowFanOut")
     delimiter: str | None = None
@@ -217,6 +221,7 @@ class Metric(BaseModel):
 
     label: str
     expression: str
+    description: str | None = None
     format: str | None = None
     owner: str | None = None
     synonyms: list[str] = Field(default_factory=list)
@@ -229,6 +234,7 @@ class SemanticModel(BaseModel):
     """Complete semantic model parsed from OBML YAML."""
 
     version: float = 1.0
+    description: str | None = None
     data_objects: dict[str, DataObject] = Field(default={}, alias="dataObjects")
     dimensions: dict[str, Dimension] = {}
     measures: dict[str, Measure] = {}

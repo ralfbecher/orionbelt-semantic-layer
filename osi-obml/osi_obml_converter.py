@@ -72,6 +72,10 @@ class OSItoOBML:
 
         obml: dict[str, Any] = {"version": 1.0}
 
+        # ── Model description ─────────────────────────────────────
+        if model.get("description"):
+            obml["description"] = model["description"]
+
         # ── DataObjects ─────────────────────────────────────────────
         datasets = model.get("datasets", [])
         relationships = model.get("relationships", [])
@@ -170,9 +174,9 @@ class OSItoOBML:
         if joins:
             do["joins"] = joins
 
-        # ── Comment from description ──────────────────────────────────
+        # ── Description (semantic, from OSI) ─────────────────────────
         if ds.get("description"):
-            do["comment"] = ds["description"]
+            do["description"] = ds["description"]
 
         # ── Extract ai_context: synonyms → native, rest → customExtensions ─
         ai_ctx = ds.get("ai_context")
@@ -225,7 +229,7 @@ class OSItoOBML:
         }
 
         if field.get("description"):
-            col["comment"] = field["description"]
+            col["description"] = field["description"]
 
         # Extract field-level ai_context: synonyms → native, rest → customExtensions
         ai_ctx = field.get("ai_context")
@@ -392,6 +396,8 @@ class OSItoOBML:
         for m in osi_metrics:
             name = m["name"]
 
+            osi_description = m.get("description")
+
             # Extract synonyms from OSI ai_context
             osi_ai_ctx = m.get("ai_context")
             osi_synonyms: list[str] = []
@@ -417,6 +423,8 @@ class OSItoOBML:
                 }
                 if is_distinct:
                     measure_def["distinct"] = True
+                if osi_description:
+                    measure_def["description"] = osi_description
                 if osi_synonyms:
                     measure_def["synonyms"] = osi_synonyms
                 self._apply_obml_measure_extras(measure_def, obml_extras)
@@ -433,6 +441,8 @@ class OSItoOBML:
                     "resultType": "float" if agg.upper() in ("SUM", "AVG") else "int",
                     "aggregation": agg.lower(),
                 }
+                if osi_description:
+                    measure_def["description"] = osi_description
                 if osi_synonyms:
                     measure_def["synonyms"] = osi_synonyms
                 self._apply_obml_measure_extras(measure_def, obml_extras)
@@ -457,6 +467,8 @@ class OSItoOBML:
                             break
                 measures.update(auto_measures)
                 metric_def: dict[str, Any] = {"expression": obml_expr}
+                if osi_description:
+                    metric_def["description"] = osi_description
                 if osi_synonyms:
                     metric_def["synonyms"] = osi_synonyms
                 # Restore format for complex metrics (stored as obml_format)
@@ -729,8 +741,11 @@ class OBMLtoOSI:
 
         # ── Build semantic model ────────────────────────────────────
         sem_model: dict[str, Any] = {"name": self.model_name}
-        if self.model_description:
-            sem_model["description"] = self.model_description
+        # Prefer OBML model-level description, fall back to constructor param
+        obml_description = self.obml.get("description", "")
+        model_desc = obml_description or self.model_description
+        if model_desc:
+            sem_model["description"] = model_desc
         if self.ai_instructions:
             sem_model["ai_context"] = {"instructions": self.ai_instructions}
 
@@ -773,7 +788,9 @@ class OBMLtoOSI:
             "source": source,
         }
 
-        if do_obj.get("comment"):
+        if do_obj.get("description"):
+            dataset["description"] = do_obj["description"]
+        elif do_obj.get("comment"):
             dataset["description"] = do_obj["comment"]
 
         # ── Rebuild ai_context: native synonyms + remaining from customExtensions
@@ -855,7 +872,9 @@ class OBMLtoOSI:
         if is_dimension or is_time:
             field["dimension"] = {"is_time": is_time}
 
-        if col_obj.get("comment"):
+        if col_obj.get("description"):
+            field["description"] = col_obj["description"]
+        elif col_obj.get("comment"):
             field["description"] = col_obj["comment"]
         else:
             field["description"] = col_name  # Use display name as description
@@ -1018,7 +1037,7 @@ class OBMLtoOSI:
                             "expression": expr,
                         }]
                     },
-                    "description": name,
+                    "description": measure.get("description", name),
                 }
                 if ai_ctx:
                     result["ai_context"] = ai_ctx
@@ -1050,7 +1069,7 @@ class OBMLtoOSI:
                     "expression": expr,
                 }]
             },
-            "description": name,
+            "description": measure.get("description", name),
         }
         if ai_ctx:
             result["ai_context"] = ai_ctx
@@ -1138,7 +1157,7 @@ class OBMLtoOSI:
                     "expression": sql_expr,
                 }]
             },
-            "description": name,
+            "description": metric.get("description", name),
         }
         # Include OBML synonyms in ai_context
         obml_synonyms = metric.get("synonyms", [])
