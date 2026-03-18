@@ -171,14 +171,20 @@ def execute_sql(sql: str, *, dialect: str) -> ExecutionResult:
         ExecutionError: if the database connection or query fails.
     """
     try:
-        from ob_flight.db_router import get_connection
+        from ob_flight.db_router import get_credentials
     except ImportError:
         raise ExecutionUnavailableError(
-            "ob-flight-extension package is not installed. Install with: uv sync --extra flight"
+            "ob-flight-extension package is not installed. "
+            "Install with: uv sync --extra flight"
         ) from None
 
     t0 = time.monotonic()
     try:
+        if dialect == "duckdb":
+            return _execute_duckdb(sql, get_credentials(dialect), t0)
+        # Non-DuckDB: use the full ob driver via db_router
+        from ob_flight.db_router import get_connection
+
         with get_connection(dialect) as conn:
             cursor = conn.cursor()
             try:
@@ -193,6 +199,33 @@ def execute_sql(sql: str, *, dialect: str) -> ExecutionResult:
         raise ExecutionUnavailableError(str(exc)) from None
     except Exception as exc:
         raise ExecutionError(f"Database execution failed: {exc}") from exc
+
+
+def _execute_duckdb(sql: str, creds: dict[str, Any], t0: float) -> ExecutionResult:
+    """Execute SQL directly via native duckdb.
+
+    Uses the native ``duckdb`` package with ``read_only=True`` to avoid
+    cross-process file lock conflicts with the notebook process.
+    """
+    import duckdb
+
+    database = creds.get("database", ":memory:")
+    conn = duckdb.connect(database=database, read_only=True)
+    try:
+        result = conn.execute(sql)
+        rows_raw = result.fetchall()
+        desc = result.description or []
+        columns = [ColumnMeta(name=d[0], type_hint="string") for d in desc]
+        rows = [_serialize_row(r) for r in rows_raw]
+        elapsed_ms = (time.monotonic() - t0) * 1000
+        return ExecutionResult(
+            columns=columns,
+            raw_rows=rows,
+            row_count=len(rows),
+            execution_time_ms=round(elapsed_ms, 2),
+        )
+    finally:
+        conn.close()
 
 
 def _fetch_result(cursor: Any, t0: float) -> ExecutionResult:
@@ -233,7 +266,15 @@ def _fetch_result(cursor: Any, t0: float) -> ExecutionResult:
 
 
 def _try_fetch_arrow(cursor: Any) -> Any:
-    """Try to fetch results as an Arrow Table. Returns None on failure."""
+    """Try to fetch results as an Arrow Table. Returns None on failure.
+
+    Disabled when pyarrow is not loaded to avoid triggering heavy gRPC
+    initialization inside uvicorn on macOS.
+    """
+    import sys
+
+    if "pyarrow" not in sys.modules:
+        return None
     fetch_fn = getattr(cursor, "fetch_arrow_table", None)
     if fetch_fn is None:
         return None

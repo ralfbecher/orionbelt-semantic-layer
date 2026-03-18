@@ -120,12 +120,13 @@ class TestExecuteSql:
         mock_conn = MagicMock()
         mock_conn.cursor.return_value = mock_cursor
 
+        # Use postgres dialect (duckdb now takes the native _execute_duckdb path)
         with patch(
             "ob_flight.db_router.get_connection",
             side_effect=_mock_get_connection(mock_conn),
             create=True,
         ):
-            result = execute_sql("SELECT country, revenue FROM t", dialect="duckdb")
+            result = execute_sql("SELECT country, revenue FROM t", dialect="postgres")
 
         assert isinstance(result, ExecutionResult)
         assert result.row_count == 2
@@ -134,6 +135,30 @@ class TestExecuteSql:
         assert result.rows == [["US", 100], ["UK", 200]]
         assert result.execution_time_ms >= 0
         mock_cursor.close.assert_called_once()
+
+    def test_duckdb_direct_execution(self) -> None:
+        """DuckDB uses a direct native path (no get_connection)."""
+        mock_result = MagicMock()
+        mock_result.fetchall.return_value = [("US", 100)]
+        mock_result.description = [("country",), ("revenue",)]
+
+        mock_conn = MagicMock()
+        mock_conn.execute.return_value = mock_result
+
+        with (
+            patch(
+                "ob_flight.db_router.get_credentials",
+                return_value={"database": ":memory:"},
+                create=True,
+            ),
+            patch("duckdb.connect", return_value=mock_conn),
+        ):
+            result = execute_sql("SELECT 1", dialect="duckdb")
+
+        assert isinstance(result, ExecutionResult)
+        assert result.row_count == 1
+        assert result.rows == [["US", 100]]
+        mock_conn.close.assert_called_once()
 
     def test_db_error_raises_execution_error(self) -> None:
         mock_cursor = MagicMock()
@@ -150,7 +175,7 @@ class TestExecuteSql:
             ),
             pytest.raises(ExecutionError, match="connection refused"),
         ):
-            execute_sql("SELECT 1", dialect="duckdb")
+            execute_sql("SELECT 1", dialect="postgres")
 
     def test_unsupported_dialect_raises_unavailable(self) -> None:
         @contextmanager
@@ -183,7 +208,7 @@ class TestExecuteSql:
             ),
             pytest.raises(ExecutionError),
         ):
-            execute_sql("SELECT 1", dialect="duckdb")
+            execute_sql("SELECT 1", dialect="postgres")
 
         mock_cursor.close.assert_called_once()
 
