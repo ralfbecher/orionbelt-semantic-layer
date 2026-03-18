@@ -47,6 +47,7 @@ class CFLPlanner:
         resolved: ResolvedQuery,
         model: SemanticModel,
         qualify_table: Callable[[DataObject], str] | None = None,
+        union_by_name: bool = False,
     ) -> QueryPlan:
         """Plan a CFL query."""
         self._validate_fanout(resolved, model)
@@ -71,7 +72,12 @@ class CFLPlanner:
 
         # Multi-fact: UNION ALL strategy
         return self._plan_union_all(
-            resolved, model, measures_by_object, cross_fact, qualify_table=qualify_table
+            resolved,
+            model,
+            measures_by_object,
+            cross_fact,
+            qualify_table=qualify_table,
+            union_by_name=union_by_name,
         )
 
     def _validate_fanout(self, resolved: ResolvedQuery, model: SemanticModel) -> None:
@@ -339,8 +345,14 @@ class CFLPlanner:
         measures_by_object: dict[str, list[ResolvedMeasure]],
         cross_fact: list[ResolvedMeasure] | None = None,
         qualify_table: Callable[[DataObject], str] | None = None,
+        union_by_name: bool = False,
     ) -> QueryPlan:
-        """UNION ALL strategy: stack fact legs with NULL padding, aggregate outside."""
+        """UNION ALL strategy: stack fact legs with NULL padding, aggregate outside.
+
+        When *union_by_name* is True (DuckDB, Snowflake) each leg only emits
+        the columns it actually has — the database fills missing columns with
+        NULL automatically via ``UNION ALL BY NAME``.
+        """
         graph = JoinGraph(model, use_path_names=resolved.use_path_names or None)
 
         def qualify(obj: DataObject) -> str:
@@ -373,30 +385,30 @@ class CFLPlanner:
             reachable = graph.descendants(obj_name) | {obj_name}
 
             # SELECT conformed dimensions — only emit real column refs for
-            # dimensions reachable from this leg's fact; NULL-pad the rest.
+            # dimensions reachable from this leg's fact; skip unreachable
+            # ones when the dialect supports UNION ALL BY NAME.
             for dim in resolved.dimensions:
                 if dim.object_name in reachable:
                     col: Expr = ColumnRef(name=dim.source_column, table=dim.object_name)
-                else:
+                    leg_builder.select(AliasedExpr(expr=col, alias=dim.name))
+                elif not union_by_name:
                     model_dim = model.dimensions.get(dim.name)
                     dim_type = model_dim.result_type.value if model_dim else None
                     col = Cast(Literal.null(), type_name=dim_type) if dim_type else Literal.null()
-                leg_builder.select(AliasedExpr(expr=col, alias=dim.name))
+                    leg_builder.select(AliasedExpr(expr=col, alias=dim.name))
 
-            # SELECT this fact's measures (raw expressions, no aggregation)
-            # and NULL for the other facts' measures.
-            # Multi-field measures expand into one CTE column per field.
+            # SELECT this fact's measures (raw expressions, no aggregation).
+            # When union_by_name is True, skip NULL padding for other facts'
+            # measures — the database fills them automatically.
             for m in all_measures:
                 if self._is_multi_field(m):
                     assert isinstance(m.expression, FunctionCall)
                     for i, arg in enumerate(m.expression.args):
                         alias = self._multi_field_cte_alias(m.name, i)
-                        # Each field goes into the leg that owns its table
                         arg_table = arg.table if isinstance(arg, ColumnRef) else None
                         if arg_table == obj_name:
                             leg_builder.select(AliasedExpr(expr=arg, alias=alias))
-                        else:
-                            # Typed NULL: look up column's abstract_type from the data object
+                        elif not union_by_name:
                             null_type = self._resolve_null_type_for_field(m, i, model)
                             null_expr: Expr = (
                                 Cast(Literal.null(), type_name=null_type)
@@ -406,8 +418,7 @@ class CFLPlanner:
                             leg_builder.select(AliasedExpr(expr=null_expr, alias=alias))
                 elif m.name in this_measure_names:
                     leg_builder.select(AliasedExpr(expr=self._unwrap_aggregation(m), alias=m.name))
-                else:
-                    # Typed NULL: use the measure's result_type
+                elif not union_by_name:
                     model_measure = model.measures.get(m.name)
                     null_type_name = model_measure.result_type.value if model_measure else None
                     null_expr = (
