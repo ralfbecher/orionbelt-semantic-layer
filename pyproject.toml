@@ -107,6 +107,7 @@ plugins = ["pydantic.mypy"]
 
 [dependency-groups]
 dev = [
+    "nbstripout>=0.9.1",
     "types-networkx>=3.6.1.20260210",
     "types-PyYAML>=6.0",
 ]

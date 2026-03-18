@@ -218,6 +218,16 @@ dataObjects:
           - Line Supplier Key
         columnsTo:
           - Supplier Key
+      - joinType: many-to-one
+        joinTo: Part Supply
+        secondary: true
+        pathName: lineitem_partsupp
+        columnsFrom:
+          - Line Part Key
+          - Line Supplier Key
+        columnsTo:
+          - PS Part Key
+          - PS Supplier Key
 
   Part Supply:
     code: partsupp
@@ -353,10 +363,15 @@ measures:
     resultType: float
     aggregation: sum
 
-  Total Supply Cost:
+  Supply Cost:
     resultType: float
     aggregation: sum
-    expression: "{[Part Supply].[Supply Cost]} * {[Part Supply].[Available Qty]}"
+    expression: "{[Line Items].[Quantity]} * {[Part Supply].[Supply Cost]}"
+
+  Inventory Value:
+    resultType: float
+    aggregation: sum
+    expression: "{[Part Supply].[Available Qty]} * {[Part Supply].[Supply Cost]}"
 
   Available Stock:
     columns:
@@ -376,3 +391,6 @@ metrics:
 
   Average Line Price:
     expression: "{[Gross Amount]} / {[Line Item Count]}"
+
+  Gross Margin:
+    expression: "({[Revenue]} - {[Supply Cost]}) / {[Revenue]}"
