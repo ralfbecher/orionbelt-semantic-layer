@@ -206,11 +206,15 @@ class JoinGraph:
                         cardinality=edge_data["cardinality"],
                     )
                 else:
+                    # Path traverses edge in reverse direction.
+                    # from_object = source_object (edge[1]), to_object = join target (edge[0]).
+                    # columns_from/to belong to source_object/join_target respectively,
+                    # so they stay aligned with from_object/to_object — no swap needed.
                     step = JoinStep(
                         from_object=edge[1],
                         to_object=edge[0],
-                        from_columns=edge_data["columns_to"],
-                        to_columns=edge_data["columns_from"],
+                        from_columns=edge_data["columns_from"],
+                        to_columns=edge_data["columns_to"],
                         join_type=ASTJoinType.LEFT,
                         cardinality=edge_data["cardinality"],
                         reversed=True,
