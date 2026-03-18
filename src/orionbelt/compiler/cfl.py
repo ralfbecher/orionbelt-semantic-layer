@@ -127,12 +127,17 @@ class CFLPlanner:
                     continue
                 seen.add(measure.name)
                 model_measure = model.measures.get(measure.name)
-                if not model_measure or not model_measure.columns:
+                if not model_measure:
                     groups.setdefault(resolved.base_object, []).append(measure)
                     continue
 
-                # Collect all distinct source objects for this measure
-                field_objects = {f.view for f in model_measure.columns if f.view}
+                # Collect source objects: from explicit columns or expression AST
+                if model_measure.columns:
+                    field_objects = {f.view for f in model_measure.columns if f.view}
+                else:
+                    # Expression-based measure: extract table refs from the AST
+                    field_objects: set[str] = set()
+                    self._collect_table_refs(measure.expression, field_objects)
                 if len(field_objects) > 1:
                     # Cross-fact multi-field measure: ensure each
                     # involved object has a leg, but don't assign
@@ -140,9 +145,11 @@ class CFLPlanner:
                     cross_fact.append(measure)
                     for obj in field_objects:
                         groups.setdefault(obj, [])
-                else:
-                    obj_name = model_measure.columns[0].view or resolved.base_object
+                elif field_objects:
+                    obj_name = next(iter(field_objects))
                     groups.setdefault(obj_name, []).append(measure)
+                else:
+                    groups.setdefault(resolved.base_object, []).append(measure)
 
         return groups, cross_fact
 
