@@ -80,6 +80,10 @@ uv run uvicorn orionbelt.api.app:create_app --factory --reload
 
 The API is available at `http://127.0.0.1:8000`. Interactive docs at `/docs` (Swagger UI) and `/redoc`.
 
+### Interactive Notebook
+
+The [Quickstart Notebook](examples/quickstart.ipynb) walks through the full workflow using TPC-H in DuckDB — explore the model, compile queries across dialects, execute against real data, and see multi-fact CFL and secondary join paths in action. No cloud database needed.
+
 ## Example
 
 ### Define a Semantic Model
