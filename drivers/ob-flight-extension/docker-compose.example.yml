@@ -1,0 +1,39 @@
+# docker-compose.yml — add to your existing orionbelt-api service
+# Only two lines change: expose port 8815 and add FLIGHT_ENABLED=true
+
+services:
+  orionbelt:
+    image: orionbelt-api:latest
+    build: .
+    ports:
+      - "8000:8000"    # REST API (existing)
+      - "8815:8815"    # Arrow Flight SQL (NEW)
+    environment:
+      # --- existing env vars unchanged ---
+      LOG_LEVEL: INFO
+      API_SERVER_HOST: "0.0.0.0"
+      API_SERVER_PORT: "8000"
+      SESSION_TTL_SECONDS: "1800"
+
+      # --- Arrow Flight SQL (NEW) ---
+      FLIGHT_ENABLED: "true"
+      FLIGHT_PORT: "8815"
+      FLIGHT_AUTH_MODE: "none"          # use "token" for production
+      # FLIGHT_API_TOKEN: "changeme"    # required when AUTH_MODE=token
+      FLIGHT_DEFAULT_MODEL: ""          # fallback if DBeaver sends no path
+      FLIGHT_PRELOAD_MODELS: ""         # comma-sep paths, loaded at startup
+
+      # --- DB credentials (used by db_router.py) ---
+      DB_VENDOR: snowflake              # default vendor
+      SNOWFLAKE_ACCOUNT: "xy12345.eu-west-1"
+      SNOWFLAKE_USER: "your_user"
+      SNOWFLAKE_PASSWORD: "your_password"
+      SNOWFLAKE_DATABASE: "MY_DB"
+      SNOWFLAKE_SCHEMA: "PUBLIC"
+      SNOWFLAKE_WAREHOUSE: "COMPUTE_WH"
+      # POSTGRES_HOST: localhost
+      # POSTGRES_PORT: 5432
+      # POSTGRES_USER: postgres
+      # POSTGRES_PASSWORD: secret
+      # POSTGRES_DBNAME: mydb
+    restart: unless-stopped

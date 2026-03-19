@@ -1,6 +1,6 @@
 # Quick Start
 
-This walkthrough takes you from a YAML semantic model to compiled SQL in under 5 minutes.
+This walkthrough takes you from a YAML semantic model to compiled and executed SQL in under 5 minutes.
 
 ## Step 1: Define a Semantic Model
 

@@ -1,3 +1,3 @@
-"""OrionBelt Semantic Layer — Compiles YAML semantic models into analytical SQL."""
+"""OrionBelt Semantic Layer — Compiles and executes YAML semantic models as analytical SQL."""
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"

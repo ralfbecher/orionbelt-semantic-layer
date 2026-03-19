@@ -16,6 +16,8 @@ from orionbelt.models.semantic import (
     FilterValue,
     Measure,
     MeasureFilter,
+    MeasureFilterGroup,
+    MeasureFilterItem,
     Metric,
     SemanticModel,
 )
@@ -26,6 +28,46 @@ def _parse_extensions(raw: dict[str, Any]) -> list[CustomExtension]:
     """Extract customExtensions from a raw YAML dict."""
     exts = raw.get("customExtensions", [])
     return [CustomExtension(vendor=e.get("vendor", ""), data=e.get("data", "")) for e in exts]
+
+
+def _parse_measure_filter_item(raw: dict[str, Any]) -> MeasureFilterItem:
+    """Parse a single measure filter or filter group from raw YAML."""
+    if "logic" in raw:
+        # It's a filter group
+        child_filters: list[MeasureFilterItem] = [
+            _parse_measure_filter_item(f) for f in raw.get("filters", [])
+        ]
+        return MeasureFilterGroup(
+            logic=raw["logic"],
+            filters=child_filters,
+            negated=raw.get("negated", False),
+        )
+
+    # It's a leaf filter
+    filter_values: list[FilterValue] = []
+    for vdata in raw.get("values", []):
+        filter_values.append(
+            FilterValue(
+                data_type=vdata.get("dataType", "string"),
+                is_null=vdata.get("isNull"),
+                value_string=vdata.get("valueString"),
+                value_int=vdata.get("valueInt"),
+                value_float=vdata.get("valueFloat"),
+                value_date=vdata.get("valueDate"),
+                value_boolean=vdata.get("valueBoolean"),
+            )
+        )
+    filter_column = None
+    if "column" in raw:
+        filter_column = DataColumnRef(
+            view=raw["column"].get("dataObject"),
+            column=raw["column"].get("column"),
+        )
+    return MeasureFilter(
+        column=filter_column,
+        operator=raw.get("operator", "equals"),
+        values=filter_values,
+    )
 
 
 class ReferenceResolver:
@@ -217,33 +259,17 @@ class ReferenceResolver:
                         name, expression, data_objects, errors, source_map
                     )
 
-                mfilter = None
-                raw_filter = raw_meas.get("filter")
-                if raw_filter:
-                    filter_values = []
-                    for vdata in raw_filter.get("values", []):
-                        filter_values.append(
-                            FilterValue(
-                                data_type=vdata.get("dataType", "string"),
-                                is_null=vdata.get("isNull"),
-                                value_string=vdata.get("valueString"),
-                                value_int=vdata.get("valueInt"),
-                                value_float=vdata.get("valueFloat"),
-                                value_date=vdata.get("valueDate"),
-                                value_boolean=vdata.get("valueBoolean"),
-                            )
-                        )
-                    filter_column = None
-                    if "column" in raw_filter:
-                        filter_column = DataColumnRef(
-                            view=raw_filter["column"].get("dataObject"),
-                            column=raw_filter["column"].get("column"),
-                        )
-                    mfilter = MeasureFilter(
-                        column=filter_column,
-                        operator=raw_filter.get("operator", "equals"),
-                        values=filter_values,
-                    )
+                # Parse measure filters (new `filters:` list or legacy `filter:` single)
+                measure_filters: list[MeasureFilterItem] = []
+                raw_filters = raw_meas.get("filters")
+                if raw_filters and isinstance(raw_filters, list):
+                    for rf in raw_filters:
+                        measure_filters.append(_parse_measure_filter_item(rf))
+                else:
+                    # Backward compat: single `filter:` key → [filter]
+                    raw_filter = raw_meas.get("filter")
+                    if raw_filter:
+                        measure_filters.append(_parse_measure_filter_item(raw_filter))
 
                 measures[name] = Measure(
                     label=name,
@@ -253,7 +279,7 @@ class ReferenceResolver:
                     expression=expression,
                     distinct=raw_meas.get("distinct", False),
                     total=raw_meas.get("total", False),
-                    filter=mfilter,
+                    filters=measure_filters,
                     format=raw_meas.get("format"),
                     allow_fan_out=raw_meas.get("allowFanOut", False),
                     owner=raw_meas.get("owner"),

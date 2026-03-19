@@ -134,8 +134,10 @@ class StarSchemaPlanner:
         for expr, desc in resolved.order_by_exprs:
             builder.order_by(expr, desc=desc)
 
-        # LIMIT
+        # LIMIT / OFFSET
         if resolved.limit is not None:
             builder.limit(resolved.limit)
+        if resolved.offset is not None:
+            builder.offset(resolved.offset)
 
         return QueryPlan(ast=builder.build())

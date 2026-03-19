@@ -1,0 +1,67 @@
+# --- Build stage: install dependencies with Flight + vendor drivers ---
+FROM python:3.12-slim AS builder
+
+ENV PYTHONDONTWRITEBYTECODE=1
+
+WORKDIR /app
+
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+
+# Copy workspace package metadata first (cached layer)
+COPY pyproject.toml uv.lock README.md ./
+COPY drivers/ drivers/
+RUN uv sync --no-dev --no-install-project --extra flight --frozen
+
+# Copy source and install everything
+COPY src/ src/
+COPY schema/ schema/
+COPY osi-obml/osi_obml_converter.py osi-obml/
+COPY osi-obml/osi-schema.json osi-obml/
+RUN uv sync --no-dev --no-editable --extra flight --frozen
+
+# --- Runtime stage: minimal image ---
+FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+WORKDIR /app
+
+# Create non-root user
+RUN groupadd -r app && useradd -r -g app -d /app -s /sbin/nologin app
+
+# Copy installed virtualenv from builder
+COPY --from=builder --chown=app:app /app/.venv /app/.venv
+ENV PATH="/app/.venv/bin:$PATH"
+
+# Copy schema (needed at runtime for validation)
+COPY --from=builder --chown=app:app /app/schema schema/
+
+# Copy OSI converter (needed at runtime for /convert endpoints)
+COPY --from=builder --chown=app:app /app/osi-obml osi-obml/
+
+# Model directory — mount a host directory containing the OBML YAML file:
+#   docker run -v /path/to/models/:/app/models/ -e MODEL_FILE=my-model.obml.yml ...
+RUN mkdir -p /app/models && chown app:app /app/models
+
+USER app
+
+# REST API on 8080, Flight SQL on 8815
+# MODEL_DIR is the fixed mount point; MODEL_FILE (just the filename) is set by the user
+ENV PORT=8080 \
+    API_SERVER_HOST=0.0.0.0 \
+    LOG_LEVEL=INFO \
+    LOG_FORMAT=json \
+    MODEL_DIR=/app/models \
+    QUERY_EXECUTE=true \
+    DB_VENDOR=duckdb \
+    FLIGHT_ENABLED=true \
+    FLIGHT_PORT=8815 \
+    FLIGHT_AUTH_MODE=none
+
+EXPOSE 8080 8815
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen(f'http://localhost:{__import__(\"os\").environ[\"PORT\"]}/health')"
+
+CMD ["sh", "-c", "uvicorn orionbelt.api.app:create_app --factory --host 0.0.0.0 --port $PORT --log-level info --proxy-headers --forwarded-allow-ips='*' --no-access-log"]

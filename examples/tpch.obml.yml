@@ -1,0 +1,396 @@
+# yaml-language-server: $schema=../schema/obml-schema.json
+#
+# TPC-H Semantic Model for OrionBelt Quickstart
+# Uses DuckDB's built-in TPC-H dataset (CALL dbgen(sf=0.01))
+#
+version: 1.0
+
+dataObjects:
+  # ── Dimension tables ───────────────────────────────────────────────
+
+  Regions:
+    code: region
+    schema: main
+    columns:
+      Region Key:
+        code: r_regionkey
+        abstractType: int
+      Region Name:
+        code: r_name
+        abstractType: string
+
+  Nations:
+    code: nation
+    schema: main
+    columns:
+      Nation Key:
+        code: n_nationkey
+        abstractType: int
+      Nation Name:
+        code: n_name
+        abstractType: string
+      Nation Region Key:
+        code: n_regionkey
+        abstractType: int
+    joins:
+      - joinType: many-to-one
+        joinTo: Regions
+        columnsFrom:
+          - Nation Region Key
+        columnsTo:
+          - Region Key
+
+  Customers:
+    code: customer
+    schema: main
+    columns:
+      Customer Key:
+        code: c_custkey
+        abstractType: int
+      Customer Name:
+        code: c_name
+        abstractType: string
+      Market Segment:
+        code: c_mktsegment
+        abstractType: string
+      Customer Nation Key:
+        code: c_nationkey
+        abstractType: int
+      Account Balance:
+        code: c_acctbal
+        abstractType: float
+        numClass: non-additive
+    joins:
+      - joinType: many-to-one
+        joinTo: Nations
+        columnsFrom:
+          - Customer Nation Key
+        columnsTo:
+          - Nation Key
+
+  Suppliers:
+    code: supplier
+    schema: main
+    columns:
+      Supplier Key:
+        code: s_suppkey
+        abstractType: int
+      Supplier Name:
+        code: s_name
+        abstractType: string
+      Supplier Nation Key:
+        code: s_nationkey
+        abstractType: int
+    joins:
+      # Secondary: Nations is already reachable via Customers
+      - joinType: many-to-one
+        joinTo: Nations
+        secondary: true
+        pathName: supplier_nation
+        columnsFrom:
+          - Supplier Nation Key
+        columnsTo:
+          - Nation Key
+
+  Parts:
+    code: part
+    schema: main
+    columns:
+      Part Key:
+        code: p_partkey
+        abstractType: int
+      Part Name:
+        code: p_name
+        abstractType: string
+      Manufacturer:
+        code: p_mfgr
+        abstractType: string
+      Brand:
+        code: p_brand
+        abstractType: string
+      Part Type:
+        code: p_type
+        abstractType: string
+      Part Size:
+        code: p_size
+        abstractType: int
+      Container:
+        code: p_container
+        abstractType: string
+      Retail Price:
+        code: p_retailprice
+        abstractType: float
+        numClass: non-additive
+
+  # ── Fact tables ────────────────────────────────────────────────────
+
+  Orders:
+    code: orders
+    schema: main
+    columns:
+      Order Key:
+        code: o_orderkey
+        abstractType: int
+      Order Customer Key:
+        code: o_custkey
+        abstractType: int
+      Order Date:
+        code: o_orderdate
+        abstractType: date
+      Order Priority:
+        code: o_orderpriority
+        abstractType: string
+      Order Status:
+        code: o_orderstatus
+        abstractType: string
+      Order Total:
+        code: o_totalprice
+        abstractType: float
+        numClass: additive
+    joins:
+      - joinType: many-to-one
+        joinTo: Customers
+        columnsFrom:
+          - Order Customer Key
+        columnsTo:
+          - Customer Key
+
+  Line Items:
+    code: lineitem
+    schema: main
+    columns:
+      Line Order Key:
+        code: l_orderkey
+        abstractType: int
+      Line Part Key:
+        code: l_partkey
+        abstractType: int
+      Line Supplier Key:
+        code: l_suppkey
+        abstractType: int
+      Line Number:
+        code: l_linenumber
+        abstractType: int
+      Quantity:
+        code: l_quantity
+        abstractType: float
+        numClass: additive
+      Extended Price:
+        code: l_extendedprice
+        abstractType: float
+        numClass: additive
+      Discount:
+        code: l_discount
+        abstractType: float
+        numClass: non-additive
+      Tax:
+        code: l_tax
+        abstractType: float
+        numClass: non-additive
+      Return Flag:
+        code: l_returnflag
+        abstractType: string
+      Line Status:
+        code: l_linestatus
+        abstractType: string
+      Ship Date:
+        code: l_shipdate
+        abstractType: date
+      Ship Mode:
+        code: l_shipmode
+        abstractType: string
+    joins:
+      - joinType: many-to-one
+        joinTo: Orders
+        columnsFrom:
+          - Line Order Key
+        columnsTo:
+          - Order Key
+      - joinType: many-to-one
+        joinTo: Parts
+        columnsFrom:
+          - Line Part Key
+        columnsTo:
+          - Part Key
+      - joinType: many-to-one
+        joinTo: Suppliers
+        columnsFrom:
+          - Line Supplier Key
+        columnsTo:
+          - Supplier Key
+      - joinType: many-to-one
+        joinTo: Part Supply
+        secondary: true
+        pathName: lineitem_partsupp
+        columnsFrom:
+          - Line Part Key
+          - Line Supplier Key
+        columnsTo:
+          - PS Part Key
+          - PS Supplier Key
+
+  Part Supply:
+    code: partsupp
+    schema: main
+    columns:
+      PS Part Key:
+        code: ps_partkey
+        abstractType: int
+      PS Supplier Key:
+        code: ps_suppkey
+        abstractType: int
+      Available Qty:
+        code: ps_availqty
+        abstractType: int
+        numClass: additive
+      Supply Cost:
+        code: ps_supplycost
+        abstractType: float
+        numClass: non-additive
+    joins:
+      - joinType: many-to-one
+        joinTo: Parts
+        columnsFrom:
+          - PS Part Key
+        columnsTo:
+          - Part Key
+      - joinType: many-to-one
+        joinTo: Suppliers
+        columnsFrom:
+          - PS Supplier Key
+        columnsTo:
+          - Supplier Key
+
+# ── Dimensions ─────────────────────────────────────────────────────
+
+dimensions:
+  Region:
+    dataObject: Regions
+    column: Region Name
+    resultType: string
+  Nation:
+    dataObject: Nations
+    column: Nation Name
+    resultType: string
+  Customer:
+    dataObject: Customers
+    column: Customer Name
+    resultType: string
+  Market Segment:
+    dataObject: Customers
+    column: Market Segment
+    resultType: string
+  Order Date:
+    dataObject: Orders
+    column: Order Date
+    resultType: date
+  Order Priority:
+    dataObject: Orders
+    column: Order Priority
+    resultType: string
+  Order Status:
+    dataObject: Orders
+    column: Order Status
+    resultType: string
+  Brand:
+    dataObject: Parts
+    column: Brand
+    resultType: string
+  Part Type:
+    dataObject: Parts
+    column: Part Type
+    resultType: string
+  Ship Mode:
+    dataObject: Line Items
+    column: Ship Mode
+    resultType: string
+  Return Flag:
+    dataObject: Line Items
+    column: Return Flag
+    resultType: string
+  Supplier:
+    dataObject: Suppliers
+    column: Supplier Name
+    resultType: string
+
+# ── Measures ───────────────────────────────────────────────────────
+
+measures:
+  Revenue:
+    resultType: float
+    aggregation: sum
+    expression: "{[Line Items].[Extended Price]} * (1 - {[Line Items].[Discount]})"
+    synonyms: [sales, income, turnover]
+
+  Gross Amount:
+    columns:
+      - dataObject: Line Items
+        column: Extended Price
+    resultType: float
+    aggregation: sum
+
+  Total Discount:
+    resultType: float
+    aggregation: sum
+    expression: "{[Line Items].[Extended Price]} * {[Line Items].[Discount]}"
+
+  Total Quantity:
+    columns:
+      - dataObject: Line Items
+        column: Quantity
+    resultType: float
+    aggregation: sum
+
+  Order Count:
+    columns:
+      - dataObject: Orders
+        column: Order Key
+    resultType: int
+    aggregation: count
+    distinct: true
+
+  Line Item Count:
+    columns:
+      - dataObject: Line Items
+        column: Line Number
+    resultType: int
+    aggregation: count
+
+  Total Order Value:
+    columns:
+      - dataObject: Orders
+        column: Order Total
+    resultType: float
+    aggregation: sum
+
+  Supply Cost:
+    resultType: float
+    aggregation: sum
+    expression: "{[Line Items].[Quantity]} * {[Part Supply].[Supply Cost]}"
+
+  Inventory Value:
+    resultType: float
+    aggregation: sum
+    expression: "{[Part Supply].[Available Qty]} * {[Part Supply].[Supply Cost]}"
+
+  Available Stock:
+    columns:
+      - dataObject: Part Supply
+        column: Available Qty
+    resultType: int
+    aggregation: sum
+
+# ── Metrics (cross-measure formulas) ──────────────────────────────
+
+metrics:
+  Average Order Value:
+    expression: "{[Revenue]} / {[Order Count]}"
+
+  Discount Rate:
+    expression: "{[Total Discount]} / {[Gross Amount]}"
+
+  Average Line Price:
+    expression: "{[Gross Amount]} / {[Line Item Count]}"
+
+  Gross Margin:
+    expression: "({[Revenue]} - {[Supply Cost]}) / {[Revenue]}"

@@ -31,5 +31,6 @@ CLAUDE.md
 LICENSE
 .mcpregistry_github_token
 .mcpregistry_registry_token
+drivers/
 Dockerfile
 .dockerignore

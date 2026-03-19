@@ -61,6 +61,36 @@ class QueryCompileResponse(BaseModel):
     explain: ExplainPlanResponse | None = None
 
 
+class ColumnMetadata(BaseModel):
+    """Metadata for a single result column."""
+
+    name: str
+    type: str = Field(description="Type hint: string, number, datetime, binary")
+
+
+class QueryExecuteResponse(BaseModel):
+    """Response body for POST /query/execute."""
+
+    sql: str
+    dialect: str
+    columns: list[ColumnMetadata] = Field(default_factory=list)
+    rows: list[list[object]] = Field(default_factory=list)
+    row_count: int = 0
+    execution_time_ms: float = 0.0
+    resolved: ResolvedInfoResponse = Field(default_factory=ResolvedInfoResponse)
+    warnings: list[str] = Field(default_factory=list)
+    sql_valid: bool = True
+    explain: ExplainPlanResponse | None = None
+
+
+class SessionQueryExecuteRequest(BaseModel):
+    """Request body for POST /sessions/{session_id}/query/execute."""
+
+    model_id: str
+    query: QueryObject
+    dialect: str = Field(default="postgres")
+
+
 class ValidateRequest(BaseModel):
     """Request body for POST /validate."""
 
@@ -113,6 +143,15 @@ class HealthResponse(BaseModel):
     version: str = ""
 
 
+class FlightSettingsInfo(BaseModel):
+    """Arrow Flight SQL server status (included when FLIGHT_ENABLED=true)."""
+
+    enabled: bool = True
+    port: int = 8815
+    auth_mode: str = "none"
+    db_vendor: str = "duckdb"
+
+
 class SettingsResponse(BaseModel):
     """Response for GET /settings — public configuration for clients."""
 
@@ -122,6 +161,14 @@ class SettingsResponse(BaseModel):
         description="Pre-loaded OBML YAML content (only when single_model_mode is true)",
     )
     session_ttl_seconds: int = 1800
+    query_execute: bool = Field(
+        default=False,
+        description="Whether POST /query/execute is available",
+    )
+    flight: FlightSettingsInfo | None = Field(
+        default=None,
+        description="Arrow Flight SQL server info (present only when Flight is enabled)",
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -243,6 +290,7 @@ class ColumnDetail(BaseModel):
     code: str
     abstract_type: str
     num_class: str | None = None
+    description: str | None = None
     comment: str | None = None
     owner: str | None = None
     synonyms: list[str] = Field(default_factory=list)
@@ -257,6 +305,7 @@ class DataObjectDetail(BaseModel):
     schema_name: str = Field(alias="schema")
     columns: list[ColumnDetail] = Field(default_factory=list)
     join_targets: list[str] = Field(default_factory=list)
+    description: str | None = None
     comment: str | None = None
     owner: str | None = None
     synonyms: list[str] = Field(default_factory=list)
@@ -272,6 +321,7 @@ class DimensionDetail(BaseModel):
     column: str
     result_type: str
     time_grain: str | None = None
+    description: str | None = None
     format: str | None = None
     owner: str | None = None
     synonyms: list[str] = Field(default_factory=list)
@@ -287,6 +337,7 @@ class MeasureDetail(BaseModel):
     columns: list[dict[str, str]] = Field(default_factory=list)
     distinct: bool = False
     total: bool = False
+    description: str | None = None
     format: str | None = None
     owner: str | None = None
     synonyms: list[str] = Field(default_factory=list)
@@ -298,6 +349,7 @@ class MetricDetail(BaseModel):
     name: str
     expression: str
     component_measures: list[str] = Field(default_factory=list)
+    description: str | None = None
     format: str | None = None
     owner: str | None = None
     synonyms: list[str] = Field(default_factory=list)
@@ -308,6 +360,7 @@ class SchemaResponse(BaseModel):
 
     model_id: str
     version: float = 1.0
+    description: str | None = None
     owner: str | None = None
     data_objects: list[DataObjectDetail] = Field(default_factory=list)
     dimensions: list[DimensionDetail] = Field(default_factory=list)

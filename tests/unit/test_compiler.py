@@ -12,6 +12,7 @@ from orionbelt.compiler.star import StarSchemaPlanner
 from orionbelt.models.query import (
     FilterOperator,
     QueryFilter,
+    QueryFilterGroup,
     QueryObject,
     QueryOrderBy,
     QuerySelect,
@@ -906,3 +907,238 @@ class TestFilterValidation:
         with pytest.raises(ResolutionError) as exc_info:
             resolver.resolve(query, model)
         assert any(e.code == "UNREACHABLE_FILTER_FIELD" for e in exc_info.value.errors)
+
+
+class TestFilterGroups:
+    """Tests for AND/OR/NOT filter groups."""
+
+    def test_or_filter_group(self) -> None:
+        """OR group produces BinaryOp(op='OR')."""
+        model = _load_model(VALIDATION_MODEL_YAML)
+        resolver = QueryResolver()
+        query = QueryObject(
+            select=QuerySelect(
+                dimensions=["Customer Country"],
+                measures=["Total Revenue"],
+            ),
+            where=[
+                QueryFilterGroup(
+                    logic="or",
+                    filters=[
+                        QueryFilter(field="Customer Country", op=FilterOperator.EQ, value="US"),
+                        QueryFilter(field="Customer Country", op=FilterOperator.EQ, value="CA"),
+                    ],
+                )
+            ],
+        )
+        resolved = resolver.resolve(query, model)
+        assert len(resolved.where_filters) == 1
+        expr = resolved.where_filters[0].expression
+        assert isinstance(expr, BinaryOp)
+        assert expr.op == "OR"
+
+    def test_and_filter_group(self) -> None:
+        """AND group produces BinaryOp(op='AND')."""
+        model = _load_model(VALIDATION_MODEL_YAML)
+        resolver = QueryResolver()
+        query = QueryObject(
+            select=QuerySelect(
+                dimensions=["Customer Country"],
+                measures=["Total Revenue"],
+            ),
+            where=[
+                QueryFilterGroup(
+                    logic="and",
+                    filters=[
+                        QueryFilter(field="Customer Country", op=FilterOperator.EQ, value="US"),
+                        QueryFilter(
+                            field="Region Name", op=FilterOperator.EQ, value="North America"
+                        ),
+                    ],
+                )
+            ],
+        )
+        resolved = resolver.resolve(query, model)
+        assert len(resolved.where_filters) == 1
+        expr = resolved.where_filters[0].expression
+        assert isinstance(expr, BinaryOp)
+        assert expr.op == "AND"
+        # Region should be auto-joined
+        joined = {s.to_object for s in resolved.join_steps}
+        assert "Regions" in joined
+
+    def test_negated_filter_group(self) -> None:
+        """Negated group wraps with UnaryOp(NOT)."""
+        from orionbelt.ast.nodes import UnaryOp
+
+        model = _load_model(VALIDATION_MODEL_YAML)
+        resolver = QueryResolver()
+        query = QueryObject(
+            select=QuerySelect(
+                dimensions=["Customer Country"],
+                measures=["Total Revenue"],
+            ),
+            where=[
+                QueryFilterGroup(
+                    logic="or",
+                    negated=True,
+                    filters=[
+                        QueryFilter(field="Customer Country", op=FilterOperator.EQ, value="US"),
+                        QueryFilter(field="Customer Country", op=FilterOperator.EQ, value="CA"),
+                    ],
+                )
+            ],
+        )
+        resolved = resolver.resolve(query, model)
+        assert len(resolved.where_filters) == 1
+        expr = resolved.where_filters[0].expression
+        assert isinstance(expr, UnaryOp)
+        assert expr.op == "NOT"
+        assert isinstance(expr.operand, BinaryOp)
+        assert expr.operand.op == "OR"
+
+    def test_nested_filter_groups(self) -> None:
+        """Nested groups: (A OR B) AND C."""
+        model = _load_model(VALIDATION_MODEL_YAML)
+        resolver = QueryResolver()
+        query = QueryObject(
+            select=QuerySelect(
+                dimensions=["Customer Country"],
+                measures=["Total Revenue"],
+            ),
+            where=[
+                QueryFilterGroup(
+                    logic="and",
+                    filters=[
+                        QueryFilterGroup(
+                            logic="or",
+                            filters=[
+                                QueryFilter(
+                                    field="Customer Country",
+                                    op=FilterOperator.EQ,
+                                    value="US",
+                                ),
+                                QueryFilter(
+                                    field="Customer Country",
+                                    op=FilterOperator.EQ,
+                                    value="CA",
+                                ),
+                            ],
+                        ),
+                        QueryFilter(
+                            field="Region Name",
+                            op=FilterOperator.EQ,
+                            value="North America",
+                        ),
+                    ],
+                )
+            ],
+        )
+        resolved = resolver.resolve(query, model)
+        assert len(resolved.where_filters) == 1
+        expr = resolved.where_filters[0].expression
+        assert isinstance(expr, BinaryOp)
+        assert expr.op == "AND"
+        # Left is the OR group
+        assert isinstance(expr.left, BinaryOp)
+        assert expr.left.op == "OR"
+
+    def test_mixed_flat_and_grouped_filters(self) -> None:
+        """Flat filters and groups can be mixed at top level (AND-combined)."""
+        model = _load_model(VALIDATION_MODEL_YAML)
+        resolver = QueryResolver()
+        query = QueryObject(
+            select=QuerySelect(
+                dimensions=["Customer Country"],
+                measures=["Total Revenue"],
+            ),
+            where=[
+                QueryFilter(field="Customer Country", op=FilterOperator.EQ, value="US"),
+                QueryFilterGroup(
+                    logic="or",
+                    filters=[
+                        QueryFilter(
+                            field="Region Name", op=FilterOperator.EQ, value="North America"
+                        ),
+                        QueryFilter(field="Region Name", op=FilterOperator.EQ, value="EMEA"),
+                    ],
+                ),
+            ],
+        )
+        resolved = resolver.resolve(query, model)
+        # Two separate resolved filters (AND-combined by builder)
+        assert len(resolved.where_filters) == 2
+
+    def test_or_filter_group_sql(self) -> None:
+        """OR filter group produces correct SQL."""
+        model = _load_model(VALIDATION_MODEL_YAML)
+        pipeline = CompilationPipeline()
+        query = QueryObject(
+            select=QuerySelect(
+                dimensions=["Customer Country"],
+                measures=["Total Revenue"],
+            ),
+            where=[
+                QueryFilterGroup(
+                    logic="or",
+                    filters=[
+                        QueryFilter(field="Customer Country", op=FilterOperator.EQ, value="US"),
+                        QueryFilter(field="Customer Country", op=FilterOperator.EQ, value="CA"),
+                    ],
+                )
+            ],
+        )
+        result = pipeline.compile(query, model, "duckdb")
+        sql = result.sql.upper()
+        assert "OR" in sql
+        assert "WHERE" in sql
+
+    def test_single_item_group_no_binary_op(self) -> None:
+        """A group with a single filter just returns that filter's expression."""
+        model = _load_model(VALIDATION_MODEL_YAML)
+        resolver = QueryResolver()
+        query = QueryObject(
+            select=QuerySelect(
+                dimensions=["Customer Country"],
+                measures=["Total Revenue"],
+            ),
+            where=[
+                QueryFilterGroup(
+                    logic="or",
+                    filters=[
+                        QueryFilter(field="Customer Country", op=FilterOperator.EQ, value="US"),
+                    ],
+                )
+            ],
+        )
+        resolved = resolver.resolve(query, model)
+        assert len(resolved.where_filters) == 1
+        # Single child — no BinaryOp wrapping, just the leaf expression
+        expr = resolved.where_filters[0].expression
+        assert isinstance(expr, BinaryOp)
+        assert expr.op == "="
+
+    def test_having_filter_group(self) -> None:
+        """Filter groups work in HAVING too."""
+        model = _load_model(VALIDATION_MODEL_YAML)
+        resolver = QueryResolver()
+        query = QueryObject(
+            select=QuerySelect(
+                dimensions=["Customer Country"],
+                measures=["Total Revenue", "Order Count"],
+            ),
+            having=[
+                QueryFilterGroup(
+                    logic="or",
+                    filters=[
+                        QueryFilter(field="Total Revenue", op=FilterOperator.GT, value=1000),
+                        QueryFilter(field="Order Count", op=FilterOperator.GT, value=10),
+                    ],
+                )
+            ],
+        )
+        resolved = resolver.resolve(query, model)
+        assert len(resolved.having_filters) == 1
+        expr = resolved.having_filters[0].expression
+        assert isinstance(expr, BinaryOp)
+        assert expr.op == "OR"

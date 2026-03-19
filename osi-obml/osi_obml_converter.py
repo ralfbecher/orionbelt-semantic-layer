@@ -72,6 +72,10 @@ class OSItoOBML:
 
         obml: dict[str, Any] = {"version": 1.0}
 
+        # ── Model description ─────────────────────────────────────
+        if model.get("description"):
+            obml["description"] = model["description"]
+
         # ── DataObjects ─────────────────────────────────────────────
         datasets = model.get("datasets", [])
         relationships = model.get("relationships", [])
@@ -170,9 +174,9 @@ class OSItoOBML:
         if joins:
             do["joins"] = joins
 
-        # ── Comment from description ──────────────────────────────────
+        # ── Description (semantic, from OSI) ─────────────────────────
         if ds.get("description"):
-            do["comment"] = ds["description"]
+            do["description"] = ds["description"]
 
         # ── Extract ai_context: synonyms → native, rest → customExtensions ─
         ai_ctx = ds.get("ai_context")
@@ -225,7 +229,7 @@ class OSItoOBML:
         }
 
         if field.get("description"):
-            col["comment"] = field["description"]
+            col["description"] = field["description"]
 
         # Extract field-level ai_context: synonyms → native, rest → customExtensions
         ai_ctx = field.get("ai_context")
@@ -356,6 +360,18 @@ class OSItoOBML:
                 ai_ctx = field.get("ai_context")
                 if isinstance(ai_ctx, dict) and ai_ctx.get("synonyms"):
                     dim_def["synonyms"] = list(ai_ctx["synonyms"])
+                # Restore OBML-only dimension properties from custom_extensions
+                for ext in field.get("custom_extensions", []):
+                    if ext.get("vendor_name") == "COMMON":
+                        try:
+                            ext_data = json.loads(ext.get("data", "{}"))
+                            if ext_data.get("obml_time_grain"):
+                                dim_def["timeGrain"] = ext_data["obml_time_grain"]
+                            if ext_data.get("obml_dimension_format"):
+                                dim_def["format"] = ext_data["obml_dimension_format"]
+                        except (json.JSONDecodeError, TypeError):
+                            pass
+                        break
                 dimensions[field_name] = dim_def
         return dimensions
 
@@ -380,6 +396,8 @@ class OSItoOBML:
         for m in osi_metrics:
             name = m["name"]
 
+            osi_description = m.get("description")
+
             # Extract synonyms from OSI ai_context
             osi_ai_ctx = m.get("ai_context")
             osi_synonyms: list[str] = []
@@ -390,6 +408,9 @@ class OSItoOBML:
             if not expr_text:
                 self.warnings.append(f"Metric '{name}' has no ANSI_SQL expression; skipped.")
                 continue
+
+            # Restore OBML-only properties from custom_extensions
+            obml_extras = self._extract_obml_extras(m)
 
             # Try simple: AGG(dataset.column) or AGG(DISTINCT dataset.column)
             parsed = self._parse_simple_agg(expr_text)
@@ -402,8 +423,11 @@ class OSItoOBML:
                 }
                 if is_distinct:
                     measure_def["distinct"] = True
+                if osi_description:
+                    measure_def["description"] = osi_description
                 if osi_synonyms:
                     measure_def["synonyms"] = osi_synonyms
+                self._apply_obml_measure_extras(measure_def, obml_extras)
                 measures[name] = measure_def
                 continue
 
@@ -417,8 +441,11 @@ class OSItoOBML:
                     "resultType": "float" if agg.upper() in ("SUM", "AVG") else "int",
                     "aggregation": agg.lower(),
                 }
+                if osi_description:
+                    measure_def["description"] = osi_description
                 if osi_synonyms:
                     measure_def["synonyms"] = osi_synonyms
+                self._apply_obml_measure_extras(measure_def, obml_extras)
                 measures[name] = measure_def
                 continue
 
@@ -440,8 +467,13 @@ class OSItoOBML:
                             break
                 measures.update(auto_measures)
                 metric_def: dict[str, Any] = {"expression": obml_expr}
+                if osi_description:
+                    metric_def["description"] = osi_description
                 if osi_synonyms:
                     metric_def["synonyms"] = osi_synonyms
+                # Restore format for complex metrics (stored as obml_format)
+                if obml_extras.get("obml_format"):
+                    metric_def["format"] = obml_extras["obml_format"]
                 metrics[name] = metric_def
             else:
                 self.warnings.append(
@@ -449,6 +481,36 @@ class OSItoOBML:
                 )
 
         return measures, metrics
+
+    @staticmethod
+    def _extract_obml_extras(osi_metric: dict) -> dict:
+        """Extract OBML-only properties from OSI metric custom_extensions."""
+        for ext in osi_metric.get("custom_extensions", []):
+            if ext.get("vendor_name") == "COMMON":
+                try:
+                    data = json.loads(ext.get("data", "{}"))
+                    # Check for any obml_ prefixed keys
+                    if any(k.startswith("obml_") for k in data):
+                        return data
+                except (json.JSONDecodeError, TypeError):
+                    pass
+        return {}
+
+    @staticmethod
+    def _apply_obml_measure_extras(measure_def: dict, extras: dict) -> None:
+        """Restore OBML-only measure properties from extracted extras."""
+        if extras.get("obml_filter"):
+            measure_def["filter"] = extras["obml_filter"]
+        if extras.get("obml_total"):
+            measure_def["total"] = True
+        if extras.get("obml_allow_fan_out"):
+            measure_def["allowFanOut"] = True
+        if extras.get("obml_format"):
+            measure_def["format"] = extras["obml_format"]
+        if extras.get("obml_delimiter"):
+            measure_def["delimiter"] = extras["obml_delimiter"]
+        if extras.get("obml_within_group"):
+            measure_def["withinGroup"] = extras["obml_within_group"]
 
     @staticmethod
     def _measures_equivalent(a: dict, b: dict) -> bool:
@@ -679,8 +741,11 @@ class OBMLtoOSI:
 
         # ── Build semantic model ────────────────────────────────────
         sem_model: dict[str, Any] = {"name": self.model_name}
-        if self.model_description:
-            sem_model["description"] = self.model_description
+        # Prefer OBML model-level description, fall back to constructor param
+        obml_description = self.obml.get("description", "")
+        model_desc = obml_description or self.model_description
+        if model_desc:
+            sem_model["description"] = model_desc
         if self.ai_instructions:
             sem_model["ai_context"] = {"instructions": self.ai_instructions}
 
@@ -723,7 +788,9 @@ class OBMLtoOSI:
             "source": source,
         }
 
-        if do_obj.get("comment"):
+        if do_obj.get("description"):
+            dataset["description"] = do_obj["description"]
+        elif do_obj.get("comment"):
             dataset["description"] = do_obj["comment"]
 
         # ── Rebuild ai_context: native synonyms + remaining from customExtensions
@@ -805,7 +872,9 @@ class OBMLtoOSI:
         if is_dimension or is_time:
             field["dimension"] = {"is_time": is_time}
 
-        if col_obj.get("comment"):
+        if col_obj.get("description"):
+            field["description"] = col_obj["description"]
+        elif col_obj.get("comment"):
             field["description"] = col_obj["comment"]
         else:
             field["description"] = col_name  # Use display name as description
@@ -843,12 +912,21 @@ class OBMLtoOSI:
         # Preserve OBML type info in custom_extensions for roundtrip fidelity
         abstract_type = col_obj.get("abstractType", "string")
         osi_type = OBML_TO_OSI_TYPE.get(abstract_type, "string")
+        ext_data: dict[str, Any] = {
+            "data_type": osi_type,
+            "obml_abstract_type": abstract_type,
+        }
+        # Preserve OBML-only dimension properties (timeGrain, format)
+        for dim_name, dim_obj in obml_dimensions.items():
+            if dim_obj.get("dataObject") == do_name and dim_obj.get("column") == col_name:
+                if dim_obj.get("timeGrain"):
+                    ext_data["obml_time_grain"] = dim_obj["timeGrain"]
+                if dim_obj.get("format"):
+                    ext_data["obml_dimension_format"] = dim_obj["format"]
+                break
         field["custom_extensions"] = [{
             "vendor_name": "COMMON",
-            "data": json.dumps({
-                "data_type": osi_type,
-                "obml_abstract_type": abstract_type,
-            }),
+            "data": json.dumps(ext_data),
         }]
 
         return field
@@ -959,10 +1037,11 @@ class OBMLtoOSI:
                             "expression": expr,
                         }]
                     },
-                    "description": name,
+                    "description": measure.get("description", name),
                 }
                 if ai_ctx:
                     result["ai_context"] = ai_ctx
+                self._add_obml_measure_extras(result, measure)
                 return result
             self.warnings.append(f"Measure '{name}' has no columns; skipped.")
             return None
@@ -990,11 +1069,35 @@ class OBMLtoOSI:
                     "expression": expr,
                 }]
             },
-            "description": name,
+            "description": measure.get("description", name),
         }
         if ai_ctx:
             result["ai_context"] = ai_ctx
+        self._add_obml_measure_extras(result, measure)
         return result
+
+    @staticmethod
+    def _add_obml_measure_extras(result: dict, measure: dict) -> None:
+        """Preserve OBML-only measure properties in custom_extensions for roundtrip."""
+        extras: dict[str, Any] = {}
+        if measure.get("filter"):
+            extras["obml_filter"] = measure["filter"]
+        if measure.get("total"):
+            extras["obml_total"] = True
+        if measure.get("allowFanOut"):
+            extras["obml_allow_fan_out"] = True
+        if measure.get("format"):
+            extras["obml_format"] = measure["format"]
+        if measure.get("delimiter"):
+            extras["obml_delimiter"] = measure["delimiter"]
+        if measure.get("withinGroup"):
+            extras["obml_within_group"] = measure["withinGroup"]
+        if extras:
+            exts = result.setdefault("custom_extensions", [])
+            exts.append({
+                "vendor_name": "COMMON",
+                "data": json.dumps(extras),
+            })
 
     def _obml_refs_to_sql(self, obml_expr: str, data_objects: dict) -> str:
         """Convert OBML {[DataObject].[Column]} references to SQL dataset.column."""
@@ -1054,13 +1157,20 @@ class OBMLtoOSI:
                     "expression": sql_expr,
                 }]
             },
-            "description": name,
+            "description": metric.get("description", name),
         }
         # Include OBML synonyms in ai_context
         obml_synonyms = metric.get("synonyms", [])
         ai_synonyms = [s for s in obml_synonyms if s != name]
         if ai_synonyms:
             result["ai_context"] = {"synonyms": ai_synonyms}
+        # Preserve OBML-only metric properties in custom_extensions
+        if metric.get("format"):
+            exts = result.setdefault("custom_extensions", [])
+            exts.append({
+                "vendor_name": "COMMON",
+                "data": json.dumps({"obml_format": metric["format"]}),
+            })
         return result
 
     def _measure_to_sql(self, measure: dict, data_objects: dict) -> str | None:

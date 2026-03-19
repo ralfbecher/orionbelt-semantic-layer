@@ -132,7 +132,10 @@ class TestSemanticValidator:
         errors = validator.validate(sales_model)
         assert len(errors) == 0
 
-    def test_duplicate_identifier_across_sections(self, resolver: ReferenceResolver) -> None:
+    def test_dimension_may_share_name_with_data_object(
+        self, resolver: ReferenceResolver
+    ) -> None:
+        """Dimension names can match data object names (different namespaces)."""
         yaml_content = """\
 version: 1.0
 dataObjects:
@@ -149,6 +152,45 @@ dimensions:
     dataObject: Orders
     column: id
     resultType: string
+"""
+        loader = TrackedLoader()
+        raw, source_map = loader.load_string(yaml_content)
+        model, result = resolver.resolve(raw, source_map)
+        validator = SemanticValidator()
+        errors = validator.validate(model)
+        assert not any(e.code == "DUPLICATE_IDENTIFIER" for e in errors)
+
+    def test_duplicate_identifier_dimension_measure(
+        self, resolver: ReferenceResolver
+    ) -> None:
+        """Dimension and measure with the same name should still error."""
+        yaml_content = """\
+version: 1.0
+dataObjects:
+  Orders:
+    code: ORDERS
+    database: DB
+    schema: SCH
+    columns:
+      id:
+        code: ID
+        abstractType: string
+      amt:
+        code: AMT
+        abstractType: float
+        numClass: additive
+dimensions:
+  Revenue:
+    dataObject: Orders
+    column: id
+    resultType: string
+measures:
+  Revenue:
+    columns:
+      - dataObject: Orders
+        column: amt
+    resultType: float
+    aggregation: sum
 """
         loader = TrackedLoader()
         raw, source_map = loader.load_string(yaml_content)

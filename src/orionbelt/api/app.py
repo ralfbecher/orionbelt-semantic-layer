@@ -29,9 +29,11 @@ from orionbelt.settings import Settings
 logger = logging.getLogger("orionbelt.api")
 
 
-def _read_model_file(path_str: str) -> str:
+def _read_model_file(path_str: str, model_dir: str | None = None) -> str:
     """Read and validate the MODEL_FILE at startup. Raises on error."""
     path = Path(path_str)
+    if not path.is_absolute() and model_dir:
+        path = Path(model_dir) / path
     if not path.is_file():
         raise FileNotFoundError(f"MODEL_FILE not found: {path}")
     yaml_str = path.read_text(encoding="utf-8")
@@ -56,7 +58,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     # Read and validate MODEL_FILE before starting (fail fast)
     preload_yaml: str | None = None
     if settings.model_file:
-        preload_yaml = _read_model_file(settings.model_file)
+        preload_yaml = _read_model_file(settings.model_file, settings.model_dir)
         logger.info("Single-model mode: loaded %s", settings.model_file)
 
     mgr = SessionManager(
@@ -64,14 +66,65 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
         cleanup_interval=settings.session_cleanup_interval,
     )
     mgr.start()
+
+    # Build Flight info dict if enabled (exposed via GET /v1/settings)
+    flight_info: dict[str, object] | None = None
+    if settings.flight_enabled:
+        flight_info = {
+            "enabled": True,
+            "port": settings.flight_port,
+            "auth_mode": settings.flight_auth_mode,
+            "db_vendor": settings.db_vendor,
+        }
+
+    # query/execute is available when explicitly enabled OR when Flight is enabled
+    query_execute_enabled = settings.query_execute or settings.flight_enabled
+
     init_session_manager(
         mgr,
         disable_session_list=settings.disable_session_list,
         preload_model_yaml=preload_yaml,
+        flight_info=flight_info,
+        query_execute_enabled=query_execute_enabled,
+        db_vendor=settings.db_vendor,
+        query_default_limit=settings.query_default_limit,
     )
+
+    # Optionally start Arrow Flight SQL server in a daemon thread
+    flight_thread = None
+    if settings.flight_enabled:
+        try:
+            from ob_flight.startup import start_flight_background
+
+            flight_thread = start_flight_background(
+                session_manager=mgr,
+                port=settings.flight_port,
+            )
+            logger.info(
+                "Flight SQL server started on port %d (vendor=%s)",
+                settings.flight_port,
+                settings.db_vendor,
+            )
+        except ImportError:
+            logger.warning(
+                "FLIGHT_ENABLED=true but ob-flight-extension is not installed. "
+                "Install with: uv sync --extra flight"
+            )
+
     try:
         yield
     finally:
+        if flight_thread is not None:
+            from ob_flight.startup import stop_flight_server
+
+            stop_flight_server()
+        # Drain connection pools before stopping sessions
+        try:
+            from ob_flight.db_router import close_all_pools
+
+            close_all_pools()
+        except ImportError:
+            pass
         mgr.stop()
         reset_session_manager()
 
@@ -83,7 +136,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app = FastAPI(
         title="OrionBelt Semantic Layer",
-        description="Compiles YAML semantic models into analytical SQL across multiple dialects.",
+        description=(
+            "Compiles and executes YAML semantic models as analytical SQL across multiple dialects."
+        ),
         version=__version__,
         lifespan=lifespan,
     )
@@ -133,8 +188,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         api_url = f"http://localhost:{settings.effective_port}"
         demo = create_blocks(default_api_url=api_url)
         app = gr.mount_gradio_app(app, demo, path="/ui")
-    except ImportError:
-        pass  # gradio not installed — skip UI mount
+    except Exception:
+        pass  # gradio not installed or mount failed — skip UI mount
 
     return app
 

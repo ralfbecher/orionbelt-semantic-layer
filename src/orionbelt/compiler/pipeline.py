@@ -104,7 +104,12 @@ class CompilationPipeline:
         # Phase 2: Planning (star schema or CFL)
         use_cfl = resolved.requires_cfl or resolved.dimensions_exclude
         if use_cfl:
-            plan = self._cfl_planner.plan(resolved, model, qualify_table=qualify_table)
+            plan = self._cfl_planner.plan(
+                resolved,
+                model,
+                qualify_table=qualify_table,
+                union_by_name=dialect.capabilities.supports_union_all_by_name,
+            )
         else:
             plan = self._star_planner.plan(resolved, model, qualify_table=qualify_table)
 
@@ -158,8 +163,8 @@ class CompilationPipeline:
             if resolved.dimensions_exclude:
                 planner = "CFL"
                 planner_reason = (
-                    "Dimensions span independent branches — "
-                    "Composite Fact Layer produces one leg per branch"
+                    "dimensionsExclude anti-join — "
+                    "CROSS JOIN of distinct values EXCEPT existing combinations"
                 )
             else:
                 planner = "CFL"

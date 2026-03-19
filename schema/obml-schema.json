@@ -54,8 +54,13 @@
             "$ref": "#/definitions/join"
           }
         },
+        "description": {
+          "type": "string",
+          "description": "Business description of this data object (semantic layer metadata)"
+        },
         "comment": {
-          "type": "string"
+          "type": "string",
+          "description": "Physical database comment (from COMMENT ON TABLE)"
         },
         "owner": {
           "type": "string",
@@ -72,7 +77,7 @@
           "items": { "$ref": "#/definitions/customExtension" }
         }
       },
-      "required": ["code", "database", "schema", "columns"],
+      "required": ["code", "columns"],
       "additionalProperties": false
     },
     "dataType": {
@@ -127,8 +132,13 @@
         "numClass": {
           "$ref": "#/definitions/numClass"
         },
+        "description": {
+          "type": "string",
+          "description": "Business description of this column (semantic layer metadata)"
+        },
         "comment": {
-          "type": "string"
+          "type": "string",
+          "description": "Physical database comment (from COMMENT ON COLUMN)"
         },
         "owner": {
           "type": "string",
@@ -390,6 +400,35 @@
       },
       "required": ["column", "operator"]
     },
+    "filterGroup": {
+      "type": "object",
+      "description": "A group of filters combined with AND or OR logic, supporting recursive nesting",
+      "properties": {
+        "logic": {
+          "description": "Boolean combination logic for child filters",
+          "enum": ["and", "or"],
+          "default": "and"
+        },
+        "filters": {
+          "type": "array",
+          "description": "Child filters (leaf filters or nested filter groups)",
+          "items": {
+            "oneOf": [
+              { "$ref": "#/definitions/filter" },
+              { "$ref": "#/definitions/filterGroup" }
+            ]
+          },
+          "minItems": 1
+        },
+        "negated": {
+          "type": "boolean",
+          "description": "When true, negates the entire group: NOT (filter1 AND/OR filter2)",
+          "default": false
+        }
+      },
+      "required": ["filters"],
+      "additionalProperties": false
+    },
     "dimension": {
       "type": "object",
       "description": "Dimension definition",
@@ -411,6 +450,10 @@
         },
         "timeGrain": {
           "$ref": "#/definitions/timeGrain"
+        },
+        "description": {
+          "type": "string",
+          "description": "Business description of this dimension"
         },
         "format": {
           "type": "string"
@@ -508,11 +551,22 @@
             "type": "string"
           }
         },
+        "description": {
+          "type": "string",
+          "description": "Business description of this measure"
+        },
         "format": {
           "type": "string"
         },
-        "filter": {
-          "$ref": "#/definitions/filter"
+        "filters": {
+          "type": "array",
+          "description": "Filters applied to this measure (combined with AND by default). Supports leaf filters and filter groups with AND/OR/NOT logic.",
+          "items": {
+            "oneOf": [
+              { "$ref": "#/definitions/filter" },
+              { "$ref": "#/definitions/filterGroup" }
+            ]
+          }
         },
         "owner": {
           "type": "string",
@@ -542,6 +596,10 @@
         "expression": {
           "type": "string",
           "description": "template string with {[Measure Name]} placeholders referencing defined measures"
+        },
+        "description": {
+          "type": "string",
+          "description": "Business description of this metric"
         },
         "format": {
           "type": "string"
@@ -675,6 +733,10 @@
   "properties": {
     "version": {
       "enum": [1.0]
+    },
+    "description": {
+      "type": "string",
+      "description": "Business description of this semantic model"
     },
 "dataObjects": {
       "type": "object",

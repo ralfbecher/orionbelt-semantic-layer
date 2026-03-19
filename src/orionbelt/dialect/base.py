@@ -44,6 +44,7 @@ class DialectCapabilities:
     supports_ilike: bool = False
     supports_time_travel: bool = False
     supports_semi_structured: bool = False
+    supports_union_all_by_name: bool = False
 
 
 class Dialect(ABC):

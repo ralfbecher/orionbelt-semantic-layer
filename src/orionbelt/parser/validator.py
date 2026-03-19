@@ -25,7 +25,11 @@ class SemanticValidator:
         return errors
 
     def _check_unique_identifiers(self, model: SemanticModel) -> list[SemanticError]:
-        """Ensure no duplicate names across data objects, dimensions, measures, metrics."""
+        """Ensure no duplicate names across dimensions, measures, and metrics.
+
+        Data object names live in a separate namespace — a dimension may share
+        its name with a data object (e.g. dimension "Region" on data object "Region").
+        """
         errors: list[SemanticError] = []
         all_names: dict[str, str] = {}  # name -> type
 
@@ -42,9 +46,6 @@ class SemanticValidator:
                     )
                 )
             all_names[name] = kind
-
-        for name in model.data_objects:
-            _register(name, "dataObject", f"dataObjects.{name}")
 
         for name in model.dimensions:
             _register(name, "dimension", f"dimensions.{name}")

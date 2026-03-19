@@ -161,15 +161,14 @@ dimensionsExclude: true
 
 This generates an anti-join query using SQL `EXCEPT`:
 
-1. **All possible combinations** — A `CROSS JOIN` of the distinct values from each independent dimension group
-2. **Existing combinations** — The actual dimension pairs found through the fact/bridge tables
+1. **All possible combinations** — A `CROSS JOIN` of the distinct values of each dimension
+2. **Existing combinations** — The actual dimension pairs found through the join graph
 3. **Result** — All combinations `EXCEPT` existing ones
 
 ### Constraints
 
 - **No measures allowed** — `dimensionsExclude` only works with dimension-only queries (no measures or metrics)
-- **2+ dimensions required** — At least two dimensions from independent branches are needed
-- **Independent branches** — The dimensions must come from data objects on separate branches of the join graph (connected through intermediate fact/bridge tables, not directly joined to each other)
+- **2+ dimensions required** — At least two dimensions must be specified
 
 ### In Python
 
@@ -199,7 +198,6 @@ query = QueryObject(
 |------------|-------|
 | `DIMENSIONS_EXCLUDE_WITH_MEASURES` | Query includes measures — not allowed with `dimensionsExclude` |
 | `DIMENSIONS_EXCLUDE_INSUFFICIENT` | Fewer than 2 dimensions specified |
-| `DIMENSIONS_EXCLUDE_NOT_INDEPENDENT` | All dimensions come from the same branch (no meaningful exclusion possible) |
 
 ## Filters
 
@@ -207,9 +205,14 @@ Filters restrict the result set. **Dimension filters** go in `where` (become SQL
 
 ```yaml
 where:
+  # By dimension name
   - field: Customer Country
     op: equals
     value: Germany
+  # By qualified column (DataObject.Column) — no dimension needed
+  - field: Orders.Order Status
+    op: equals
+    value: F
 
 having:
   - field: Revenue
@@ -217,17 +220,110 @@ having:
     value: 5000
 ```
 
+Multiple top-level filters are combined with **AND**. For **OR** logic or more complex boolean expressions, use [filter groups](#filter-groups).
+
 ### Filter Structure
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `field` | string | Dimension name (`where`) or measure name (`having`) |
+| `field` | string | Dimension name or `DataObject.Column` (`where`), measure name (`having`) |
 | `op` | string | Filter operator (see table below) |
 | `value` | any | Comparison value (string, number, list, etc.) |
 
+### Filter Groups (AND / OR / NOT)
+
+A **filter group** combines multiple filters with `and` or `or` logic. Groups can be nested recursively for complex boolean expressions.
+
+```yaml
+where:
+  # Simple OR: country is US or CA
+  - logic: or
+    filters:
+      - field: Customer Country
+        op: equals
+        value: US
+      - field: Customer Country
+        op: equals
+        value: CA
+```
+
+#### Nested groups: (A OR B) AND C
+
+```yaml
+where:
+  - logic: and
+    filters:
+      - logic: or
+        filters:
+          - field: Customer Country
+            op: equals
+            value: US
+          - field: Customer Country
+            op: equals
+            value: CA
+      - field: Market Segment
+        op: equals
+        value: BUILDING
+```
+
+#### Negation: NOT (A OR B)
+
+```yaml
+where:
+  - logic: or
+    negated: true
+    filters:
+      - field: Order Status
+        op: equals
+        value: P
+      - field: Order Status
+        op: equals
+        value: F
+```
+
+#### Filter Group Properties
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `logic` | enum | `and` | `and` or `or` — how to combine child filters |
+| `filters` | list | — | Child filters (leaf filters or nested filter groups) |
+| `negated` | bool | `false` | Wrap the combined expression with `NOT` |
+
+Filter groups and leaf filters can be mixed freely at any level — in `where`, `having`, or nested inside other groups.
+
+#### In Python
+
+```python
+from orionbelt.models.query import (
+    QueryFilter, QueryFilterGroup, FilterOperator,
+)
+
+# (country = 'US' OR country = 'CA') AND segment = 'BUILDING'
+where = [
+    QueryFilterGroup(
+        logic="and",
+        filters=[
+            QueryFilterGroup(
+                logic="or",
+                filters=[
+                    QueryFilter(field="Customer Country", op=FilterOperator.EQ, value="US"),
+                    QueryFilter(field="Customer Country", op=FilterOperator.EQ, value="CA"),
+                ],
+            ),
+            QueryFilter(field="Market Segment", op=FilterOperator.EQ, value="BUILDING"),
+        ],
+    ),
+]
+```
+
 ### Filter Reachability
 
-A `where` filter field must reference a **dimension** whose data object is reachable from the query's join graph. The data object can be:
+A `where` filter field can reference:
+
+- A **dimension name** (e.g. `Order Priority`) — resolves to the dimension's data object and column
+- A **qualified column** using `DataObject.Column` dot notation (e.g. `Orders.Order Priority`) — directly references a column without requiring a dimension definition
+
+The referenced data object must be reachable from the query's join graph:
 
 - Directly joined in the query (base object or any object in the join path)
 - A descendant — reachable via directed joins from any already-joined object
@@ -359,7 +455,6 @@ Invalid queries return error responses:
 | `AMBIGUOUS_JOIN` | 422 | Multiple join paths possible |
 | `DIMENSIONS_EXCLUDE_WITH_MEASURES` | 400 | `dimensionsExclude` used with measures |
 | `DIMENSIONS_EXCLUDE_INSUFFICIENT` | 400 | `dimensionsExclude` with fewer than 2 dimensions |
-| `DIMENSIONS_EXCLUDE_NOT_INDEPENDENT` | 400 | `dimensionsExclude` dimensions not on independent branches |
 
 ## Semantics Summary
 

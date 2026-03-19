@@ -5,7 +5,15 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
-from orionbelt.ast.nodes import ColumnRef, Expr, FunctionCall, Literal, OrderByItem
+from orionbelt.ast.nodes import (
+    BinaryOp,
+    ColumnRef,
+    Expr,
+    FunctionCall,
+    Literal,
+    OrderByItem,
+    UnaryOp,
+)
 from orionbelt.compiler.expr_parser import (
     parse_expression,
     tokenize_measure_expression,
@@ -17,6 +25,8 @@ from orionbelt.models.errors import SemanticError
 from orionbelt.models.query import (
     DimensionRef,
     QueryFilter,
+    QueryFilterGroup,
+    QueryFilterItem,
     QueryObject,
     UsePathName,
 )
@@ -67,6 +77,7 @@ class ResolvedQuery:
     having_filters: list[ResolvedFilter] = field(default_factory=list)
     order_by_exprs: list[tuple[Expr, bool]] = field(default_factory=list)
     limit: int | None = None
+    offset: int | None = None
     warnings: list[str] = field(default_factory=list)
     requires_cfl: bool = False
     measure_source_objects: set[str] = field(default_factory=set)
@@ -113,6 +124,7 @@ class QueryResolver:
             model=model,
             result=ResolvedQuery(
                 limit=query.limit,
+                offset=query.offset,
                 use_path_names=list(query.use_path_names),
             ),
         )
@@ -185,23 +197,7 @@ class QueryResolver:
                     )
                 )
             else:
-                # Check if dimensions are on independent branches
-                graph = JoinGraph(model, use_path_names=query.use_path_names or None)
-                reachable = graph.descendants(ctx.result.base_object) | {ctx.result.base_object}
-                dim_objects = {d.object_name for d in ctx.result.dimensions}
-                if dim_objects <= reachable:
-                    ctx.errors.append(
-                        SemanticError(
-                            code="DIMENSIONS_EXCLUDE_NOT_INDEPENDENT",
-                            message=(
-                                "dimensionsExclude requires dimensions on at least "
-                                "2 independent branches"
-                            ),
-                            path="select.dimensions",
-                        )
-                    )
-                else:
-                    ctx.result.dimensions_exclude = True
+                ctx.result.dimensions_exclude = True
 
         # 4. Validate usePathNames before building join graph
         self._validate_use_path_names(ctx, query.use_path_names)
@@ -220,13 +216,13 @@ class QueryResolver:
             ctx.joined_objects.add(step.to_object)
 
         # 6. Classify filters — filters may auto-extend the join path
-        for qf in query.where:
-            resolved_filter = self._resolve_filter(ctx, qf, is_having=False)
+        for qfi in query.where:
+            resolved_filter = self._resolve_filter_item(ctx, qfi, is_having=False)
             if resolved_filter:
                 ctx.result.where_filters.append(resolved_filter)
 
-        for qf in query.having:
-            resolved_filter = self._resolve_filter(ctx, qf, is_having=True)
+        for qfi in query.having:
+            resolved_filter = self._resolve_filter_item(ctx, qfi, is_having=True)
             if resolved_filter:
                 ctx.result.having_filters.append(resolved_filter)
 
@@ -520,55 +516,138 @@ class QueryResolver:
 
     # -- filters -------------------------------------------------------------
 
+    def _resolve_filter_object(
+        self,
+        ctx: _ResolutionContext,
+        obj_name: str,
+        filter_path: str,
+        field_label: str,
+    ) -> bool:
+        """Ensure *obj_name* is joined; auto-extend if reachable. Return success."""
+        if obj_name in ctx.joined_objects:
+            return True
+        reachable = False
+        if ctx.graph is not None:
+            for joined_obj in list(ctx.joined_objects):
+                if obj_name in ctx.graph.descendants(joined_obj):
+                    reachable = True
+                    break
+        if not reachable:
+            ctx.errors.append(
+                SemanticError(
+                    code="UNREACHABLE_FILTER_FIELD",
+                    message=(
+                        f"Filter field '{field_label}' references data object "
+                        f"'{obj_name}' which is not reachable from "
+                        f"the query's join graph"
+                    ),
+                    path=filter_path,
+                )
+            )
+            return False
+        if ctx.graph is not None:
+            new_steps = ctx.graph.find_join_path(ctx.joined_objects, {obj_name})
+            for step in new_steps:
+                if step.to_object not in ctx.joined_objects:
+                    ctx.result.join_steps.append(step)
+                    ctx.joined_objects.add(step.to_object)
+                    ctx.result.required_objects.add(step.to_object)
+        return True
+
+    def _resolve_filter_item(
+        self, ctx: _ResolutionContext, item: QueryFilterItem, *, is_having: bool
+    ) -> ResolvedFilter | None:
+        """Resolve a filter item (leaf or group) to a physical expression."""
+        if isinstance(item, QueryFilter):
+            return self._resolve_filter(ctx, item, is_having=is_having)
+        return self._resolve_filter_group(ctx, item, is_having=is_having)
+
+    def _resolve_filter_group(
+        self, ctx: _ResolutionContext, group: QueryFilterGroup, *, is_having: bool
+    ) -> ResolvedFilter | None:
+        """Resolve a filter group recursively, combining with AND/OR."""
+        child_exprs: list[Expr] = []
+        for child in group.filters:
+            resolved = self._resolve_filter_item(ctx, child, is_having=is_having)
+            if resolved:
+                child_exprs.append(resolved.expression)
+
+        if not child_exprs:
+            return None
+
+        # Combine children with the group's logic
+        op = "AND" if group.logic == "and" else "OR"
+        combined: Expr = child_exprs[0]
+        for expr in child_exprs[1:]:
+            combined = BinaryOp(left=combined, op=op, right=expr)
+
+        # Optionally negate
+        if group.negated:
+            combined = UnaryOp(op="NOT", operand=combined)
+
+        return ResolvedFilter(expression=combined, is_aggregate=is_having)
+
     def _resolve_filter(
         self, ctx: _ResolutionContext, qf: QueryFilter, *, is_having: bool
     ) -> ResolvedFilter | None:
         """Resolve a query filter to a physical expression.
 
-        Filter fields can reference any dimension whose data object is
-        reachable from the query's join graph (including descendants).
-        If the object is reachable but not yet joined, the join path is
-        auto-extended.
+        Filter fields can reference:
+        1. A dimension name (e.g. ``"Order Priority"``)
+        2. A qualified column ``"DataObject.Column"`` (e.g. ``"Orders.Order Priority"``)
+        3. For HAVING filters, a measure name (e.g. ``"Revenue"``)
+
+        If the referenced data object is reachable but not yet joined, the
+        join path is auto-extended.
         """
         filter_path = "having" if is_having else "where"
 
+        # 1. Try dimension name
         dim = ctx.model.dimensions.get(qf.field)
         if dim:
             obj_name = dim.view
-            if obj_name not in ctx.joined_objects:
-                reachable = False
-                if ctx.graph is not None:
-                    for joined_obj in list(ctx.joined_objects):
-                        if obj_name in ctx.graph.descendants(joined_obj):
-                            reachable = True
-                            break
-                if not reachable:
-                    ctx.errors.append(
-                        SemanticError(
-                            code="UNREACHABLE_FILTER_FIELD",
-                            message=(
-                                f"Filter field '{qf.field}' references data object "
-                                f"'{obj_name}' which is not reachable from "
-                                f"the query's join graph"
-                            ),
-                            path=filter_path,
-                        )
-                    )
-                    return None
-                if ctx.graph is not None:
-                    new_steps = ctx.graph.find_join_path(ctx.joined_objects, {obj_name})
-                    for step in new_steps:
-                        if step.to_object not in ctx.joined_objects:
-                            ctx.result.join_steps.append(step)
-                            ctx.joined_objects.add(step.to_object)
-                            ctx.result.required_objects.add(step.to_object)
-
+            if not self._resolve_filter_object(ctx, obj_name, filter_path, qf.field):
+                return None
             col_name = dim.column
             obj = ctx.model.data_objects.get(obj_name)
             source = obj.columns[col_name].code if obj and col_name in obj.columns else col_name
             col_expr: Expr = ColumnRef(name=source, table=obj_name)
+
+        # 2. HAVING: try measure name
         elif is_having and qf.field in ctx.model.measures:
             col_expr = ColumnRef(name=qf.field)
+
+        # 3. Try qualified column: "DataObject.Column"
+        elif "." in qf.field:
+            parts = qf.field.split(".", 1)
+            obj_name, col_name = parts[0].strip(), parts[1].strip()
+            obj = ctx.model.data_objects.get(obj_name)
+            if obj is None:
+                ctx.errors.append(
+                    SemanticError(
+                        code="UNKNOWN_FILTER_FIELD",
+                        message=(f"Unknown data object '{obj_name}' in filter field '{qf.field}'"),
+                        path=filter_path,
+                    )
+                )
+                return None
+            if col_name not in obj.columns:
+                ctx.errors.append(
+                    SemanticError(
+                        code="UNKNOWN_FILTER_FIELD",
+                        message=(
+                            f"Unknown column '{col_name}' in data object "
+                            f"'{obj_name}' for filter field '{qf.field}'"
+                        ),
+                        path=filter_path,
+                    )
+                )
+                return None
+            if not self._resolve_filter_object(ctx, obj_name, filter_path, qf.field):
+                return None
+            source = obj.columns[col_name].code
+            col_expr = ColumnRef(name=source, table=obj_name)
+
         else:
             ctx.errors.append(
                 SemanticError(

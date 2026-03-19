@@ -65,7 +65,7 @@ uv run ruff check src/
 OrionBelt reads configuration from environment variables and a `.env` file. Copy the example:
 
 ```bash
-cp .env.example .env
+cp .env.template .env
 ```
 
 Key settings:
@@ -78,6 +78,10 @@ Key settings:
 | `SESSION_TTL_SECONDS`      | `1800`      | Session inactivity timeout (30 min)         |
 | `SESSION_CLEANUP_INTERVAL` | `60`        | Cleanup sweep interval (seconds)            |
 | `MODEL_FILE`               | —           | Path to OBML YAML for single-model mode     |
+| `FLIGHT_ENABLED`           | `false`     | Enable Flight SQL + query execution         |
+| `DB_VENDOR`                | `duckdb`    | Database vendor for query execution         |
+
+See `.env.template` for the full list including database credentials.
 
 ### Single-Model Mode
 
