@@ -5,7 +5,15 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
-from orionbelt.ast.nodes import ColumnRef, Expr, FunctionCall, Literal, OrderByItem
+from orionbelt.ast.nodes import (
+    BinaryOp,
+    ColumnRef,
+    Expr,
+    FunctionCall,
+    Literal,
+    OrderByItem,
+    UnaryOp,
+)
 from orionbelt.compiler.expr_parser import (
     parse_expression,
     tokenize_measure_expression,
@@ -17,6 +25,8 @@ from orionbelt.models.errors import SemanticError
 from orionbelt.models.query import (
     DimensionRef,
     QueryFilter,
+    QueryFilterGroup,
+    QueryFilterItem,
     QueryObject,
     UsePathName,
 )
@@ -187,23 +197,7 @@ class QueryResolver:
                     )
                 )
             else:
-                # Check if dimensions are on independent branches
-                graph = JoinGraph(model, use_path_names=query.use_path_names or None)
-                reachable = graph.descendants(ctx.result.base_object) | {ctx.result.base_object}
-                dim_objects = {d.object_name for d in ctx.result.dimensions}
-                if dim_objects <= reachable:
-                    ctx.errors.append(
-                        SemanticError(
-                            code="DIMENSIONS_EXCLUDE_NOT_INDEPENDENT",
-                            message=(
-                                "dimensionsExclude requires dimensions on at least "
-                                "2 independent branches"
-                            ),
-                            path="select.dimensions",
-                        )
-                    )
-                else:
-                    ctx.result.dimensions_exclude = True
+                ctx.result.dimensions_exclude = True
 
         # 4. Validate usePathNames before building join graph
         self._validate_use_path_names(ctx, query.use_path_names)
@@ -222,13 +216,13 @@ class QueryResolver:
             ctx.joined_objects.add(step.to_object)
 
         # 6. Classify filters — filters may auto-extend the join path
-        for qf in query.where:
-            resolved_filter = self._resolve_filter(ctx, qf, is_having=False)
+        for qfi in query.where:
+            resolved_filter = self._resolve_filter_item(ctx, qfi, is_having=False)
             if resolved_filter:
                 ctx.result.where_filters.append(resolved_filter)
 
-        for qf in query.having:
-            resolved_filter = self._resolve_filter(ctx, qf, is_having=True)
+        for qfi in query.having:
+            resolved_filter = self._resolve_filter_item(ctx, qfi, is_having=True)
             if resolved_filter:
                 ctx.result.having_filters.append(resolved_filter)
 
@@ -560,6 +554,39 @@ class QueryResolver:
                     ctx.result.required_objects.add(step.to_object)
         return True
 
+    def _resolve_filter_item(
+        self, ctx: _ResolutionContext, item: QueryFilterItem, *, is_having: bool
+    ) -> ResolvedFilter | None:
+        """Resolve a filter item (leaf or group) to a physical expression."""
+        if isinstance(item, QueryFilter):
+            return self._resolve_filter(ctx, item, is_having=is_having)
+        return self._resolve_filter_group(ctx, item, is_having=is_having)
+
+    def _resolve_filter_group(
+        self, ctx: _ResolutionContext, group: QueryFilterGroup, *, is_having: bool
+    ) -> ResolvedFilter | None:
+        """Resolve a filter group recursively, combining with AND/OR."""
+        child_exprs: list[Expr] = []
+        for child in group.filters:
+            resolved = self._resolve_filter_item(ctx, child, is_having=is_having)
+            if resolved:
+                child_exprs.append(resolved.expression)
+
+        if not child_exprs:
+            return None
+
+        # Combine children with the group's logic
+        op = "AND" if group.logic == "and" else "OR"
+        combined: Expr = child_exprs[0]
+        for expr in child_exprs[1:]:
+            combined = BinaryOp(left=combined, op=op, right=expr)
+
+        # Optionally negate
+        if group.negated:
+            combined = UnaryOp(op="NOT", operand=combined)
+
+        return ResolvedFilter(expression=combined, is_aggregate=is_having)
+
     def _resolve_filter(
         self, ctx: _ResolutionContext, qf: QueryFilter, *, is_having: bool
     ) -> ResolvedFilter | None:
@@ -599,10 +626,7 @@ class QueryResolver:
                 ctx.errors.append(
                     SemanticError(
                         code="UNKNOWN_FILTER_FIELD",
-                        message=(
-                            f"Unknown data object '{obj_name}' in filter "
-                            f"field '{qf.field}'"
-                        ),
+                        message=(f"Unknown data object '{obj_name}' in filter field '{qf.field}'"),
                         path=filter_path,
                     )
                 )

@@ -63,6 +63,11 @@ class NumClass(StrEnum):
     NON_ADDITIVE = "non-additive"
 
 
+class FilterLogic(StrEnum):
+    AND = "and"
+    OR = "or"
+
+
 class CustomExtension(BaseModel):
     """Vendor-keyed extension data — opaque to OrionBelt.
 
@@ -181,6 +186,27 @@ class MeasureFilter(BaseModel):
     model_config = {"populate_by_name": True}
 
 
+class MeasureFilterGroup(BaseModel):
+    """A group of measure filters combined with AND or OR logic.
+
+    Supports recursive nesting for complex boolean expressions like
+    ``(country = 'US' OR country = 'CA') AND status = 'Active'``.
+    """
+
+    logic: FilterLogic = FilterLogic.AND
+    filters: list[MeasureFilter | MeasureFilterGroup] = []
+    negated: bool = False
+
+    model_config = {"populate_by_name": True}
+
+
+# Resolve forward reference for recursive MeasureFilterGroup
+MeasureFilterGroup.model_rebuild()
+
+# Union type for measure filter items (leaf or group)
+MeasureFilterItem = MeasureFilter | MeasureFilterGroup
+
+
 class WithinGroup(BaseModel):
     """WITHIN GROUP ordering clause for LISTAGG measures."""
 
@@ -200,7 +226,7 @@ class Measure(BaseModel):
     expression: str | None = None
     distinct: bool = False
     total: bool = False
-    filter: MeasureFilter | None = None
+    filters: list[MeasureFilterItem] = []
     description: str | None = None
     format: str | None = None
     allow_fan_out: bool = Field(False, alias="allowFanOut")

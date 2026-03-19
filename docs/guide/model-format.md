@@ -277,7 +277,7 @@ measures:
 | `total` | bool | No | Use the total (unfiltered) value when referenced in a metric |
 | `delimiter` | string | No | Separator for `listagg` aggregation (default: `","`) |
 | `withinGroup` | object | No | Ordering clause for `listagg` — specifies `column` and `order` (`ASC`/`DESC`) |
-| `filter` | object | No | Conditional filter applied to this measure |
+| `filters` | list | No | Filters applied to this measure (supports AND/OR/NOT groups) |
 | `allowFanOut` | bool | No | Allow fan-out joins (default: false) |
 | `synonyms` | list | No | Alternative names or terms (LLM hints) |
 | `owner` | string | No | Responsible team or person |
@@ -305,7 +305,9 @@ measures:
 
 ### Measure Filters
 
-Apply a filter to a measure so it only aggregates matching rows:
+Apply filters to a measure so it only aggregates matching rows. The `filters` property accepts a list of leaf filters and filter groups.
+
+#### Single filter
 
 ```yaml
 measures:
@@ -313,15 +315,56 @@ measures:
     resultType: float
     aggregation: sum
     expression: '({[Sales].[Salesamount]} / {[Sales].[Salescosts]}) * 100'
-    filter:
-      column:
-        dataObject: Sales
-        column: Salescosts
-      operator: gt
-      values:
-        - dataType: float
-          valueFloat: 100.00
+    filters:
+      - column:
+          dataObject: Sales
+          column: Salescosts
+        operator: gt
+        values:
+          - dataType: float
+            valueFloat: 100.00
 ```
+
+#### Multiple filters with AND/OR logic
+
+Use filter groups for boolean combinations:
+
+```yaml
+measures:
+  Domestic Revenue:
+    columns:
+      - dataObject: Line Items
+        column: Extended Price
+    resultType: float
+    aggregation: sum
+    filters:
+      - logic: or
+        filters:
+          - column:
+              dataObject: Nations
+              column: Name
+            operator: equals
+            values:
+              - dataType: string
+                valueString: UNITED STATES
+          - column:
+              dataObject: Nations
+              column: Name
+            operator: equals
+            values:
+              - dataType: string
+                valueString: CANADA
+```
+
+#### Filter Group Properties
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `logic` | enum | `and` | `and` or `or` — how to combine child filters |
+| `filters` | list | — | Child filters (leaf filters or nested filter groups) |
+| `negated` | bool | `false` | Wrap the combined expression with `NOT` |
+
+Multiple top-level filters are combined with **AND**. Filter groups and leaf filters can be mixed freely and nested recursively.
 
 ### LISTAGG Measures
 

@@ -163,8 +163,8 @@ class CompilationPipeline:
             if resolved.dimensions_exclude:
                 planner = "CFL"
                 planner_reason = (
-                    "Dimensions span independent branches — "
-                    "Composite Fact Layer produces one leg per branch"
+                    "dimensionsExclude anti-join — "
+                    "CROSS JOIN of distinct values EXCEPT existing combinations"
                 )
             else:
                 planner = "CFL"

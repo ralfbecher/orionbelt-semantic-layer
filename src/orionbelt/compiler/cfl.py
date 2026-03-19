@@ -22,6 +22,7 @@ from orionbelt.ast.nodes import (
     Literal,
     RelativeDateRange,
     Select,
+    UnaryOp,
     UnionAll,
 )
 from orionbelt.compiler.fanout import FanoutError
@@ -282,6 +283,8 @@ class CFLPlanner:
         elif isinstance(expr, BinaryOp):
             CFLPlanner._collect_table_refs(expr.left, tables)
             CFLPlanner._collect_table_refs(expr.right, tables)
+        elif isinstance(expr, UnaryOp):
+            CFLPlanner._collect_table_refs(expr.operand, tables)
         elif isinstance(expr, (InList, IsNull, Between)):
             CFLPlanner._collect_table_refs(expr.expr, tables)
         elif isinstance(expr, RelativeDateRange):

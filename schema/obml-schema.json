@@ -400,6 +400,35 @@
       },
       "required": ["column", "operator"]
     },
+    "filterGroup": {
+      "type": "object",
+      "description": "A group of filters combined with AND or OR logic, supporting recursive nesting",
+      "properties": {
+        "logic": {
+          "description": "Boolean combination logic for child filters",
+          "enum": ["and", "or"],
+          "default": "and"
+        },
+        "filters": {
+          "type": "array",
+          "description": "Child filters (leaf filters or nested filter groups)",
+          "items": {
+            "oneOf": [
+              { "$ref": "#/definitions/filter" },
+              { "$ref": "#/definitions/filterGroup" }
+            ]
+          },
+          "minItems": 1
+        },
+        "negated": {
+          "type": "boolean",
+          "description": "When true, negates the entire group: NOT (filter1 AND/OR filter2)",
+          "default": false
+        }
+      },
+      "required": ["filters"],
+      "additionalProperties": false
+    },
     "dimension": {
       "type": "object",
       "description": "Dimension definition",
@@ -529,8 +558,15 @@
         "format": {
           "type": "string"
         },
-        "filter": {
-          "$ref": "#/definitions/filter"
+        "filters": {
+          "type": "array",
+          "description": "Filters applied to this measure (combined with AND by default). Supports leaf filters and filter groups with AND/OR/NOT logic.",
+          "items": {
+            "oneOf": [
+              { "$ref": "#/definitions/filter" },
+              { "$ref": "#/definitions/filterGroup" }
+            ]
+          }
         },
         "owner": {
           "type": "string",
