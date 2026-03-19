@@ -1,0 +1,48 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ob-duckdb"
+version = "0.1.0"
+description = "OrionBelt Semantic Layer driver for DuckDB (DB-API 2.0)"
+license = { text = "Apache-2.0" }
+authors = [{ name = "Ralfo Becher", email = "info@orionbelt.ai" }]
+keywords = ["duckdb", "semantic-layer", "obml", "db-api", "orionbelt"]
+requires-python = ">=3.12"
+dependencies = [
+    "ob-driver-core>=0.1",
+    "duckdb>=1.0",
+]
+
+[project.optional-dependencies]
+sqlalchemy = ["sqlalchemy>=2.0"]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "mypy>=1.10",
+    "ruff>=0.4",
+]
+
+[project.entry-points."sqlalchemy.dialects"]
+"ob.duckdb" = "ob_duckdb.dialect:OBDuckDBDialect"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ob_duckdb"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "ANN"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+files = ["src/ob_duckdb"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+# Note: no integration marker needed — DuckDB :memory: runs anywhere

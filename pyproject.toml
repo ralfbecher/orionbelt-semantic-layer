@@ -1,7 +1,7 @@
 [project]
 name = "orionbelt-semantic-layer"
-version = "1.0.0"
-description = "OrionBelt Semantic Layer - Compiles YAML semantic models into analytical SQL"
+version = "1.1.0"
+description = "OrionBelt Semantic Layer - Compiles and executes YAML semantic models as analytical SQL"
 license = {text = "BSL-1.1"}
 authors = [{name = "Ralf Becher, RALFORION d.o.o.", email = "ralf.becher@web.de"}]
 requires-python = ">=3.12"
@@ -75,6 +75,11 @@ docs = [
 ui = [
     "gradio>=5.0,<6.0",
 ]
+flight = [
+    "pyarrow>=16.0,<20.0",
+    "ob-flight-extension>=0.1",
+    "ob-duckdb>=0.1",
+]
 
 [build-system]
 requires = ["hatchling"]
@@ -102,6 +107,33 @@ plugins = ["pydantic.mypy"]
 
 [dependency-groups]
 dev = [
+    "nbstripout>=0.9.1",
     "types-networkx>=3.6.1.20260210",
     "types-PyYAML>=6.0",
 ]
+
+[tool.uv.workspace]
+members = [
+    "drivers/ob-driver-core",
+    "drivers/ob-bigquery",
+    "drivers/ob-snowflake",
+    "drivers/ob-postgres",
+    "drivers/ob-clickhouse",
+    "drivers/ob-dremio",
+    "drivers/ob-databricks",
+    "drivers/ob-duckdb",
+    "drivers/ob-flight-extension",
+]
+
+[tool.uv.sources]
+# Workspace members reference each other without needing PyPI publication
+orionbelt-semantic-layer = { workspace = true }
+ob-driver-core = { workspace = true }
+ob-bigquery = { workspace = true }
+ob-snowflake = { workspace = true }
+ob-postgres = { workspace = true }
+ob-clickhouse = { workspace = true }
+ob-dremio = { workspace = true }
+ob-databricks = { workspace = true }
+ob-duckdb = { workspace = true }
+ob-flight-extension = { workspace = true }

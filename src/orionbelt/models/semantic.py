@@ -63,6 +63,11 @@ class NumClass(StrEnum):
     NON_ADDITIVE = "non-additive"
 
 
+class FilterLogic(StrEnum):
+    AND = "and"
+    OR = "or"
+
+
 class CustomExtension(BaseModel):
     """Vendor-keyed extension data — opaque to OrionBelt.
 
@@ -95,6 +100,7 @@ class DataObjectColumn(BaseModel):
     sql_precision: int | None = Field(None, alias="sqlPrecision")
     sql_scale: int | None = Field(None, alias="sqlScale")
     num_class: NumClass | None = Field(None, alias="numClass")
+    description: str | None = None
     comment: str | None = None
     owner: str | None = None
     synonyms: list[str] = Field(default_factory=list)
@@ -125,6 +131,7 @@ class DataObject(BaseModel):
     schema_name: str = Field(alias="schema")
     columns: dict[str, DataObjectColumn] = {}
     joins: list[DataObjectJoin] = []
+    description: str | None = None
     comment: str | None = None
     owner: str | None = None
     synonyms: list[str] = Field(default_factory=list)
@@ -146,6 +153,7 @@ class Dimension(BaseModel):
     column: str = ""
     result_type: DataType = Field(DataType.STRING, alias="resultType")
     time_grain: TimeGrain | None = Field(None, alias="timeGrain")
+    description: str | None = None
     format: str | None = None
     owner: str | None = None
     synonyms: list[str] = Field(default_factory=list)
@@ -178,6 +186,27 @@ class MeasureFilter(BaseModel):
     model_config = {"populate_by_name": True}
 
 
+class MeasureFilterGroup(BaseModel):
+    """A group of measure filters combined with AND or OR logic.
+
+    Supports recursive nesting for complex boolean expressions like
+    ``(country = 'US' OR country = 'CA') AND status = 'Active'``.
+    """
+
+    logic: FilterLogic = FilterLogic.AND
+    filters: list[MeasureFilter | MeasureFilterGroup] = []
+    negated: bool = False
+
+    model_config = {"populate_by_name": True}
+
+
+# Resolve forward reference for recursive MeasureFilterGroup
+MeasureFilterGroup.model_rebuild()
+
+# Union type for measure filter items (leaf or group)
+MeasureFilterItem = MeasureFilter | MeasureFilterGroup
+
+
 class WithinGroup(BaseModel):
     """WITHIN GROUP ordering clause for LISTAGG measures."""
 
@@ -197,7 +226,8 @@ class Measure(BaseModel):
     expression: str | None = None
     distinct: bool = False
     total: bool = False
-    filter: MeasureFilter | None = None
+    filters: list[MeasureFilterItem] = []
+    description: str | None = None
     format: str | None = None
     allow_fan_out: bool = Field(False, alias="allowFanOut")
     delimiter: str | None = None
@@ -217,6 +247,7 @@ class Metric(BaseModel):
 
     label: str
     expression: str
+    description: str | None = None
     format: str | None = None
     owner: str | None = None
     synonyms: list[str] = Field(default_factory=list)
@@ -229,6 +260,7 @@ class SemanticModel(BaseModel):
     """Complete semantic model parsed from OBML YAML."""
 
     version: float = 1.0
+    description: str | None = None
     data_objects: dict[str, DataObject] = Field(default={}, alias="dataObjects")
     dimensions: dict[str, Dimension] = {}
     measures: dict[str, Measure] = {}

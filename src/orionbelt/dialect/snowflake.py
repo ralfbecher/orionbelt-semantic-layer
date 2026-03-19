@@ -26,6 +26,7 @@ class SnowflakeDialect(Dialect):
             supports_ilike=True,
             supports_time_travel=True,
             supports_semi_structured=True,
+            supports_union_all_by_name=True,
         )
 
     def quote_identifier(self, name: str) -> str:

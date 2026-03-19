@@ -11,6 +11,7 @@ build/
 venv/
 .env
 *.db
+*.duckdb
 *.sqlite3
 .mypy_cache/
 .ruff_cache/
@@ -29,3 +30,4 @@ scripts/
 _*/
 blog/
 review*
+*analysis*.md

@@ -7,7 +7,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from orionbelt.models.semantic import TimeGrain
+from orionbelt.models.semantic import FilterLogic, TimeGrain
 
 
 class FilterOperator(StrEnum):
@@ -76,6 +76,27 @@ class QueryFilter(BaseModel):
     model_config = {"populate_by_name": True}
 
 
+class QueryFilterGroup(BaseModel):
+    """A group of query filters combined with AND or OR logic.
+
+    Supports recursive nesting for complex boolean expressions like
+    ``(country = 'US' OR region = 'EMEA') AND status != 'Cancelled'``.
+    """
+
+    logic: FilterLogic = FilterLogic.AND
+    filters: list[QueryFilter | QueryFilterGroup] = []
+    negated: bool = False
+
+    model_config = {"populate_by_name": True}
+
+
+# Resolve forward reference for recursive QueryFilterGroup
+QueryFilterGroup.model_rebuild()
+
+# Union type for query filter items (leaf or group)
+QueryFilterItem = QueryFilter | QueryFilterGroup
+
+
 class QueryOrderBy(BaseModel):
     """Order-by clause in a query."""
 
@@ -104,10 +125,11 @@ class QueryObject(BaseModel):
     """A complete YAML analytical query."""
 
     select: QuerySelect
-    where: list[QueryFilter] = []
-    having: list[QueryFilter] = []
+    where: list[QueryFilterItem] = []
+    having: list[QueryFilterItem] = []
     order_by: list[QueryOrderBy] = Field([], alias="order_by")
     limit: int | None = None
+    offset: int | None = None
     use_path_names: list[UsePathName] = Field([], alias="usePathNames")
     dimensions_exclude: bool = Field(False, alias="dimensionsExclude")
 

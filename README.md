@@ -4,16 +4,19 @@
 
 <h1 align="center">OrionBelt Semantic Layer</h1>
 
-<p align="center"><strong>Compile YAML semantic models into analytical SQL across multiple database dialects</strong></p>
+<p align="center"><strong>Compile and execute YAML semantic models as analytical SQL across multiple database dialects</strong></p>
 
-[![Version 1.0.0](https://img.shields.io/badge/version-1.0.0-purple.svg)](https://github.com/ralfbecher/orionbelt-semantic-layer/releases)
+[![GitHub stars](https://img.shields.io/github/stars/ralfbecher/orionbelt-semantic-layer?style=social)](https://github.com/ralfbecher/orionbelt-semantic-layer)
+[![Version 1.1.0](https://img.shields.io/badge/version-1.1.0-purple.svg)](https://github.com/ralfbecher/orionbelt-semantic-layer/releases)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![License: BSL 1.1](https://img.shields.io/badge/License-BSL_1.1-orange.svg)](https://github.com/ralfbecher/orionbelt-semantic-layer/blob/main/LICENSE)
+[![Docker Hub](https://img.shields.io/docker/pulls/ralforion/orionbelt-api?logo=docker&label=Docker%20Hub)](https://hub.docker.com/repositories/ralforion)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.128+-009688.svg?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![Pydantic v2](https://img.shields.io/badge/Pydantic-v2-E92063.svg?logo=pydantic&logoColor=white)](https://docs.pydantic.dev)
 [![Gradio](https://img.shields.io/badge/Gradio-5.0+-F97316.svg?logo=gradio&logoColor=white)](https://www.gradio.app)
 [![sqlglot](https://img.shields.io/badge/sqlglot-26.0+-4B8BBE.svg)](https://github.com/tobymao/sqlglot)
-[![Docker](https://img.shields.io/badge/Docker-ready-2496ED.svg?logo=docker&logoColor=white)](https://docs.docker.com)
+[![Arrow Flight SQL](https://img.shields.io/badge/Arrow_Flight_SQL-ready-D22128.svg?logo=apachearrow&logoColor=white)](https://arrow.apache.org/docs/format/FlightSql.html)
+[![DB-API 2.0](https://img.shields.io/badge/DB--API_2.0-PEP_249-3776AB.svg?logo=python&logoColor=white)](https://peps.python.org/pep-0249/)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://docs.astral.sh/ruff/)
 [![mypy](https://img.shields.io/badge/type--checked-mypy-blue.svg)](https://mypy-lang.org)
 
@@ -25,7 +28,7 @@
 [![Databricks](https://img.shields.io/badge/Databricks-FF3621.svg?logo=databricks&logoColor=white)](https://www.databricks.com)
 [![DuckDB](https://img.shields.io/badge/DuckDB-FFF000.svg?logo=duckdb&logoColor=black)](https://duckdb.org)
 
-OrionBelt Semantic Layer is an **API-first** semantic engine and query planner for AI agents that transforms declarative YAML model definitions into optimized SQL for BigQuery, ClickHouse, Databricks, Dremio, DuckDB/MotherDuck, Postgres, and Snowflake. It provides a unified abstraction over your data warehouse, so analysts and applications can query using business concepts (dimensions, measures, metrics) instead of raw SQL. Every capability — model loading, validation, query compilation, and diagram generation — is exposed through a REST API, making OrionBelt easy to integrate into any application, workflow, or AI assistant.
+OrionBelt Semantic Layer is an **API-first** semantic engine and query planner for AI agents that compiles and executes declarative YAML model definitions as optimized SQL for BigQuery, ClickHouse, Databricks, Dremio, DuckDB/MotherDuck, Postgres, and Snowflake. It provides a unified abstraction over your data warehouse, so analysts and applications can query using business concepts (dimensions, measures, metrics) instead of raw SQL. Every capability — model loading, validation, query compilation and execution, and diagram generation — is exposed through a REST API, making OrionBelt easy to integrate into any application, workflow, or AI assistant.
 
 ## Features
 
@@ -38,10 +41,12 @@ OrionBelt Semantic Layer is an **API-first** semantic engine and query planner f
 - **Validation with Source Positions** — Precise error reporting with line/column numbers from YAML source, including join graph analysis (cycle and multipath detection, secondary join constraints)
 - **Session Management** — TTL-scoped sessions with per-client model stores
 - **ER Diagram Generation** — Mermaid ER diagrams via API and Gradio UI with theme support, zoom, and secondary join visualization
-- **REST API** — FastAPI-powered session endpoints for model loading, validation, compilation, diagram generation, and management
+- **REST API** — FastAPI-powered session endpoints for model loading, validation, compilation, execution, diagram generation, and management
 - **MCP Server** — Available as a separate thin client in [orionbelt-semantic-layer-mcp](https://github.com/ralfbecher/orionbelt-semantic-layer-mcp) — delegates to the REST API via HTTP, deployable independently (e.g. to Prefect Horizon)
 - **Gradio UI** — Interactive web interface for model editing, query testing, and SQL compilation with live validation feedback
 - **[OSI](https://github.com/open-semantic-interchange/OSI) Interoperability** — Bidirectional conversion between OBML and the Open Semantic Interchange format via REST API (`/convert`) and Gradio UI, with validation for both directions
+- **DB-API 2.0 Drivers** — PEP 249 drivers for all 7 databases with transparent OBML-to-SQL compilation via REST API
+- **Arrow Flight SQL** — Embedded gRPC server for DBeaver, Tableau, and Power BI — single container, two ports (8080 + 8815)
 - **Plugin Architecture** — Extensible dialect system with capability flags and registry
 
 ## Quick Start
@@ -74,6 +79,10 @@ uv run uvicorn orionbelt.api.app:create_app --factory --reload
 ```
 
 The API is available at `http://127.0.0.1:8000`. Interactive docs at `/docs` (Swagger UI) and `/redoc`.
+
+### Interactive Notebook
+
+The [Quickstart Notebook](examples/quickstart.ipynb) walks through the full workflow using TPC-H in DuckDB — explore the model, compile queries across dialects, execute against real data, and see multi-fact CFL and secondary join paths in action. No cloud database needed.
 
 ## Example
 
@@ -195,6 +204,8 @@ LIMIT 100
 ```
 
 Change the dialect to `"bigquery"`, `"clickhouse"`, `"databricks"`, `"dremio"`, `"duckdb"`, or `"snowflake"` to get dialect-specific SQL.
+
+> **Interactive notebook:** Try the full workflow in [`examples/quickstart.ipynb`](examples/quickstart.ipynb) — uses the TPC-H dataset in DuckDB to demonstrate multi-dialect compilation, query execution, multi-fact CFL, metrics, filters, and ER diagrams.
 
 ### Use the REST API with Sessions
 
@@ -328,7 +339,29 @@ The ER diagram is also available as download (MD, or PNG) or via the REST API.
 
 ## Docker
 
-### Build and Run
+### [Docker Hub](https://hub.docker.com/repositories/ralforion)
+
+Pre-built multi-platform images (linux/amd64, linux/arm64) are available on Docker Hub:
+
+```bash
+# API-only (REST API on :8080)
+docker pull ralforion/orionbelt-api
+docker run -p 8080:8080 ralforion/orionbelt-api
+
+# API + Arrow Flight SQL (REST on :8080, Flight on :8815)
+docker pull ralforion/orionbelt-flight
+docker run -p 8080:8080 -p 8815:8815 --env-file .env ralforion/orionbelt-flight
+
+# UI (Gradio on :7860, connects to API)
+docker pull ralforion/orionbelt-ui
+docker run -p 7860:7860 \
+  -e API_BASE_URL=http://host.docker.internal:8080 \
+  ralforion/orionbelt-ui
+```
+
+See [docs/drivers.md](docs/drivers.md) for Flight SQL configuration and BI tool setup (DBeaver, Tableau, Power BI).
+
+### Build and Run (from source)
 
 Two separate images — API-only (fast) and UI (with Gradio):
 
@@ -359,9 +392,50 @@ The API is available at `http://localhost:8080`. The UI is at `http://localhost:
 ./tests/cloudrun/test_cloudrun.sh https://orionbelt-semantic-layer-mw2bqg2mva-ew.a.run.app
 ```
 
+## DB-API 2.0 Drivers & Arrow Flight SQL
+
+OrionBelt provides **PEP 249 DB-API 2.0 drivers** for 7 databases and an **Arrow Flight SQL server** that enables BI tools like DBeaver, Tableau, and Power BI to run OBML queries directly.
+
+| Package | Database | Native Connector | Arrow Support |
+|---------|----------|------------------|---------------|
+| `ob-driver-core` | — (shared foundation) | — | — |
+| `ob-bigquery` | BigQuery | `google-cloud-bigquery` | `to_arrow()` |
+| `ob-duckdb` | DuckDB | `duckdb` | `fetch_arrow_table()` |
+| `ob-postgres` | PostgreSQL | `adbc-driver-postgresql` | ADBC native |
+| `ob-snowflake` | Snowflake | `snowflake-connector-python` | `fetch_arrow_all()` |
+| `ob-clickhouse` | ClickHouse | `clickhouse-connect` | `query_arrow()` |
+| `ob-dremio` | Dremio | `pyarrow.flight` | Flight native |
+| `ob-databricks` | Databricks | `databricks-sql-connector` | `fetchall_arrow()` |
+| `ob-flight-extension` | Arrow Flight SQL server | `pyarrow.flight` | — |
+
+All drivers work against the OrionBelt REST API in **single-model mode** (`MODEL_FILE` set). OBML queries are compiled transparently via `POST /v1/query/sql` — the user writes OBML, the driver returns SQL results. Plain SQL queries bypass the API entirely.
+
+```python
+import ob_duckdb
+
+conn = ob_duckdb.connect(database=":memory:")
+with conn.cursor() as cur:
+    # OBML query — compiled via API, executed on DuckDB
+    cur.execute("select:\n  dimensions:\n    - Region\n  measures:\n    - Revenue\n")
+    print(cur.fetchall())
+```
+
+The **Arrow Flight SQL server** (`ob-flight-extension`) runs inside the API process as a daemon thread, enabling JDBC/ODBC BI tools to connect directly. It is designed for on-premise or hybrid deployments — Cloud Run uses the standard API-only image.
+
+```bash
+# On-premise with Flight SQL enabled
+docker build -f Dockerfile.flight -t orionbelt-flight .
+docker run -p 8080:8080 -p 8815:8815 \
+  -v /path/to/models/:/app/models/ \
+  --env-file .env \
+  orionbelt-flight
+```
+
+See **[Drivers Documentation](docs/drivers.md)** for full usage examples, connect() parameters, Flight SQL configuration, Docker Compose setup, and DBeaver/Tableau instructions.
+
 ## Configuration
 
-Configuration is via environment variables or a `.env` file. See `.env.example` for all options:
+Configuration is via environment variables or a `.env` file. See `.env.template` for all options:
 
 | Variable                   | Default     | Description                             |
 | -------------------------- | ----------- | --------------------------------------- |
@@ -376,6 +450,11 @@ Configuration is via environment variables or a `.env` file. See `.env.example` 
 | `MODEL_FILE`               | —           | Path to OBML YAML for single-model mode |
 | `API_BASE_URL`             | —           | API URL for standalone UI               |
 | `ROOT_PATH`                | —           | ASGI root path for UI behind LB         |
+| `FLIGHT_ENABLED`           | `false`     | Enable Flight SQL + query execution     |
+| `FLIGHT_PORT`              | `8815`      | Arrow Flight SQL gRPC port              |
+| `FLIGHT_AUTH_MODE`         | `none`      | `none` or `token`                       |
+| `FLIGHT_API_TOKEN`         | —           | Static token (when auth mode = token)   |
+| `DB_VENDOR`                | `duckdb`    | Database vendor for query execution     |
 
 ### Single-Model Mode
 
@@ -458,7 +537,7 @@ OrionBelt Analytics is an ontology-based MCP server that analyzes relational dat
 Together, the two projects form a powerful combination for AI-guided analytical workflows:
 
 - **OrionBelt Analytics** gives the AI contextual knowledge of your database schema, relationships, and business semantics
-- **OrionBelt Semantic Layer** ensures correct, optimized SQL generation from business concepts (dimensions, measures, metrics)
+- **OrionBelt Semantic Layer** ensures correct, optimized SQL compilation and execution from business concepts (dimensions, measures, metrics)
 
 By combining both, an AI assistant can navigate your data landscape through ontologies and compile safe, dialect-aware analytical SQL — enabling a seamless end-to-end analytical journey.
 

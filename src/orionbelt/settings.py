@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     """Configuration for OrionBelt REST API server.
 
     Values are read from environment variables and from a ``.env`` file
-    in the working directory.  See ``.env.example`` for all options.
+    in the working directory.  See ``.env.template`` for all options.
     """
 
     model_config = SettingsConfigDict(
@@ -37,6 +37,19 @@ class Settings(BaseSettings):
     session_cleanup_interval: int = 60  # seconds between cleanup sweeps
     disable_session_list: bool = False  # hide GET /sessions endpoint
 
-    # Single-model mode — path to an OBML YAML file that is pre-loaded into
-    # every new session.  When set, model upload/removal endpoints return 403.
-    model_file: str | None = None
+    # Single-model mode — pre-loaded into every new session.
+    # When set, model upload/removal endpoints return 403.
+    model_dir: str | None = None  # base directory for MODEL_FILE (set by Docker)
+    model_file: str | None = None  # filename or absolute path to OBML YAML
+
+    # Query execution
+    query_execute: bool = False  # enable POST /v1/query/execute
+    query_default_limit: int = 1000  # max rows when query has no LIMIT
+    db_pool_size: int = 5  # connection pool size per dialect
+
+    # Arrow Flight SQL server (requires ob-flight-extension)
+    flight_enabled: bool = False  # start gRPC Flight server on FLIGHT_PORT (implies query_execute)
+    flight_port: int = 8815
+    flight_auth_mode: str = "none"  # "none" or "token"
+    flight_api_token: str | None = None
+    db_vendor: str = "duckdb"  # default vendor driver for Flight query execution

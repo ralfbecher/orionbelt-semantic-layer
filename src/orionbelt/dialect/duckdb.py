@@ -24,6 +24,7 @@ class DuckDBDialect(Dialect):
             supports_arrays=True,
             supports_window_filters=True,
             supports_ilike=True,
+            supports_union_all_by_name=True,
         )
 
     def format_table_ref(self, database: str, schema: str, code: str) -> str:

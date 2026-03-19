@@ -146,3 +146,13 @@ def and_(*conditions: Expr) -> Expr:
     if result is None:
         return Literal(value=True)
     return result
+
+
+def or_(*conditions: Expr) -> Expr:
+    """Chain conditions with OR."""
+    result: Expr | None = None
+    for cond in conditions:
+        result = cond if result is None else BinaryOp(left=result, op="OR", right=cond)
+    if result is None:
+        return Literal(value=True)
+    return result

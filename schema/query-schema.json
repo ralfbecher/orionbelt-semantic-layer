@@ -44,11 +44,11 @@
     },
     "queryFilter": {
       "type": "object",
-      "description": "A filter condition. WHERE filters reference a dimension name; HAVING filters reference a measure name. The dimension's data object must be reachable from the query's join graph (auto-joined if needed).",
+      "description": "A filter condition. WHERE filters reference a dimension name or a qualified column (DataObject.Column); HAVING filters reference a measure name. The data object must be reachable from the query's join graph (auto-joined if needed).",
       "properties": {
         "field": {
           "type": "string",
-          "description": "Dimension name (for WHERE) or measure name (for HAVING)"
+          "description": "Dimension name, qualified column as DataObject.Column (for WHERE), or measure name (for HAVING)"
         },
         "op": {
           "$ref": "#/definitions/filterOperator"
@@ -58,6 +58,35 @@
         }
       },
       "required": ["field", "op"],
+      "additionalProperties": false
+    },
+    "queryFilterGroup": {
+      "type": "object",
+      "description": "A group of query filters combined with AND or OR logic. Supports recursive nesting for complex boolean expressions.",
+      "properties": {
+        "logic": {
+          "description": "Boolean combination logic for child filters",
+          "enum": ["and", "or"],
+          "default": "and"
+        },
+        "filters": {
+          "type": "array",
+          "description": "Child filters (leaf filters or nested filter groups)",
+          "items": {
+            "oneOf": [
+              { "$ref": "#/definitions/queryFilter" },
+              { "$ref": "#/definitions/queryFilterGroup" }
+            ]
+          },
+          "minItems": 1
+        },
+        "negated": {
+          "type": "boolean",
+          "description": "When true, negates the entire group: NOT (filter1 AND/OR filter2)",
+          "default": false
+        }
+      },
+      "required": ["filters"],
       "additionalProperties": false
     },
     "queryOrderBy": {
@@ -125,16 +154,22 @@
     },
     "where": {
       "type": "array",
-      "description": "Filters applied before aggregation (WHERE clause)",
+      "description": "Filters applied before aggregation (WHERE clause). Supports leaf filters and filter groups with AND/OR/NOT logic. Top-level items are combined with AND.",
       "items": {
-        "$ref": "#/definitions/queryFilter"
+        "oneOf": [
+          { "$ref": "#/definitions/queryFilter" },
+          { "$ref": "#/definitions/queryFilterGroup" }
+        ]
       }
     },
     "having": {
       "type": "array",
-      "description": "Filters applied after aggregation (HAVING clause)",
+      "description": "Filters applied after aggregation (HAVING clause). Supports leaf filters and filter groups with AND/OR/NOT logic. Top-level items are combined with AND.",
       "items": {
-        "$ref": "#/definitions/queryFilter"
+        "oneOf": [
+          { "$ref": "#/definitions/queryFilter" },
+          { "$ref": "#/definitions/queryFilterGroup" }
+        ]
       }
     },
     "order_by": {
@@ -148,6 +183,11 @@
       "type": "integer",
       "description": "Maximum number of rows to return",
       "minimum": 1
+    },
+    "offset": {
+      "type": "integer",
+      "description": "Number of rows to skip before returning results",
+      "minimum": 0
     },
     "usePathNames": {
       "type": "array",
