@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Compile YAML semantic models into analytical SQL across multiple database dialects.">
+        <meta name="description" content="Compile and execute YAML semantic models as analytical SQL across multiple database dialects.">
       
       
       
@@ -681,7 +681,7 @@
 </nav>
 <div class="obml-version-badge">
   OBML v1.0<br>
-  OrionBelt v1.0.0
+  OrionBelt v1.1.0
 </div>
       
     </li>
@@ -1474,7 +1474,7 @@
 </nav>
 <div class="obml-version-badge">
   OBML v1.0<br>
-  OrionBelt v1.0.0
+  OrionBelt v1.1.0
 </div>
                   </div>
                 </div>
@@ -1569,7 +1569,7 @@
 </span></code></pre></div>
 <h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
 <p>OrionBelt reads configuration from environment variables and a <code>.env</code> file. Copy the example:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>cp<span class="w"> </span>.env.example<span class="w"> </span>.env
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>cp<span class="w"> </span>.env.template<span class="w"> </span>.env
 </span></code></pre></div>
 <p>Key settings:</p>
 <table>
@@ -1611,8 +1611,19 @@
 <td>—</td>
 <td>Path to OBML YAML for single-model mode</td>
 </tr>
+<tr>
+<td><code>FLIGHT_ENABLED</code></td>
+<td><code>false</code></td>
+<td>Enable Flight SQL + query execution</td>
+</tr>
+<tr>
+<td><code>DB_VENDOR</code></td>
+<td><code>duckdb</code></td>
+<td>Database vendor for query execution</td>
+</tr>
 </tbody>
 </table>
+<p>See <code>.env.template</code> for the full list including database credentials.</p>
 <h3 id="single-model-mode">Single-Model Mode<a class="headerlink" href="#single-model-mode" title="Permanent link">&para;</a></h3>
 <p>Set <code>MODEL_FILE</code> to serve a fixed OBML model. Every new session gets the model pre-loaded, and model upload/removal endpoints return 403.</p>
 <h2 id="start-the-servers">Start the Servers<a class="headerlink" href="#start-the-servers" title="Permanent link">&para;</a></h2>

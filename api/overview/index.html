@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Compile YAML semantic models into analytical SQL across multiple database dialects.">
+        <meta name="description" content="Compile and execute YAML semantic models as analytical SQL across multiple database dialects.">
       
       
       
@@ -971,7 +971,7 @@
 </nav>
 <div class="obml-version-badge">
   OBML v1.0<br>
-  OrionBelt v1.0.0
+  OrionBelt v1.1.0
 </div>
       
     </li>
@@ -1474,7 +1474,7 @@
 </nav>
 <div class="obml-version-badge">
   OBML v1.0<br>
-  OrionBelt v1.0.0
+  OrionBelt v1.1.0
 </div>
                   </div>
                 </div>
@@ -1494,7 +1494,7 @@
 
 
 <h1 id="api-overview">API Overview<a class="headerlink" href="#api-overview" title="Permanent link">&para;</a></h1>
-<p>OrionBelt exposes a REST API — FastAPI-powered HTTP endpoints for session-based model management, validation, and query compilation.</p>
+<p>OrionBelt exposes a REST API — FastAPI-powered HTTP endpoints for session-based model management, validation, query compilation, and query execution.</p>
 <h2 id="rest-api">REST API<a class="headerlink" href="#rest-api" title="Permanent link">&para;</a></h2>
 <h3 id="base-url">Base URL<a class="headerlink" href="#base-url" title="Permanent link">&para;</a></h3>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>http://127.0.0.1:8000
@@ -1517,7 +1517,7 @@
 <tr>
 <td><code>/v1/sessions</code></td>
 <td>sessions</td>
-<td>Session-scoped model management, validation, and query compilation</td>
+<td>Session-scoped model management, validation, query compilation, and execution</td>
 </tr>
 <tr>
 <td><code>/v1/sessions/.../models/.../</code></td>
@@ -1556,7 +1556,8 @@
 <ol>
 <li><strong>Create a session</strong> — <code>POST /v1/sessions</code> returns a <code>session_id</code></li>
 <li><strong>Load models</strong> — <code>POST /v1/sessions/{id}/models</code> with OBML YAML</li>
-<li><strong>Query</strong> — <code>POST /v1/sessions/{id}/query/sql</code> against loaded models</li>
+<li><strong>Compile</strong> — <code>POST /v1/sessions/{id}/query/sql</code> to compile OBML to SQL</li>
+<li><strong>Execute</strong> — <code>POST /v1/sessions/{id}/query/execute</code> to compile and execute against the database (requires <code>FLIGHT_ENABLED=true</code>)</li>
 <li><strong>Close</strong> — <code>DELETE /v1/sessions/{id}</code> when done (or let TTL expire)</li>
 </ol>
 <p>Sessions automatically expire after 30 minutes of inactivity (configurable via <code>SESSION_TTL_SECONDS</code>).</p>
@@ -1565,7 +1566,8 @@
 <ol>
 <li><strong>Create a session</strong> — <code>POST /v1/sessions</code> returns a <code>session_id</code> with the model already loaded (<code>model_count: 1</code>)</li>
 <li><strong>List the model</strong> — <code>GET /v1/sessions/{id}/models</code> to get the pre-loaded <code>model_id</code></li>
-<li><strong>Query</strong> — <code>POST /v1/sessions/{id}/query/sql</code> against the pre-loaded model</li>
+<li><strong>Compile</strong> — <code>POST /v1/sessions/{id}/query/sql</code> to compile OBML to SQL</li>
+<li><strong>Execute</strong> — <code>POST /v1/sessions/{id}/query/execute</code> to compile and execute (requires <code>FLIGHT_ENABLED=true</code>)</li>
 <li><strong>Close</strong> — <code>DELETE /v1/sessions/{id}</code> when done (or let TTL expire)</li>
 </ol>
 <p>Model upload (<code>POST /v1/sessions/{id}/models</code>) and removal (<code>DELETE /v1/sessions/{id}/models/{mid}</code>) return <strong>403 Forbidden</strong> in this mode. All other endpoints work normally.</p>
@@ -1619,6 +1621,16 @@
 <td>422</td>
 <td>Unprocessable Entity</td>
 <td>Model validation failure, resolution error</td>
+</tr>
+<tr>
+<td>502</td>
+<td>Bad Gateway</td>
+<td>Database execution failed (query/execute)</td>
+</tr>
+<tr>
+<td>503</td>
+<td>Service Unavailable</td>
+<td>Query execution not available (FLIGHT_ENABLED not set)</td>
 </tr>
 </tbody>
 </table>
