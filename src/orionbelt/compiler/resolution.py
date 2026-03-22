@@ -30,7 +30,15 @@ from orionbelt.models.query import (
     QueryObject,
     UsePathName,
 )
-from orionbelt.models.semantic import Measure, Metric, SemanticModel, TimeGrain
+from orionbelt.models.semantic import (
+    CumulativeAggType,
+    GrainToDate,
+    Measure,
+    Metric,
+    MetricType,
+    SemanticModel,
+    TimeGrain,
+)
 
 
 @dataclass
@@ -54,6 +62,13 @@ class ResolvedMeasure:
     is_expression: bool = False
     component_measures: list[str] = field(default_factory=list)
     total: bool = False
+    # Cumulative metric fields
+    is_cumulative: bool = False
+    cumulative_measure: str | None = None
+    cumulative_time_dimension: str | None = None
+    cumulative_type: CumulativeAggType = CumulativeAggType.SUM
+    cumulative_window: int | None = None
+    cumulative_grain_to_date: GrainToDate | None = None
 
 
 @dataclass
@@ -102,6 +117,11 @@ class ResolvedQuery:
                 if comp and comp.total:
                     return True
         return False
+
+    @property
+    def has_cumulative(self) -> bool:
+        """Check if any selected metric is cumulative."""
+        return any(m.is_cumulative for m in self.measures)
 
 
 @dataclass
@@ -381,10 +401,18 @@ class QueryResolver:
         self, ctx: _ResolutionContext, name: str, metric: Metric
     ) -> ResolvedMeasure | None:
         """Resolve a metric to its combined expression."""
+        if metric.type == MetricType.CUMULATIVE:
+            return self._resolve_cumulative_metric(ctx, name, metric)
+        return self._resolve_derived_metric(ctx, name, metric)
+
+    def _resolve_derived_metric(
+        self, ctx: _ResolutionContext, name: str, metric: Metric
+    ) -> ResolvedMeasure | None:
+        """Resolve a derived metric to its combined expression."""
         formula = metric.expression
 
         # Extract and resolve each component measure
-        component_names = re.findall(r"\{\[([^\]]+)\]\}", formula)
+        component_names = re.findall(r"\{\[([^\]]+)\]\}", formula or "")
         for comp_name in component_names:
             if comp_name not in ctx.result.metric_components:
                 comp = self._resolve_measure(ctx, comp_name)
@@ -393,7 +421,7 @@ class QueryResolver:
 
         # Parse the formula into an AST tree
         try:
-            tokens = tokenize_metric_formula(formula)
+            tokens = tokenize_metric_formula(formula or "")
             parsed_expr = parse_expression(tokens)
         except Exception as exc:
             ctx.errors.append(
@@ -413,6 +441,79 @@ class QueryResolver:
             is_expression=True,
         )
 
+    def _resolve_cumulative_metric(
+        self, ctx: _ResolutionContext, name: str, metric: Metric
+    ) -> ResolvedMeasure | None:
+        """Resolve a cumulative metric referencing an existing measure."""
+        assert metric.measure is not None
+        assert metric.time_dimension is not None
+
+        # Validate referenced measure exists
+        base_measure = ctx.model.measures.get(metric.measure)
+        if base_measure is None:
+            ctx.errors.append(
+                SemanticError(
+                    code="UNKNOWN_MEASURE",
+                    message=(
+                        f"Cumulative metric '{name}' references unknown measure '{metric.measure}'"
+                    ),
+                    path=f"metrics.{name}.measure",
+                )
+            )
+            return None
+
+        # Validate timeDimension is a known dimension
+        dim = ctx.model.dimensions.get(metric.time_dimension)
+        if dim is None:
+            ctx.errors.append(
+                SemanticError(
+                    code="UNKNOWN_DIMENSION",
+                    message=(
+                        f"Cumulative metric '{name}' references unknown "
+                        f"timeDimension '{metric.time_dimension}'"
+                    ),
+                    path=f"metrics.{name}.timeDimension",
+                )
+            )
+            return None
+
+        # Validate timeDimension is in the query's selected dimensions
+        dim_names = {d.name for d in ctx.result.dimensions}
+        if metric.time_dimension not in dim_names:
+            ctx.errors.append(
+                SemanticError(
+                    code="CUMULATIVE_TIME_DIMENSION_NOT_IN_SELECT",
+                    message=(
+                        f"Cumulative metric '{name}' requires timeDimension "
+                        f"'{metric.time_dimension}' to be in the query's selected dimensions"
+                    ),
+                    path=f"metrics.{name}.timeDimension",
+                )
+            )
+            return None
+
+        # Resolve the base measure as a component (reuse existing resolution)
+        if metric.measure not in ctx.result.metric_components:
+            comp = self._resolve_measure(ctx, metric.measure)
+            if comp:
+                ctx.result.metric_components[metric.measure] = comp
+
+        # The cumulative metric's expression is a placeholder ColumnRef to the base measure
+        # The actual window function is built during the cumulative_wrap phase
+        return ResolvedMeasure(
+            name=name,
+            aggregation=base_measure.aggregation,
+            expression=ColumnRef(name=metric.measure),
+            is_expression=True,
+            component_measures=[metric.measure],
+            is_cumulative=True,
+            cumulative_measure=metric.measure,
+            cumulative_time_dimension=metric.time_dimension,
+            cumulative_type=metric.cumulative_type,
+            cumulative_window=metric.window,
+            cumulative_grain_to_date=metric.grain_to_date,
+        )
+
     def _get_measure_source_objects(self, ctx: _ResolutionContext, name: str) -> set[str]:
         """Extract all source data objects for a measure or metric."""
         result: set[str] = set()
@@ -430,9 +531,14 @@ class QueryResolver:
 
         metric = ctx.model.metrics.get(name)
         if metric:
-            measure_refs = re.findall(r"\{\[([^\]]+)\]\}", metric.expression)
-            for ref_name in measure_refs:
-                result.update(self._get_measure_source_objects(ctx, ref_name))
+            if metric.type == MetricType.CUMULATIVE and metric.measure:
+                # Cumulative metric: source objects come from the referenced measure
+                result.update(self._get_measure_source_objects(ctx, metric.measure))
+            elif metric.expression:
+                # Derived metric: parse expression for measure references
+                measure_refs = re.findall(r"\{\[([^\]]+)\]\}", metric.expression)
+                for ref_name in measure_refs:
+                    result.update(self._get_measure_source_objects(ctx, ref_name))
 
         return result
 

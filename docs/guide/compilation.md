@@ -1,6 +1,6 @@
 # Compilation Pipeline
 
-OrionBelt compiles semantic queries into SQL through a three-phase pipeline: **Resolution**, **Planning**, and **Code Generation**. Each phase transforms the query into a progressively more concrete representation.
+OrionBelt compiles semantic queries into SQL through a multi-phase pipeline: **Resolution**, **Planning**, optional **wrapping** (totals, cumulative), and **Code Generation**. Each phase transforms the query into a progressively more concrete representation.
 
 ```
 QueryObject + SemanticModel
@@ -16,6 +16,13 @@ QueryObject + SemanticModel
 |  Phase 2:       |
 |  Planning       |  -> QueryPlan (SQL AST)
 |  (Star or CFL)  |
++--------+--------+
+         |
+         v
++-----------------+
+|  Phase 2.5-2.6: |
+|  Total Wrap     |  -> CTE + AGG(x) OVER () for total measures
+|  Cumulative Wrap|  -> CTE + window functions for cumulative metrics
 +--------+--------+
          |
          v
@@ -247,6 +254,8 @@ All SQL is generated from an immutable AST — never by string concatenation. Th
 | `CaseExpr` | CASE expression | `CASE WHEN ... THEN ... END` |
 | `Cast` | Type cast | `CAST(x AS INTEGER)` |
 | `SubqueryExpr` | Subquery | `(SELECT ...)` |
+| `WindowFunction` | Window function | `SUM(x) OVER (ORDER BY y ROWS ...)` |
+| `WindowFrame` | Window frame | `ROWS BETWEEN ... AND ...` |
 | `RawSQL` | Escape hatch | Raw SQL string |
 
 ### Statement Nodes
@@ -302,9 +311,15 @@ class CompilationPipeline:
         else:
             plan = StarSchemaPlanner.plan(resolved, model)
 
+        # Phase 2.5: Total wrap (grand total measures)
+        wrapped_ast = wrap_with_totals(plan.ast, resolved)
+
+        # Phase 2.6: Cumulative wrap (running/rolling/grain-to-date metrics)
+        wrapped_ast = wrap_with_cumulative(wrapped_ast, resolved)
+
         # Phase 3: Code Generation
         dialect = DialectRegistry.get(dialect_name)
-        sql = CodeGenerator(dialect).generate(plan.ast)
+        sql = CodeGenerator(dialect).generate(wrapped_ast)
 
         return CompilationResult(sql=sql, dialect=dialect_name, resolved=..., warnings=...)
 ```

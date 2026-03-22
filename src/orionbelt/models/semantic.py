@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from enum import StrEnum
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class DataType(StrEnum):
@@ -61,6 +61,26 @@ class NumClass(StrEnum):
     CATEGORICAL = "categorical"
     ADDITIVE = "additive"
     NON_ADDITIVE = "non-additive"
+
+
+class MetricType(StrEnum):
+    DERIVED = "derived"
+    CUMULATIVE = "cumulative"
+
+
+class CumulativeAggType(StrEnum):
+    SUM = "sum"
+    AVG = "avg"
+    MIN = "min"
+    MAX = "max"
+    COUNT = "count"
+
+
+class GrainToDate(StrEnum):
+    YEAR = "year"
+    QUARTER = "quarter"
+    MONTH = "month"
+    WEEK = "week"
 
 
 class FilterLogic(StrEnum):
@@ -240,13 +260,24 @@ class Measure(BaseModel):
 
 
 class Metric(BaseModel):
-    """A composite metric combining measures via an expression.
+    """A metric: either a derived expression or a cumulative window over a measure.
 
-    The expression references measures by name using ``{[Measure Name]}`` syntax.
+    **Derived** (default): references measures by name using ``{[Measure Name]}`` syntax.
+    **Cumulative**: applies a window function to an existing measure, ordered by a time
+    dimension.  Supports running totals, rolling windows, and grain-to-date resets.
     """
 
     label: str
-    expression: str
+    type: MetricType = MetricType.DERIVED
+    # Derived metrics
+    expression: str | None = None
+    # Cumulative metrics
+    measure: str | None = None
+    time_dimension: str | None = Field(None, alias="timeDimension")
+    cumulative_type: CumulativeAggType = Field(CumulativeAggType.SUM, alias="cumulativeType")
+    window: int | None = None
+    grain_to_date: GrainToDate | None = Field(None, alias="grainToDate")
+    # Common
     description: str | None = None
     format: str | None = None
     owner: str | None = None
@@ -254,6 +285,24 @@ class Metric(BaseModel):
     custom_extensions: list[CustomExtension] = Field(default_factory=list, alias="customExtensions")
 
     model_config = {"populate_by_name": True}
+
+    @model_validator(mode="after")
+    def _validate_metric_type(self) -> Metric:
+        if self.type == MetricType.DERIVED:
+            if not self.expression:
+                raise ValueError("Derived metrics require 'expression'")
+        elif self.type == MetricType.CUMULATIVE:
+            if not self.measure:
+                raise ValueError("Cumulative metrics require 'measure'")
+            if not self.time_dimension:
+                raise ValueError("Cumulative metrics require 'timeDimension'")
+            if self.expression:
+                raise ValueError("Cumulative metrics must not have 'expression'")
+            if self.window is not None and self.grain_to_date is not None:
+                raise ValueError("'window' and 'grainToDate' are mutually exclusive")
+            if self.window is not None and self.window < 1:
+                raise ValueError("'window' must be >= 1")
+        return self
 
 
 class SemanticModel(BaseModel):

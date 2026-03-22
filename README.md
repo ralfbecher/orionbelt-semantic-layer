@@ -34,7 +34,8 @@ OrionBelt Semantic Layer is an **API-first** semantic engine and query planner f
 
 - **7 SQL Dialects** — BigQuery, ClickHouse, Databricks, Dremio, DuckDB/MotherDuck, Postgres, Snowflake with dialect-specific optimizations
 - **AST-Based SQL Generation** — Custom SQL AST ensures correct, injection-safe SQL (no string concatenation)
-- **OrionBelt ML (OBML)** — YAML-based semantic models with data objects, dimensions, measures, metrics, and joins
+- **OrionBelt ML (OBML)** — YAML-based semantic models with data objects, dimensions, measures, metrics (derived and cumulative), and joins
+- **Cumulative Metrics** — Running totals, rolling windows, and grain-to-date (MTD/YTD) via window functions with configurable aggregation types
 - **Star Schema & CFL Planning** — Automatic join path resolution with Composite Fact Layer support for multi-fact queries and dimension-only queries through intermediate tables
 - **Dimension Exclusion** — Anti-join queries via `dimensionsExclude` flag to find non-existing combinations (e.g., directors and producers who never collaborated)
 - **Vendor-Specific SQL Validation** — Post-generation syntax validation via sqlglot for each target dialect (non-blocking)

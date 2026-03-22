@@ -164,13 +164,23 @@ class RelativeDateRange:
 
 
 @dataclass(frozen=True)
+class WindowFrame:
+    """ROWS/RANGE BETWEEN start AND end."""
+
+    mode: str = "ROWS"  # ROWS | RANGE
+    start: str = "UNBOUNDED PRECEDING"
+    end: str = "CURRENT ROW"
+
+
+@dataclass(frozen=True)
 class WindowFunction:
-    """Window function: func(args) OVER ([PARTITION BY ...] [ORDER BY ...])."""
+    """Window function: func(args) OVER ([PARTITION BY ...] [ORDER BY ...] [frame])."""
 
     func_name: str
     args: list[Expr] = field(default_factory=list)
     partition_by: list[Expr] = field(default_factory=list)
     order_by: list[OrderByItem] = field(default_factory=list)
+    frame: WindowFrame | None = None
     distinct: bool = False
 
 

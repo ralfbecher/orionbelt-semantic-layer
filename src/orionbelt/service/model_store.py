@@ -72,8 +72,11 @@ class MetricInfo:
     """Summary of a metric."""
 
     name: str
-    expression: str
+    expression: str | None
     synonyms: list[str]
+    type: str = "derived"
+    measure: str | None = None
+    time_dimension: str | None = None
     owner: str | None = None
 
 
@@ -293,6 +296,9 @@ class ModelStore:
                 name=met.label,
                 expression=met.expression,
                 synonyms=met.synonyms,
+                type=met.type.value,
+                measure=met.measure,
+                time_dimension=met.time_dimension,
                 owner=met.owner,
             )
             for met in model.metrics.values()

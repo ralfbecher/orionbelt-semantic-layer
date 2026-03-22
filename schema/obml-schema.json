@@ -586,16 +586,51 @@
       "required": ["aggregation"],
       "additionalProperties": false
     },
+    "cumulativeAggType": {
+      "description": "Window aggregation function for cumulative metrics",
+      "enum": ["sum", "avg", "min", "max", "count"]
+    },
+    "grainToDate": {
+      "description": "Reset boundary for grain-to-date cumulative metrics",
+      "enum": ["year", "quarter", "month", "week"]
+    },
     "metric": {
       "type": "object",
-      "description": "Metric definition. Expression references measures by name using {[Measure Name]} syntax.",
+      "description": "Metric definition. Either a derived metric (expression referencing measures) or a cumulative metric (window function over a measure).",
       "properties": {
         "label": {
           "type": "string"
         },
+        "type": {
+          "description": "Metric category: derived (expression-based) or cumulative (window function)",
+          "enum": ["derived", "cumulative"],
+          "default": "derived"
+        },
         "expression": {
           "type": "string",
-          "description": "template string with {[Measure Name]} placeholders referencing defined measures"
+          "description": "Template string with {[Measure Name]} placeholders (required for derived metrics)"
+        },
+        "measure": {
+          "type": "string",
+          "description": "Name of base measure (required for cumulative metrics)"
+        },
+        "timeDimension": {
+          "type": "string",
+          "description": "Dimension used for ordering (required for cumulative metrics, must be a date/timestamp dimension)"
+        },
+        "cumulativeType": {
+          "$ref": "#/definitions/cumulativeAggType",
+          "description": "Window aggregation function (default: sum)",
+          "default": "sum"
+        },
+        "window": {
+          "type": "integer",
+          "description": "Rolling window size in periods (omit for unbounded running total). Mutually exclusive with grainToDate.",
+          "minimum": 1
+        },
+        "grainToDate": {
+          "$ref": "#/definitions/grainToDate",
+          "description": "Reset boundary for grain-to-date (e.g. month for MTD). Mutually exclusive with window."
         },
         "description": {
           "type": "string",
@@ -619,7 +654,19 @@
           "items": { "$ref": "#/definitions/customExtension" }
         }
       },
-      "required": ["expression"],
+      "if": {
+        "properties": { "type": { "const": "cumulative" } },
+        "required": ["type"]
+      },
+      "then": {
+        "required": ["measure", "timeDimension"],
+        "not": {
+          "required": ["window", "grainToDate"]
+        }
+      },
+      "else": {
+        "required": ["expression"]
+      },
       "additionalProperties": false
     },
     "locale": {

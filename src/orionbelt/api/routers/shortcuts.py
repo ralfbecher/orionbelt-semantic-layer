@@ -203,10 +203,13 @@ async def shortcut_metric(
     met = model.metrics.get(name)
     if not met:
         raise HTTPException(status_code=404, detail=f"Metric '{name}' not found")
-    component_names = re.findall(r"\{\[([^\]]+)\]\}", met.expression)
+    component_names = re.findall(r"\{\[([^\]]+)\]\}", met.expression or "")
     return MetricDetail(
         name=name,
+        type=met.type.value,
         expression=met.expression,
+        measure=met.measure,
+        time_dimension=met.time_dimension,
         component_measures=component_names,
         format=met.format,
         owner=met.owner,
