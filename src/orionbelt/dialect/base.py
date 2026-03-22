@@ -389,6 +389,7 @@ class Dialect(ABC):
                 args=args,
                 partition_by=partition_by,
                 order_by=order_by,
+                frame=frame,
                 distinct=distinct,
             ):
                 args_sql = ", ".join(self.compile_expr(a) for a in args)
@@ -400,6 +401,8 @@ class Dialect(ABC):
                 if order_by:
                     ob = ", ".join(self.compile_order_by(o) for o in order_by)
                     over_parts.append(f"ORDER BY {ob}")
+                if frame is not None:
+                    over_parts.append(f"{frame.mode} BETWEEN {frame.start} AND {frame.end}")
                 over_clause = " ".join(over_parts)
                 return f"{func_sql} OVER ({over_clause})"
             case _:

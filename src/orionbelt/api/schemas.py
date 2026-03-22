@@ -347,12 +347,17 @@ class MetricDetail(BaseModel):
     """Detail of a metric."""
 
     name: str
-    expression: str
+    type: str = "derived"
+    expression: str | None = None
+    measure: str | None = None
+    time_dimension: str | None = Field(None, alias="timeDimension")
     component_measures: list[str] = Field(default_factory=list)
     description: str | None = None
     format: str | None = None
     owner: str | None = None
     synonyms: list[str] = Field(default_factory=list)
+
+    model_config = {"populate_by_name": True}
 
 
 class SchemaResponse(BaseModel):

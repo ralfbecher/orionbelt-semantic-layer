@@ -116,11 +116,14 @@ def _build_schema(model_id: str, model: SemanticModel) -> SchemaResponse:
 
     metrics = []
     for name, met in model.metrics.items():
-        component_names = re.findall(r"\{\[([^\]]+)\]\}", met.expression)
+        component_names = re.findall(r"\{\[([^\]]+)\]\}", met.expression or "")
         metrics.append(
             MetricDetail(
                 name=name,
+                type=met.type.value,
                 expression=met.expression,
+                measure=met.measure,
+                time_dimension=met.time_dimension,
                 component_measures=component_names,
                 description=met.description,
                 format=met.format,
@@ -208,9 +211,13 @@ def _build_explain(name: str, model: SemanticModel) -> ExplainResponse:
         met = model.metrics[name]
         lineage = [
             ExplainLineageItem(type="metric", name=name, detail="composite metric"),
-            ExplainLineageItem(type="expression", name=met.expression, detail="metric formula"),
+            ExplainLineageItem(
+                type="expression",
+                name=met.expression or f"cumulative({met.measure})",
+                detail="metric formula",
+            ),
         ]
-        component_names = re.findall(r"\{\[([^\]]+)\]\}", met.expression)
+        component_names = re.findall(r"\{\[([^\]]+)\]\}", met.expression or "")
         for comp_name in component_names:
             comp = model.measures.get(comp_name)
             if comp:
@@ -423,10 +430,13 @@ async def get_metric(
     met = model.metrics.get(name)
     if not met:
         raise HTTPException(status_code=404, detail=f"Metric '{name}' not found")
-    component_names = re.findall(r"\{\[([^\]]+)\]\}", met.expression)
+    component_names = re.findall(r"\{\[([^\]]+)\]\}", met.expression or "")
     return MetricDetail(
         name=name,
+        type=met.type.value,
         expression=met.expression,
+        measure=met.measure,
+        time_dimension=met.time_dimension,
         component_measures=component_names,
         format=met.format,
         owner=met.owner,

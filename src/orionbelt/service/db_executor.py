@@ -78,7 +78,12 @@ class ExecutionResult:
 def _map_type_code(type_code: Any) -> str:
     """Map a PEP 249 type code to a simple string type hint."""
     try:
-        from ob_driver_core.type_codes import BINARY, DATETIME, NUMBER, STRING
+        from ob_driver_core.type_codes import (  # type: ignore[import-untyped]
+            BINARY,
+            DATETIME,
+            NUMBER,
+            STRING,
+        )
 
         if type_code == NUMBER or type_code is NUMBER:
             return "number"
@@ -95,7 +100,7 @@ def _map_type_code(type_code: Any) -> str:
 
 def _arrow_type_to_hint(arrow_type: Any) -> str:
     """Map a PyArrow type to a simple type hint string."""
-    import pyarrow as pa
+    import pyarrow as pa  # type: ignore[import-untyped]
 
     if (
         pa.types.is_integer(arrow_type)
@@ -171,7 +176,7 @@ def execute_sql(sql: str, *, dialect: str) -> ExecutionResult:
         ExecutionError: if the database connection or query fails.
     """
     try:
-        from ob_flight.db_router import get_credentials
+        from ob_flight.db_router import get_credentials  # type: ignore[import-untyped]
     except ImportError:
         raise ExecutionUnavailableError(
             "ob-flight-extension package is not installed. Install with: uv sync --extra flight"
@@ -245,19 +250,19 @@ def _fetch_result(cursor: Any, t0: float) -> ExecutionResult:
         )
 
     # Fallback: PEP 249 fetchall()
-    columns: list[ColumnMeta] = []
+    pep_columns: list[ColumnMeta] = []
     if cursor.description:
         for col_desc in cursor.description:
             name = col_desc[0]
             type_code = col_desc[1]
-            columns.append(ColumnMeta(name=name, type_hint=_map_type_code(type_code)))
+            pep_columns.append(ColumnMeta(name=name, type_hint=_map_type_code(type_code)))
 
     raw_rows = cursor.fetchall()
     rows = [_serialize_row(r) for r in raw_rows]
     elapsed_ms = (time.monotonic() - t0) * 1000
 
     return ExecutionResult(
-        columns=columns,
+        columns=pep_columns,
         raw_rows=rows,
         row_count=len(rows),
         execution_time_ms=round(elapsed_ms, 2),
