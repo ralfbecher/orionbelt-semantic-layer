@@ -70,6 +70,8 @@ dev = [
     "duckdb>=1.0",
     "testcontainers>=4.0",
     "psycopg2-binary>=2.9",
+    "pymysql[rsa]>=1.0",
+    "clickhouse-connect>=0.7",
 ]
 docs = [
     "mkdocs-material>=9.7",
