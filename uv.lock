@@ -2246,11 +2246,13 @@ dependencies = [
 
 [package.optional-dependencies]
 dev = [
+    { name = "clickhouse-connect" },
     { name = "duckdb" },
     { name = "httpx" },
     { name = "mypy" },
     { name = "pre-commit" },
     { name = "psycopg2-binary" },
+    { name = "pymysql", extra = ["rsa"] },
     { name = "pytest" },
     { name = "pytest-asyncio" },
     { name = "pytest-cov" },
@@ -2280,6 +2282,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "clickhouse-connect", marker = "extra == 'dev'", specifier = ">=0.7" },
     { name = "duckdb", marker = "extra == 'dev'", specifier = ">=1.0" },
     { name = "fastapi", specifier = ">=0.128,<1.0" },
     { name = "gradio", marker = "extra == 'ui'", specifier = ">=5.0,<6.0" },
@@ -2299,6 +2302,7 @@ requires-dist = [
     { name = "pyarrow", marker = "extra == 'flight'", specifier = ">=16.0,<20.0" },
     { name = "pydantic", specifier = ">=2.12,<3.0" },
     { name = "pydantic-settings", specifier = ">=2.12,<3.0" },
+    { name = "pymysql", extras = ["rsa"], marker = "extra == 'dev'", specifier = ">=1.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=9.0" },
     { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=1.3" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=7.0" },
@@ -2881,6 +2885,20 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/1e/6c/9e370934bfa30e889d12e61d0dae009991294f40055c238980066a7fbd83/pymdown_extensions-10.20.1.tar.gz", hash = "sha256:e7e39c865727338d434b55f1dd8da51febcffcaebd6e1a0b9c836243f660740a", size = 852860, upload-time = "2026-01-24T05:56:56.758Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/40/6d/b6ee155462a0156b94312bdd82d2b92ea56e909740045a87ccb98bf52405/pymdown_extensions-10.20.1-py3-none-any.whl", hash = "sha256:24af7feacbca56504b313b7b418c4f5e1317bb5fea60f03d57be7fcc40912aa0", size = 268768, upload-time = "2026-01-24T05:56:54.537Z" },
+]
+
+[[package]]
+name = "pymysql"
+version = "1.1.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/f5/ae/1fe3fcd9f959efa0ebe200b8de88b5a5ce3e767e38c7ac32fb179f16a388/pymysql-1.1.2.tar.gz", hash = "sha256:4961d3e165614ae65014e361811a724e2044ad3ea3739de9903ae7c21f539f03", size = 48258, upload-time = "2025-08-24T12:55:55.146Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/7c/4c/ad33b92b9864cbde84f259d5df035a6447f91891f5be77788e2a3892bce3/pymysql-1.1.2-py3-none-any.whl", hash = "sha256:e6b1d89711dd51f8f74b1631fe08f039e7d76cf67a42a323d3178f0f25762ed9", size = 45300, upload-time = "2025-08-24T12:55:53.394Z" },
+]
+
+[package.optional-dependencies]
+rsa = [
+    { name = "cryptography" },
 ]
 
 [[package]]
