@@ -44,6 +44,7 @@ def configure_logging(log_level: str = "INFO", log_format: str = "console") -> N
             structlog.stdlib.ProcessorFormatter.remove_processors_meta,
             renderer,
         ],
+        foreign_pre_chain=shared_processors,
     )
 
     handler = logging.StreamHandler(sys.stdout)
@@ -55,5 +56,4 @@ def configure_logging(log_level: str = "INFO", log_format: str = "console") -> N
     root.setLevel(log_level.upper())
 
     # Quiet noisy third-party loggers
-    logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
     logging.getLogger("httpx").setLevel(logging.WARNING)
