@@ -201,6 +201,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     return app
 
 
+class _StaticAssetLogFilter(logging.Filter):
+    """Suppress access log noise from Gradio static assets and heartbeats."""
+
+    _SKIP = ("/ui/assets/", "/ui/static/", "/ui/theme.css", "/ui/gradio_api/heartbeat", "/favicon")
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        msg = record.getMessage()
+        return not any(path in msg for path in self._SKIP)
+
+
 class _ShutdownLogFilter(logging.Filter):
     """Suppress noisy uvicorn errors during graceful shutdown.
 
@@ -238,10 +248,9 @@ def main() -> None:
         settings.effective_port,
     )
 
-    # Filter noisy uvicorn shutdown errors caused by Gradio WebSockets
-    # being force-closed after the graceful timeout.
-    _uv_error = logging.getLogger("uvicorn.error")
-    _uv_error.addFilter(_ShutdownLogFilter())
+    # Filter noisy uvicorn logs: static asset access lines and shutdown errors
+    logging.getLogger("uvicorn.access").addFilter(_StaticAssetLogFilter())
+    logging.getLogger("uvicorn.error").addFilter(_ShutdownLogFilter())
 
     uvicorn.run(
         "orionbelt.api.app:create_app",
@@ -249,5 +258,6 @@ def main() -> None:
         host=settings.api_server_host,
         port=settings.effective_port,
         log_level=settings.log_level.lower(),
+        log_config=None,
         timeout_graceful_shutdown=3,
     )

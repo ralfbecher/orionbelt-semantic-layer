@@ -674,26 +674,40 @@ def _load_example_model() -> str:
     return "# Place your OBML model YAML here\n"
 
 
+_cached_dialects: dict[str, list[str]] = {}
+_cached_settings: dict[str, dict[str, Any]] = {}
+
+
 def _fetch_dialects(api_url: str) -> list[str]:
-    """Fetch dialect names from the API, falling back to hardcoded list."""
+    """Fetch dialect names from the API, falling back to hardcoded list (cached)."""
+    url = api_url.rstrip("/")
+    if url in _cached_dialects:
+        return _cached_dialects[url]
     try:
-        resp = httpx.get(f"{api_url.rstrip('/')}/v1/dialects", timeout=5, headers=_API_HEADERS)
+        resp = httpx.get(f"{url}/v1/dialects", timeout=5, headers=_API_HEADERS)
         resp.raise_for_status()
         data = resp.json()
         names = [d["name"] for d in data.get("dialects", [])]
-        return names if names else _FALLBACK_DIALECTS
+        result = names if names else _FALLBACK_DIALECTS
     except Exception:
-        return _FALLBACK_DIALECTS
+        result = _FALLBACK_DIALECTS
+    _cached_dialects[url] = result
+    return result
 
 
 def _fetch_settings(api_url: str) -> dict[str, Any]:
-    """Fetch public settings from the API. Returns empty dict on failure."""
+    """Fetch public settings from the API. Returns empty dict on failure (cached)."""
+    url = api_url.rstrip("/")
+    if url in _cached_settings:
+        return _cached_settings[url]
     try:
-        resp = httpx.get(f"{api_url.rstrip('/')}/v1/settings", timeout=5, headers=_API_HEADERS)
+        resp = httpx.get(f"{url}/v1/settings", timeout=5, headers=_API_HEADERS)
         resp.raise_for_status()
-        return resp.json()  # type: ignore[no-any-return]
+        result: dict[str, Any] = resp.json()
     except Exception:
-        return {}
+        result = {}
+    _cached_settings[url] = result
+    return result
 
 
 def _ensure_session_and_model(
