@@ -6,7 +6,9 @@ from dataclasses import dataclass, field
 
 from orionbelt.compiler.cfl import CFLPlanner
 from orionbelt.compiler.codegen import CodeGenerator
+from orionbelt.compiler.cumulative_wrap import wrap_with_cumulative
 from orionbelt.compiler.fanout import detect_fanout
+from orionbelt.compiler.pop_wrap import wrap_with_pop
 from orionbelt.compiler.resolution import QueryResolver, ResolvedQuery
 from orionbelt.compiler.star import QueryPlan, StarSchemaPlanner
 from orionbelt.compiler.total_wrap import wrap_with_totals
@@ -58,6 +60,8 @@ class ExplainPlan:
     where_filter_count: int = 0
     having_filter_count: int = 0
     has_totals: bool = False
+    has_cumulative: bool = False
+    has_pop: bool = False
     cfl_legs: list[ExplainCflLeg] = field(default_factory=list)
 
 
@@ -109,12 +113,21 @@ class CompilationPipeline:
                 model,
                 qualify_table=qualify_table,
                 union_by_name=dialect.capabilities.supports_union_all_by_name,
+                dialect=dialect,
             )
         else:
-            plan = self._star_planner.plan(resolved, model, qualify_table=qualify_table)
+            plan = self._star_planner.plan(
+                resolved, model, qualify_table=qualify_table, dialect=dialect
+            )
+
+        # Phase 2.4: Wrap with PoP CTEs if needed
+        wrapped_ast = wrap_with_pop(plan.ast, resolved, model, dialect, qualify_table)
 
         # Phase 2.5: Wrap with totals CTE if needed
-        wrapped_ast = wrap_with_totals(plan.ast, resolved)
+        wrapped_ast = wrap_with_totals(wrapped_ast, resolved)
+
+        # Phase 2.6: Wrap with cumulative CTE if needed
+        wrapped_ast = wrap_with_cumulative(wrapped_ast, resolved)
 
         # Phase 3: Dialect-specific SQL rendering
         codegen = CodeGenerator(dialect)
@@ -252,5 +265,7 @@ class CompilationPipeline:
             where_filter_count=len(resolved.where_filters),
             having_filter_count=len(resolved.having_filters),
             has_totals=resolved.has_totals,
+            has_cumulative=resolved.has_cumulative,
+            has_pop=resolved.has_pop,
             cfl_legs=cfl_leg_explains,
         )

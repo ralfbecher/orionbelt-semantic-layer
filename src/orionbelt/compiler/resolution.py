@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 
 from orionbelt.ast.nodes import (
     BinaryOp,
+    CaseExpr,
     ColumnRef,
     Expr,
     FunctionCall,
@@ -19,7 +20,11 @@ from orionbelt.compiler.expr_parser import (
     tokenize_measure_expression,
     tokenize_metric_formula,
 )
-from orionbelt.compiler.filters import build_filter_expr
+from orionbelt.compiler.filters import (
+    build_filter_expr,
+    build_measure_filter_condition,
+    collect_measure_filter_objects,
+)
 from orionbelt.compiler.graph import JoinGraph, JoinStep
 from orionbelt.models.errors import SemanticError
 from orionbelt.models.query import (
@@ -30,7 +35,16 @@ from orionbelt.models.query import (
     QueryObject,
     UsePathName,
 )
-from orionbelt.models.semantic import Measure, Metric, SemanticModel, TimeGrain
+from orionbelt.models.semantic import (
+    CumulativeAggType,
+    GrainToDate,
+    Measure,
+    Metric,
+    MetricType,
+    PeriodOverPeriodComparison,
+    SemanticModel,
+    TimeGrain,
+)
 
 
 @dataclass
@@ -54,6 +68,21 @@ class ResolvedMeasure:
     is_expression: bool = False
     component_measures: list[str] = field(default_factory=list)
     total: bool = False
+    # Cumulative metric fields
+    is_cumulative: bool = False
+    cumulative_measure: str | None = None
+    cumulative_time_dimension: str | None = None
+    cumulative_type: CumulativeAggType = CumulativeAggType.SUM
+    cumulative_window: int | None = None
+    cumulative_grain_to_date: GrainToDate | None = None
+    # Period-over-period metric fields
+    is_pop: bool = False
+    pop_base_measure: str | None = None
+    pop_time_dimension: str | None = None
+    pop_grain: TimeGrain | None = None
+    pop_offset: int = -1
+    pop_offset_grain: TimeGrain | None = None
+    pop_comparison: PeriodOverPeriodComparison | None = None
 
 
 @dataclass
@@ -102,6 +131,16 @@ class ResolvedQuery:
                 if comp and comp.total:
                     return True
         return False
+
+    @property
+    def has_cumulative(self) -> bool:
+        """Check if any selected metric is cumulative."""
+        return any(m.is_cumulative for m in self.measures)
+
+    @property
+    def has_pop(self) -> bool:
+        """Check if any selected metric is period-over-period."""
+        return any(m.is_pop for m in self.measures)
 
 
 @dataclass
@@ -350,13 +389,14 @@ class QueryResolver:
                     )
                 ]
 
-        return FunctionCall(
+        result = FunctionCall(
             name=agg,
             args=args,
             distinct=distinct,
             order_by=order_by,
             separator=separator,
         )
+        return self._apply_measure_filters(ctx, measure, result)
 
     def _expand_expression(self, ctx: _ResolutionContext, measure: Measure) -> Expr:
         """Expand a measure expression with ``{[DataObject].[Column]}`` refs into AST."""
@@ -371,20 +411,52 @@ class QueryResolver:
             agg = "COUNT"
             distinct = True
 
-        return FunctionCall(
+        result = FunctionCall(
             name=agg,
             args=[inner],
             distinct=distinct,
+        )
+        return self._apply_measure_filters(ctx, measure, result)
+
+    @staticmethod
+    def _apply_measure_filters(
+        ctx: _ResolutionContext, measure: Measure, func: FunctionCall
+    ) -> FunctionCall:
+        """Wrap aggregate args with CASE WHEN if the measure has filters."""
+        if not measure.filters:
+            return func
+        condition = build_measure_filter_condition(measure.filters, ctx.model, ctx.errors)
+        if condition is None:
+            return func
+        wrapped_args: list[Expr] = [
+            CaseExpr(when_clauses=[(condition, arg)]) for arg in func.args
+        ]
+        return FunctionCall(
+            name=func.name,
+            args=wrapped_args,
+            distinct=func.distinct,
+            order_by=func.order_by,
+            separator=func.separator,
         )
 
     def _resolve_metric(
         self, ctx: _ResolutionContext, name: str, metric: Metric
     ) -> ResolvedMeasure | None:
         """Resolve a metric to its combined expression."""
+        if metric.type == MetricType.CUMULATIVE:
+            return self._resolve_cumulative_metric(ctx, name, metric)
+        if metric.type == MetricType.PERIOD_OVER_PERIOD:
+            return self._resolve_pop_metric(ctx, name, metric)
+        return self._resolve_derived_metric(ctx, name, metric)
+
+    def _resolve_derived_metric(
+        self, ctx: _ResolutionContext, name: str, metric: Metric
+    ) -> ResolvedMeasure | None:
+        """Resolve a derived metric to its combined expression."""
         formula = metric.expression
 
         # Extract and resolve each component measure
-        component_names = re.findall(r"\{\[([^\]]+)\]\}", formula)
+        component_names = re.findall(r"\{\[([^\]]+)\]\}", formula or "")
         for comp_name in component_names:
             if comp_name not in ctx.result.metric_components:
                 comp = self._resolve_measure(ctx, comp_name)
@@ -393,7 +465,7 @@ class QueryResolver:
 
         # Parse the formula into an AST tree
         try:
-            tokens = tokenize_metric_formula(formula)
+            tokens = tokenize_metric_formula(formula or "")
             parsed_expr = parse_expression(tokens)
         except Exception as exc:
             ctx.errors.append(
@@ -413,6 +485,171 @@ class QueryResolver:
             is_expression=True,
         )
 
+    def _resolve_cumulative_metric(
+        self, ctx: _ResolutionContext, name: str, metric: Metric
+    ) -> ResolvedMeasure | None:
+        """Resolve a cumulative metric referencing an existing measure."""
+        assert metric.measure is not None
+        assert metric.time_dimension is not None
+
+        # Validate referenced measure exists
+        base_measure = ctx.model.measures.get(metric.measure)
+        if base_measure is None:
+            ctx.errors.append(
+                SemanticError(
+                    code="UNKNOWN_MEASURE",
+                    message=(
+                        f"Cumulative metric '{name}' references unknown measure '{metric.measure}'"
+                    ),
+                    path=f"metrics.{name}.measure",
+                )
+            )
+            return None
+
+        # Validate timeDimension is a known dimension
+        dim = ctx.model.dimensions.get(metric.time_dimension)
+        if dim is None:
+            ctx.errors.append(
+                SemanticError(
+                    code="UNKNOWN_DIMENSION",
+                    message=(
+                        f"Cumulative metric '{name}' references unknown "
+                        f"timeDimension '{metric.time_dimension}'"
+                    ),
+                    path=f"metrics.{name}.timeDimension",
+                )
+            )
+            return None
+
+        # Validate timeDimension is in the query's selected dimensions
+        dim_names = {d.name for d in ctx.result.dimensions}
+        if metric.time_dimension not in dim_names:
+            ctx.errors.append(
+                SemanticError(
+                    code="CUMULATIVE_TIME_DIMENSION_NOT_IN_SELECT",
+                    message=(
+                        f"Cumulative metric '{name}' requires timeDimension "
+                        f"'{metric.time_dimension}' to be in the query's selected dimensions"
+                    ),
+                    path=f"metrics.{name}.timeDimension",
+                )
+            )
+            return None
+
+        # Resolve the base measure as a component (reuse existing resolution)
+        if metric.measure not in ctx.result.metric_components:
+            comp = self._resolve_measure(ctx, metric.measure)
+            if comp:
+                ctx.result.metric_components[metric.measure] = comp
+
+        # The cumulative metric's expression is a placeholder ColumnRef to the base measure
+        # The actual window function is built during the cumulative_wrap phase
+        return ResolvedMeasure(
+            name=name,
+            aggregation=base_measure.aggregation,
+            expression=ColumnRef(name=metric.measure),
+            is_expression=True,
+            component_measures=[metric.measure],
+            is_cumulative=True,
+            cumulative_measure=metric.measure,
+            cumulative_time_dimension=metric.time_dimension,
+            cumulative_type=metric.cumulative_type,
+            cumulative_window=metric.window,
+            cumulative_grain_to_date=metric.grain_to_date,
+        )
+
+    def _resolve_pop_metric(
+        self, ctx: _ResolutionContext, name: str, metric: Metric
+    ) -> ResolvedMeasure | None:
+        """Resolve a period-over-period metric."""
+        assert metric.period_over_period is not None
+        assert metric.expression is not None
+
+        pop = metric.period_over_period
+
+        # Validate timeDimension is a known dimension
+        dim = ctx.model.dimensions.get(pop.time_dimension)
+        if dim is None:
+            ctx.errors.append(
+                SemanticError(
+                    code="POP_UNKNOWN_TIME_DIMENSION",
+                    message=(
+                        f"Period-over-period metric '{name}' references unknown "
+                        f"time dimension '{pop.time_dimension}'"
+                    ),
+                    path=f"metrics.{name}.periodOverPeriod.timeDimension",
+                )
+            )
+            return None
+
+        # Validate timeDimension is in the query's selected dimensions
+        dim_names = {d.name for d in ctx.result.dimensions}
+        if pop.time_dimension not in dim_names:
+            ctx.errors.append(
+                SemanticError(
+                    code="POP_TIME_DIMENSION_NOT_IN_SELECT",
+                    message=(
+                        f"Period-over-period metric '{name}' requires time dimension "
+                        f"'{pop.time_dimension}' to be in the query's selected dimensions"
+                    ),
+                    path=f"metrics.{name}.periodOverPeriod.timeDimension",
+                )
+            )
+            return None
+
+        # Validate offset is non-zero
+        if pop.offset == 0:
+            ctx.errors.append(
+                SemanticError(
+                    code="POP_INVALID_OFFSET",
+                    message=(
+                        f"Period-over-period metric '{name}' has offset=0 "
+                        f"(must be non-zero, e.g. -1 for previous period)"
+                    ),
+                    path=f"metrics.{name}.periodOverPeriod.offset",
+                )
+            )
+            return None
+
+        # Resolve the expression (same as derived — parse {[Measure Name]} refs)
+        component_names = re.findall(r"\{\[([^\]]+)\]\}", metric.expression)
+        for comp_name in component_names:
+            if comp_name not in ctx.result.metric_components:
+                comp = self._resolve_measure(ctx, comp_name)
+                if comp:
+                    ctx.result.metric_components[comp_name] = comp
+
+        try:
+            tokens = tokenize_metric_formula(metric.expression)
+            parsed_expr = parse_expression(tokens)
+        except Exception as exc:
+            ctx.errors.append(
+                SemanticError(
+                    code="INVALID_METRIC_EXPRESSION",
+                    message=f"Metric '{name}' has invalid expression: {exc}",
+                    path=f"metrics.{name}.expression",
+                )
+            )
+            return None
+
+        # Use the first component measure as the base (for single-measure PoP)
+        pop_base = component_names[0] if component_names else None
+
+        return ResolvedMeasure(
+            name=name,
+            aggregation="",
+            expression=parsed_expr,
+            component_measures=component_names,
+            is_expression=True,
+            is_pop=True,
+            pop_base_measure=pop_base,
+            pop_time_dimension=pop.time_dimension,
+            pop_grain=pop.grain,
+            pop_offset=pop.offset,
+            pop_offset_grain=pop.offset_grain,
+            pop_comparison=pop.comparison,
+        )
+
     def _get_measure_source_objects(self, ctx: _ResolutionContext, name: str) -> set[str]:
         """Extract all source data objects for a measure or metric."""
         result: set[str] = set()
@@ -426,13 +663,20 @@ class QueryResolver:
                 col_refs = re.findall(r"\{\[([^\]]+)\]\.\[([^\]]+)\]\}", measure.expression)
                 for obj_name, _col_name in col_refs:
                     result.add(obj_name)
+            for fi in measure.filters:
+                collect_measure_filter_objects(fi, result)
             return result
 
         metric = ctx.model.metrics.get(name)
         if metric:
-            measure_refs = re.findall(r"\{\[([^\]]+)\]\}", metric.expression)
-            for ref_name in measure_refs:
-                result.update(self._get_measure_source_objects(ctx, ref_name))
+            if metric.type == MetricType.CUMULATIVE and metric.measure:
+                # Cumulative metric: source objects come from the referenced measure
+                result.update(self._get_measure_source_objects(ctx, metric.measure))
+            elif metric.expression:
+                # Derived or PoP metric: parse expression for measure references
+                measure_refs = re.findall(r"\{\[([^\]]+)\]\}", metric.expression)
+                for ref_name in measure_refs:
+                    result.update(self._get_measure_source_objects(ctx, ref_name))
 
         return result
 

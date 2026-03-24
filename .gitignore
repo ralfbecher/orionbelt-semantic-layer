@@ -23,6 +23,7 @@ htmlcov/
 .DS_Store
 .claude/
 security/
+infra/
 site/
 scripts/
 .mcpregistry_github_token
@@ -30,4 +31,5 @@ scripts/
 _*/
 blog/
 review*
-*analysis*.md
+design/
+examples/test*

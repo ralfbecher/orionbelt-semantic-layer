@@ -7,7 +7,7 @@
 <p align="center"><strong>Compile and execute YAML semantic models as analytical SQL across multiple database dialects</strong></p>
 
 [![GitHub stars](https://img.shields.io/github/stars/ralfbecher/orionbelt-semantic-layer?style=social)](https://github.com/ralfbecher/orionbelt-semantic-layer)
-[![Version 1.1.0](https://img.shields.io/badge/version-1.1.0-purple.svg)](https://github.com/ralfbecher/orionbelt-semantic-layer/releases)
+[![Version 1.2.0](https://img.shields.io/badge/version-1.2.0-purple.svg)](https://github.com/ralfbecher/orionbelt-semantic-layer/releases)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![License: BSL 1.1](https://img.shields.io/badge/License-BSL_1.1-orange.svg)](https://github.com/ralfbecher/orionbelt-semantic-layer/blob/main/LICENSE)
 [![Docker Hub](https://img.shields.io/docker/pulls/ralforion/orionbelt-api?logo=docker&label=Docker%20Hub)](https://hub.docker.com/repositories/ralforion)
@@ -27,14 +27,16 @@
 [![Dremio](https://img.shields.io/badge/Dremio-31B48D.svg)](https://www.dremio.com)
 [![Databricks](https://img.shields.io/badge/Databricks-FF3621.svg?logo=databricks&logoColor=white)](https://www.databricks.com)
 [![DuckDB](https://img.shields.io/badge/DuckDB-FFF000.svg?logo=duckdb&logoColor=black)](https://duckdb.org)
+[![MySQL](https://img.shields.io/badge/MySQL-4479A1.svg?logo=mysql&logoColor=white)](https://www.mysql.com)
 
-OrionBelt Semantic Layer is an **API-first** semantic engine and query planner for AI agents that compiles and executes declarative YAML model definitions as optimized SQL for BigQuery, ClickHouse, Databricks, Dremio, DuckDB/MotherDuck, Postgres, and Snowflake. It provides a unified abstraction over your data warehouse, so analysts and applications can query using business concepts (dimensions, measures, metrics) instead of raw SQL. Every capability — model loading, validation, query compilation and execution, and diagram generation — is exposed through a REST API, making OrionBelt easy to integrate into any application, workflow, or AI assistant.
+OrionBelt Semantic Layer is an **API-first** semantic engine and query planner for AI agents that compiles and executes declarative YAML model definitions as optimized SQL for BigQuery, ClickHouse, Databricks, Dremio, DuckDB/MotherDuck, MySQL, Postgres, and Snowflake. It provides a unified abstraction over your data warehouse, so analysts and applications can query using business concepts (dimensions, measures, metrics) instead of raw SQL. Every capability — model loading, validation, query compilation and execution, and diagram generation — is exposed through a REST API, making OrionBelt easy to integrate into any application, workflow, or AI assistant.
 
 ## Features
 
-- **7 SQL Dialects** — BigQuery, ClickHouse, Databricks, Dremio, DuckDB/MotherDuck, Postgres, Snowflake with dialect-specific optimizations
+- **8 SQL Dialects** — BigQuery, ClickHouse, Databricks, Dremio, DuckDB/MotherDuck, MySQL, Postgres, Snowflake with dialect-specific optimizations
 - **AST-Based SQL Generation** — Custom SQL AST ensures correct, injection-safe SQL (no string concatenation)
-- **OrionBelt ML (OBML)** — YAML-based semantic models with data objects, dimensions, measures, metrics, and joins
+- **OrionBelt ML (OBML)** — YAML-based semantic models with data objects, dimensions, measures, metrics (derived and cumulative), and joins
+- **Cumulative Metrics** — Running totals, rolling windows, and grain-to-date (MTD/YTD) via window functions with configurable aggregation types
 - **Star Schema & CFL Planning** — Automatic join path resolution with Composite Fact Layer support for multi-fact queries and dimension-only queries through intermediate tables
 - **Dimension Exclusion** — Anti-join queries via `dimensionsExclude` flag to find non-existing combinations (e.g., directors and producers who never collaborated)
 - **Vendor-Specific SQL Validation** — Post-generation syntax validation via sqlglot for each target dialect (non-blocking)
@@ -45,7 +47,7 @@ OrionBelt Semantic Layer is an **API-first** semantic engine and query planner f
 - **MCP Server** — Available as a separate thin client in [orionbelt-semantic-layer-mcp](https://github.com/ralfbecher/orionbelt-semantic-layer-mcp) — delegates to the REST API via HTTP, deployable independently (e.g. to Prefect Horizon)
 - **Gradio UI** — Interactive web interface for model editing, query testing, and SQL compilation with live validation feedback
 - **[OSI](https://github.com/open-semantic-interchange/OSI) Interoperability** — Bidirectional conversion between OBML and the Open Semantic Interchange format via REST API (`/convert`) and Gradio UI, with validation for both directions
-- **DB-API 2.0 Drivers** — PEP 249 drivers for all 7 databases with transparent OBML-to-SQL compilation via REST API
+- **DB-API 2.0 Drivers** — PEP 249 drivers for all 8 databases with transparent OBML-to-SQL compilation via REST API
 - **Arrow Flight SQL** — Embedded gRPC server for DBeaver, Tableau, and Power BI — single container, two ports (8080 + 8815)
 - **Plugin Architecture** — Extensible dialect system with capability flags and registry
 
@@ -80,9 +82,13 @@ uv run uvicorn orionbelt.api.app:create_app --factory --reload
 
 The API is available at `http://127.0.0.1:8000`. Interactive docs at `/docs` (Swagger UI) and `/redoc`.
 
-### Interactive Notebook
+### Interactive Jupyter Notebook
 
-The [Quickstart Notebook](examples/quickstart.ipynb) walks through the full workflow using TPC-H in DuckDB — explore the model, compile queries across dialects, execute against real data, and see multi-fact CFL and secondary join paths in action. No cloud database needed.
+The [Quickstart Notebook](examples/quickstart.ipynb) walks through the full workflow using TPC-H in DuckDB — explore the model, compile queries across dialects, execute against real data, and see multi-fact CFL, secondary join paths, and complex measures in action. No cloud database needed.
+
+<p align="center">
+  <img src="docs/assets/quickstart_notebook.png" alt="Interactive Jupyter Notebook" width="900">
+</p>
 
 ## Example
 
@@ -203,7 +209,7 @@ GROUP BY "Customers"."COUNTRY"
 LIMIT 100
 ```
 
-Change the dialect to `"bigquery"`, `"clickhouse"`, `"databricks"`, `"dremio"`, `"duckdb"`, or `"snowflake"` to get dialect-specific SQL.
+Change the dialect to `"bigquery"`, `"clickhouse"`, `"databricks"`, `"dremio"`, `"duckdb"`, `"mysql"`, or `"snowflake"` to get dialect-specific SQL.
 
 > **Interactive notebook:** Try the full workflow in [`examples/quickstart.ipynb`](examples/quickstart.ipynb) — uses the TPC-H dataset in DuckDB to demonstrate multi-dialect compilation, query execution, multi-fact CFL, metrics, filters, and ER diagrams.
 
@@ -322,7 +328,7 @@ Load Balancer (single IP)
 The UI provides:
 
 - **Side-by-side editors** — OBML model (YAML) and query (YAML) with syntax highlighting
-- **Dialect selector** — Switch between BigQuery, ClickHouse, Databricks, Dremio, DuckDB, Postgres, and Snowflake
+- **Dialect selector** — Switch between BigQuery, ClickHouse, Databricks, Dremio, DuckDB, MySQL, Postgres, and Snowflake
 - **One-click compilation** — Compile button generates formatted SQL output
 - **SQL validation feedback** — Warnings and validation errors from sqlglot are displayed as comments above the generated SQL
 - **ER Diagram tab** — Visualize the semantic model as a Mermaid ER diagram with left-to-right layout, FK annotations, dotted lines for secondary joins, and an adjustable zoom slider
@@ -394,19 +400,19 @@ The API is available at `http://localhost:8080`. The UI is at `http://localhost:
 
 ## DB-API 2.0 Drivers & Arrow Flight SQL
 
-OrionBelt provides **PEP 249 DB-API 2.0 drivers** for 7 databases and an **Arrow Flight SQL server** that enables BI tools like DBeaver, Tableau, and Power BI to run OBML queries directly.
+OrionBelt provides **PEP 249 DB-API 2.0 drivers** for 8 databases and an **Arrow Flight SQL server** that enables BI tools like DBeaver, Tableau, and Power BI to run OBML queries directly.
 
-| Package | Database | Native Connector | Arrow Support |
-|---------|----------|------------------|---------------|
-| `ob-driver-core` | — (shared foundation) | — | — |
-| `ob-bigquery` | BigQuery | `google-cloud-bigquery` | `to_arrow()` |
-| `ob-duckdb` | DuckDB | `duckdb` | `fetch_arrow_table()` |
-| `ob-postgres` | PostgreSQL | `adbc-driver-postgresql` | ADBC native |
-| `ob-snowflake` | Snowflake | `snowflake-connector-python` | `fetch_arrow_all()` |
-| `ob-clickhouse` | ClickHouse | `clickhouse-connect` | `query_arrow()` |
-| `ob-dremio` | Dremio | `pyarrow.flight` | Flight native |
-| `ob-databricks` | Databricks | `databricks-sql-connector` | `fetchall_arrow()` |
-| `ob-flight-extension` | Arrow Flight SQL server | `pyarrow.flight` | — |
+| Package               | Database                | Native Connector             | Arrow Support         |
+| --------------------- | ----------------------- | ---------------------------- | --------------------- |
+| `ob-driver-core`      | — (shared foundation)   | —                            | —                     |
+| `ob-bigquery`         | BigQuery                | `google-cloud-bigquery`      | `to_arrow()`          |
+| `ob-duckdb`           | DuckDB                  | `duckdb`                     | `fetch_arrow_table()` |
+| `ob-postgres`         | PostgreSQL              | `adbc-driver-postgresql`     | ADBC native           |
+| `ob-snowflake`        | Snowflake               | `snowflake-connector-python` | `fetch_arrow_all()`   |
+| `ob-clickhouse`       | ClickHouse              | `clickhouse-connect`         | `query_arrow()`       |
+| `ob-dremio`           | Dremio                  | `pyarrow.flight`             | Flight native         |
+| `ob-databricks`       | Databricks              | `databricks-sql-connector`   | `fetchall_arrow()`    |
+| `ob-flight-extension` | Arrow Flight SQL server | `pyarrow.flight`             | —                     |
 
 All drivers work against the OrionBelt REST API in **single-model mode** (`MODEL_FILE` set). OBML queries are compiled transparently via `POST /v1/query/sql` — the user writes OBML, the driver returns SQL results. Plain SQL queries bypass the API entirely.
 
@@ -437,24 +443,24 @@ See **[Drivers Documentation](docs/drivers.md)** for full usage examples, connec
 
 Configuration is via environment variables or a `.env` file. See `.env.template` for all options:
 
-| Variable                   | Default     | Description                             |
-| -------------------------- | ----------- | --------------------------------------- |
-| `LOG_LEVEL`                | `INFO`      | Logging level                           |
+| Variable                   | Default     | Description                               |
+| -------------------------- | ----------- | ----------------------------------------- |
+| `LOG_LEVEL`                | `INFO`      | Logging level                             |
 | `LOG_FORMAT`               | `console`   | `console` (pretty) or `json` (structured) |
-| `API_SERVER_HOST`          | `localhost` | REST API bind host                      |
-| `API_SERVER_PORT`          | `8000`      | REST API bind port                      |
-| `PORT`                     | —           | Override port (Cloud Run sets this)     |
-| `DISABLE_SESSION_LIST`     | `false`     | Disable `GET /sessions` endpoint        |
-| `SESSION_TTL_SECONDS`      | `1800`      | Session inactivity timeout (30 min)     |
-| `SESSION_CLEANUP_INTERVAL` | `60`        | Cleanup sweep interval (seconds)        |
-| `MODEL_FILE`               | —           | Path to OBML YAML for single-model mode |
-| `API_BASE_URL`             | —           | API URL for standalone UI               |
-| `ROOT_PATH`                | —           | ASGI root path for UI behind LB         |
-| `FLIGHT_ENABLED`           | `false`     | Enable Flight SQL + query execution     |
-| `FLIGHT_PORT`              | `8815`      | Arrow Flight SQL gRPC port              |
-| `FLIGHT_AUTH_MODE`         | `none`      | `none` or `token`                       |
-| `FLIGHT_API_TOKEN`         | —           | Static token (when auth mode = token)   |
-| `DB_VENDOR`                | `duckdb`    | Database vendor for query execution     |
+| `API_SERVER_HOST`          | `localhost` | REST API bind host                        |
+| `API_SERVER_PORT`          | `8000`      | REST API bind port                        |
+| `PORT`                     | —           | Override port (Cloud Run sets this)       |
+| `DISABLE_SESSION_LIST`     | `false`     | Disable `GET /sessions` endpoint          |
+| `SESSION_TTL_SECONDS`      | `1800`      | Session inactivity timeout (30 min)       |
+| `SESSION_CLEANUP_INTERVAL` | `60`        | Cleanup sweep interval (seconds)          |
+| `MODEL_FILE`               | —           | Path to OBML YAML for single-model mode   |
+| `API_BASE_URL`             | —           | API URL for standalone UI                 |
+| `ROOT_PATH`                | —           | ASGI root path for UI behind LB           |
+| `FLIGHT_ENABLED`           | `false`     | Enable Flight SQL + query execution       |
+| `FLIGHT_PORT`              | `8815`      | Arrow Flight SQL gRPC port                |
+| `FLIGHT_AUTH_MODE`         | `none`      | `none` or `token`                         |
+| `FLIGHT_API_TOKEN`         | —           | Static token (when auth mode = token)     |
+| `DB_VENDOR`                | `duckdb`    | Database vendor for query execution       |
 
 ### Single-Model Mode
 

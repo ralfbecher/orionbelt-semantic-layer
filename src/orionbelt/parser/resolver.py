@@ -19,6 +19,8 @@ from orionbelt.models.semantic import (
     MeasureFilterGroup,
     MeasureFilterItem,
     Metric,
+    MetricType,
+    PeriodOverPeriod,
     SemanticModel,
 )
 from orionbelt.parser.loader import SourceMap
@@ -311,20 +313,118 @@ class ReferenceResolver:
             raw_metrics = {}
         for name, raw_metric in raw_metrics.items():
             try:
-                # Validate measure references in expression
-                expression = raw_metric.get("expression", "")
-                self._validate_metric_expression_refs(
-                    name, expression, measures, errors, source_map
-                )
+                metric_type = raw_metric.get("type", "derived")
 
-                metrics[name] = Metric(
-                    label=name,
-                    expression=expression,
-                    format=raw_metric.get("format"),
-                    owner=raw_metric.get("owner"),
-                    synonyms=raw_metric.get("synonyms", []),
-                    custom_extensions=_parse_extensions(raw_metric),
-                )
+                if metric_type == MetricType.CUMULATIVE:
+                    # Cumulative metric: validate measure reference exists
+                    ref_measure = raw_metric.get("measure", "")
+                    if ref_measure and ref_measure not in measures:
+                        span = source_map.get(f"metrics.{name}.measure") if source_map else None
+                        errors.append(
+                            SemanticError(
+                                code="UNKNOWN_MEASURE",
+                                message=(
+                                    f"Cumulative metric '{name}' references "
+                                    f"unknown measure '{ref_measure}'"
+                                ),
+                                path=f"metrics.{name}.measure",
+                                span=span,
+                            )
+                        )
+
+                    metrics[name] = Metric(
+                        label=name,
+                        type=MetricType.CUMULATIVE,
+                        measure=raw_metric.get("measure"),
+                        time_dimension=raw_metric.get("timeDimension"),
+                        cumulative_type=raw_metric.get("cumulativeType", "sum"),
+                        window=raw_metric.get("window"),
+                        grain_to_date=raw_metric.get("grainToDate"),
+                        description=raw_metric.get("description"),
+                        format=raw_metric.get("format"),
+                        owner=raw_metric.get("owner"),
+                        synonyms=raw_metric.get("synonyms", []),
+                        custom_extensions=_parse_extensions(raw_metric),
+                    )
+                elif metric_type == MetricType.PERIOD_OVER_PERIOD:
+                    # Period-over-period metric: validate expression + PoP config
+                    expression = raw_metric.get("expression", "")
+                    self._validate_metric_expression_refs(
+                        name, expression, measures, errors, source_map
+                    )
+
+                    raw_pop = raw_metric.get("periodOverPeriod")
+                    if not raw_pop:
+                        span = source_map.get(f"metrics.{name}") if source_map else None
+                        errors.append(
+                            SemanticError(
+                                code="METRIC_PARSE_ERROR",
+                                message=(
+                                    f"Period-over-period metric '{name}' "
+                                    f"requires 'periodOverPeriod' configuration"
+                                ),
+                                path=f"metrics.{name}",
+                                span=span,
+                            )
+                        )
+                        raw_pop = {}
+
+                    # Validate time dimension reference
+                    pop_time_dim = raw_pop.get("timeDimension", "")
+                    if pop_time_dim and pop_time_dim not in dimensions:
+                        span = (
+                            source_map.get(f"metrics.{name}.periodOverPeriod")
+                            if source_map
+                            else None
+                        )
+                        errors.append(
+                            SemanticError(
+                                code="POP_UNKNOWN_TIME_DIMENSION",
+                                message=(
+                                    f"Period-over-period metric '{name}' references "
+                                    f"unknown time dimension '{pop_time_dim}'"
+                                ),
+                                path=f"metrics.{name}.periodOverPeriod.timeDimension",
+                                span=span,
+                                suggestions=_suggest_similar(pop_time_dim, list(dimensions.keys())),
+                            )
+                        )
+
+                    pop_config = PeriodOverPeriod(
+                        time_dimension=raw_pop.get("timeDimension", ""),
+                        grain=raw_pop.get("grain", "month"),
+                        offset=raw_pop.get("offset", -1),
+                        offset_grain=raw_pop.get("offsetGrain", "year"),
+                        comparison=raw_pop.get("comparison", "percentChange"),
+                    )
+
+                    metrics[name] = Metric(
+                        label=name,
+                        type=MetricType.PERIOD_OVER_PERIOD,
+                        expression=expression,
+                        period_over_period=pop_config,
+                        description=raw_metric.get("description"),
+                        format=raw_metric.get("format"),
+                        owner=raw_metric.get("owner"),
+                        synonyms=raw_metric.get("synonyms", []),
+                        custom_extensions=_parse_extensions(raw_metric),
+                    )
+                else:
+                    # Derived metric (default)
+                    expression = raw_metric.get("expression", "")
+                    self._validate_metric_expression_refs(
+                        name, expression, measures, errors, source_map
+                    )
+
+                    metrics[name] = Metric(
+                        label=name,
+                        expression=expression,
+                        description=raw_metric.get("description"),
+                        format=raw_metric.get("format"),
+                        owner=raw_metric.get("owner"),
+                        synonyms=raw_metric.get("synonyms", []),
+                        custom_extensions=_parse_extensions(raw_metric),
+                    )
             except Exception as e:
                 span = source_map.get(f"metrics.{name}") if source_map else None
                 errors.append(

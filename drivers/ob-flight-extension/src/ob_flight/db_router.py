@@ -21,6 +21,7 @@ VENDOR_MAP: dict[str, str] = {
     "clickhouse": "ob_clickhouse",
     "dremio": "ob_dremio",
     "databricks": "ob_databricks",
+    "mysql": "ob_mysql",
 }
 
 # Environment variable prefixes for vendor credentials
@@ -37,6 +38,7 @@ _CREDENTIAL_KEYS: dict[str, list[str]] = {
         "POSTGRES_DBNAME",
         "POSTGRES_USER",
         "POSTGRES_PASSWORD",
+        "POSTGRES_SCHEMA",
     ],
     "snowflake": [
         "SNOWFLAKE_ACCOUNT",
@@ -63,6 +65,15 @@ _CREDENTIAL_KEYS: dict[str, list[str]] = {
         "DATABRICKS_SERVER_HOSTNAME",
         "DATABRICKS_HTTP_PATH",
         "DATABRICKS_ACCESS_TOKEN",
+        "DATABRICKS_CATALOG",
+        "DATABRICKS_SCHEMA",
+    ],
+    "mysql": [
+        "MYSQL_HOST",
+        "MYSQL_PORT",
+        "MYSQL_DATABASE",
+        "MYSQL_USER",
+        "MYSQL_PASSWORD",
     ],
 }
 
@@ -77,6 +88,7 @@ _ENV_TO_KWARG: dict[str, str] = {
     "POSTGRES_DBNAME": "dbname",
     "POSTGRES_USER": "user",
     "POSTGRES_PASSWORD": "password",
+    "POSTGRES_SCHEMA": "schema",
     "SNOWFLAKE_ACCOUNT": "account",
     "SNOWFLAKE_USER": "user",
     "SNOWFLAKE_PASSWORD": "password",
@@ -95,6 +107,13 @@ _ENV_TO_KWARG: dict[str, str] = {
     "DATABRICKS_SERVER_HOSTNAME": "server_hostname",
     "DATABRICKS_HTTP_PATH": "http_path",
     "DATABRICKS_ACCESS_TOKEN": "access_token",
+    "DATABRICKS_CATALOG": "catalog",
+    "DATABRICKS_SCHEMA": "schema",
+    "MYSQL_HOST": "host",
+    "MYSQL_PORT": "port",
+    "MYSQL_DATABASE": "database",
+    "MYSQL_USER": "user",
+    "MYSQL_PASSWORD": "password",
 }
 
 
