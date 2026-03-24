@@ -1,6 +1,6 @@
 [project]
 name = "orionbelt-semantic-layer"
-version = "1.1.0"
+version = "1.2.0"
 description = "OrionBelt Semantic Layer - Compiles and executes YAML semantic models as analytical SQL"
 license = {text = "BSL-1.1"}
 authors = [{name = "Ralf Becher, RALFORION d.o.o.", email = "ralf.becher@web.de"}]
@@ -21,6 +21,7 @@ keywords = [
     "dremio",
     "databricks",
     "duckdb",
+    "mysql",
 ]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -66,6 +67,11 @@ dev = [
     "ruff>=0.15",
     "mypy>=1.19",
     "pre-commit>=4.5",
+    "duckdb>=1.0",
+    "testcontainers>=4.0",
+    "psycopg2-binary>=2.9",
+    "pymysql[rsa]>=1.0",
+    "clickhouse-connect>=0.7",
 ]
 docs = [
     "mkdocs-material>=9.7",
@@ -78,7 +84,15 @@ ui = [
 flight = [
     "pyarrow>=16.0,<20.0",
     "ob-flight-extension>=0.1",
+    "ob-driver-core>=0.1",
+    "ob-bigquery>=0.1",
+    "ob-clickhouse>=0.1",
+    "ob-databricks>=0.1",
+    "ob-dremio>=0.1",
     "ob-duckdb>=0.1",
+    "ob-mysql>=0.1",
+    "ob-postgres>=0.1",
+    "ob-snowflake>=0.1",
 ]
 
 [build-system]
@@ -99,6 +113,9 @@ select = ["E", "F", "I", "N", "UP", "B", "A", "SIM"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+markers = [
+    "docker: requires Docker (testcontainers) — run with: pytest -m docker",
+]
 
 [tool.mypy]
 python_version = "3.12"
@@ -122,6 +139,7 @@ members = [
     "drivers/ob-dremio",
     "drivers/ob-databricks",
     "drivers/ob-duckdb",
+    "drivers/ob-mysql",
     "drivers/ob-flight-extension",
 ]
 
@@ -136,4 +154,5 @@ ob-clickhouse = { workspace = true }
 ob-dremio = { workspace = true }
 ob-databricks = { workspace = true }
 ob-duckdb = { workspace = true }
+ob-mysql = { workspace = true }
 ob-flight-extension = { workspace = true }

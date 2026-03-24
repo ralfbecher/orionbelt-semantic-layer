@@ -366,6 +366,24 @@ measures:
 
 Multiple top-level filters are combined with **AND**. Filter groups and leaf filters can be mixed freely and nested recursively.
 
+#### How Measure Filters Compile
+
+Filtered measures compile to `CASE WHEN` inside the aggregate function. The implicit `ELSE NULL` is ignored by all aggregate functions (SUM, COUNT, AVG, etc.):
+
+```sql
+-- Unfiltered:   SUM("extendedprice" * (1 - "discount"))
+-- Filtered:     SUM(CASE WHEN "returnflag" = 'R'
+--                        THEN "extendedprice" * (1 - "discount") END)
+```
+
+This works with all planners (star, CFL, cumulative, period-over-period) and all 8 dialects. Filtered measures can be combined with unfiltered measures in ratio metrics:
+
+```yaml
+metrics:
+  Return Rate:
+    expression: "{[Returned Revenue]} / {[Revenue]}"
+```
+
 ### LISTAGG Measures
 
 Use `listagg` to concatenate column values into a delimited string. OrionBelt renders the correct SQL for each database dialect automatically.
@@ -390,7 +408,11 @@ The `delimiter` defaults to `","` if omitted. The `withinGroup` clause is option
 
 ## Metrics
 
-A **metric** is a composite measure that combines multiple measures into a derived KPI. The expression references measures by name using `{[Measure Name]}` template syntax.
+Metrics come in three types: **derived** (composite expression), **cumulative** (window function over a measure), and **period-over-period** (time comparison).
+
+### Derived Metrics
+
+A **derived metric** combines multiple measures into a KPI. The expression references measures by name using `{[Measure Name]}` template syntax.
 
 ```yaml
 metrics:
@@ -403,21 +425,123 @@ metrics:
 
 All artefacts (data objects, dimensions, measures, metrics) have unique names. The `{[Name]}` placeholders in a metric expression must match existing measure names exactly.
 
+### Cumulative Metrics
+
+A **cumulative metric** applies a window function to an existing measure, ordered by a time dimension. Three patterns are supported:
+
+| Pattern | Configuration | SQL Frame |
+|---------|--------------|-----------|
+| Running total | (default — no `window` or `grainToDate`) | `ROWS UNBOUNDED PRECEDING` |
+| Rolling window | `window: N` | `ROWS BETWEEN N-1 PRECEDING AND CURRENT ROW` |
+| Grain-to-date | `grainToDate: month` | `PARTITION BY DATE_TRUNC('month', ...)` + unbounded |
+
+```yaml
+metrics:
+  # Running total (unbounded cumulative sum)
+  Cumulative Revenue:
+    type: cumulative
+    measure: Revenue
+    timeDimension: Order Date
+    description: Running total of revenue
+
+  # Rolling 7-period average
+  7-Day Rolling Avg Revenue:
+    type: cumulative
+    measure: Revenue
+    timeDimension: Order Date
+    cumulativeType: avg
+    window: 7
+
+  # Month-to-Date (resets each month)
+  MTD Revenue:
+    type: cumulative
+    measure: Revenue
+    timeDimension: Order Date
+    grainToDate: month
+
+  # Year-to-Date (resets each year)
+  YTD Revenue:
+    type: cumulative
+    measure: Revenue
+    timeDimension: Order Date
+    grainToDate: year
+
+  # Rolling peak
+  30-Day Peak Revenue:
+    type: cumulative
+    measure: Revenue
+    timeDimension: Order Date
+    cumulativeType: max
+    window: 30
+```
+
+!!! note "Time dimension requirement"
+    The `timeDimension` must be included in the query's selected dimensions. Cumulative metrics without their time dimension in the SELECT will raise a validation error.
+
+### Period-over-Period Metrics
+
+A **period-over-period metric** compares a measure against a prior time period. The `expression` references the base measure, and the `periodOverPeriod` block configures how to shift time and compute the comparison.
+
+```yaml
+metrics:
+  Revenue YoY Growth:
+    type: period_over_period
+    expression: '{[Revenue]}'
+    periodOverPeriod:
+      timeDimension: Order Date
+      grain: month
+      offset: -1
+      offsetGrain: year
+      comparison: percentChange
+
+  Revenue MoM Diff:
+    type: period_over_period
+    expression: '{[Revenue]}'
+    periodOverPeriod:
+      timeDimension: Order Date
+      grain: month
+      offset: -1
+      offsetGrain: month
+      comparison: difference
+```
+
+Four comparison modes are available:
+
+| Comparison | Formula | Use case |
+|------------|---------|----------|
+| `percentChange` | `current / NULLIF(prev, 0) - 1` | YoY growth rate |
+| `ratio` | `current / NULLIF(prev, 0)` | Current-to-previous ratio |
+| `difference` | `current - prev` | Absolute change |
+| `previousValue` | `prev` | Prior period value alongside current |
+
+!!! note "Time dimension requirement"
+    The `timeDimension` must be included in the query's selected dimensions. All PoP metrics in a single query must share the same `timeDimension` and `grain`.
+
+For a detailed guide on PoP metrics, including CTE architecture, filter push-down, and dialect-specific SQL examples, see the [Period-over-Period Metrics](period-over-period.md) guide.
+
 ### Metric Properties
 
-| Property | Type | Required | Description |
-|----------|------|----------|-------------|
-| `expression` | string | Yes | Expression with `{[Measure Name]}` placeholders |
-| `label` | string | No | Display label |
-| `format` | string | No | Display format |
-| `synonyms` | list | No | Alternative names or terms (LLM hints) |
-| `owner` | string | No | Responsible team or person |
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `type` | `"derived"` \| `"cumulative"` \| `"period_over_period"` | `"derived"` | Metric category |
+| `expression` | string | — | Expression with `{[Measure Name]}` placeholders (required for derived and period_over_period) |
+| `measure` | string | — | Name of base measure (required for cumulative) |
+| `timeDimension` | string | — | Dimension used for ordering (required for cumulative) |
+| `cumulativeType` | `"sum"` \| `"avg"` \| `"min"` \| `"max"` \| `"count"` | `"sum"` | Window aggregation function |
+| `window` | integer | — | Rolling window size in periods (mutually exclusive with `grainToDate`) |
+| `grainToDate` | `"year"` \| `"quarter"` \| `"month"` \| `"week"` | — | Reset boundary (mutually exclusive with `window`) |
+| `periodOverPeriod` | object | — | Period-over-period configuration (required for period_over_period) |
+| `label` | string | — | Display label |
+| `description` | string | — | Business description |
+| `format` | string | — | Display format |
+| `synonyms` | list | — | Alternative names or terms (LLM hints) |
+| `owner` | string | — | Responsible team or person |
 
 ### Metric Expression Placeholders
 
 | Placeholder | Resolves to |
 |-------------|-------------|
-| `{[Measure Name]}` | Named reference to any defined measure |
+| `{[Measure Name]}` | Named reference to any defined measure (derived metrics only) |
 
 ## Synonyms
 

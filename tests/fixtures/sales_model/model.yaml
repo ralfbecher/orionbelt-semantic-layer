@@ -124,9 +124,45 @@ measures:
     expression: '{[Orders].[Price]} * {[Orders].[Quantity]}'
     total: true
 
+  US Revenue:
+    resultType: float
+    aggregation: sum
+    expression: '{[Orders].[Price]} * {[Orders].[Quantity]}'
+    filters:
+      - column: {dataObject: Customers, column: Country}
+        operator: equals
+        values: [{dataType: string, valueString: "US"}]
+
 metrics:
   Revenue per Order:
     expression: '{[Revenue]} / {[Order Count]}'
 
   Revenue Share:
     expression: '{[Revenue]} / {[Grand Total Revenue]}'
+
+  US Revenue Share:
+    expression: '{[US Revenue]} / {[Revenue]}'
+
+  Running Revenue:
+    type: cumulative
+    measure: Revenue
+    timeDimension: Order Date
+    description: Running total of revenue over time
+
+  Rolling 3m Revenue:
+    type: cumulative
+    measure: Revenue
+    timeDimension: Order Date
+    cumulativeType: sum
+    window: 3
+    description: 3-month rolling sum of revenue
+
+  Revenue MoM Change:
+    type: period_over_period
+    expression: "{[Revenue]}"
+    periodOverPeriod:
+      timeDimension: Order Date
+      grain: month
+      offsetGrain: month
+      comparison: difference
+    description: Month-over-month revenue change

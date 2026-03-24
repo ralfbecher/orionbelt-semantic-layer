@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from orionbelt.ast.nodes import (
     AliasedExpr,
@@ -33,6 +33,15 @@ from orionbelt.ast.nodes import (
 from orionbelt.models.semantic import TimeGrain
 
 
+class UnsupportedAggregationError(Exception):
+    """Raised when a dialect does not support a specific aggregation function."""
+
+    def __init__(self, dialect: str, aggregation: str) -> None:
+        self.dialect = dialect
+        self.aggregation = aggregation
+        super().__init__(f"Dialect '{dialect}' does not support {aggregation.upper()} aggregation")
+
+
 @dataclass
 class DialectCapabilities:
     """Flags indicating what SQL features a dialect supports."""
@@ -45,6 +54,7 @@ class DialectCapabilities:
     supports_time_travel: bool = False
     supports_semi_structured: bool = False
     supports_union_all_by_name: bool = False
+    unsupported_aggregations: list[str] = field(default_factory=list)
 
 
 class Dialect(ABC):
@@ -109,6 +119,41 @@ class Dialect(ABC):
     @abstractmethod
     def date_add_sql(self, date_sql: str, unit: str, count: int) -> str:
         """Return SQL that adds count units to date_sql."""
+
+    @abstractmethod
+    def render_date_trunc_sql(self, column_sql: str, grain: str) -> str:
+        """Return SQL string that truncates a date/timestamp to the given grain.
+
+        String-level helper (not AST) for use in raw SQL CTEs like date_range.
+        """
+
+    @abstractmethod
+    def render_date_spine_cte_sql(
+        self,
+        min_date: str,
+        max_date: str,
+        grain: str,
+        offset: int,
+        offset_grain: str,
+    ) -> str:
+        """Return the SQL body for a date spine CTE.
+
+        Must produce two columns: ``spine_date`` and ``spine_date_prev``.
+        ``spine_date_prev`` is NULL when the offset date falls before min_date.
+
+        Parameters
+        ----------
+        min_date : str
+            SQL expression referencing the minimum date (e.g. ``date_range.min_date``).
+        max_date : str
+            SQL expression referencing the maximum date.
+        grain : str
+            Time grain string: ``day``, ``week``, ``month``, ``quarter``, ``year``.
+        offset : int
+            Signed period offset (e.g. ``-1`` for previous period).
+        offset_grain : str
+            Grain of the offset (e.g. ``year`` for YoY).
+        """
 
     def render_string_contains(self, column: Expr, pattern: Expr) -> Expr:
         """Default: column LIKE '%' || pattern || '%'."""
@@ -191,7 +236,9 @@ class Dialect(ABC):
         if node.ctes:
             cte_parts = []
             for cte in node.ctes:
-                if isinstance(cte.query, UnionAll):
+                if isinstance(cte.query, RawSQL):
+                    cte_sql = cte.query.sql
+                elif isinstance(cte.query, UnionAll):
                     cte_sql = self.compile_union_all(cte.query)
                 elif isinstance(cte.query, Except):
                     cte_sql = self.compile_except(cte.query)
@@ -389,6 +436,7 @@ class Dialect(ABC):
                 args=args,
                 partition_by=partition_by,
                 order_by=order_by,
+                frame=frame,
                 distinct=distinct,
             ):
                 args_sql = ", ".join(self.compile_expr(a) for a in args)
@@ -400,6 +448,8 @@ class Dialect(ABC):
                 if order_by:
                     ob = ", ".join(self.compile_order_by(o) for o in order_by)
                     over_parts.append(f"ORDER BY {ob}")
+                if frame is not None:
+                    over_parts.append(f"{frame.mode} BETWEEN {frame.start} AND {frame.end}")
                 over_clause = " ".join(over_parts)
                 return f"{func_sql} OVER ({over_clause})"
             case _:

@@ -1,6 +1,6 @@
 # Compilation Pipeline
 
-OrionBelt compiles semantic queries into SQL through a three-phase pipeline: **Resolution**, **Planning**, and **Code Generation**. Each phase transforms the query into a progressively more concrete representation.
+OrionBelt compiles semantic queries into SQL through a multi-phase pipeline: **Resolution**, **Planning**, optional **wrapping** (PoP, totals, cumulative), and **Code Generation**. Each phase transforms the query into a progressively more concrete representation.
 
 ```
 QueryObject + SemanticModel
@@ -16,6 +16,19 @@ QueryObject + SemanticModel
 |  Phase 2:       |
 |  Planning       |  -> QueryPlan (SQL AST)
 |  (Star or CFL)  |
++--------+--------+
+         |
+         v
++-----------------+
+|  Phase 2.4:     |
+|  PoP Wrap       |  -> 4-CTE date spine + period comparison
++--------+--------+
+         |
+         v
++-----------------+
+|  Phase 2.5-2.6: |
+|  Total Wrap     |  -> CTE + AGG(x) OVER () for total measures
+|  Cumulative Wrap|  -> CTE + window functions for cumulative metrics
 +--------+--------+
          |
          v
@@ -39,8 +52,9 @@ The resolver transforms a high-level `QueryObject` (business names) into a `Reso
 3. **Resolve metrics** — Expand measure references (`{[Measure Name]}`), compose expressions
 4. **Select base object** — Choose the primary fact table (prefers data objects with joins defined)
 5. **Find join paths** — Use the join graph to find the minimal set of joins connecting all required objects
-6. **Classify filters** — Dimension filters -> WHERE, measure filters -> HAVING
-7. **Resolve ORDER BY** — Map field names to dimension or measure expressions
+6. **Apply measure filters** — Measures with `filters` are wrapped in `CASE WHEN` inside the aggregate function
+7. **Classify query filters** — Dimension filters -> WHERE, measure filters -> HAVING
+8. **Resolve ORDER BY** — Map field names to dimension or measure expressions
 
 ### ResolvedQuery
 
@@ -200,6 +214,21 @@ FROM non_combinations
 
 The dimensions are partitioned into independent groups based on the join graph. Each group gets a CTE with distinct values, and the `all_pairs` CTE uses an implicit cross join (comma-separated FROM) to produce all possible combinations. The `EXCEPT` clause removes existing combinations found through the fact/bridge tables.
 
+## Phase 2.4: Period-over-Period Wrap
+
+**Module:** `orionbelt.compiler.pop_wrap`
+
+When a query includes period-over-period metrics (`type: period_over_period`), the PoP wrapper restructures the planner output into a 4-CTE date spine architecture:
+
+1. **`date_range`** -- Discovers `MIN`/`MAX` date from fact tables with ALL query `WHERE` filters pushed down (time and dimension filters alike). For multi-fact (CFL) queries, each fact table leg is scanned independently via `UNION ALL`.
+2. **`date_spine`** -- Generates a date series from `min_date` to `max_date` at the configured grain. Each row includes a `spine_date_prev` column pointing to the comparison period. The generation technique is dialect-specific (e.g. `generate_series` in Postgres, `TABLE(GENERATOR(...))` in Snowflake).
+3. **`pop_base`** -- Aggregates measures using the spine as `FROM`, with fact and dimension tables LEFT JOINed via the truncated date column. Non-time dimensions are included in the `GROUP BY`.
+4. **`pop_compare`** -- Self-joins `pop_base` onto itself via `spine_date_prev`, matching on all non-time dimensions, and computes the comparison expression (percent change, ratio, difference, or previous value).
+
+The outer `SELECT` projects all dimensions, non-PoP measures, and PoP metric columns from `pop_compare`.
+
+PoP wrapping runs before total and cumulative wraps so those layers can operate on the already-aggregated comparison output. For details, see the [Period-over-Period Metrics](period-over-period.md) guide.
+
 ## Phase 3: Code Generation
 
 **Module:** `orionbelt.compiler.codegen`
@@ -247,6 +276,8 @@ All SQL is generated from an immutable AST — never by string concatenation. Th
 | `CaseExpr` | CASE expression | `CASE WHEN ... THEN ... END` |
 | `Cast` | Type cast | `CAST(x AS INTEGER)` |
 | `SubqueryExpr` | Subquery | `(SELECT ...)` |
+| `WindowFunction` | Window function | `SUM(x) OVER (ORDER BY y ROWS ...)` |
+| `WindowFrame` | Window frame | `ROWS BETWEEN ... AND ...` |
 | `RawSQL` | Escape hatch | Raw SQL string |
 
 ### Statement Nodes
@@ -302,9 +333,18 @@ class CompilationPipeline:
         else:
             plan = StarSchemaPlanner.plan(resolved, model)
 
+        # Phase 2.4: PoP wrap (period-over-period metrics)
+        wrapped_ast = wrap_with_pop(plan.ast, resolved, model, dialect, qualify_table)
+
+        # Phase 2.5: Total wrap (grand total measures)
+        wrapped_ast = wrap_with_totals(wrapped_ast, resolved)
+
+        # Phase 2.6: Cumulative wrap (running/rolling/grain-to-date metrics)
+        wrapped_ast = wrap_with_cumulative(wrapped_ast, resolved)
+
         # Phase 3: Code Generation
         dialect = DialectRegistry.get(dialect_name)
-        sql = CodeGenerator(dialect).generate(plan.ast)
+        sql = CodeGenerator(dialect).generate(wrapped_ast)
 
         return CompilationResult(sql=sql, dialect=dialect_name, resolved=..., warnings=...)
 ```
