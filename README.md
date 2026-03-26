@@ -45,6 +45,7 @@ OrionBelt Semantic Layer is an **API-first** semantic engine and query planner f
 - **ER Diagram Generation** — Mermaid ER diagrams via API and Gradio UI with theme support, zoom, and secondary join visualization
 - **REST API** — FastAPI-powered session endpoints for model loading, validation, compilation, execution, diagram generation, and management
 - **MCP Server** — Available as a separate thin client in [orionbelt-semantic-layer-mcp](https://github.com/ralfbecher/orionbelt-semantic-layer-mcp) — delegates to the REST API via HTTP, deployable independently (e.g. to Prefect Horizon)
+- **AI Integrations** — Ready-to-use tools for [LangChain](integrations/langchain/), [OpenAI Agents SDK](integrations/openai-agents-sdk/), [CrewAI](integrations/crewai/), [Google ADK](integrations/google-adk/), [Vercel AI SDK](integrations/vercel-ai-sdk/), [n8n](integrations/n8n/), and [ChatGPT Custom GPT](integrations/chatgpt-custom-gpt/)
 - **Gradio UI** — Interactive web interface for model editing, query testing, and SQL compilation with live validation feedback
 - **[OSI](https://github.com/open-semantic-interchange/OSI) Interoperability** — Bidirectional conversion between OBML and the Open Semantic Interchange format via REST API (`/convert`) and Gradio UI, with validation for both directions
 - **DB-API 2.0 Drivers** — PEP 249 drivers for all 8 databases with transparent OBML-to-SQL compilation via REST API
@@ -529,6 +530,21 @@ curl -X POST http://127.0.0.1:8000/v1/convert/obml-to-osi \
 The Gradio UI also provides **Import OSI** / **Export to OSI** buttons that use these API endpoints.
 
 See the [OSI ↔ OBML Mapping Analysis](osi-obml/osi_obml_mapping_analysis.md) for a detailed comparison and conversion reference.
+
+## AI Integrations
+
+| Integration | Language | Description | Guide |
+|-------------|----------|-------------|-------|
+| **LangChain / LangGraph** | Python | 10 async tools + `create_agent` example | [`integrations/langchain/`](integrations/langchain/) |
+| **OpenAI Agents SDK** | Python | 10 function tools + `Agent`/`Runner` example | [`integrations/openai-agents-sdk/`](integrations/openai-agents-sdk/) |
+| **CrewAI** | Python | 10 tools + multi-agent crew example | [`integrations/crewai/`](integrations/crewai/) |
+| **Google ADK** | Python | 10 FunctionTools + Gemini agent example | [`integrations/google-adk/`](integrations/google-adk/) |
+| **Vercel AI SDK** | TypeScript | 10 tools + Next.js API route example | [`integrations/vercel-ai-sdk/`](integrations/vercel-ai-sdk/) |
+| **n8n** | JSON | Workflow templates (batch + AI agent) | [`integrations/n8n/`](integrations/n8n/) |
+| **ChatGPT Custom GPT** | OpenAPI | OpenAPI 3.1 spec + GPT instructions | [`integrations/chatgpt-custom-gpt/`](integrations/chatgpt-custom-gpt/) |
+| **MCP Server** | Python | 10+ tools for Claude, Copilot, Cursor, Windsurf | [separate repo](https://github.com/ralfbecher/orionbelt-semantic-layer-mcp) |
+
+All REST API integrations use the [shortcut endpoints](#single-model-mode) and work best with OrionBelt running in single-model mode (`MODEL_FILE` set). Each integration also documents the MCP alternative for tools that support it.
 
 ## Companion Project
 

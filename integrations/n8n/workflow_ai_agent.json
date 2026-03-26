@@ -1,0 +1,147 @@
+{
+  "name": "OrionBelt - AI Agent with Semantic Layer",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "You are a data analyst assistant powered by the OrionBelt Semantic Layer. You help users explore semantic data models and compile analytical SQL queries.\n\nWorkflow:\n1. Start by calling the Schema endpoint to understand the model.\n2. Use the Dimensions, Measures, and Metrics endpoints to explore details.\n3. Use the Compile Query endpoint to generate SQL.\n4. Present SQL in a code block and explain what it does.\n\nAlways use exact artefact names from the model."
+        }
+      },
+      "id": "ai-agent",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [620, 300]
+    },
+    {
+      "parameters": {},
+      "id": "chat-trigger",
+      "name": "When chat message received",
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.1,
+      "position": [380, 300]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o",
+        "options": {}
+      },
+      "id": "openai-model",
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [620, 520]
+    },
+    {
+      "parameters": {
+        "name": "get_schema",
+        "description": "Get the full semantic model structure with data objects, dimensions, measures, and metrics. Call this first.",
+        "method": "GET",
+        "url": "={{ $env.ORIONBELT_API_URL }}/v1/schema",
+        "placeholderDefinitions": {
+          "parameters": []
+        }
+      },
+      "id": "tool-schema",
+      "name": "Get Schema Tool",
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [480, 520]
+    },
+    {
+      "parameters": {
+        "name": "list_dimensions",
+        "description": "List all dimensions (categorical/temporal attributes for grouping and filtering).",
+        "method": "GET",
+        "url": "={{ $env.ORIONBELT_API_URL }}/v1/dimensions",
+        "placeholderDefinitions": {
+          "parameters": []
+        }
+      },
+      "id": "tool-dimensions",
+      "name": "List Dimensions Tool",
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [540, 520]
+    },
+    {
+      "parameters": {
+        "name": "list_measures",
+        "description": "List all measures (numeric aggregations like Revenue, Order Count).",
+        "method": "GET",
+        "url": "={{ $env.ORIONBELT_API_URL }}/v1/measures",
+        "placeholderDefinitions": {
+          "parameters": []
+        }
+      },
+      "id": "tool-measures",
+      "name": "List Measures Tool",
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [600, 520]
+    },
+    {
+      "parameters": {
+        "name": "compile_query",
+        "description": "Compile a semantic query to SQL. Send a JSON body with select.dimensions and select.measures. Use the dialect query parameter to choose the SQL dialect.",
+        "method": "POST",
+        "url": "={{ $env.ORIONBELT_API_URL }}/v1/query/sql?dialect={dialect}",
+        "sendBody": true,
+        "placeholderDefinitions": {
+          "parameters": [
+            {
+              "name": "dialect",
+              "description": "SQL dialect: postgres, snowflake, bigquery, clickhouse, databricks, dremio, duckdb, mysql",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "id": "tool-compile",
+      "name": "Compile Query Tool",
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [660, 520]
+    }
+  ],
+  "connections": {
+    "When chat message received": {
+      "main": [
+        [{ "node": "AI Agent", "type": "main", "index": 0 }]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [{ "node": "AI Agent", "type": "ai_languageModel", "index": 0 }]
+      ]
+    },
+    "Get Schema Tool": {
+      "ai_tool": [
+        [{ "node": "AI Agent", "type": "ai_tool", "index": 0 }]
+      ]
+    },
+    "List Dimensions Tool": {
+      "ai_tool": [
+        [{ "node": "AI Agent", "type": "ai_tool", "index": 0 }]
+      ]
+    },
+    "List Measures Tool": {
+      "ai_tool": [
+        [{ "node": "AI Agent", "type": "ai_tool", "index": 0 }]
+      ]
+    },
+    "Compile Query Tool": {
+      "ai_tool": [
+        [{ "node": "AI Agent", "type": "ai_tool", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    { "name": "OrionBelt" },
+    { "name": "AI Agent" },
+    { "name": "Semantic Layer" }
+  ]
+}

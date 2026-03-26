@@ -1,0 +1,91 @@
+{
+  "name": "OrionBelt - Compile Semantic Query",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "trigger-1",
+      "name": "When clicking 'Test workflow'",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.ORIONBELT_API_URL }}/v1/schema",
+        "options": {}
+      },
+      "id": "get-schema",
+      "name": "Get Model Schema",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [420, 200],
+      "notes": "Fetch the full semantic model structure"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.ORIONBELT_API_URL }}/v1/dimensions",
+        "options": {}
+      },
+      "id": "get-dimensions",
+      "name": "List Dimensions",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [420, 400],
+      "notes": "Fetch all available dimensions"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.ORIONBELT_API_URL }}/v1/measures",
+        "options": {}
+      },
+      "id": "get-measures",
+      "name": "List Measures",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [420, 600],
+      "notes": "Fetch all available measures"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.ORIONBELT_API_URL }}/v1/query/sql?dialect=postgres",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"select\": {\n    \"dimensions\": [\"Country\"],\n    \"measures\": [\"Revenue\"]\n  },\n  \"order_by\": [\n    {\"field\": \"Revenue\", \"direction\": \"desc\"}\n  ],\n  \"limit\": 10\n}",
+        "options": {}
+      },
+      "id": "compile-query",
+      "name": "Compile Query",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [700, 300],
+      "notes": "Compile a semantic query to SQL. Edit the JSON body to change dimensions, measures, filters, and dialect."
+    }
+  ],
+  "connections": {
+    "When clicking 'Test workflow'": {
+      "main": [
+        [
+          { "node": "Get Model Schema", "type": "main", "index": 0 },
+          { "node": "List Dimensions", "type": "main", "index": 0 },
+          { "node": "List Measures", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Get Model Schema": {
+      "main": [
+        [{ "node": "Compile Query", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    { "name": "OrionBelt" },
+    { "name": "Semantic Layer" }
+  ]
+}
