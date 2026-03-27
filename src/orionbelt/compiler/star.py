@@ -137,9 +137,7 @@ class StarSchemaPlanner:
 
         # ORDER BY (use alias for time-grained dimensions)
         grained_cols: dict[tuple[str, str | None], str] = {
-            (d.source_column, d.object_name): d.name
-            for d in resolved.dimensions
-            if d.grain
+            (d.source_column, d.object_name): d.name for d in resolved.dimensions if d.grain
         }
         for expr, desc in resolved.order_by_exprs:
             if isinstance(expr, ColumnRef) and (expr.name, expr.table) in grained_cols:

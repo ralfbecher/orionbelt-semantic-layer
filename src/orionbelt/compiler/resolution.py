@@ -428,9 +428,7 @@ class QueryResolver:
         condition = build_measure_filter_condition(measure.filters, ctx.model, ctx.errors)
         if condition is None:
             return func
-        wrapped_args: list[Expr] = [
-            CaseExpr(when_clauses=[(condition, arg)]) for arg in func.args
-        ]
+        wrapped_args: list[Expr] = [CaseExpr(when_clauses=[(condition, arg)]) for arg in func.args]
         return FunctionCall(
             name=func.name,
             args=wrapped_args,

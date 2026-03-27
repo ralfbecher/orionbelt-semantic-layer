@@ -336,9 +336,7 @@ class ReferenceResolver:
                     cum_time_dim = raw_metric.get("timeDimension", "")
                     if cum_time_dim and cum_time_dim not in dimensions:
                         span = (
-                            source_map.get(f"metrics.{name}.timeDimension")
-                            if source_map
-                            else None
+                            source_map.get(f"metrics.{name}.timeDimension") if source_map else None
                         )
                         errors.append(
                             SemanticError(
@@ -349,9 +347,7 @@ class ReferenceResolver:
                                 ),
                                 path=f"metrics.{name}.timeDimension",
                                 span=span,
-                                suggestions=_suggest_similar(
-                                    cum_time_dim, list(dimensions.keys())
-                                ),
+                                suggestions=_suggest_similar(cum_time_dim, list(dimensions.keys())),
                             )
                         )
 

@@ -246,10 +246,7 @@ class JoinGraph:
             )
 
         if not conditions:
-            msg = (
-                f"Join from '{step.from_object}' to '{step.to_object}' "
-                f"has no join columns"
-            )
+            msg = f"Join from '{step.from_object}' to '{step.to_object}' has no join columns"
             raise ValueError(msg)
         result: Expr = conditions[0]
         for cond in conditions[1:]:

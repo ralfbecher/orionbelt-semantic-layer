@@ -1007,13 +1007,9 @@ def validate_model(
         # Build detail YAML for explain panel
         detail: dict[str, Any] = {"valid": valid}
         if errors:
-            detail["errors"] = [
-                {k: v for k, v in e.items() if v} for e in errors
-            ]
+            detail["errors"] = [{k: v for k, v in e.items() if v} for e in errors]
         if warnings:
-            detail["warnings"] = [
-                {k: v for k, v in w.items() if v} for w in warnings
-            ]
+            detail["warnings"] = [{k: v for k, v in w.items() if v} for w in warnings]
         detail_yaml = yaml.dump(detail, default_flow_style=False, sort_keys=False)
 
         # Summary for SQL output panel (plain text, not SQL comments)
@@ -1341,9 +1337,7 @@ def create_blocks(default_api_url: str | None = None) -> Any:
                 def _fetch_settings_yaml(api_url_val: str) -> str:
                     url = api_url_val.rstrip("/") if api_url_val else _DEFAULT_API_URL
                     try:
-                        resp = httpx.get(
-                            f"{url}/v1/settings", timeout=5, headers=_API_HEADERS
-                        )
+                        resp = httpx.get(f"{url}/v1/settings", timeout=5, headers=_API_HEADERS)
                         resp.raise_for_status()
                         data = resp.json()
                         # Remove model_yaml from display (too large)

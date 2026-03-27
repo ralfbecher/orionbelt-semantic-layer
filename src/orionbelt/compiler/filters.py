@@ -330,13 +330,17 @@ def _build_single_measure_filter(
         case "between":
             if len(values) >= 2:
                 return Between(
-                    expr=col, low=Literal(value=values[0]), high=Literal(value=values[1]),
+                    expr=col,
+                    low=Literal(value=values[0]),
+                    high=Literal(value=values[1]),
                 )
             return BinaryOp(left=col, op="=", right=Literal(value=values[0] if values else None))
         case "notbetween":
             if len(values) >= 2:
                 return Between(
-                    expr=col, low=Literal(value=values[0]), high=Literal(value=values[1]),
+                    expr=col,
+                    low=Literal(value=values[0]),
+                    high=Literal(value=values[1]),
                     negated=True,
                 )
             return BinaryOp(left=col, op="<>", right=Literal(value=values[0] if values else None))
@@ -406,9 +410,7 @@ def build_measure_filter_condition(
     return combined
 
 
-def collect_measure_filter_objects(
-    item: MeasureFilterItem, objects: set[str]
-) -> None:
+def collect_measure_filter_objects(item: MeasureFilterItem, objects: set[str]) -> None:
     """Recursively collect data object names referenced by measure filters."""
     if isinstance(item, MeasureFilter):
         if item.column and item.column.view:
