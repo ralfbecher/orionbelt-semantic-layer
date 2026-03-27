@@ -7,6 +7,18 @@ import sys
 
 import structlog
 
+_LOGGER_RENAMES = {"uvicorn.error": "uvicorn", "uvicorn.access": "uvicorn.access"}
+
+
+def _rename_loggers(
+    logger: logging.Logger, method_name: str, event_dict: structlog.types.EventDict
+) -> structlog.types.EventDict:
+    """Rename misleading logger names (e.g. uvicorn.error → uvicorn)."""
+    name = event_dict.get("logger")
+    if name and name in _LOGGER_RENAMES:
+        event_dict["logger"] = _LOGGER_RENAMES[name]
+    return event_dict
+
 
 def configure_logging(log_level: str = "INFO", log_format: str = "console") -> None:
     """Configure structlog for the application.
@@ -18,6 +30,7 @@ def configure_logging(log_level: str = "INFO", log_format: str = "console") -> N
     shared_processors: list[structlog.types.Processor] = [
         structlog.contextvars.merge_contextvars,
         structlog.stdlib.add_logger_name,
+        _rename_loggers,
         structlog.stdlib.add_log_level,
         structlog.processors.TimeStamper(fmt="iso"),
         structlog.processors.StackInfoRenderer(),

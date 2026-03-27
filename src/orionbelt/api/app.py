@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib.util
 import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
@@ -96,9 +97,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
         query_default_limit=settings.query_default_limit,
     )
 
-    # Optionally start Arrow Flight SQL server in a daemon thread
+    # Start Arrow Flight SQL server if ob-flight-extension is installed
+    # (auto-detected) or FLIGHT_ENABLED=true is set explicitly.
     flight_thread = None
-    if settings.flight_enabled:
+    flight_available = importlib.util.find_spec("ob_flight") is not None
+    if settings.flight_enabled or flight_available:
         try:
             from ob_flight.startup import start_flight_background  # type: ignore[import-untyped]
 
@@ -107,6 +110,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
                 port=settings.flight_port,
                 default_dialect=settings.db_vendor,
             )
+            settings.flight_enabled = True
             logger.info(
                 "Flight SQL server started on port %d (vendor=%s)",
                 settings.flight_port,
