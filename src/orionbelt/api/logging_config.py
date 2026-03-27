@@ -25,8 +25,11 @@ def configure_logging(log_level: str = "INFO", log_format: str = "console") -> N
 
     Args:
         log_level: Standard logging level (DEBUG, INFO, WARNING, ERROR).
-        log_format: "json" for cloud deployments, "console" for local dev.
+        log_format: "console" for local dev, "json" for structured logging,
+            "cloudrun" for JSON without uvicorn access logs (Cloud Run provides its own).
     """
+    use_json = log_format in ("json", "cloudrun")
+
     shared_processors: list[structlog.types.Processor] = [
         structlog.contextvars.merge_contextvars,
         structlog.stdlib.add_logger_name,
@@ -37,7 +40,7 @@ def configure_logging(log_level: str = "INFO", log_format: str = "console") -> N
         structlog.processors.UnicodeDecoder(),
     ]
 
-    if log_format == "json":
+    if use_json:
         renderer: structlog.types.Processor = structlog.processors.JSONRenderer()
     else:
         renderer = structlog.dev.ConsoleRenderer()

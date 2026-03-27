@@ -203,7 +203,7 @@ Environment variables or `.env` file (via pydantic-settings):
 | `SESSION_CLEANUP_INTERVAL` | `60` | Cleanup sweep interval |
 | `MODEL_FILE` | — | Path to OBML YAML for single-model mode |
 | `LOG_LEVEL` | `INFO` | Logging level |
-| `LOG_FORMAT` | `console` | `console` (pretty) or `json` (structured for cloud) |
+| `LOG_FORMAT` | `console` | `console` (pretty), `json` (structured), `cloudrun` (JSON, no access logs) |
 | `API_BASE_URL` | — | API URL for standalone UI |
 | `ROOT_PATH` | — | ASGI root path for UI behind load balancer |
 

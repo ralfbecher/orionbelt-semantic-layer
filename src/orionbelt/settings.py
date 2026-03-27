@@ -20,7 +20,11 @@ class Settings(BaseSettings):
 
     # Shared
     log_level: str = "INFO"
-    log_format: str = "console"  # "console" (pretty) or "json" (structured)
+    # Log format:
+    #   "console"  — pretty-printed for local dev (default)
+    #   "json"     — structured JSON for log aggregators (ELK, Datadog, etc.)
+    #   "cloudrun" — JSON + disables uvicorn access logs (Cloud Run provides its own)
+    log_format: str = "console"
 
     # REST API
     api_server_host: str = "localhost"

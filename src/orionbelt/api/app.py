@@ -256,6 +256,10 @@ def main() -> None:
     logging.getLogger("uvicorn.access").addFilter(_StaticAssetLogFilter())
     logging.getLogger("uvicorn.error").addFilter(_ShutdownLogFilter())
 
+    # "cloudrun" log format uses JSON but disables uvicorn access logs
+    # since Cloud Run generates its own request logs (with trace ID, LB latency, etc.).
+    access_log = settings.log_format != "cloudrun"
+
     uvicorn.run(
         "orionbelt.api.app:create_app",
         factory=True,
@@ -263,5 +267,6 @@ def main() -> None:
         port=settings.effective_port,
         log_level=settings.log_level.lower(),
         log_config=None,
+        access_log=access_log,
         timeout_graceful_shutdown=3,
     )
