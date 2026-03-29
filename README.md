@@ -87,6 +87,8 @@ The API is available at `http://127.0.0.1:8000`. Interactive docs at `/docs` (Sw
 
 The [Quickstart Notebook](examples/quickstart.ipynb) walks through the full workflow using TPC-H in DuckDB — explore the model, compile queries across dialects, execute against real data, and see multi-fact CFL, secondary join paths, and complex measures in action. No cloud database needed.
 
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/ralfbecher/orionbelt-semantic-layer/blob/main/examples/quickstart_colab.ipynb) — Run the full quickstart directly in Google Colab (requires Python 3.12 runtime).
+
 <p align="center">
   <img src="docs/assets/quickstart_notebook.png" alt="Interactive Jupyter Notebook" width="900">
 </p>
