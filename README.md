@@ -7,7 +7,7 @@
 <p align="center"><strong>Compile and execute YAML semantic models as analytical SQL across multiple database dialects</strong></p>
 
 [![GitHub stars](https://img.shields.io/github/stars/ralfbecher/orionbelt-semantic-layer?style=social)](https://github.com/ralfbecher/orionbelt-semantic-layer)
-[![Version 1.2.2](https://img.shields.io/badge/version-1.2.2-purple.svg)](https://github.com/ralfbecher/orionbelt-semantic-layer/releases)
+[![Version 1.3.0](https://img.shields.io/badge/version-1.3.0-purple.svg)](https://github.com/ralfbecher/orionbelt-semantic-layer/releases)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![License: BSL 1.1](https://img.shields.io/badge/License-BSL_1.1-orange.svg)](https://github.com/ralfbecher/orionbelt-semantic-layer/blob/main/LICENSE)
 [![Docker Hub](https://img.shields.io/docker/pulls/ralforion/orionbelt-api?logo=docker&label=Docker%20Hub)](https://hub.docker.com/repositories/ralforion)
@@ -50,6 +50,7 @@ OrionBelt Semantic Layer is an **API-first** semantic engine and query planner f
 - **[OSI](https://github.com/open-semantic-interchange/OSI) Interoperability** — Bidirectional conversion between OBML and the Open Semantic Interchange format via REST API (`/convert`) and Gradio UI, with validation for both directions
 - **DB-API 2.0 Drivers** — PEP 249 drivers for all 8 databases with transparent OBML-to-SQL compilation via REST API
 - **Arrow Flight SQL** — Embedded gRPC server for DBeaver, Tableau, and Power BI — single container, two ports (8080 + 8815)
+- **OBSL Graph & SPARQL** — Every loaded model is exported as an [OBSL-Core 0.1](ontology/spec.md) RDF graph (Turtle) with read-only SPARQL querying via API
 - **Plugin Architecture** — Extensible dialect system with capability flags and registry
 
 ## Quick Start

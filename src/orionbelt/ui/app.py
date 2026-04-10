@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import contextlib
 import hashlib
 from typing import Any
 
@@ -242,6 +241,19 @@ _DETECT_THEME_JS = """
     return args;
 }
 """
+
+# JS: download OBSL Turtle as a .ttl file
+_DOWNLOAD_TTL_JS = """(turtle) => {
+    if (!turtle) { alert('No OBSL graph available. Load a model first.'); return; }
+    var blob = new Blob([turtle], {type: 'text/turtle'});
+    var a = document.createElement('a');
+    a.download = 'obsl-model.ttl';
+    a.href = URL.createObjectURL(blob);
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(a.href);
+}"""
 
 # JS: download the raw Mermaid text as a .md file
 _DOWNLOAD_MD_JS = """(raw) => {
@@ -592,6 +604,53 @@ def _export_to_osi(obml_yaml: str, api_base: str) -> tuple[str, str]:
     return status + "\nCopy the OSI YAML output below.\n\n" + output, ""
 
 
+def _fetch_obsl_turtle(
+    model_yaml: str,
+    api_url: str,
+    session_state: dict[str, str] | None,
+    model_state: dict[str, str] | None,
+) -> tuple[str, dict[str, str] | None, dict[str, str] | None]:
+    """Fetch the OBSL-Core Turtle graph for the current model.
+
+    Returns ``(turtle_str, session_state, model_state)``.  Falls back to
+    local generation when the API is unreachable.
+    """
+    if not model_yaml or not model_yaml.strip():
+        return "", session_state, model_state
+
+    try:
+        client, session_id, model_id, session_state, model_state = _ensure_session_and_model(
+            model_yaml, api_url, session_state, model_state
+        )
+        resp = client.get(f"/v1/sessions/{session_id}/models/{model_id}/graph")
+        if resp.status_code == 404:
+            client, session_id, model_id, session_state, model_state = _ensure_session_and_model(
+                model_yaml, api_url, None, None
+            )
+            resp = client.get(f"/v1/sessions/{session_id}/models/{model_id}/graph")
+        resp.raise_for_status()
+        return resp.text, session_state, model_state
+    except _ModelValidationError:
+        return "", session_state, model_state
+    except httpx.ConnectError:
+        # API not available — fall back to local generation
+        try:
+            from orionbelt.obsl.exporter import export_obsl
+            from orionbelt.parser.loader import TrackedLoader
+            from orionbelt.parser.resolver import ReferenceResolver
+
+            raw, sm = TrackedLoader().load_string(model_yaml)
+            model, result = ReferenceResolver().resolve(raw, sm)
+            if not result.valid:
+                return "", session_state, model_state
+            g = export_obsl(model, "model")
+            return g.serialize(format="turtle"), session_state, model_state
+        except Exception:
+            return "", session_state, model_state
+    except Exception:
+        return "", session_state, model_state
+
+
 def _format_sql(sql: str) -> str:
     """Pretty-print SQL with keyword-per-line formatting."""
     import re
@@ -826,15 +885,6 @@ class _ModelValidationError(Exception):
     def __init__(self, detail: Any) -> None:
         self.detail = detail
         super().__init__(str(detail))
-
-
-def _cleanup_session(session_state: dict[str, str] | None) -> None:
-    """Delete the API session on browser tab close."""
-    if session_state:
-        with contextlib.suppress(Exception):
-            httpx.Client(base_url=session_state["api_url"], timeout=5, headers=_API_HEADERS).delete(
-                f"/v1/sessions/{session_state['session_id']}"
-            )
 
 
 def _build_explain_yaml(data: dict[str, Any]) -> str:
@@ -1126,21 +1176,21 @@ def create_blocks(default_api_url: str | None = None) -> Any:
                 f' src="{_LOGO_LIGHT_URI}"'
                 f' style="height:34px;width:auto" alt="OrionBelt">'
                 f'<span class="header-title">'
-                f'Semantic Layer</span></span>'
+                f"Semantic Layer</span></span>"
                 f'<span class="header-links">'
                 f'<span class="header-version">'
-                f'v{__version__}</span>'
+                f"v{__version__}</span>"
                 f'<a href="https://github.com/ralfbecher'
                 f'/orionbelt-semantic-layer"'
                 f' target="_blank">'
-                f'{_GITHUB_SVG} GitHub</a>'
+                f"{_GITHUB_SVG} GitHub</a>"
                 f'<a href="https://github.com/ralfbecher'
                 f'/orionbelt-semantic-layer/issues"'
                 f' target="_blank">Report Issue</a>'
                 f'<a href="https://ralforion.com'
                 f'/orionbelt-semantic-layer/"'
                 f' target="_blank">Docs</a>'
-                f'</span></div>'
+                f"</span></div>"
             )
             dark_btn = gr.Button("Light / Dark", size="sm", scale=0, min_width=120)
 
@@ -1167,6 +1217,7 @@ def create_blocks(default_api_url: str | None = None) -> Any:
                         visible=not single_model,
                     )
                     export_osi_btn = gr.Button("Export to OSI", size="sm", scale=0, min_width=120)
+                    download_obsl_btn = gr.Button("\u2193 OBSL", size="sm", scale=0, min_width=80)
 
                 with gr.Row(equal_height=True):
                     model_label = (
@@ -1280,6 +1331,18 @@ def create_blocks(default_api_url: str | None = None) -> Any:
                     fn=_export_to_osi,
                     inputs=[model_input, api_url],
                     outputs=[sql_output, explain_output],
+                )
+
+                # OBSL graph download: fetch Turtle → JS triggers file download
+                obsl_turtle_state = gr.Textbox(visible=False)
+                download_obsl_btn.click(
+                    fn=_fetch_obsl_turtle,
+                    inputs=[model_input, api_url, session_state, model_state],
+                    outputs=[obsl_turtle_state, session_state, model_state],
+                ).then(
+                    fn=None,
+                    inputs=[obsl_turtle_state],
+                    js=_DOWNLOAD_TTL_JS,
                 )
 
             with gr.Tab("ER Diagram", id=1) as er_tab:

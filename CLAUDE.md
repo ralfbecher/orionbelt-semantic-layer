@@ -184,10 +184,13 @@ All API routes are prefixed with `/v1/` except `/health` and `/robots.txt`.
 | GET | `/v1/sessions/{id}/models/{mid}/explain/{name}` | Lineage explain |
 | POST | `/v1/sessions/{id}/models/{mid}/find` | Search artefacts |
 | GET | `/v1/sessions/{id}/models/{mid}/join-graph` | Join graph adjacency |
+| GET | `/v1/sessions/{id}/models/{mid}/graph` | OBSL RDF graph (Turtle) |
+| POST | `/v1/sessions/{id}/models/{mid}/sparql` | SPARQL query (SELECT/ASK) |
 | POST | `/v1/convert/osi-to-obml` | Convert OSI YAML → OBML YAML |
 | POST | `/v1/convert/obml-to-osi` | Convert OBML YAML → OSI YAML |
+| GET | `/v1/reference/obml` | OBML reference documentation |
 
-Top-level shortcuts (auto-resolve when single session/model): `/v1/schema`, `/v1/dimensions`, `/v1/measures`, `/v1/metrics`, `/v1/explain/{name}`, `/v1/find`, `/v1/join-graph`, `/v1/query/sql`, `/v1/query/execute`.
+Top-level shortcuts (auto-resolve when single session/model): `/v1/schema`, `/v1/dimensions`, `/v1/measures`, `/v1/metrics`, `/v1/explain/{name}`, `/v1/find`, `/v1/join-graph`, `/v1/graph`, `/v1/sparql`, `/v1/query/sql`, `/v1/query/execute`.
 
 ## Configuration
 
