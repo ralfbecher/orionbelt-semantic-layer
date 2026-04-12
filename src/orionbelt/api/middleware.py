@@ -1,8 +1,10 @@
-"""Middleware: security headers, body limits, request ID, timing."""
+"""Middleware: security headers, body limits, request ID, timing, rate limiting."""
 
 from __future__ import annotations
 
+import collections
 import logging
+import threading
 import time
 import uuid
 
@@ -86,6 +88,67 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
                 "default-src 'self'; frame-ancestors 'none'"
             )
         return response
+
+
+class SessionRateLimitMiddleware(BaseHTTPMiddleware):
+    """Per-IP sliding-window rate limit on ``POST /v1/sessions``.
+
+    Rejects with 429 + ``Retry-After`` header when the limit is exceeded.
+    Uses an in-memory deque per IP — safe for single-instance deployments.
+    For multi-instance, rely on Cloud Armor or an external rate limiter.
+    """
+
+    def __init__(self, app: object, max_requests: int = 10, window_seconds: int = 60) -> None:
+        super().__init__(app)  # type: ignore[arg-type]
+        self._max = max_requests
+        self._window = window_seconds
+        self._lock = threading.Lock()
+        self._buckets: dict[str, collections.deque[float]] = {}
+
+    def _client_ip(self, request: Request) -> str:
+        """Extract client IP, respecting X-Forwarded-For from trusted proxies."""
+        forwarded = request.headers.get("x-forwarded-for")
+        if forwarded:
+            return forwarded.split(",")[0].strip()
+        return request.client.host if request.client else "unknown"
+
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+        # Only rate-limit session creation
+        if request.method != "POST" or not request.url.path.rstrip("/").endswith("/sessions"):
+            return await call_next(request)
+
+        ip = self._client_ip(request)
+        now = time.monotonic()
+
+        with self._lock:
+            bucket = self._buckets.get(ip)
+            if bucket is None:
+                bucket = collections.deque()
+                self._buckets[ip] = bucket
+
+            # Evict timestamps outside the window
+            while bucket and bucket[0] < now - self._window:
+                bucket.popleft()
+
+            if len(bucket) >= self._max:
+                logger.warning(
+                    "Session creation rate limit hit for IP %s (%d/%d in %ds)",
+                    ip,
+                    len(bucket),
+                    self._max,
+                    self._window,
+                )
+                return JSONResponse(
+                    status_code=429,
+                    content={
+                        "detail": f"Rate limit exceeded: max {self._max} "
+                        f"session creations per {self._window}s"
+                    },
+                    headers={"Retry-After": str(self._window)},
+                )
+            bucket.append(now)
+
+        return await call_next(request)
 
 
 class RequestBodyLimitMiddleware(BaseHTTPMiddleware):
