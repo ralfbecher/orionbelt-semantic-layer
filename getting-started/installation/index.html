@@ -681,7 +681,7 @@
 </nav>
 <div class="obml-version-badge">
   OBML v1.0<br>
-  OrionBelt v1.3.0
+  OrionBelt v1.4.0
 </div>
       
     </li>
@@ -1530,7 +1530,7 @@
 </nav>
 <div class="obml-version-badge">
   OBML v1.0<br>
-  OrionBelt v1.3.0
+  OrionBelt v1.4.0
 </div>
                   </div>
                 </div>
@@ -1658,9 +1658,29 @@
 <td>Session inactivity timeout (30 min)</td>
 </tr>
 <tr>
+<td><code>SESSION_MAX_AGE_SECONDS</code></td>
+<td><code>86400</code></td>
+<td>Absolute max session lifetime (24 h)</td>
+</tr>
+<tr>
 <td><code>SESSION_CLEANUP_INTERVAL</code></td>
 <td><code>60</code></td>
 <td>Cleanup sweep interval (seconds)</td>
+</tr>
+<tr>
+<td><code>MAX_SESSIONS</code></td>
+<td><code>500</code></td>
+<td>Global concurrent session cap (429 when full)</td>
+</tr>
+<tr>
+<td><code>MAX_MODELS_PER_SESSION</code></td>
+<td><code>10</code></td>
+<td>Max models a single session may hold</td>
+</tr>
+<tr>
+<td><code>SESSION_RATE_LIMIT</code></td>
+<td><code>10</code></td>
+<td>Max <code>POST /sessions</code> per IP per minute</td>
 </tr>
 <tr>
 <td><code>MODEL_FILE</code></td>

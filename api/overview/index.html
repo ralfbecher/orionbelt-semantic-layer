@@ -1027,7 +1027,7 @@
 </nav>
 <div class="obml-version-badge">
   OBML v1.0<br>
-  OrionBelt v1.3.0
+  OrionBelt v1.4.0
 </div>
       
     </li>
@@ -1530,7 +1530,7 @@
 </nav>
 <div class="obml-version-badge">
   OBML v1.0<br>
-  OrionBelt v1.3.0
+  OrionBelt v1.4.0
 </div>
                   </div>
                 </div>
@@ -1616,7 +1616,7 @@
 <li><strong>Execute</strong> — <code>POST /v1/sessions/{id}/query/execute</code> to compile and execute against the database (requires <code>FLIGHT_ENABLED=true</code>)</li>
 <li><strong>Close</strong> — <code>DELETE /v1/sessions/{id}</code> when done (or let TTL expire)</li>
 </ol>
-<p>Sessions automatically expire after 30 minutes of inactivity (configurable via <code>SESSION_TTL_SECONDS</code>).</p>
+<p>Sessions expire after 30 minutes of inactivity (configurable via <code>SESSION_TTL_SECONDS</code>) or after an absolute maximum lifetime of 24 hours (<code>SESSION_MAX_AGE_SECONDS</code>). The server enforces a global concurrent session cap (<code>MAX_SESSIONS</code>, default 500) and a per-session model cap (<code>MAX_MODELS_PER_SESSION</code>, default 10). Session creation is rate-limited per IP (<code>SESSION_RATE_LIMIT</code>, default 10/min). When limits are exceeded, the API returns <strong>429 Too Many Requests</strong> with a <code>Retry-After</code> header. Expired sessions return <strong>410 Gone</strong> (not 404) so clients can distinguish expiry from unknown IDs.</p>
 <h3 id="single-model-mode">Single-Model Mode<a class="headerlink" href="#single-model-mode" title="Permanent link">&para;</a></h3>
 <p>When the <code>MODEL_FILE</code> environment variable is set, the server runs in <strong>single-model mode</strong>:</p>
 <ol>
