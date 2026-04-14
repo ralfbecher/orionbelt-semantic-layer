@@ -37,6 +37,14 @@
          <lastmod>2026-04-14</lastmod>
     </url>
     <url>
+         <loc>https://ralfbecher.github.io/orionbelt-semantic-layer/getting-started/development/</loc>
+         <lastmod>2026-04-14</lastmod>
+    </url>
+    <url>
+         <loc>https://ralfbecher.github.io/orionbelt-semantic-layer/getting-started/docker/</loc>
+         <lastmod>2026-04-14</lastmod>
+    </url>
+    <url>
          <loc>https://ralfbecher.github.io/orionbelt-semantic-layer/getting-started/installation/</loc>
          <lastmod>2026-04-14</lastmod>
     </url>
@@ -53,6 +61,10 @@
          <lastmod>2026-04-14</lastmod>
     </url>
     <url>
+         <loc>https://ralfbecher.github.io/orionbelt-semantic-layer/guide/integrations/</loc>
+         <lastmod>2026-04-14</lastmod>
+    </url>
+    <url>
          <loc>https://ralfbecher.github.io/orionbelt-semantic-layer/guide/model-format/</loc>
          <lastmod>2026-04-14</lastmod>
     </url>
@@ -61,11 +73,27 @@
          <lastmod>2026-04-14</lastmod>
     </url>
     <url>
+         <loc>https://ralfbecher.github.io/orionbelt-semantic-layer/guide/osi/</loc>
+         <lastmod>2026-04-14</lastmod>
+    </url>
+    <url>
          <loc>https://ralfbecher.github.io/orionbelt-semantic-layer/guide/period-over-period/</loc>
          <lastmod>2026-04-14</lastmod>
     </url>
     <url>
          <loc>https://ralfbecher.github.io/orionbelt-semantic-layer/guide/query-language/</loc>
+         <lastmod>2026-04-14</lastmod>
+    </url>
+    <url>
+         <loc>https://ralfbecher.github.io/orionbelt-semantic-layer/guide/ui/</loc>
+         <lastmod>2026-04-14</lastmod>
+    </url>
+    <url>
+         <loc>https://ralfbecher.github.io/orionbelt-semantic-layer/reference/architecture/</loc>
+         <lastmod>2026-04-14</lastmod>
+    </url>
+    <url>
+         <loc>https://ralfbecher.github.io/orionbelt-semantic-layer/reference/configuration/</loc>
          <lastmod>2026-04-14</lastmod>
     </url>
     <url>
