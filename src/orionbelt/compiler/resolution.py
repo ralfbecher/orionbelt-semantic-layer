@@ -256,15 +256,17 @@ class QueryResolver:
             ctx.joined_objects.add(step.to_object)
 
         # 5b. Inject static model filters — always applied as WHERE conditions
+        static_exprs: list[Expr] = []
         for mf in model.filters:
             static_filter = self._resolve_static_filter(ctx, mf)
             if static_filter:
                 ctx.result.where_filters.append(static_filter)
+                static_exprs.append(static_filter.expression)
 
-        # 6. Classify filters — filters may auto-extend the join path
+        # 6. Classify filters — skip query-time duplicates of static filters
         for qfi in query.where:
             resolved_filter = self._resolve_filter_item(ctx, qfi, is_having=False)
-            if resolved_filter:
+            if resolved_filter and resolved_filter.expression not in static_exprs:
                 ctx.result.where_filters.append(resolved_filter)
 
         for qfi in query.having:

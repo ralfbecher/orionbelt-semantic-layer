@@ -125,6 +125,21 @@ class TestStaticFilterCompilation:
         assert "\"STATUS\" = 'completed'" in result.sql
         assert "\"COUNTRY\" = 'Germany'" in result.sql
 
+    def test_duplicate_query_filter_skipped(self):
+        """Query-time filter identical to a static filter is not duplicated."""
+        yaml = _model_with_filters("""\
+  - dataObject: Orders
+    column: Status
+    operator: equals
+    value: completed""")
+        model = _load_model(yaml)
+        query = QueryObject(
+            select=QuerySelect(dimensions=["Customer Country"], measures=["Total Revenue"]),
+            where=[{"field": "Orders.Status", "op": "equals", "value": "completed"}],
+        )
+        result = PIPELINE.compile(query, model, "postgres")
+        assert result.sql.count("\"STATUS\" = 'completed'") == 1
+
     def test_multiple_static_filters_and(self):
         yaml = _model_with_filters("""\
   - dataObject: Orders
