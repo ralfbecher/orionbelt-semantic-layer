@@ -222,7 +222,7 @@
       "additionalProperties": false
     },
     "operator": {
-      "description": "Filter operation code",
+      "description": "Filter operation code (measure-level filters)",
       "enum": [
         "equals",
         "notequals",
@@ -242,6 +242,17 @@
         "notlike",
         "starts_with",
         "ends_with"
+      ]
+    },
+    "staticFilterOperator": {
+      "description": "Filter operator for static model filters — supports both OBML and SQL-style naming",
+      "enum": [
+        "equals", "notequals", "inlist", "notinlist",
+        "contains", "notcontains", "gt", "gte", "lt", "lte",
+        "set", "notset", "between", "notbetween",
+        "like", "notlike", "starts_with", "ends_with",
+        "=", "!=", ">", ">=", "<", "<=",
+        "in", "not_in", "is_null", "is_not_null"
       ]
     },
     "parameterValue": {
@@ -907,16 +918,26 @@
             "description": "Column name within the data object"
           },
           "operator": {
-            "type": "string",
-            "description": "Filter operator (equals, notequals, in, not_in, gt, gte, lt, lte, between, like, notlike, is_null, is_not_null, contains, notcontains, starts_with, ends_with)"
+            "$ref": "#/definitions/staticFilterOperator"
           },
           "value": {
-            "description": "Single filter value (scalar)"
+            "description": "Single filter value — string, number, boolean, or ISO 8601 date/timestamp",
+            "oneOf": [
+              { "type": "string" },
+              { "type": "number" },
+              { "type": "boolean" }
+            ]
           },
           "values": {
             "type": "array",
             "description": "List of filter values (for in/between operators)",
-            "items": {}
+            "items": {
+              "oneOf": [
+                { "type": "string" },
+                { "type": "number" },
+                { "type": "boolean" }
+              ]
+            }
           }
         },
         "required": ["dataObject", "column", "operator"],
