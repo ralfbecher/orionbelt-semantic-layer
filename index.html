@@ -1607,6 +1607,7 @@
 <ul>
 <li><strong>Analytics as Code</strong> — Define your analytical semantics in version-controlled YAML, compile to dialect-specific SQL, and execute against live databases, all through a single API. No BI tool in the middle: the full loop from declarative model to query results is programmable, reviewable, and reproducible</li>
 <li><strong>One model, many dialects</strong> — Define your semantic model once in YAML, compile and execute SQL for any supported warehouse</li>
+<li><strong>Cross-schema &amp; cross-database</strong> — Model data objects across multiple schemas and databases; dimensions, measures, and metrics can span schema boundaries in a single query</li>
 <li><strong>Safe by construction</strong> — AST-based SQL generation prevents injection and ensures syntactic correctness</li>
 <li><strong>Precise error reporting</strong> — Validation errors include line and column numbers from your YAML source</li>
 <li><strong>Automatic join resolution</strong> — Declare relationships between data objects; OrionBelt finds optimal join paths using graph algorithms</li>
@@ -1630,6 +1631,10 @@
 <tr>
 <td>OrionBelt ML (OBML)</td>
 <td>YAML-based data objects, dimensions, measures, metrics, joins</td>
+</tr>
+<tr>
+<td>Cross-Schema Queries</td>
+<td>Dimensions, measures, and metrics can span multiple databases and schemas in a single query</td>
 </tr>
 <tr>
 <td>Star Schema &amp; CFL</td>
