@@ -34,6 +34,7 @@ OrionBelt Semantic Layer is an **API-first** semantic engine and query planner f
 - **OBML Model Format** — YAML-based semantic models with data objects, dimensions, measures, metrics, and joins
 - **AST-Based SQL** — Custom SQL AST ensures correct, injection-safe SQL generation
 - **Cross-Schema Queries** — Model data objects across multiple databases and schemas in a single model
+- **Static Model Filters** — Mandatory WHERE conditions baked into the model, applied to every query with auto-join extension
 - **Star Schema & CFL** — Automatic join resolution with Composite Fact Layer for multi-fact queries
 - **REST API** — FastAPI endpoints for model management, validation, compilation, and execution
 - **Gradio UI** — Interactive web interface for model editing, query testing, and ER diagrams
