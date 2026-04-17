@@ -112,8 +112,9 @@ _CSS = """\
 /* compact settings row */
 .settings-row { min-height: 0 !important; }
 
-/* Code editors + SQL output: viewport-percentage heights */
-.code-editor .cm-editor { max-height: 45dvh !important; }
+/* Code editors + SQL output: fixed heights */
+.code-editor .cm-editor { height: 45dvh !important; }
+#ob-query .cm-editor { height: calc(45dvh - 90px) !important; }
 .sql-output .cm-editor { max-height: 20dvh !important; }
 
 /* purple primary button — compact */
@@ -188,11 +189,11 @@ _CSS = """\
 
 /* ── Model picker dropdowns ── */
 .picker-col {
-  gap: 2px !important; padding: 0 !important;
+  gap: 0 !important; padding: 0 !important;
 }
 .picker-row {
   min-height: 0 !important; padding: 0 !important;
-  margin: 0 !important;
+  margin: 0 !important; flex: 0 0 auto !important;
 }
 .picker-row > div { gap: 4px !important; }
 .picker-row label span {
