@@ -234,6 +234,39 @@ class TestSessionModelFlow:
         assert data["dimensions"] == 1
         assert data["measures"] == 1
 
+    async def test_load_model_json_string(self, client: AsyncClient) -> None:
+        """model_json as a JSON string (LLMs sometimes stringify objects)."""
+        sid = (await client.post("/v1/sessions")).json()["session_id"]
+        import json
+
+        model_json_str = json.dumps(
+            {
+                "version": 1.0,
+                "dataObjects": {
+                    "Orders": {
+                        "code": "orders",
+                        "database": "db",
+                        "schema": "public",
+                        "columns": {
+                            "Amount": {"code": "amount", "abstractType": "float"},
+                        },
+                    }
+                },
+                "measures": {
+                    "Revenue": {
+                        "aggregation": "SUM",
+                        "resultType": "float",
+                        "columns": [{"dataObject": "Orders", "column": "Amount"}],
+                    }
+                },
+            }
+        )
+        response = await client.post(
+            f"/v1/sessions/{sid}/models", json={"model_json": model_json_str}
+        )
+        assert response.status_code == 201
+        assert response.json()["data_objects"] == 1
+
     async def test_load_model_no_input(self, client: AsyncClient) -> None:
         sid = (await client.post("/v1/sessions")).json()["session_id"]
         response = await client.post(f"/v1/sessions/{sid}/models", json={})
