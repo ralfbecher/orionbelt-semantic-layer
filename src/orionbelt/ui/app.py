@@ -1777,19 +1777,24 @@ def create_blocks(
                 )
 
             with gr.Tab("Query Results", id=1, visible=query_exec_enabled) as results_tab:
-                result_info = gr.Textbox(
-                    label="Execution Info",
-                    interactive=False,
-                    lines=1,
-                    max_lines=1,
-                )
+                with gr.Row():
+                    result_info = gr.Textbox(
+                        label="Execution Info",
+                        interactive=False,
+                        lines=1,
+                        max_lines=1,
+                    )
+                    csv_download = gr.DownloadButton(
+                        "Download CSV",
+                        visible=False,
+                        variant="secondary",
+                        scale=0,
+                        min_width=140,
+                    )
                 result_table = gr.Dataframe(
                     label="Query Results",
                     interactive=False,
                     wrap=True,
-                )
-                csv_download = gr.DownloadButton(
-                    "Download CSV", visible=False, variant="secondary", scale=0
                 )
 
             # Refresh execute button/tab visibility when API URL changes
