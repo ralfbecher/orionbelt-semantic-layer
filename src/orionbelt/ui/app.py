@@ -1875,9 +1875,12 @@ def create_blocks(
                 import pandas as pd
 
                 if not isinstance(df, pd.DataFrame) or df.empty:
+                    gr.Info("No data to copy")
                     return ""
                 export = df.drop(columns=["#"], errors="ignore")
-                return export.to_csv(sep="\t", index=False)
+                tsv = export.to_csv(sep="\t", index=False)
+                gr.Info("Copied to clipboard")
+                return tsv
 
             copy_data_btn.click(
                 fn=_to_tsv,
@@ -1885,11 +1888,9 @@ def create_blocks(
                 outputs=[copy_buf],
             ).then(
                 fn=None,
-                js="async () => {"
-                "const el = document.querySelector("
-                "'#ob-copy-buf textarea');"
-                "if(el && el.value) {"
-                "await navigator.clipboard.writeText(el.value);}"
+                inputs=[copy_buf],
+                js="async (tsv) => {"
+                "if(tsv) await navigator.clipboard.writeText(tsv);"
                 "}",
             )
 
