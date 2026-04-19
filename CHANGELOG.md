@@ -2,6 +2,20 @@
 
 All notable changes to OrionBelt Semantic Layer are documented here.
 
+## [1.6.2] - 2026-04-19
+
+### Added
+
+- **Query execution in Gradio UI** — new "Execute Query" button and "Query Results" tab with data table, visible when `QUERY_EXECUTE=true`. Calls `/query/execute` and auto-switches to results.
+- **Docker UI instructions in README** — added examples for running API, UI, and Flight images together.
+- **Gradio mount log message** — embedded mode now logs the UI URL on startup.
+
+### Changed
+
+- Version bumped to 1.6.2
+
+---
+
 ## [1.6.1] - 2026-04-18
 
 ### Added
