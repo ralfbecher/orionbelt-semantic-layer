@@ -1785,6 +1785,13 @@ def create_blocks(
                         lines=1,
                         max_lines=1,
                     )
+                    copy_data_btn = gr.Button(
+                        "Copy Data",
+                        visible=False,
+                        variant="secondary",
+                        scale=0,
+                        min_width=120,
+                    )
                     csv_download = gr.DownloadButton(
                         "Download CSV",
                         visible=False,
@@ -1797,6 +1804,7 @@ def create_blocks(
                     interactive=False,
                     wrap=True,
                     max_height=800,
+                    elem_classes=["result-table"],
                 )
 
             # Refresh execute button/tab visibility when API URL changes
@@ -1837,9 +1845,10 @@ def create_blocks(
                 fn=lambda info: (
                     gr.Tabs(selected=1) if info else gr.Tabs(),
                     gr.update(visible=bool(info)),
+                    gr.update(visible=bool(info)),
                 ),
                 inputs=[result_info],
-                outputs=[tabs, csv_download],
+                outputs=[tabs, csv_download, copy_data_btn],
             )
 
             def _export_csv(df: object) -> str | None:
@@ -1859,6 +1868,27 @@ def create_blocks(
                 inputs=[result_table],
                 outputs=[csv_download],
             )
+
+            copy_data_js = """
+            async () => {
+                const table = document.querySelector(
+                    '.result-table table, .gradio-dataframe table'
+                );
+                if (!table) return;
+                const rows = table.querySelectorAll('tr');
+                const lines = [];
+                for (const row of rows) {
+                    const cells = row.querySelectorAll('th, td');
+                    const vals = [];
+                    for (let i = 1; i < cells.length; i++) {
+                        vals.push(cells[i].textContent.trim());
+                    }
+                    if (vals.length) lines.push(vals.join('\\t'));
+                }
+                await navigator.clipboard.writeText(lines.join('\\n'));
+            }
+            """
+            copy_data_btn.click(fn=None, js=copy_data_js)
 
             with gr.Tab("ER Diagram", id=2) as er_tab:
                 with gr.Row():
