@@ -7,7 +7,7 @@
 <p align="center"><strong>Compile and execute YAML semantic models as analytical SQL across multiple database dialects</strong></p>
 
 [![GitHub stars](https://img.shields.io/github/stars/ralfbecher/orionbelt-semantic-layer?style=social)](https://github.com/ralfbecher/orionbelt-semantic-layer)
-[![Version 1.6.1](https://img.shields.io/badge/version-1.6.1-purple.svg)](https://github.com/ralfbecher/orionbelt-semantic-layer/releases)
+[![Version 1.6.2](https://img.shields.io/badge/version-1.6.2-purple.svg)](https://github.com/ralfbecher/orionbelt-semantic-layer/releases)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![License: BSL 1.1](https://img.shields.io/badge/License-BSL_1.1-orange.svg)](https://github.com/ralfbecher/orionbelt-semantic-layer/blob/main/LICENSE)
 [![Docker Hub](https://img.shields.io/docker/pulls/ralforion/orionbelt-api?logo=docker&label=Docker%20Hub)](https://hub.docker.com/repositories/ralforion)
@@ -49,10 +49,19 @@ OrionBelt Semantic Layer is an **API-first** semantic engine and query planner f
 ### Docker (fastest)
 
 ```bash
+# API only
 docker run -p 8080:8080 ralforion/orionbelt-api
+
+# API + Gradio UI (two containers)
+docker run -p 8080:8080 ralforion/orionbelt-api
+docker run -p 7860:7860 -e API_BASE_URL=http://host.docker.internal:8080 ralforion/orionbelt-ui
+
+# API + Flight SQL + Gradio UI (all-in-one image)
+docker run -p 8080:8080 -p 8815:8815 ralforion/orionbelt-flight
+docker run -p 7860:7860 -e API_BASE_URL=http://host.docker.internal:8080 ralforion/orionbelt-ui
 ```
 
-API at `http://localhost:8080` — Swagger docs at [`/docs`](http://localhost:8080/docs)
+API at `http://localhost:8080` — Swagger docs at [`/docs`](http://localhost:8080/docs) — UI at `http://localhost:7860`
 
 ### From Source
 
@@ -153,11 +162,27 @@ Change `dialect` to `bigquery`, `clickhouse`, `databricks`, `dremio`, `duckdb`, 
   <img src="https://raw.githubusercontent.com/ralfbecher/orionbelt-semantic-layer/main/docs/assets/ui-sqlcompiler-dark.png" alt="SQL Compiler in Gradio UI" width="900">
 </p>
 
-Install the `ui` extra and the UI is mounted at `/ui` on the API server:
+- **SQL Compiler** — side-by-side OBML model and query editors with syntax highlighting, 8 dialect selector, one-click compilation with formatted SQL output and query explain
+- **Query Execution** — execute compiled queries against a connected database, view results in a scrollable data table with CSV download and clipboard copy (requires `QUERY_EXECUTE=true`)
+- **ER Diagram** — interactive Mermaid ER diagram with zoom, column toggle, and download (MD/PNG/Turtle)
+- **Editor Toolbar** — clear, undo, redo, upload, download, and copy buttons on all code editors
+- **OSI Import/Export** — convert between OBML and OSI formats
+- **Dark/Light Mode** — toggle via header button, state persisted across sessions
+
+**Embedded mode** — the UI is mounted at `/ui` on the API server:
 
 ```bash
-uv sync --extra ui && uv run orionbelt-api
+uv sync && uv run orionbelt-api
 # -> UI at http://localhost:8000/ui
+```
+
+**Standalone mode** — run API and UI as separate processes:
+
+```bash
+uv sync
+uv run orionbelt-api                                          # API on :8000
+uv run orionbelt-ui                                           # UI on :7860 (connects to API on :8000)
+API_BASE_URL=http://remote-api:8080 uv run orionbelt-ui       # point UI to a remote API
 ```
 
 ## Documentation

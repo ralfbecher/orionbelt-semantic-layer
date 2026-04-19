@@ -129,6 +129,17 @@ _CSS = """\
 .purple-btn:hover {
   background: linear-gradient(135deg, #6d28d9, #7c3aed) !important;
 }
+.orange-btn {
+  background: linear-gradient(135deg, #ea580c, #f97316) !important;
+  border: none !important;
+  color: white !important;
+  padding-top: 6px !important;
+  padding-bottom: 6px !important;
+  margin: 0 !important;
+}
+.orange-btn:hover {
+  background: linear-gradient(135deg, #c2410c, #ea580c) !important;
+}
 
 /* Custom upload button: match Gradio's native toolbar button style */
 .ob-upload-btn {
@@ -489,7 +500,7 @@ _INJECT_UPLOAD_JS = (
         var toolbar = svgBtn.closest('button').parentElement;
         var btn = document.createElement('button');
         btn.className = 'ob-upload-btn ob-clear-btn';
-        btn.title = 'Clear query';
+        btn.title = codeId === 'ob-model' ? 'Clear model' : 'Clear query';
         btn.innerHTML = '\u2715';
         btn.style.fontSize = '14px';
         btn.addEventListener('click', function(e) {
@@ -537,7 +548,7 @@ _INJECT_UPLOAD_JS = (
         var redo = document.createElement('button');
         redo.className = 'ob-upload-btn ob-redo-btn';
         redo.title = 'Redo';
-        redo.innerHTML = '\u21B7';
+        redo.innerHTML = '\u21b7';
         redo.style.fontSize = '16px';
         redo.addEventListener('click', function(e) {
             e.preventDefault(); e.stopPropagation();
@@ -547,7 +558,7 @@ _INJECT_UPLOAD_JS = (
         var undo = document.createElement('button');
         undo.className = 'ob-upload-btn ob-undo-btn';
         undo.title = 'Undo';
-        undo.innerHTML = '\u21B6';
+        undo.innerHTML = '\u21b6';
         undo.style.fontSize = '16px';
         undo.addEventListener('click', function(e) {
             e.preventDefault(); e.stopPropagation();
@@ -563,6 +574,7 @@ _INJECT_UPLOAD_JS = (
     var iv = setInterval(function() {
         addUploadBtn('ob-model', 'ob-model-bridge');
         addUploadBtn('ob-query', 'ob-query-bridge');
+        addClearBtn('ob-model', 'ob-model-bridge');
         addClearBtn('ob-query', 'ob-query-bridge');
         addUndoRedoBtns('ob-model');
         addUndoRedoBtns('ob-query');
@@ -1155,6 +1167,149 @@ def compile_sql(
         return f"Error: {exc}", "", session_state, model_state
 
 
+def execute_query(
+    model_yaml: str,
+    query_yaml: str,
+    dialect: str,
+    api_url: str,
+    session_state: dict[str, str] | None,
+    model_state: dict[str, str] | None,
+) -> tuple[
+    str,
+    str,
+    dict[str, str] | None,
+    dict[str, str] | None,
+    object,
+    str,
+]:
+    """Execute query via the REST API and return results as a table.
+
+    Returns ``(sql_output, explain_yaml, session_state, model_state,
+    dataframe, result_info)``.
+    """
+    import pandas as pd
+
+    empty_df = pd.DataFrame()
+    try:
+        client, session_id, model_id, session_state, model_state = _ensure_session_and_model(
+            model_yaml, api_url, session_state, model_state
+        )
+
+        try:
+            query_dict = yaml.safe_load(query_yaml)
+        except yaml.YAMLError as exc:
+            return f"Error: Invalid query YAML\n{exc}", "", session_state, model_state, empty_df, ""
+
+        if not isinstance(query_dict, dict):
+            return (
+                "Error: Query YAML must be a mapping (dict), not a scalar or list",
+                "",
+                session_state,
+                model_state,
+                empty_df,
+                "",
+            )
+
+        if "query" in query_dict and "select" not in query_dict:
+            query_dict = query_dict["query"]
+
+        resp = client.post(
+            f"/v1/sessions/{session_id}/query/execute",
+            json={"model_id": model_id, "query": query_dict, "dialect": dialect},
+            timeout=120,
+        )
+        if resp.status_code == 404:
+            client, session_id, model_id, session_state, model_state = _ensure_session_and_model(
+                model_yaml, api_url, None, None
+            )
+            resp = client.post(
+                f"/v1/sessions/{session_id}/query/execute",
+                json={"model_id": model_id, "query": query_dict, "dialect": dialect},
+                timeout=120,
+            )
+        if resp.status_code == 503:
+            detail = resp.json().get("detail", resp.text)
+            return (
+                f"Error: {detail}",
+                "",
+                session_state,
+                model_state,
+                empty_df,
+                "",
+            )
+        if resp.status_code in (400, 422):
+            detail = resp.json().get("detail", resp.text)
+            return (
+                f"Error: Query execution failed\n{_format_api_errors(detail)}",
+                "",
+                session_state,
+                model_state,
+                empty_df,
+                "",
+            )
+        resp.raise_for_status()
+        data = resp.json()
+
+        sql: str = data["sql"]
+        formatted = _format_sql(sql)
+        explain_yaml = _build_explain_yaml(data)
+
+        columns = data.get("columns", [])
+        rows = data.get("rows", [])
+        row_count = data.get("row_count", 0)
+        exec_time = data.get("execution_time_ms", 0.0)
+
+        col_names = [c["name"] for c in columns]
+        df = pd.DataFrame(rows, columns=col_names) if col_names else pd.DataFrame(rows)
+        df.insert(0, "#", range(1, len(df) + 1))
+
+        warnings: list[str] = data.get("warnings", [])
+        sql_valid: bool = data.get("sql_valid", True)
+        header_lines: list[str] = []
+        if not sql_valid:
+            header_lines.append("-- WARNING: SQL validation failed")
+        for w in warnings:
+            header_lines.append(f"-- WARNING: {w}")
+        if header_lines:
+            header_lines.append("")
+            formatted = "\n".join(header_lines) + "\n" + formatted
+
+        info = f"{row_count} rows in {exec_time:.0f} ms"
+        return formatted, explain_yaml, session_state, model_state, df, info
+
+    except _ModelValidationError as exc:
+        return (
+            f"Error: Model validation failed\n{_format_api_errors(exc.detail)}",
+            "",
+            session_state,
+            model_state,
+            empty_df,
+            "",
+        )
+    except httpx.ConnectError:
+        api = api_url.rstrip("/") if api_url else _DEFAULT_API_URL
+        return (
+            f"Error: Cannot connect to API at {api}\n"
+            "Make sure the server is running: uv run orionbelt-api",
+            "",
+            session_state,
+            model_state,
+            empty_df,
+            "",
+        )
+    except httpx.HTTPStatusError as exc:
+        return (
+            f"Error: HTTP {exc.response.status_code}\n{exc.response.text}",
+            "",
+            session_state,
+            model_state,
+            empty_df,
+            "",
+        )
+    except Exception as exc:
+        return f"Error: {exc}", "", session_state, model_state, empty_df, ""
+
+
 def validate_model(
     model_yaml: str,
     api_url: str,
@@ -1317,7 +1472,10 @@ def _insert_into_query(query: str, value: str, section: str) -> str:
     return "\n".join(lines) + "\n"
 
 
-def create_blocks(default_api_url: str | None = None) -> Any:
+def create_blocks(
+    default_api_url: str | None = None,
+    embedded_settings: dict[str, Any] | None = None,
+) -> Any:
     """Build and return a ``gr.Blocks`` instance (without launching).
 
     Parameters
@@ -1326,6 +1484,10 @@ def create_blocks(default_api_url: str | None = None) -> Any:
         Override the default API URL shown in the UI.  When the UI is
         co-hosted inside FastAPI (mounted at ``/ui``), this is set to the
         local server address so the UI talks to the same process.
+    embedded_settings:
+        Pre-built settings dict passed by the API host process in embedded
+        mode.  Avoids an HTTP round-trip to ``/v1/settings`` before the
+        server is listening.
     """
     import gradio as gr
 
@@ -1333,14 +1495,15 @@ def create_blocks(default_api_url: str | None = None) -> Any:
 
     cohosted = default_api_url is not None
     api_base = default_api_url or _DEFAULT_API_URL
-    dialects = _fetch_dialects(api_base)
+    dialects = _fetch_dialects(api_base) if not cohosted else _FALLBACK_DIALECTS
     default_dialect = (
         "postgres" if "postgres" in dialects else (dialects[0] if dialects else "postgres")
     )
 
-    # Detect single-model mode from the API /settings endpoint
-    api_settings = _fetch_settings(api_base)
+    # In embedded mode use pre-supplied settings; standalone fetches via HTTP
+    api_settings = embedded_settings if embedded_settings is not None else _fetch_settings(api_base)
     single_model = api_settings.get("single_model_mode", False)
+    query_exec_enabled = api_settings.get("query_execute", False)
     if single_model and api_settings.get("model_yaml"):
         example_model = api_settings["model_yaml"]
     else:
@@ -1391,7 +1554,7 @@ def create_blocks(default_api_url: str | None = None) -> Any:
             )
             dark_btn = gr.Button("Light / Dark", size="sm", scale=0, min_width=120)
 
-        with gr.Tabs():
+        with gr.Tabs() as tabs:
             with gr.Tab("SQL Compiler", id=0):
                 with gr.Row(elem_classes=["settings-row"]):
                     dialect = gr.Dropdown(
@@ -1416,9 +1579,7 @@ def create_blocks(default_api_url: str | None = None) -> Any:
                     export_osi_btn = gr.Button("Export to OSI", size="sm", scale=0, min_width=120)
                     download_obsl_btn = gr.Button("\u2193 OBSL", size="sm", scale=0, min_width=80)
 
-                init_dims, init_meas, init_fields = _extract_model_items(
-                    example_model
-                )
+                init_dims, init_meas, init_fields = _extract_model_items(example_model)
 
                 with gr.Row():
                     model_label = (
@@ -1537,13 +1698,23 @@ def create_blocks(default_api_url: str | None = None) -> Any:
                         outputs=[query_input, picker],
                     )
 
-
-                with gr.Row():
+                with gr.Row(equal_height=True):
                     compile_btn = gr.Button(
                         "Compile SQL", variant="primary", elem_classes=["purple-btn"]
                     )
+                    execute_btn = gr.Button(
+                        "Execute Query",
+                        variant="primary",
+                        scale=0,
+                        min_width=140,
+                        visible=query_exec_enabled,
+                        elem_classes=["orange-btn"],
+                    )
                     validate_btn = gr.Button(
-                        "Validate Model", variant="secondary", scale=0, min_width=140
+                        "Validate Model",
+                        variant="secondary",
+                        scale=0,
+                        min_width=140,
                     )
 
                 with gr.Row():
@@ -1606,7 +1777,124 @@ def create_blocks(default_api_url: str | None = None) -> Any:
                     js=_DOWNLOAD_TTL_JS,
                 )
 
-            with gr.Tab("ER Diagram", id=1) as er_tab:
+            with gr.Tab("Query Results", id=1, visible=query_exec_enabled) as results_tab:
+                with gr.Row():
+                    result_info = gr.Textbox(
+                        label="Execution Info",
+                        interactive=False,
+                        lines=1,
+                        max_lines=1,
+                    )
+                    copy_data_btn = gr.Button(
+                        "Copy Data",
+                        visible=False,
+                        variant="secondary",
+                        scale=0,
+                        min_width=120,
+                    )
+                    csv_download = gr.DownloadButton(
+                        "Download CSV",
+                        visible=False,
+                        variant="secondary",
+                        scale=0,
+                        min_width=140,
+                    )
+                result_table = gr.Dataframe(
+                    label="Query Results",
+                    interactive=False,
+                    wrap=True,
+                    max_height=800,
+                    elem_classes=["result-table"],
+                )
+
+            # Refresh execute button/tab visibility when API URL changes
+            def _refresh_query_exec_visibility(api_url_val: str) -> tuple[object, object]:
+                import gradio as gr
+
+                _cached_settings.pop(api_url_val.rstrip("/"), None)
+                s = _fetch_settings(api_url_val)
+                enabled = s.get("query_execute", False)
+                return gr.update(visible=enabled), gr.update(visible=enabled)
+
+            api_url.blur(
+                fn=_refresh_query_exec_visibility,
+                inputs=[api_url],
+                outputs=[execute_btn, results_tab],
+            )
+
+            # Wire execute button after result components are defined
+            execute_btn.click(
+                fn=execute_query,
+                inputs=[
+                    model_input,
+                    query_input,
+                    dialect,
+                    api_url,
+                    session_state,
+                    model_state,
+                ],
+                outputs=[
+                    sql_output,
+                    explain_output,
+                    session_state,
+                    model_state,
+                    result_table,
+                    result_info,
+                ],
+            ).then(
+                fn=lambda info: (
+                    gr.Tabs(selected=1) if info else gr.Tabs(),
+                    gr.update(visible=bool(info)),
+                    gr.update(visible=bool(info)),
+                ),
+                inputs=[result_info],
+                outputs=[tabs, csv_download, copy_data_btn],
+            )
+
+            def _export_csv(df: object) -> str | None:
+                import pandas as pd
+
+                if not isinstance(df, pd.DataFrame) or df.empty:
+                    return None
+                import tempfile
+
+                _, path = tempfile.mkstemp(suffix=".csv", prefix="query_results_")
+                export = df.drop(columns=["#"], errors="ignore")
+                export.to_csv(path, index=False)
+                return path
+
+            csv_download.click(
+                fn=_export_csv,
+                inputs=[result_table],
+                outputs=[csv_download],
+            )
+
+            copy_buf = gr.Textbox(visible=False, elem_id="ob-copy-buf")
+
+            def _to_tsv(df: object) -> str:
+                import pandas as pd
+
+                if not isinstance(df, pd.DataFrame) or df.empty:
+                    gr.Info("No data to copy")
+                    return ""
+                export = df.drop(columns=["#"], errors="ignore")
+                tsv = export.to_csv(sep="\t", index=False)
+                gr.Info("Copied to clipboard")
+                return tsv
+
+            copy_data_btn.click(
+                fn=_to_tsv,
+                inputs=[result_table],
+                outputs=[copy_buf],
+            ).then(
+                fn=None,
+                inputs=[copy_buf],
+                js="async (tsv) => {"
+                "if(tsv) await navigator.clipboard.writeText(tsv);"
+                "}",
+            )
+
+            with gr.Tab("ER Diagram", id=2) as er_tab:
                 with gr.Row():
                     show_columns_cb = gr.Checkbox(value=True, label="Show columns")
                     zoom_slider = gr.Slider(
@@ -1707,7 +1995,7 @@ def create_blocks(default_api_url: str | None = None) -> Any:
                     js=_DOWNLOAD_PNG_JS,
                 )
 
-            with gr.Tab("Settings", id=2) as settings_tab:
+            with gr.Tab("Settings", id=3) as settings_tab:
                 settings_output = gr.Code(
                     language="yaml",
                     label="API Settings",
@@ -1795,6 +2083,10 @@ def create_ui() -> None:
     import os
 
     import uvicorn
+
+    from orionbelt import __version__
+
+    print(f"OrionBelt Semantic Layer UI v{__version__}")
 
     api_url = os.environ.get("API_BASE_URL") or None
     port = int(os.environ.get("PORT", "7860"))

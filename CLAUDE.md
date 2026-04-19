@@ -10,12 +10,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 # Install
-uv sync                           # main deps only
-uv sync --all-extras --all-groups # all deps (dev, docs, ui, type stubs)
+uv sync                           # all deps (dev, docs, ui, flight, drivers)
 
 # Run servers
 uv run orionbelt-api              # REST API on :8000
-uv run orionbelt-ui               # Gradio UI (requires --extra ui)
+uv run orionbelt-ui               # Gradio UI
 
 # Tests
 uv run pytest                     # all tests
@@ -44,6 +43,10 @@ docker run -p 7860:7860 -e API_BASE_URL=http://host.docker.internal:8080 orionbe
 ./tests/docker/test_docker.sh                    # 15 local Docker tests
 ./tests/cloudrun/test_cloudrun.sh <CLOUD_RUN_URL> # 30 live API tests
 ```
+
+## Code Review
+
+Code changes are reviewed with **OpenAI Codex**. Write clean, well-structured code that passes automated review. Avoid unnecessary complexity, dead code, or patterns that would trigger review warnings. Ensure all changes pass `ruff check`, `ruff format`, and `mypy` before submitting.
 
 ## Architecture — Compilation Pipeline
 
@@ -217,4 +220,4 @@ Environment variables or `.env` file (via pydantic-settings):
 - mypy strict mode with `pydantic.mypy` plugin; needs `types-networkx` and `types-PyYAML` stubs
 - `list` is invariant in mypy: `list[Literal]` != `list[Expr]` — annotate with `list[Expr]`
 - ruamel.yaml: `data.lc.key(key)` is a method call (not dict access); always wrap in try/except
-- `uv sync` without `--all-extras --all-groups` skips dev/docs/ui deps
+- `uv sync` installs all deps (dev, docs, ui, flight, drivers) via the default `dev` dependency group
