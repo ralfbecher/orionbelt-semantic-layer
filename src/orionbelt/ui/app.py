@@ -1758,7 +1758,7 @@ def create_blocks(
                     js=_DOWNLOAD_TTL_JS,
                 )
 
-            with gr.Tab("Query Results", id=1, visible=query_exec_enabled):
+            with gr.Tab("Query Results", id=1, visible=query_exec_enabled) as results_tab:
                 result_info = gr.Textbox(
                     label="Execution Info",
                     interactive=False,
@@ -1770,6 +1770,21 @@ def create_blocks(
                     interactive=False,
                     wrap=True,
                 )
+
+            # Refresh execute button/tab visibility when API URL changes
+            def _refresh_query_exec_visibility(api_url_val: str) -> tuple[object, object]:
+                import gradio as gr
+
+                _cached_settings.pop(api_url_val.rstrip("/"), None)
+                s = _fetch_settings(api_url_val)
+                enabled = s.get("query_execute", False)
+                return gr.update(visible=enabled), gr.update(visible=enabled)
+
+            api_url.blur(
+                fn=_refresh_query_exec_visibility,
+                inputs=[api_url],
+                outputs=[execute_btn, results_tab],
+            )
 
             # Wire execute button after result components are defined
             execute_btn.click(
