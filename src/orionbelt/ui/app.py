@@ -1869,26 +1869,29 @@ def create_blocks(
                 outputs=[csv_download],
             )
 
-            copy_data_js = """
-            async () => {
-                const table = document.querySelector(
-                    '.result-table table, .gradio-dataframe table'
-                );
-                if (!table) return;
-                const rows = table.querySelectorAll('tr');
-                const lines = [];
-                for (const row of rows) {
-                    const cells = row.querySelectorAll('th, td');
-                    const vals = [];
-                    for (let i = 1; i < cells.length; i++) {
-                        vals.push(cells[i].textContent.trim());
-                    }
-                    if (vals.length) lines.push(vals.join('\\t'));
-                }
-                await navigator.clipboard.writeText(lines.join('\\n'));
-            }
-            """
-            copy_data_btn.click(fn=None, js=copy_data_js)
+            copy_buf = gr.Textbox(visible=False, elem_id="ob-copy-buf")
+
+            def _to_tsv(df: object) -> str:
+                import pandas as pd
+
+                if not isinstance(df, pd.DataFrame) or df.empty:
+                    return ""
+                export = df.drop(columns=["#"], errors="ignore")
+                return export.to_csv(sep="\t", index=False)
+
+            copy_data_btn.click(
+                fn=_to_tsv,
+                inputs=[result_table],
+                outputs=[copy_buf],
+            ).then(
+                fn=None,
+                js="async () => {"
+                "const el = document.querySelector("
+                "'#ob-copy-buf textarea');"
+                "if(el && el.value) {"
+                "await navigator.clipboard.writeText(el.value);}"
+                "}",
+            )
 
             with gr.Tab("ER Diagram", id=2) as er_tab:
                 with gr.Row():
