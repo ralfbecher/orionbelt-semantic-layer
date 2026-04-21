@@ -546,12 +546,25 @@ async def shortcut_execute_query(
     except ExecutionError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from None
 
-    from orionbelt.api.routers.sessions import _build_explain_response
+    from orionbelt.api.routers.sessions import (
+        _build_explain_response,
+        _build_format_map,
+        _build_type_map,
+    )
 
+    type_map = _build_type_map(model)
+    fmt_map = _build_format_map(model)
     return QueryExecuteResponse(
         sql=result.sql,
         dialect=result.dialect,
-        columns=[ColumnMetadata(name=c.name, type=c.type_hint) for c in exec_result.columns],
+        columns=[
+            ColumnMetadata(
+                name=c.name,
+                type=type_map.get(c.name, c.type_hint),
+                format=fmt_map.get(c.name),
+            )
+            for c in exec_result.columns
+        ],
         rows=exec_result.rows,
         row_count=exec_result.row_count,
         execution_time_ms=exec_result.execution_time_ms,

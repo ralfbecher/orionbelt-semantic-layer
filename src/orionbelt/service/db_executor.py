@@ -107,12 +107,21 @@ def _map_type_code(type_code: Any) -> str:
             return "binary"
     except ImportError:
         pass
+    # Fallback: inspect string representation of the type object (works for
+    # psycopg2, mysql-connector, pyodbc, etc. which expose descriptive names)
+    s = str(type_code).upper()
+    if any(k in s for k in ("NUMBER", "NUMERIC", "DECIMAL", "INT", "FLOAT", "DOUBLE", "REAL")):
+        return "number"
+    if any(k in s for k in ("DATE", "TIME", "TIMESTAMP", "INTERVAL")):
+        return "datetime"
+    if any(k in s for k in ("BINARY", "BLOB", "BYTEA", "BYTES")):
+        return "binary"
     return "string"
 
 
 _DUCKDB_NUMERIC_PREFIXES = (
     "TINYINT", "SMALLINT", "INTEGER", "BIGINT", "HUGEINT",
-    "FLOAT", "DOUBLE", "DECIMAL", "NUMERIC",
+    "FLOAT", "DOUBLE", "DECIMAL", "NUMERIC", "NUMBER",
     "UTINYINT", "USMALLINT", "UINTEGER", "UBIGINT",
 )
 _DUCKDB_DATETIME_PREFIXES = ("DATE", "TIME", "TIMESTAMP", "INTERVAL")

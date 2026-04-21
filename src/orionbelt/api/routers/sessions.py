@@ -386,6 +386,66 @@ async def compile_query(
     )
 
 
+_RESULT_TYPE_TO_HINT: dict[str, str] = {
+    "string": "string",
+    "json": "string",
+    "int": "number",
+    "float": "number",
+    "date": "datetime",
+    "time": "datetime",
+    "time_tz": "datetime",
+    "timestamp": "datetime",
+    "timestamp_tz": "datetime",
+    "boolean": "string",
+}
+
+
+def _build_type_map(model: Any) -> dict[str, str]:
+    """Build a column-name → type-hint map from model definitions.
+
+    Uses ``dataType`` when available (e.g. ``decimal(18, 2)``),
+    then falls back to ``settings.defaultNumericDataType`` for numeric
+    measures/metrics, otherwise maps ``resultType`` to a simple hint.
+    """
+    default_num = None
+    if model.settings and model.settings.default_numeric_data_type:
+        default_num = model.settings.default_numeric_data_type
+
+    types: dict[str, str] = {}
+    for label, dim in model.dimensions.items():
+        types[label] = _RESULT_TYPE_TO_HINT.get(str(dim.result_type), "string")
+    for label, measure in model.measures.items():
+        if measure.data_type:
+            types[label] = measure.data_type
+        elif default_num:
+            types[label] = default_num
+        else:
+            types[label] = _RESULT_TYPE_TO_HINT.get(str(measure.result_type), "number")
+    for label, metric in model.metrics.items():
+        if metric.data_type:
+            types[label] = metric.data_type
+        elif default_num:
+            types[label] = default_num
+        else:
+            types[label] = "number"
+    return types
+
+
+def _build_format_map(model: Any) -> dict[str, str | None]:
+    """Build a column-name → format-string map from model measures/metrics."""
+    fmt: dict[str, str | None] = {}
+    for label, dim in model.dimensions.items():
+        if dim.format:
+            fmt[label] = dim.format
+    for label, measure in model.measures.items():
+        if measure.format:
+            fmt[label] = measure.format
+    for label, metric in model.metrics.items():
+        if metric.format:
+            fmt[label] = metric.format
+    return fmt
+
+
 def _build_explain_response(result: Any) -> ExplainPlanResponse | None:
     """Build an ExplainPlanResponse from a CompilationResult, if explain exists."""
     if not result.explain:
@@ -498,10 +558,19 @@ async def execute_query(
     except ExecutionError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from None
 
+    type_map = _build_type_map(model)
+    fmt_map = _build_format_map(model)
     return QueryExecuteResponse(
         sql=result.sql,
         dialect=result.dialect,
-        columns=[ColumnMetadata(name=c.name, type=c.type_hint) for c in exec_result.columns],
+        columns=[
+            ColumnMetadata(
+                name=c.name,
+                type=type_map.get(c.name, c.type_hint),
+                format=fmt_map.get(c.name),
+            )
+            for c in exec_result.columns
+        ],
         rows=exec_result.rows,
         row_count=exec_result.row_count,
         execution_time_ms=exec_result.execution_time_ms,

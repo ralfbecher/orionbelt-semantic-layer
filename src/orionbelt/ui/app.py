@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 from typing import Any
 
+import gradio as gr
 import httpx
 import sqlparse
 import yaml
@@ -244,6 +245,61 @@ _ALIGN_HEADERS_JS = """
 }
 """
 
+def _parse_number_format(fmt: str | None) -> tuple[bool, int, bool]:
+    """Parse a display format pattern into (use_thousands, decimals, is_percent).
+
+    Supported patterns: ``#,##0.00``, ``#,##0``, ``0.00%``, etc.
+    Returns ``(use_thousands_separator, decimal_places, is_percentage)``.
+    """
+    if not fmt:
+        return (False, -1, False)
+    is_pct = fmt.endswith("%")
+    body = fmt.rstrip("%").strip()
+    use_thousands = "," in body
+    decimals = -1
+    if "." in body:
+        after_dot = body.split(".")[-1]
+        decimals = len(after_dot)
+    elif is_pct:
+        decimals = 0
+    return (use_thousands, decimals, is_pct)
+
+
+_COMMA_DECIMAL_LANGS = frozenset({
+    "de", "fr", "it", "es", "pt", "nl", "da", "nb", "nn", "sv", "fi",
+    "pl", "cs", "sk", "hu", "ro", "bg", "hr", "sl", "sr", "tr", "el",
+    "ru", "uk", "be", "ca", "id",
+})
+
+
+def _locale_separators(locale: str) -> tuple[str, str]:
+    """Return ``(thousands_sep, decimal_sep)`` for a browser locale tag."""
+    lang = locale.split("-")[0].lower() if locale else "en"
+    if lang in _COMMA_DECIMAL_LANGS:
+        return (".", ",")
+    return (",", ".")
+
+
+def _format_number(val: float, fmt: str | None, locale: str = "") -> str:
+    """Format a numeric value using a display format pattern and locale.
+
+    When no format is provided, falls back to Python's default ``str()``.
+    Locale controls the thousands/decimal separators (e.g. ``de`` → ``.`` / ``,``).
+    """
+    use_thousands, decimals, is_pct = _parse_number_format(fmt)
+    if decimals < 0 and not use_thousands and not is_pct:
+        return str(val)
+    if is_pct:
+        val = val * 100
+    if decimals < 0:
+        decimals = 0
+    raw = f"{val:,.{decimals}f}" if use_thousands else f"{val:.{decimals}f}"
+    tsep, dsep = _locale_separators(locale)
+    if tsep != "," or dsep != ".":
+        raw = raw.replace(",", "\x00").replace(".", dsep).replace("\x00", tsep)
+    return raw + ("%" if is_pct else "")
+
+
 _DARK_MODE_INIT_JS = """
 () => {
     if (!window.location.search.includes('__theme=')) {
@@ -251,6 +307,11 @@ _DARK_MODE_INIT_JS = """
         url.searchParams.set('__theme', 'dark');
         window.location.replace(url.href);
     }
+    // Patch metadata download filename on click (capture phase, before browser acts)
+    document.addEventListener('click', function(e) {
+        var a = e.target.closest('#ob-meta-code a.download-link');
+        if (a) a.download = 'response_metadata.yaml';
+    }, true);
 }
 """
 
@@ -1193,6 +1254,7 @@ def execute_query(
     api_url: str,
     session_state: dict[str, str] | None,
     model_state: dict[str, str] | None,
+    request: gr.Request | None = None,
 ) -> tuple[
     str,
     str,
@@ -1203,11 +1265,13 @@ def execute_query(
     str,
     str | None,
     str,
+    str,
 ]:
     """Execute query via the REST API and return results as a table.
 
     Returns ``(sql_output, explain_yaml, session_state, model_state,
-    display_df, export_df, result_info, tsv_path, num_col_indices)``.
+    display_df, export_df, result_info, tsv_path, num_col_indices,
+    meta_yaml)``.
     """
     import pandas as pd
 
@@ -1230,6 +1294,7 @@ def execute_query(
                 "",
                 None,
                 "",
+                "",
             )
 
         if not isinstance(query_dict, dict):
@@ -1242,6 +1307,7 @@ def execute_query(
                 empty_df,
                 "",
                 None,
+                "",
                 "",
             )
 
@@ -1274,6 +1340,7 @@ def execute_query(
                 "",
                 None,
                 "",
+                "",
             )
         if resp.status_code in (400, 422):
             detail = resp.json().get("detail", resp.text)
@@ -1286,6 +1353,7 @@ def execute_query(
                 empty_df,
                 "",
                 None,
+                "",
                 "",
             )
         resp.raise_for_status()
@@ -1302,6 +1370,7 @@ def execute_query(
 
         col_names = [c["name"] for c in columns]
         col_type_map = {c["name"]: c.get("type", "string") for c in columns}
+        col_fmt_map = {c["name"]: c.get("format") for c in columns}
         df = pd.DataFrame(rows, columns=col_names) if col_names else pd.DataFrame(rows)
         num_cols: set[str] = set()
         for cname in col_names:
@@ -1321,6 +1390,15 @@ def execute_query(
         df.insert(0, "#", range(1, len(df) + 1))
 
         export_df = df.copy()
+        accept_lang = ""
+        if request and hasattr(request, "headers"):
+            accept_lang = request.headers.get("accept-language", "")
+        loc = accept_lang.split(",")[0].strip() if accept_lang else ""
+        for cname in num_cols:
+            fmt = col_fmt_map.get(cname)
+            export_df[cname] = export_df[cname].apply(
+                lambda v, f=fmt, lc=loc: _format_number(float(v), f, lc) if pd.notna(v) else v
+            )
 
         import html as _html
 
@@ -1335,7 +1413,11 @@ def execute_query(
                 v = row[cname]
                 if cname in num_cols:
                     d_row.append(v if pd.notna(v) else None)
-                    disp_row.append(f"{_rtag}{v}</span>" if pd.notna(v) else f"{_rtag}-</span>")
+                    if pd.notna(v):
+                        disp = _format_number(float(v), col_fmt_map.get(cname), loc)
+                        disp_row.append(f"{_rtag}{_html.escape(disp)}</span>")
+                    else:
+                        disp_row.append(f"{_rtag}-</span>")
                 else:
                     d_row.append(v if pd.notna(v) else None)
                     disp_row.append(_html.escape(str(v)) if pd.notna(v) else "-")
@@ -1366,6 +1448,8 @@ def execute_query(
         tz_name = data.get("timezone")
         if tz_name:
             info += f" · TZ: {tz_name}"
+        if loc:
+            info += f" · Locale: {loc}"
 
         import tempfile
 
@@ -1374,6 +1458,27 @@ def execute_query(
 
         num_indices = [str(i + 1) for i, c in enumerate(all_cols) if c in num_cols]
         num_col_str = ",".join(num_indices)
+
+        meta: dict[str, Any] = {}
+        meta["dialect"] = data.get("dialect", "")
+        meta["row_count"] = row_count
+        meta["execution_time_ms"] = round(exec_time, 2)
+        if tz_name:
+            meta["timezone"] = tz_name
+        meta["sql_valid"] = sql_valid
+        if warnings:
+            meta["warnings"] = warnings
+        col_meta = []
+        for c in columns:
+            entry: dict[str, Any] = {"name": c["name"], "type": c.get("type", "string")}
+            if c.get("format"):
+                entry["format"] = c["format"]
+            col_meta.append(entry)
+        meta["columns"] = col_meta
+        resolved = data.get("resolved", {})
+        if resolved:
+            meta["resolved"] = resolved
+        meta_yaml = yaml.dump(meta, default_flow_style=False, sort_keys=False, allow_unicode=True)
 
         return (
             formatted,
@@ -1385,6 +1490,7 @@ def execute_query(
             info,
             tsv_path,
             num_col_str,
+            meta_yaml,
         )
 
     except _ModelValidationError as exc:
@@ -1397,6 +1503,7 @@ def execute_query(
             empty_df,
             "",
             None,
+            "",
             "",
         )
     except httpx.ConnectError:
@@ -1412,6 +1519,7 @@ def execute_query(
             "",
             None,
             "",
+            "",
         )
     except httpx.HTTPStatusError as exc:
         return (
@@ -1424,6 +1532,7 @@ def execute_query(
             "",
             None,
             "",
+            "",
         )
     except Exception as exc:
         return (
@@ -1435,6 +1544,7 @@ def execute_query(
             empty_df,
             "",
             None,
+            "",
             "",
         )
 
@@ -1940,6 +2050,13 @@ def create_blocks(
                     datatype="html",
                     elem_classes=["result-table"],
                 )
+                with gr.Accordion("Response Metadata", open=False, visible=False) as meta_acc:
+                    meta_code = gr.Code(
+                        language="yaml",
+                        interactive=False,
+                        lines=8,
+                        elem_id="ob-meta-code",
+                    )
 
             # Refresh execute button/tab visibility when API URL changes
             def _refresh_query_exec_visibility(api_url_val: str) -> tuple[object, object]:
@@ -1977,15 +2094,17 @@ def create_blocks(
                     result_info,
                     tsv_download,
                     num_cols_box,
+                    meta_code,
                 ],
             ).then(
                 fn=lambda info: (
                     gr.Tabs(selected=1) if info else gr.Tabs(),
                     gr.update(visible=bool(info)),
                     gr.update(visible=bool(info)),
+                    gr.update(visible=bool(info)),
                 ),
                 inputs=[result_info],
-                outputs=[tabs, tsv_download, copy_data_btn],
+                outputs=[tabs, tsv_download, copy_data_btn, meta_acc],
             ).then(
                 fn=None,
                 inputs=[num_cols_box],

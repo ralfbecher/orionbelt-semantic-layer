@@ -67,6 +67,10 @@ class ColumnMetadata(BaseModel):
 
     name: str
     type: str = Field(description="Type hint: string, number, datetime, binary")
+    format: str | None = Field(
+        default=None,
+        description="Display format pattern from model (e.g. '#,##0.00', '0.00%')",
+    )
 
 
 class QueryExecuteResponse(BaseModel):
