@@ -305,12 +305,14 @@ def wrap_with_filter_context(
                 )
             )
 
-    # --- ORDER BY remapping ---
+    # --- ORDER BY remapping: resolve to CTE aliases ---
+    dim_map: dict[tuple[str, str | None], str] = {
+        (d.source_column, d.object_name): d.name for d in resolved.dimensions
+    }
+    measure_exprs: list[tuple[Expr, str]] = [(m.expression, m.name) for m in resolved.measures]
     outer_order_by: list[OrderByItem] = []
     for ob in ast.order_by:
-        remapped = ob.expr
-        if isinstance(remapped, ColumnRef) and remapped.table is not None:
-            remapped = ColumnRef(name=remapped.name, table="main")
+        remapped = _remap_fc_order_expr(ob.expr, dim_map, measure_exprs)
         outer_order_by.append(OrderByItem(expr=remapped, desc=ob.desc, nulls_last=ob.nulls_last))
 
     return Select(
@@ -325,3 +327,20 @@ def wrap_with_filter_context(
         offset=ast.offset,
         ctes=all_ctes,
     )
+
+
+def _remap_fc_order_expr(
+    expr: Expr,
+    dim_map: dict[tuple[str, str | None], str],
+    measure_exprs: list[tuple[Expr, str]],
+) -> Expr:
+    """Remap one ORDER BY expression for the filter-context outer query."""
+    if isinstance(expr, ColumnRef) and expr.table is not None:
+        key = (expr.name, expr.table)
+        if key in dim_map:
+            return ColumnRef(name=dim_map[key], table="main")
+        return ColumnRef(name=expr.name, table="main")
+    for meas_expr, name in measure_exprs:
+        if expr is meas_expr or expr == meas_expr:
+            return ColumnRef(name=name, table="main")
+    return expr
