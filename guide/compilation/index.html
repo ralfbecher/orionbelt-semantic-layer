@@ -754,6 +754,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../grain-filter-context/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Grain & Filter Context
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../period-over-period/" class="md-nav__link">
         
   
@@ -1040,7 +1068,7 @@
 </nav>
 <div class="obml-version-badge">
   OBML v1.0<br>
-  OrionBelt v1.7.1
+  OrionBelt v1.8.0
 </div>
       
     </li>
@@ -1882,7 +1910,7 @@
 </nav>
 <div class="obml-version-badge">
   OBML v1.0<br>
-  OrionBelt v1.7.1
+  OrionBelt v1.8.0
 </div>
                   </div>
                 </div>
@@ -2334,20 +2362,23 @@
 </span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>        <span class="k">else</span><span class="p">:</span>
 </span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>            <span class="n">plan</span> <span class="o">=</span> <span class="n">StarSchemaPlanner</span><span class="o">.</span><span class="n">plan</span><span class="p">(</span><span class="n">resolved</span><span class="p">,</span> <span class="n">model</span><span class="p">)</span>
 </span><span id="__span-8-11"><a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a>
-</span><span id="__span-8-12"><a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a>        <span class="c1"># Phase 2.4: PoP wrap (period-over-period metrics)</span>
-</span><span id="__span-8-13"><a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a>        <span class="n">wrapped_ast</span> <span class="o">=</span> <span class="n">wrap_with_pop</span><span class="p">(</span><span class="n">plan</span><span class="o">.</span><span class="n">ast</span><span class="p">,</span> <span class="n">resolved</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">dialect</span><span class="p">,</span> <span class="n">qualify_table</span><span class="p">)</span>
+</span><span id="__span-8-12"><a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a>        <span class="c1"># Phase 2.3: Filter context wrap (measures with filterContext)</span>
+</span><span id="__span-8-13"><a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a>        <span class="n">wrapped_ast</span> <span class="o">=</span> <span class="n">wrap_with_filter_context</span><span class="p">(</span><span class="n">plan</span><span class="o">.</span><span class="n">ast</span><span class="p">,</span> <span class="n">resolved</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">dialect</span><span class="p">,</span> <span class="n">qualify_table</span><span class="p">)</span>
 </span><span id="__span-8-14"><a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a>
-</span><span id="__span-8-15"><a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a>        <span class="c1"># Phase 2.5: Total wrap (grand total measures)</span>
-</span><span id="__span-8-16"><a id="__codelineno-8-16" name="__codelineno-8-16" href="#__codelineno-8-16"></a>        <span class="n">wrapped_ast</span> <span class="o">=</span> <span class="n">wrap_with_totals</span><span class="p">(</span><span class="n">wrapped_ast</span><span class="p">,</span> <span class="n">resolved</span><span class="p">)</span>
+</span><span id="__span-8-15"><a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a>        <span class="c1"># Phase 2.4: PoP wrap (period-over-period metrics)</span>
+</span><span id="__span-8-16"><a id="__codelineno-8-16" name="__codelineno-8-16" href="#__codelineno-8-16"></a>        <span class="n">wrapped_ast</span> <span class="o">=</span> <span class="n">wrap_with_pop</span><span class="p">(</span><span class="n">wrapped_ast</span><span class="p">,</span> <span class="n">resolved</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">dialect</span><span class="p">,</span> <span class="n">qualify_table</span><span class="p">)</span>
 </span><span id="__span-8-17"><a id="__codelineno-8-17" name="__codelineno-8-17" href="#__codelineno-8-17"></a>
-</span><span id="__span-8-18"><a id="__codelineno-8-18" name="__codelineno-8-18" href="#__codelineno-8-18"></a>        <span class="c1"># Phase 2.6: Cumulative wrap (running/rolling/grain-to-date metrics)</span>
-</span><span id="__span-8-19"><a id="__codelineno-8-19" name="__codelineno-8-19" href="#__codelineno-8-19"></a>        <span class="n">wrapped_ast</span> <span class="o">=</span> <span class="n">wrap_with_cumulative</span><span class="p">(</span><span class="n">wrapped_ast</span><span class="p">,</span> <span class="n">resolved</span><span class="p">)</span>
+</span><span id="__span-8-18"><a id="__codelineno-8-18" name="__codelineno-8-18" href="#__codelineno-8-18"></a>        <span class="c1"># Phase 2.5: Total/grain wrap (grain overrides + grand total measures)</span>
+</span><span id="__span-8-19"><a id="__codelineno-8-19" name="__codelineno-8-19" href="#__codelineno-8-19"></a>        <span class="n">wrapped_ast</span> <span class="o">=</span> <span class="n">wrap_with_totals</span><span class="p">(</span><span class="n">wrapped_ast</span><span class="p">,</span> <span class="n">resolved</span><span class="p">)</span>
 </span><span id="__span-8-20"><a id="__codelineno-8-20" name="__codelineno-8-20" href="#__codelineno-8-20"></a>
-</span><span id="__span-8-21"><a id="__codelineno-8-21" name="__codelineno-8-21" href="#__codelineno-8-21"></a>        <span class="c1"># Phase 3: Code Generation</span>
-</span><span id="__span-8-22"><a id="__codelineno-8-22" name="__codelineno-8-22" href="#__codelineno-8-22"></a>        <span class="n">dialect</span> <span class="o">=</span> <span class="n">DialectRegistry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">dialect_name</span><span class="p">)</span>
-</span><span id="__span-8-23"><a id="__codelineno-8-23" name="__codelineno-8-23" href="#__codelineno-8-23"></a>        <span class="n">sql</span> <span class="o">=</span> <span class="n">CodeGenerator</span><span class="p">(</span><span class="n">dialect</span><span class="p">)</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span><span class="n">wrapped_ast</span><span class="p">)</span>
-</span><span id="__span-8-24"><a id="__codelineno-8-24" name="__codelineno-8-24" href="#__codelineno-8-24"></a>
-</span><span id="__span-8-25"><a id="__codelineno-8-25" name="__codelineno-8-25" href="#__codelineno-8-25"></a>        <span class="k">return</span> <span class="n">CompilationResult</span><span class="p">(</span><span class="n">sql</span><span class="o">=</span><span class="n">sql</span><span class="p">,</span> <span class="n">dialect</span><span class="o">=</span><span class="n">dialect_name</span><span class="p">,</span> <span class="n">resolved</span><span class="o">=...</span><span class="p">,</span> <span class="n">warnings</span><span class="o">=...</span><span class="p">)</span>
+</span><span id="__span-8-21"><a id="__codelineno-8-21" name="__codelineno-8-21" href="#__codelineno-8-21"></a>        <span class="c1"># Phase 2.6: Cumulative wrap (running/rolling/grain-to-date metrics)</span>
+</span><span id="__span-8-22"><a id="__codelineno-8-22" name="__codelineno-8-22" href="#__codelineno-8-22"></a>        <span class="n">wrapped_ast</span> <span class="o">=</span> <span class="n">wrap_with_cumulative</span><span class="p">(</span><span class="n">wrapped_ast</span><span class="p">,</span> <span class="n">resolved</span><span class="p">)</span>
+</span><span id="__span-8-23"><a id="__codelineno-8-23" name="__codelineno-8-23" href="#__codelineno-8-23"></a>
+</span><span id="__span-8-24"><a id="__codelineno-8-24" name="__codelineno-8-24" href="#__codelineno-8-24"></a>        <span class="c1"># Phase 3: Code Generation</span>
+</span><span id="__span-8-25"><a id="__codelineno-8-25" name="__codelineno-8-25" href="#__codelineno-8-25"></a>        <span class="n">dialect</span> <span class="o">=</span> <span class="n">DialectRegistry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">dialect_name</span><span class="p">)</span>
+</span><span id="__span-8-26"><a id="__codelineno-8-26" name="__codelineno-8-26" href="#__codelineno-8-26"></a>        <span class="n">sql</span> <span class="o">=</span> <span class="n">CodeGenerator</span><span class="p">(</span><span class="n">dialect</span><span class="p">)</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span><span class="n">wrapped_ast</span><span class="p">)</span>
+</span><span id="__span-8-27"><a id="__codelineno-8-27" name="__codelineno-8-27" href="#__codelineno-8-27"></a>
+</span><span id="__span-8-28"><a id="__codelineno-8-28" name="__codelineno-8-28" href="#__codelineno-8-28"></a>        <span class="k">return</span> <span class="n">CompilationResult</span><span class="p">(</span><span class="n">sql</span><span class="o">=</span><span class="n">sql</span><span class="p">,</span> <span class="n">dialect</span><span class="o">=</span><span class="n">dialect_name</span><span class="p">,</span> <span class="n">resolved</span><span class="o">=...</span><span class="p">,</span> <span class="n">warnings</span><span class="o">=...</span><span class="p">)</span>
 </span></code></pre></div>
 <p>The <code>CompilationResult</code> includes:</p>
 <table>
