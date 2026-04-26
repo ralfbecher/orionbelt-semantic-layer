@@ -189,6 +189,7 @@ async def shortcut_dimension(
         column=dim.column,
         result_type=dim.result_type.value,
         time_grain=dim.time_grain.value if dim.time_grain else None,
+        via=dim.via,
         format=dim.format,
         owner=dim.owner,
         synonyms=dim.synonyms,

@@ -1635,7 +1635,9 @@ def validate_model(
         return f"Error: {exc}", ""
 
 
-def _extract_model_items(model_yaml: str) -> tuple[list[str], list[str], list[str]]:
+def _extract_model_items(
+    model_yaml: str,
+) -> tuple[list[str | tuple[str, str]], list[str], list[str]]:
     """Extract dimension names, measure/metric names, and field names from model YAML.
 
     Returns ``(dimensions, measures_metrics, fields)``.
@@ -1645,7 +1647,14 @@ def _extract_model_items(model_yaml: str) -> tuple[list[str], list[str], list[st
     except Exception:
         return [], [], []
     raw_dims = raw.get("dimensions", {})
-    dims = sorted(raw_dims.keys()) if isinstance(raw_dims, dict) else []
+    dims: list[str | tuple[str, str]] = []
+    if isinstance(raw_dims, dict):
+        for name, dobj in sorted(raw_dims.items()):
+            via = dobj.get("via") if isinstance(dobj, dict) else None
+            if via:
+                dims.append((f"{name} (via {via})", name))
+            else:
+                dims.append(name)
     raw_meas = raw.get("measures", {})
     measures = list(raw_meas.keys()) if isinstance(raw_meas, dict) else []
     raw_mets = raw.get("metrics", {})

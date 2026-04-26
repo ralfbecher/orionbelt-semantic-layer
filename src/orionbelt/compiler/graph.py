@@ -162,20 +162,37 @@ class JoinGraph:
                 best = node
         return best
 
-    def find_join_path(self, from_objects: set[str], to_objects: set[str]) -> list[JoinStep]:
+    def find_join_path(
+        self,
+        from_objects: set[str],
+        to_objects: set[str],
+        via_constraints: dict[str, str] | None = None,
+    ) -> list[JoinStep]:
         """Find a minimal join path connecting all required data objects.
 
         Uses shortest path for each target object from the set of source objects.
+
+        *via_constraints* maps ``target → via``: for constrained targets, only
+        the ``via`` object is used as the source so the path is forced through it.
         """
         steps: list[JoinStep] = []
         visited_edges: set[tuple[str, str]] = set()
+        via = via_constraints or {}
 
+        # Process via waypoints first so they are in source_list when their
+        # constrained targets are processed.
         all_targets = to_objects - from_objects
+        via_targets = {t for t in all_targets if t in via}
+        non_via_targets = all_targets - via_targets
+        via_waypoints = {via[t] for t in via_targets} - from_objects - via_targets
+        ordered_targets = sorted(via_waypoints) + sorted(non_via_targets) + sorted(via_targets)
+
         source_list = list(from_objects)
 
-        for target in sorted(all_targets):
+        for target in ordered_targets:
             best_path: list[str] | None = None
-            for source in source_list:
+            sources = [via[target]] if target in via and via[target] in source_list else source_list
+            for source in sources:
                 try:
                     path = nx.shortest_path(self._graph, source, target)
                     if best_path is None or len(path) < len(best_path):
@@ -221,7 +238,8 @@ class JoinGraph:
                 steps.append(step)
 
             # Add target to sources for subsequent lookups
-            source_list.append(target)
+            if target not in source_list:
+                source_list.append(target)
 
         return steps
 

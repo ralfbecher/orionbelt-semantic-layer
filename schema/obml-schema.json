@@ -477,6 +477,10 @@
           },
           "minItems": 2
         },
+        "via": {
+          "type": "string",
+          "description": "Intermediate data object name. Forces the join path through this data object to reach the dimension's dataObject. Used for role-playing dimensions (e.g., SalesEmployee vs ReturnEmployee)."
+        },
         "owner": {
           "type": "string",
           "description": "Owner or responsible party for this dimension"

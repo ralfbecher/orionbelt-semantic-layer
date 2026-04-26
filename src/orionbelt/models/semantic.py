@@ -241,6 +241,7 @@ class Dimension(BaseModel):
     time_grain: TimeGrain | None = Field(None, alias="timeGrain")
     description: str | None = None
     format: str | None = None
+    via: str | None = None
     owner: str | None = None
     synonyms: list[str] = Field(default_factory=list)
     custom_extensions: list[CustomExtension] = Field(default_factory=list, alias="customExtensions")

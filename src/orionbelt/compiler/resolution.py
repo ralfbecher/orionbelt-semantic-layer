@@ -122,6 +122,7 @@ class ResolvedQuery:
     measure_source_objects: set[str] = field(default_factory=set)
     metric_components: dict[str, ResolvedMeasure] = field(default_factory=dict)
     use_path_names: list[UsePathName] = field(default_factory=list)
+    via_constraints: dict[str, str] = field(default_factory=dict)
     dimensions_exclude: bool = False
 
     @property
@@ -219,6 +220,10 @@ class QueryResolver:
             if resolved_dim:
                 ctx.result.dimensions.append(resolved_dim)
                 ctx.result.required_objects.add(resolved_dim.object_name)
+                dim_def = ctx.model.dimensions.get(dim_ref.name)
+                if dim_def and dim_def.via:
+                    ctx.result.required_objects.add(dim_def.via)
+                    ctx.result.via_constraints[resolved_dim.object_name] = dim_def.via
 
         # 2. Resolve measures and track their source objects
         for measure_name in query.select.measures:
@@ -251,7 +256,11 @@ class QueryResolver:
             dim_objects = {d.object_name for d in ctx.result.dimensions}
             if not dim_objects <= {ctx.result.base_object}:
                 graph = JoinGraph(model, use_path_names=query.use_path_names or None)
-                steps = graph.find_join_path({ctx.result.base_object}, dim_objects)
+                steps = graph.find_join_path(
+                    {ctx.result.base_object},
+                    dim_objects,
+                    via_constraints=ctx.result.via_constraints or None,
+                )
                 for step in steps:
                     ctx.result.required_objects.add(step.from_object)
                     ctx.result.required_objects.add(step.to_object)
@@ -284,7 +293,9 @@ class QueryResolver:
         ctx.graph = JoinGraph(model, use_path_names=query.use_path_names or None)
         if ctx.result.base_object and len(ctx.result.required_objects) > 1:
             ctx.result.join_steps = ctx.graph.find_join_path(
-                {ctx.result.base_object}, ctx.result.required_objects
+                {ctx.result.base_object},
+                ctx.result.required_objects,
+                via_constraints=ctx.result.via_constraints or None,
             )
 
         # Build set of all objects present in the query's join graph

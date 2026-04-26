@@ -256,6 +256,7 @@ def export_obsl(model: SemanticModel, model_id: str) -> Graph:
         (OBSL.columnTo, OBSL.Join, OBSL.Column),
         (OBSL.dataObject, OBSL.Dimension, OBSL.DataObject),
         (OBSL.column, OBSL.Dimension, OBSL.Column),
+        (OBSL.via, OBSL.Dimension, OBSL.DataObject),
         (OBSL.sourceColumn, OBSL.Measure, OBSL.Column),
         (OBSL.baseMeasure, OBSL.Metric, OBSL.Measure),
         (OBSL.referencesMeasure, OBSL.Metric, OBSL.Measure),
@@ -399,6 +400,9 @@ def export_obsl(model: SemanticModel, model_id: str) -> Graph:
         if dim_col:
             g.add((dim_uri, OBSL.column, dim_col))
 
+        if dim.via:
+            via_uri = _data_object_uri(model_id, dim.via)
+            g.add((dim_uri, OBSL.via, via_uri))
         if dim.time_grain:
             g.add((dim_uri, OBSL.timeGrain, Literal(dim.time_grain.value)))
         if dim.description:

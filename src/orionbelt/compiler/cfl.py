@@ -474,7 +474,11 @@ class CFLPlanner:
             join_targets = leg_required - {lead}
             steps: list[JoinStep] = []
             if join_targets:
-                steps = graph.find_join_path({lead}, leg_required)
+                steps = graph.find_join_path(
+                    {lead},
+                    leg_required,
+                    via_constraints=resolved.via_constraints or None,
+                )
                 for step in steps:
                     target_object = model.data_objects.get(step.to_object)
                     if target_object:
@@ -652,7 +656,13 @@ class CFLPlanner:
         for i, group_dims in enumerate(dim_groups):
             cte_name = f"dim_group_{i:02d}"
             group_cte_names.append(cte_name)
-            cte_query = self._build_group_distinct_select(group_dims, model, graph, qualify)
+            cte_query = self._build_group_distinct_select(
+                group_dims,
+                model,
+                graph,
+                qualify,
+                via_constraints=resolved.via_constraints or None,
+            )
             ctes.append(CTE(name=cte_name, query=cte_query))
 
         # Build "all_pairs": CROSS JOIN of all dim_group CTEs
@@ -747,6 +757,7 @@ class CFLPlanner:
         model: SemanticModel,
         graph: JoinGraph,
         qualify: Callable[[DataObject], str],
+        via_constraints: dict[str, str] | None = None,
     ) -> Select:
         """Build SELECT DISTINCT (via GROUP BY) for a group of dimensions."""
         required_objects = {d.object_name for d in dims}
@@ -776,7 +787,11 @@ class CFLPlanner:
         # Join to reach all dimension objects from root
         all_needed = required_objects | {root}
         if len(all_needed) > 1:
-            steps = graph.find_join_path({root}, all_needed)
+            steps = graph.find_join_path(
+                {root},
+                all_needed,
+                via_constraints=via_constraints,
+            )
             for step in steps:
                 target_obj = model.data_objects.get(step.to_object)
                 if target_obj:
@@ -827,7 +842,11 @@ class CFLPlanner:
         # Required: all dimension objects + all fact tables
         all_needed = all_dim_objects | fact_tables | {best_fact}
         joined: set[str] = {best_fact}
-        steps = graph.find_join_path({best_fact}, all_needed)
+        steps = graph.find_join_path(
+            {best_fact},
+            all_needed,
+            via_constraints=resolved.via_constraints or None,
+        )
         for step in steps:
             # Determine the actual new table to join.
             # For reversed edges, to_object may already be joined and the
