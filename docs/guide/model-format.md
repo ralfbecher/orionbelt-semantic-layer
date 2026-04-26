@@ -112,6 +112,7 @@ dataObjects:
 | `sqlPrecision` | int | No | Informational: numeric precision |
 | `sqlScale` | int | No | Informational: numeric scale |
 | `numClass` | enum | No | Classification of numeric columns to control aggregation behavior. `categorical` (IDs/codes), `additive` (sum-safe), `non-additive` (rates/ratios) |
+| `primaryKey` | bool | No | Marks the column as part of the data object's primary key. Informational only — set on multiple columns for composite keys. Rendered as `PK` in the ER diagram and emitted as `obsl:primaryKey` in the OBSL graph. |
 | `comment` | string | No | Documentation |
 | `synonyms` | list | No | Alternative names or terms (LLM hints) |
 | `owner` | string | No | Responsible team or person |

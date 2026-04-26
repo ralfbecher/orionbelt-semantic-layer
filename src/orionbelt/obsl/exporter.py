@@ -236,6 +236,7 @@ def export_obsl(model: SemanticModel, model_id: str) -> Graph:
         OBSL.offset,
         OBSL.offsetGrain,
         OBSL.comparison,
+        OBSL.primaryKey,
     ):
         g.add((prop, RDF.type, OWL.FunctionalProperty))
 
@@ -301,6 +302,7 @@ def export_obsl(model: SemanticModel, model_id: str) -> Graph:
         OBSL.offset,
         OBSL.offsetGrain,
         OBSL.comparison,
+        OBSL.primaryKey,
     ):
         g.add((prop, RDF.type, OWL.DatatypeProperty))
 
@@ -349,6 +351,8 @@ def export_obsl(model: SemanticModel, model_id: str) -> Graph:
             g.add((col_uri, RDFS.label, Literal(col_name)))
             g.add((col_uri, OBSL.code, Literal(col.code)))
             g.add((col_uri, OBSL.resultType, Literal(col.abstract_type.value)))
+            if col.primary_key:
+                g.add((col_uri, OBSL.primaryKey, Literal(True)))
 
             if col.description:
                 g.add((col_uri, RDFS.comment, Literal(col.description)))

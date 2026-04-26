@@ -186,6 +186,7 @@ class DataObjectColumn(BaseModel):
     sql_precision: int | None = Field(None, alias="sqlPrecision")
     sql_scale: int | None = Field(None, alias="sqlScale")
     num_class: NumClass | None = Field(None, alias="numClass")
+    primary_key: bool = Field(False, alias="primaryKey")
     description: str | None = None
     comment: str | None = None
     owner: str | None = None

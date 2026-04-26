@@ -143,6 +143,7 @@ class ReferenceResolver:
                         sql_precision=fdata.get("sqlPrecision"),
                         sql_scale=fdata.get("sqlScale"),
                         num_class=fdata.get("numClass"),
+                        primary_key=bool(fdata.get("primaryKey", False)),
                         comment=fdata.get("comment"),
                         owner=fdata.get("owner"),
                         synonyms=fdata.get("synonyms", []),

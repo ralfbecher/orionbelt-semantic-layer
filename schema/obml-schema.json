@@ -132,6 +132,11 @@
         "numClass": {
           "$ref": "#/definitions/numClass"
         },
+        "primaryKey": {
+          "type": "boolean",
+          "description": "Marks this column as part of the data object's primary key (informational; multiple columns may set true to express composite keys)",
+          "default": false
+        },
         "description": {
           "type": "string",
           "description": "Business description of this column (semantic layer metadata)"
