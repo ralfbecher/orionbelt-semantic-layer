@@ -13,6 +13,7 @@ dataObjects:
       salesid:
         code: salesid
         abstractType: string
+        primaryKey: true
       salesdate:
         code: salesdate
         abstractType: date
@@ -76,6 +77,7 @@ dataObjects:
       purchaseid:
         code: purchaseid
         abstractType: string
+        primaryKey: true
       purchasedate:
         code: purchasedate
         abstractType: date
@@ -139,6 +141,7 @@ dataObjects:
       returnid:
         code: returnid
         abstractType: string
+        primaryKey: true
       returnsalesid:
         code: returnsalesid
         abstractType: string
@@ -181,6 +184,7 @@ dataObjects:
       shipmentid:
         code: shipmentid
         abstractType: string
+        primaryKey: true
       shipmentsalesid:
         code: shipmentsalesid
         abstractType: string
@@ -226,6 +230,7 @@ dataObjects:
       complid:
         code: complid
         abstractType: string
+        primaryKey: true
       complclientid:
         code: complclientid
         abstractType: string
@@ -247,6 +252,7 @@ dataObjects:
       accountid:
         code: accountid
         abstractType: string
+        primaryKey: true
       iban:
         code: iban
         abstractType: string
@@ -272,6 +278,7 @@ dataObjects:
       clientid:
         code: clientid
         abstractType: string
+        primaryKey: true
       clientname:
         code: clientname
         abstractType: string
@@ -299,6 +306,7 @@ dataObjects:
       productid:
         code: productid
         abstractType: string
+        primaryKey: true
       productname:
         code: productname
         abstractType: string
@@ -335,6 +343,7 @@ dataObjects:
       employeeid:
         code: employeeid
         abstractType: string
+        primaryKey: true
       employeename:
         code: employeename
         abstractType: string
@@ -349,6 +358,7 @@ dataObjects:
       channelid:
         code: channelid
         abstractType: string
+        primaryKey: true
       channelname:
         code: channelname
         abstractType: string
@@ -360,6 +370,7 @@ dataObjects:
       supplierid:
         code: supplierid
         abstractType: string
+        primaryKey: true
       suppliername:
         code: suppliername
         abstractType: string
@@ -374,6 +385,7 @@ dataObjects:
       countryid:
         code: countryid
         abstractType: string
+        primaryKey: true
       countryname:
         code: countryname
         abstractType: string
@@ -395,6 +407,7 @@ dataObjects:
       regionid:
         code: regionid
         abstractType: string
+        primaryKey: true
       regionname:
         code: regionname
         abstractType: string
@@ -406,6 +419,7 @@ dataObjects:
       bankid:
         code: bankid
         abstractType: string
+        primaryKey: true
       bankname:
         code: bankname
         abstractType: string
@@ -417,6 +431,7 @@ dataObjects:
       date:
         code: date
         abstractType: date
+        primaryKey: true
       ym:
         code: ym
         abstractType: string

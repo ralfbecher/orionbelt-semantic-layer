@@ -16,6 +16,7 @@ dataObjects:
       Calendar Date:
         code: date
         abstractType: date
+        primaryKey: true
       Year Month:
         code: ym
         abstractType: string
@@ -34,6 +35,7 @@ dataObjects:
       Country ID:
         code: country_id
         abstractType: string
+        primaryKey: true
       Country Name:
         code: country_name
         abstractType: string
@@ -46,6 +48,7 @@ dataObjects:
       Client ID:
         code: client_id
         abstractType: string
+        primaryKey: true
       Client Name:
         code: client_name
         abstractType: string
@@ -71,6 +74,7 @@ dataObjects:
       Supplier ID:
         code: supplier_id
         abstractType: string
+        primaryKey: true
       Supplier Name:
         code: supplier_name
         abstractType: string
@@ -96,6 +100,7 @@ dataObjects:
       Product ID:
         code: product_id
         abstractType: string
+        primaryKey: true
       Product Name:
         code: product_name
         abstractType: string
@@ -129,6 +134,7 @@ dataObjects:
       Employee ID:
         code: employee_id
         abstractType: string
+        primaryKey: true
       Employee Name:
         code: employee_name
         abstractType: string
@@ -144,6 +150,7 @@ dataObjects:
       Account ID:
         code: account_id
         abstractType: string
+        primaryKey: true
       IBAN:
         code: iban
         abstractType: string
@@ -162,6 +169,7 @@ dataObjects:
       Sales ID:
         code: sales_id
         abstractType: string
+        primaryKey: true
       Sales Date:
         code: sales_date
         abstractType: date
@@ -234,6 +242,7 @@ dataObjects:
       Return ID:
         code: return_id
         abstractType: string
+        primaryKey: true
       Return Sales ID:
         code: return_sales_id
         abstractType: string
@@ -285,6 +294,7 @@ dataObjects:
       Shipment ID:
         code: shipment_id
         abstractType: string
+        primaryKey: true
       Shipment Sales ID:
         code: shipment_sales_id
         abstractType: string
