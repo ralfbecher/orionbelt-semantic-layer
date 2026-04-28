@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/ralfbecher-orionbelt-semantic-layer-badge.png)](https://mseep.ai/app/ralfbecher-orionbelt-semantic-layer)
+
 <p align="center">
   <img src="https://raw.githubusercontent.com/ralfbecher/orionbelt-semantic-layer/main/docs/assets/ORIONBELT_Logo.png" alt="OrionBelt Semantic Layer logo — a stylized belt of three stars" width="400">
 </p>
