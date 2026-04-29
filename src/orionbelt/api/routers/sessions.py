@@ -464,6 +464,15 @@ def _build_execute_response(
     """
     model_type_map = _build_type_map(model)
     fmt_map = _build_format_map(model)
+    # Auto-default for columns without an explicit model-side format — the
+    # executor proposes a pattern based on the column's Arrow / driver type
+    # (None for ints/strings/dates so they stay as bare ``str(val)``;
+    # ``"#,##0.00"`` for floats and decimals). Raw-mode ``select.fields``
+    # projections benefit most: physical columns no longer need a measure
+    # to inherit a sensible locale-aware render.
+    for c in exec_result.columns:
+        if fmt_map.get(c.name) is None and getattr(c, "default_format", None):
+            fmt_map[c.name] = c.default_format
     column_names = [c.name for c in exec_result.columns]
     columns_meta = [
         ColumnMetadata(

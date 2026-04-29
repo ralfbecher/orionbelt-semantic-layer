@@ -673,10 +673,21 @@ INSERT INTO PUBLIC.ORDERS VALUES
 
 
 def _make_execute_sql(conn: duckdb.DuckDBPyConnection):
-    """Create a mock execute_sql that uses the test DuckDB connection."""
+    """Create a mock execute_sql that uses the test DuckDB connection.
+
+    Mirrors the production duckdb-local path so column metadata (type_hint
+    + default_format) lines up with what the real ``execute_sql`` would
+    produce — keeps integration tests honest about the auto-default
+    pipeline.
+    """
 
     import time
     from decimal import Decimal as _Decimal
+
+    from orionbelt.service.db_executor import (
+        _default_format_for_duckdb_type,
+        _duckdb_type_hint,
+    )
 
     def _coerce(v: Any) -> Any:
         return float(v) if isinstance(v, _Decimal) else v
@@ -688,7 +699,14 @@ def _make_execute_sql(conn: duckdb.DuckDBPyConnection):
         result = conn.execute(sql)
         raw_rows = result.fetchall()
         desc = result.description or []
-        columns = [ColumnMeta(name=d[0], type_hint="string") for d in desc]
+        columns = [
+            ColumnMeta(
+                name=d[0],
+                type_hint=_duckdb_type_hint(d[1]) if len(d) > 1 else "string",
+                default_format=(_default_format_for_duckdb_type(d[1]) if len(d) > 1 else None),
+            )
+            for d in desc
+        ]
         rows = [[_coerce(v) for v in r] for r in raw_rows]
         elapsed_ms = (time.monotonic() - t0) * 1000
         return ExecutionResult(
@@ -1188,6 +1206,61 @@ class TestAPIExecuteEndpoint:
             for row in data["rows"]:
                 assert isinstance(row[0], str)  # Order ID — string column
                 assert isinstance(row[1], str)  # Amount — numeric, now stringified
+        finally:
+            reset_session_manager()
+
+    async def test_execute_raw_mode_auto_default_format_for_floats(
+        self, api_duckdb: duckdb.DuckDBPyConnection
+    ) -> None:
+        """Auto-default: raw float columns get ``"#,##0.00"`` from the
+        executor's Arrow type even with no model annotation. Integer
+        columns stay unformatted so IDs render as plain digits.
+        """
+        settings = Settings(session_ttl_seconds=3600, session_cleanup_interval=9999)
+        app = create_app(settings=settings)
+        mgr = SessionManager(
+            ttl_seconds=settings.session_ttl_seconds,
+            cleanup_interval=settings.session_cleanup_interval,
+        )
+        init_session_manager(mgr, query_execute_enabled=True, db_vendor="duckdb")
+        try:
+            mock_exec = _make_execute_sql(api_duckdb)
+            with patch("orionbelt.api.routers.sessions.execute_sql", mock_exec):
+                transport = ASGITransport(app=app)
+                async with AsyncClient(transport=transport, base_url="http://test") as c:
+                    sid = (await c.post("/v1/sessions")).json()["session_id"]
+                    load = await c.post(
+                        f"/v1/sessions/{sid}/models",
+                        json={"model_yaml": SAMPLE_MODEL_YAML},
+                    )
+                    mid = load.json()["model_id"]
+                    response = await c.post(
+                        f"/v1/sessions/{sid}/query/execute?format_values=true&locale=de",
+                        json={
+                            "model_id": mid,
+                            "query": {
+                                "select": {
+                                    "fields": ["Orders.Order ID", "Orders.Amount"],
+                                },
+                            },
+                            "dialect": "duckdb",
+                        },
+                    )
+            assert response.status_code == 200
+            data = response.json()
+            cols = {c["name"]: c for c in data["columns"]}
+
+            # Order ID is a string column → no auto-format suggested.
+            assert cols["Orders.Order ID"]["format"] is None
+
+            # Amount is a float column → auto-defaulted to "#,##0.00", visible
+            # both in column metadata and in the rendered cell text.
+            assert cols["Orders.Amount"]["format"] == "#,##0.00"
+            for row in data["rows"]:
+                amount = row[1]
+                assert isinstance(amount, str)
+                # de locale uses comma as the decimal separator
+                assert "," in amount
         finally:
             reset_session_manager()
 

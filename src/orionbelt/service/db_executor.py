@@ -32,13 +32,20 @@ class ExecutionError(Exception):
 
 
 class ColumnMeta:
-    """Metadata for a single result column."""
+    """Metadata for a single result column.
 
-    __slots__ = ("name", "type_hint")
+    ``default_format`` is the executor-suggested display pattern based on
+    the column's Arrow / driver type. The API uses it as a fallback when
+    the model has no explicit ``format`` for the column — typically raw-
+    mode ``select.fields`` projections of physical columns.
+    """
 
-    def __init__(self, name: str, type_hint: str) -> None:
+    __slots__ = ("name", "type_hint", "default_format")
+
+    def __init__(self, name: str, type_hint: str, default_format: str | None = None) -> None:
         self.name = name
         self.type_hint = type_hint
+        self.default_format = default_format
 
 
 class ExecutionResult:
@@ -119,22 +126,19 @@ def _map_type_code(type_code: Any) -> str:
     return "string"
 
 
-_DUCKDB_NUMERIC_PREFIXES = (
+_DUCKDB_INT_PREFIXES = (
     "TINYINT",
     "SMALLINT",
     "INTEGER",
     "BIGINT",
     "HUGEINT",
-    "FLOAT",
-    "DOUBLE",
-    "DECIMAL",
-    "NUMERIC",
-    "NUMBER",
     "UTINYINT",
     "USMALLINT",
     "UINTEGER",
     "UBIGINT",
 )
+_DUCKDB_FLOAT_DECIMAL_PREFIXES = ("FLOAT", "DOUBLE", "DECIMAL", "NUMERIC", "NUMBER")
+_DUCKDB_NUMERIC_PREFIXES = _DUCKDB_INT_PREFIXES + _DUCKDB_FLOAT_DECIMAL_PREFIXES
 _DUCKDB_DATETIME_PREFIXES = ("DATE", "TIME", "TIMESTAMP", "INTERVAL")
 
 
@@ -148,6 +152,19 @@ def _duckdb_type_hint(type_obj: Any) -> str:
     if s in ("BLOB",):
         return "binary"
     return "string"
+
+
+def _default_format_for_duckdb_type(type_obj: Any) -> str | None:
+    """Companion to ``_default_format_for_arrow_type`` for the DuckDB local
+    execution path (PEP 249 fetchall). Same policy: ints stay unformatted,
+    floats and decimals default to ``"#,##0.00"``.
+    """
+    s = str(type_obj).upper()
+    if s.startswith(_DUCKDB_INT_PREFIXES):
+        return None
+    if s.startswith(_DUCKDB_FLOAT_DECIMAL_PREFIXES):
+        return "#,##0.00"
+    return None
 
 
 def _arrow_type_to_hint(arrow_type: Any) -> str:
@@ -336,6 +353,34 @@ def _serialize_row(row: Any, tz: ZoneInfo | None = None) -> list[Any]:
     return [_serialize_value(v, tz) for v in row]
 
 
+def _default_format_for_arrow_type(arrow_type: Any) -> str | None:
+    """Suggest a display ``format`` pattern based on the column's Arrow type.
+
+    Used as a fallback for columns that lack an explicit ``format`` on the
+    model (raw-mode ``select.fields`` projections, measures that simply
+    forgot to declare one). Integer columns deliberately get **no** default
+    so IDs / keys render as plain digits (``"52965"``); floats and decimals
+    get ``"#,##0.00"`` so monetary-style numbers come back locale-aware.
+
+    For ADBC-style string-extension numerics the SQL ``type_name`` carried
+    on the extension distinguishes int from decimal — int variants stay
+    unformatted, others default to ``"#,##0.00"``.
+    """
+    try:
+        import pyarrow as pa
+
+        if pa.types.is_integer(arrow_type):
+            return None  # plain str(val) — keeps IDs/keys clean
+        if pa.types.is_floating(arrow_type) or pa.types.is_decimal(arrow_type):
+            return "#,##0.00"
+        if _is_string_stored_numeric_arrow_type(arrow_type):
+            type_name = str(getattr(arrow_type, "type_name", "")).lower()
+            return None if "int" in type_name else "#,##0.00"
+        return None
+    except Exception:  # noqa: BLE001 — never block row delivery on a type probe
+        return None
+
+
 def _is_string_stored_numeric_arrow_type(arrow_type: Any) -> bool:
     """Detect Arrow extension types that wrap a numeric SQL type as a string.
 
@@ -499,7 +544,11 @@ def _execute_duckdb(
         rows_raw = result.fetchall()
         desc = result.description or []
         columns = [
-            ColumnMeta(name=d[0], type_hint=_duckdb_type_hint(d[1]) if len(d) > 1 else "string")
+            ColumnMeta(
+                name=d[0],
+                type_hint=_duckdb_type_hint(d[1]) if len(d) > 1 else "string",
+                default_format=(_default_format_for_duckdb_type(d[1]) if len(d) > 1 else None),
+            )
             for d in desc
         ]
         rows = [_serialize_row(r, effective_tz) for r in rows_raw]
@@ -521,7 +570,11 @@ def _fetch_result(cursor: Any, t0: float, *, tz: ZoneInfo | None = None) -> Exec
     arrow_table = _try_fetch_arrow(cursor)
     if arrow_table is not None:
         columns = [
-            ColumnMeta(name=f.name, type_hint=_arrow_type_to_hint(f.type))
+            ColumnMeta(
+                name=f.name,
+                type_hint=_arrow_type_to_hint(f.type),
+                default_format=_default_format_for_arrow_type(f.type),
+            )
             for f in arrow_table.schema
         ]
         elapsed_ms = (time.monotonic() - t0) * 1000

@@ -12,6 +12,7 @@ import pyarrow as pa
 
 from orionbelt.service.db_executor import (
     _arrow_to_rows,
+    _default_format_for_arrow_type,
     _is_string_stored_numeric_arrow_type,
 )
 
@@ -44,6 +45,41 @@ class TestIsStringStoredNumericArrowType:
     def test_rejects_string_extension_with_non_numeric_type_name(self) -> None:
         opaque = pa.opaque(pa.string(), type_name="json", vendor_name="X")
         assert _is_string_stored_numeric_arrow_type(opaque) is False
+
+
+class TestDefaultFormatForArrowType:
+    """Auto-derive a display format from the column's Arrow type.
+
+    Integers stay unformatted (None) so IDs/keys render as plain digits;
+    floats / decimals default to ``"#,##0.00"`` so monetary-style numbers
+    come back locale-aware without any model annotation.
+    """
+
+    def test_integer_returns_none(self) -> None:
+        for t in (pa.int8(), pa.int16(), pa.int32(), pa.int64(), pa.uint64()):
+            assert _default_format_for_arrow_type(t) is None, t
+
+    def test_floating_returns_two_decimal_pattern(self) -> None:
+        for t in (pa.float16(), pa.float32(), pa.float64()):
+            assert _default_format_for_arrow_type(t) == "#,##0.00", t
+
+    def test_decimal_returns_two_decimal_pattern(self) -> None:
+        assert _default_format_for_arrow_type(pa.decimal128(18, 2)) == "#,##0.00"
+
+    def test_opaque_string_numeric_returns_two_decimal_pattern(self) -> None:
+        opaque = pa.opaque(pa.string(), type_name="numeric", vendor_name="PG")
+        assert _default_format_for_arrow_type(opaque) == "#,##0.00"
+
+    def test_opaque_string_int_returns_none(self) -> None:
+        opaque = pa.opaque(pa.string(), type_name="int8", vendor_name="PG")
+        assert _default_format_for_arrow_type(opaque) is None
+
+    def test_string_returns_none(self) -> None:
+        assert _default_format_for_arrow_type(pa.string()) is None
+
+    def test_date_returns_none(self) -> None:
+        assert _default_format_for_arrow_type(pa.date32()) is None
+        assert _default_format_for_arrow_type(pa.timestamp("us")) is None
 
 
 class TestArrowToRowsStringNumericNormalisation:
