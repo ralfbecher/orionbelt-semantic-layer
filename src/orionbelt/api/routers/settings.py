@@ -217,15 +217,13 @@ async def get_settings(
 
     # `timezone` is always present so clients can show the wall clock /
     # effective TZ even without a loaded model.
-    # Pre-warm the DB session TZ cache on first hit when a model is bound
-    # — otherwise the first request after a restart sees `effective` based
-    # on model TZ alone (because no query has populated the cache yet).
-    if (
-        is_query_execute_enabled()
-        and db_vendor
-        and db_vendor not in _DB_TZ_DETECTED
-        and (model is not None or single_mode)
-    ):
+    # Pre-warm the DB session TZ cache on first hit. The DB connection
+    # exists independently of any loaded model, so we don't need a model
+    # to probe — only that query execution is enabled and a DB vendor is
+    # configured. Without this, the first /v1/settings after a restart
+    # sees an empty cache and falls through to host/UTC, which is wrong
+    # whenever the DB has a non-default timezone.
+    if is_query_execute_enabled() and db_vendor and db_vendor not in _DB_TZ_DETECTED:
         warm_db_tz_cache(db_vendor)
     host_tz = _get_host_timezone()
     db_tz = _DB_SESSION_TZ.get(db_vendor)
