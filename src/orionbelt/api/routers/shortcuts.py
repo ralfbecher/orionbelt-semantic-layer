@@ -17,7 +17,7 @@ from typing import Literal, cast
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import Response
 
-from orionbelt.api.deps import get_session_manager, is_single_model_mode
+from orionbelt.api.deps import get_db_vendor, get_session_manager, is_single_model_mode
 from orionbelt.api.routers.model_api import (
     _build_explain,
     _build_join_graph,
@@ -379,11 +379,16 @@ class ShortcutQueryRequest(QueryObject):
 @router.post("/query/sql", response_model=QueryCompileResponse, tags=["query"])
 async def shortcut_compile_query(
     body: ShortcutQueryRequest,
-    dialect: str = "postgres",
+    dialect: str | None = None,
     mgr: SessionManager = Depends(get_session_manager),  # noqa: B008
 ) -> QueryCompileResponse:
-    """Compile a query (auto-resolves session/model)."""
+    """Compile a query (auto-resolves session/model). When ``dialect`` is
+    omitted, falls back to ``model.settings.defaultDialect`` then ``DB_VENDOR``."""
+    from orionbelt.api.routers.sessions import _resolve_dialect
+
     store, model_id = _resolve_store_and_model(mgr)
+    model = store.get_model(model_id)
+    dialect = _resolve_dialect(request_dialect=dialect, model=model, fallback=get_db_vendor())
     try:
         result = store.compile_query(model_id, body, dialect)
     except KeyError:
@@ -496,11 +501,11 @@ async def shortcut_execute_query(
       model's ``default_timezone`` for naive timestamp coercion.
     """
     from orionbelt.api.deps import (
-        get_db_vendor,
         get_default_locale,
         get_query_default_limit,
         is_query_execute_enabled,
     )
+    from orionbelt.api.routers.sessions import _resolve_dialect
 
     if not is_query_execute_enabled():
         raise HTTPException(
@@ -510,10 +515,10 @@ async def shortcut_execute_query(
         )
 
     store, model_id = _resolve_store_and_model(mgr)
+    model = store.get_model(model_id)
 
-    # Auto-detect dialect from DB_VENDOR when not provided
-    if dialect is None:
-        dialect = get_db_vendor()
+    # Resolve dialect: explicit param → model.settings.defaultDialect → DB_VENDOR.
+    dialect = _resolve_dialect(request_dialect=dialect, model=model, fallback=get_db_vendor())
 
     # Enforce a configurable default limit if the query has none
     query: QueryObject = body
@@ -553,7 +558,7 @@ async def shortcut_execute_query(
         ) from None
 
     # Resolve timezone — request override → model default → host TZ → UTC.
-    model = store.get_model(model_id)
+    # ``model`` was already loaded above for dialect resolution; reuse it.
     model_default_tz: str | None = None
     override_db_tz = False
     if model.settings:

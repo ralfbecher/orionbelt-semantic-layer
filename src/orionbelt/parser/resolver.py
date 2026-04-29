@@ -45,12 +45,14 @@ def _parse_settings(raw: dict[str, Any] | None) -> ModelSettings | None:
     default_type = raw.get("defaultNumericDataType")
     default_tz = raw.get("defaultTimezone")
     override_db_tz = raw.get("overrideDatabaseTimezone", False)
-    if not default_type and not default_tz and not override_db_tz:
+    default_dialect = raw.get("defaultDialect")
+    if not default_type and not default_tz and not override_db_tz and not default_dialect:
         return None
     return ModelSettings(
         default_numeric_data_type=default_type,
         default_timezone=default_tz,
         override_database_timezone=override_db_tz,
+        default_dialect=default_dialect,
     )
 
 

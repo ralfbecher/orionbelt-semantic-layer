@@ -1264,6 +1264,52 @@ class TestAPIExecuteEndpoint:
         finally:
             reset_session_manager()
 
+    async def test_execute_omits_dialect_uses_model_default(
+        self, api_duckdb: duckdb.DuckDBPyConnection
+    ) -> None:
+        """When the request omits ``dialect``, the API falls back to
+        ``model.settings.defaultDialect`` so tenants pin their dialect on the
+        model and never have to repeat it on every query.
+        """
+        model_yaml_with_dialect = "settings:\n  defaultDialect: duckdb\n" + SAMPLE_MODEL_YAML
+        settings = Settings(session_ttl_seconds=3600, session_cleanup_interval=9999)
+        app = create_app(settings=settings)
+        mgr = SessionManager(
+            ttl_seconds=settings.session_ttl_seconds,
+            cleanup_interval=settings.session_cleanup_interval,
+        )
+        # DB_VENDOR=postgres so the test proves the model default wins over env.
+        init_session_manager(mgr, query_execute_enabled=True, db_vendor="postgres")
+        try:
+            mock_exec = _make_execute_sql(api_duckdb)
+            with patch("orionbelt.api.routers.sessions.execute_sql", mock_exec):
+                transport = ASGITransport(app=app)
+                async with AsyncClient(transport=transport, base_url="http://test") as c:
+                    sid = (await c.post("/v1/sessions")).json()["session_id"]
+                    load = await c.post(
+                        f"/v1/sessions/{sid}/models",
+                        json={"model_yaml": model_yaml_with_dialect},
+                    )
+                    mid = load.json()["model_id"]
+                    response = await c.post(
+                        f"/v1/sessions/{sid}/query/execute",
+                        json={
+                            "model_id": mid,
+                            "query": {
+                                "select": {
+                                    "dimensions": ["Customer Country"],
+                                    "measures": ["Total Revenue"],
+                                },
+                            },
+                            # ``dialect`` deliberately omitted
+                        },
+                    )
+            assert response.status_code == 200, response.text
+            data = response.json()
+            assert data["dialect"] == "duckdb"
+        finally:
+            reset_session_manager()
+
     async def test_execute_with_limit(self, api_duckdb: duckdb.DuckDBPyConnection) -> None:
         """Default limit is applied when query has no explicit limit."""
         settings = Settings(session_ttl_seconds=3600, session_cleanup_interval=9999)

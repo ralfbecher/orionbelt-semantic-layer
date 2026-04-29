@@ -312,13 +312,16 @@ async def compile_query(
     """Compile a query against a model loaded in a session."""
     store = _get_store(session_id, mgr)
     try:
-        result = store.compile_query(body.model_id, body.query, body.dialect)
+        model_for_dialect = store.get_model(body.model_id)
+    except KeyError:
+        raise HTTPException(status_code=404, detail=f"Model '{body.model_id}' not found") from None
+    dialect = _resolve_dialect(request_dialect=body.dialect, model=model_for_dialect)
+    try:
+        result = store.compile_query(body.model_id, body.query, dialect)
     except KeyError:
         raise HTTPException(status_code=404, detail=f"Model '{body.model_id}' not found") from None
     except UnsupportedDialectError:
-        raise HTTPException(
-            status_code=400, detail=f"Unsupported dialect: '{body.dialect}'"
-        ) from None
+        raise HTTPException(status_code=400, detail=f"Unsupported dialect: '{dialect}'") from None
     except ResolutionError as exc:
         raise HTTPException(
             status_code=422,
@@ -446,6 +449,25 @@ def _build_format_map(model: Any) -> dict[str, str | None]:
         if metric.format:
             fmt[label] = metric.format
     return fmt
+
+
+def _resolve_dialect(
+    *, request_dialect: str | None, model: Any, fallback: str | None = None
+) -> str:
+    """Resolve the dialect for a query.
+
+    Order: explicit request dialect → model.settings.default_dialect →
+    ``fallback`` (typically ``DB_VENDOR``) → ``"postgres"``.
+    """
+    if request_dialect:
+        return request_dialect
+    settings = getattr(model, "settings", None)
+    model_default = getattr(settings, "default_dialect", None) if settings else None
+    if model_default:
+        return str(model_default)
+    if fallback:
+        return fallback
+    return "postgres"
 
 
 def _build_execute_response(
@@ -618,13 +640,18 @@ async def execute_query(
         query = query.model_copy(update={"limit": get_query_default_limit()})
 
     try:
-        result = store.compile_query(body.model_id, query, body.dialect)
+        model = store.get_model(body.model_id)
+    except KeyError:
+        raise HTTPException(status_code=404, detail=f"Model '{body.model_id}' not found") from None
+    from orionbelt.api.deps import get_db_vendor
+
+    dialect = _resolve_dialect(request_dialect=body.dialect, model=model, fallback=get_db_vendor())
+    try:
+        result = store.compile_query(body.model_id, query, dialect)
     except KeyError:
         raise HTTPException(status_code=404, detail=f"Model '{body.model_id}' not found") from None
     except UnsupportedDialectError:
-        raise HTTPException(
-            status_code=400, detail=f"Unsupported dialect: '{body.dialect}'"
-        ) from None
+        raise HTTPException(status_code=400, detail=f"Unsupported dialect: '{dialect}'") from None
     except ResolutionError as exc:
         raise HTTPException(
             status_code=422,
@@ -652,7 +679,7 @@ async def execute_query(
         ) from None
 
     # Resolve timezone — request override → model default → host TZ → UTC.
-    model = store.get_model(body.model_id)
+    # ``model`` was already loaded above for dialect resolution; reuse it.
     model_default_tz: str | None = None
     override_db_tz = False
     if model.settings:
@@ -664,7 +691,7 @@ async def execute_query(
         exec_result = await asyncio.to_thread(
             execute_sql,
             result.sql,
-            dialect=body.dialect,
+            dialect=dialect,
             tz=tz,
             override_db_tz=override_db_tz,
         )

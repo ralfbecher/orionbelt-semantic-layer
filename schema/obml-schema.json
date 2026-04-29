@@ -1078,6 +1078,20 @@
           "type": "boolean",
           "description": "If true, use defaultTimezone instead of the auto-detected database session timezone. Use when naive timestamps are stored in a known timezone that differs from the DB session. Default: false.",
           "default": false
+        },
+        "defaultDialect": {
+          "type": "string",
+          "description": "Default SQL dialect for queries that omit the 'dialect' field. Resolution order at request time: explicit dialect → model.settings.defaultDialect → DB_VENDOR env. Must be one of the registered OrionBelt dialects.",
+          "enum": [
+            "bigquery",
+            "clickhouse",
+            "databricks",
+            "dremio",
+            "duckdb",
+            "mysql",
+            "postgres",
+            "snowflake"
+          ]
         }
       },
       "additionalProperties": false

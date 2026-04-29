@@ -6,6 +6,7 @@ All notable changes to OrionBelt Semantic Layer are documented here.
 
 ### Added
 
+- **`settings.defaultDialect` on the OBML model.** Optional top-level `settings.defaultDialect` lets a model pin its preferred SQL dialect so callers can omit `dialect` on every `/v1/query/sql` and `/v1/query/execute` request. Resolution chain at request time: explicit `dialect` → `settings.defaultDialect` → `DB_VENDOR` env → `postgres`. Validated against the 8 registered dialects at parse time. The session and shortcut endpoints both honor it; `dialect` on the request body is now `Optional`.
 - **`/v1/query/execute` formatted output.** Four new query parameters on both the session-scoped and shortcut execute endpoints:
   - `format=tsv` returns `text/tab-separated-values` with RFC 4180-style quoting for cells containing tab/newline/CR/double-quote. Implies `format_values=true`.
   - `format_values=true` renders numeric cells in the JSON response as locale-aware display strings using each column's `format` pattern (matches the Gradio UI exactly).

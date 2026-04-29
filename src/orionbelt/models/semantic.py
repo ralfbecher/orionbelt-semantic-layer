@@ -437,6 +437,7 @@ class ModelSettings(BaseModel):
     default_numeric_data_type: str | None = Field(None, alias="defaultNumericDataType")
     default_timezone: str | None = Field(None, alias="defaultTimezone")
     override_database_timezone: bool = Field(False, alias="overrideDatabaseTimezone")
+    default_dialect: str | None = Field(None, alias="defaultDialect")
 
     model_config = {"populate_by_name": True}
 
@@ -463,6 +464,22 @@ class ModelSettings(BaseModel):
                 raise ValueError(
                     f"defaultTimezone must be a valid IANA timezone, got '{v}'"
                 ) from None
+        return v
+
+    @field_validator("default_dialect", mode="before")
+    @classmethod
+    def _validate_default_dialect(cls, v: str | None) -> str | None:
+        if v is None:
+            return v
+        # Importing the dialect package triggers the 8 self-registrations as
+        # a side effect; deferred here to avoid a parser → dialect import
+        # dependency at module load time.
+        import orionbelt.dialect  # noqa: F401
+        from orionbelt.dialect.registry import DialectRegistry
+
+        registered = DialectRegistry.available()
+        if v not in registered:
+            raise ValueError(f"defaultDialect must be one of: {', '.join(registered)} — got '{v}'")
         return v
 
 

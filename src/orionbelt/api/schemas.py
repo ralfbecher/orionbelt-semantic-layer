@@ -97,7 +97,13 @@ class SessionQueryExecuteRequest(BaseModel):
 
     model_id: str
     query: QueryObject
-    dialect: str = Field(default="postgres")
+    dialect: str | None = Field(
+        default=None,
+        description=(
+            "SQL dialect. Resolution: explicit value → model.settings.defaultDialect → "
+            "DB_VENDOR env → 'postgres'."
+        ),
+    )
 
 
 class ValidateRequest(BaseModel):
@@ -290,7 +296,13 @@ class SessionQueryRequest(BaseModel):
 
     model_id: str
     query: QueryObject
-    dialect: str = Field(default="postgres")
+    dialect: str | None = Field(
+        default=None,
+        description=(
+            "SQL dialect. Resolution: explicit value → model.settings.defaultDialect → "
+            "DB_VENDOR env → 'postgres'."
+        ),
+    )
 
 
 class DiagramResponse(BaseModel):
