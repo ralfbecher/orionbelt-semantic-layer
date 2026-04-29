@@ -22,6 +22,7 @@ from orionbelt.ast.nodes import (
     Literal,
     OrderByItem,
     RawSQL,
+    RegexMatch,
     RelativeDateRange,
     Select,
     Star,
@@ -448,6 +449,8 @@ class Dialect(ABC):
                     f"({self.compile_expr(inner)} {op} "
                     f"{self.compile_expr(low)} AND {self.compile_expr(high)})"
                 )
+            case RegexMatch(column=column, pattern=pattern, negated=negated):
+                return self.compile_regex_match(column, pattern, negated=negated)
             case RelativeDateRange(
                 column=column,
                 unit=unit,
@@ -485,6 +488,19 @@ class Dialect(ABC):
                 return f"{func_sql} OVER ({over_clause})"
             case _:
                 raise ValueError(f"Unknown AST node type: {type(expr).__name__}")
+
+    def compile_regex_match(self, column: Expr, pattern: str, *, negated: bool) -> str:
+        """Compile a regex predicate. Default uses ``REGEXP_LIKE`` — overridden
+        per dialect that needs a different syntax (Postgres ``~``, MySQL
+        ``REGEXP``, ClickHouse ``match`` etc.).
+
+        The pattern is rendered as a SQL string literal; callers pass it
+        as ``RegexMatch.pattern`` (already a Python ``str``).
+        """
+        col_sql = self.compile_expr(column)
+        pat_sql = self.compile_expr(Literal.string(pattern))
+        op_sql = f"REGEXP_LIKE({col_sql}, {pat_sql})"
+        return f"NOT {op_sql}" if negated else op_sql
 
     def compile_relative_date_range(
         self,

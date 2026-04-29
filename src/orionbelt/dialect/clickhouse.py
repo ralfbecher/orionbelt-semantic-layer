@@ -222,3 +222,10 @@ class ClickHouseDialect(Dialect):
             f"            THEN {prev_date} END AS spine_date_prev\n"
             f"FROM (SELECT arrayJoin(range(0, toUInt32({n_expr}) + 1)) AS n)"
         )
+
+    def compile_regex_match(self, column: Expr, pattern: str, *, negated: bool) -> str:
+        """ClickHouse uses ``match(col, pattern)``."""
+        col_sql = self.compile_expr(column)
+        pat_sql = self.compile_expr(Literal.string(pattern))
+        result = f"match({col_sql}, {pat_sql})"
+        return f"NOT {result}" if negated else result

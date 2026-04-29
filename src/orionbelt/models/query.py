@@ -42,6 +42,16 @@ class FilterOperator(StrEnum):
     STARTS_WITH = "starts_with"
     ENDS_WITH = "ends_with"
     RELATIVE = "relative"
+    # Regex match (per-dialect implementation; pattern is the value).
+    REGEX = "regex"
+    NOT_REGEX = "notregex"
+    # Blank check: NULL or empty after trimming whitespace.
+    BLANK = "blank"
+    NOT_BLANK = "notblank"
+    # String length comparisons; value is an int.
+    LENGTH_EQ = "length_eq"
+    LENGTH_GT = "length_gt"
+    LENGTH_LT = "length_lt"
 
 
 class SortDirection(StrEnum):

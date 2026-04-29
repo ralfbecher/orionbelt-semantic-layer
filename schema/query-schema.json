@@ -35,7 +35,14 @@
         "is_not_null",
         "starts_with",
         "ends_with",
-        "relative"
+        "relative",
+        "regex",
+        "notregex",
+        "blank",
+        "notblank",
+        "length_eq",
+        "length_gt",
+        "length_lt"
       ]
     },
     "sortDirection": {
