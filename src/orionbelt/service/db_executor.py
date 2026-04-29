@@ -16,7 +16,7 @@ import logging
 import time
 from datetime import UTC, date, datetime
 from datetime import time as dt_time
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from typing import Any
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -336,14 +336,68 @@ def _serialize_row(row: Any, tz: ZoneInfo | None = None) -> list[Any]:
     return [_serialize_value(v, tz) for v in row]
 
 
+def _is_string_stored_numeric_arrow_type(arrow_type: Any) -> bool:
+    """Detect Arrow extension types that wrap a numeric SQL type as a string.
+
+    ADBC's PostgreSQL driver (and similar high-precision-aware ADBC drivers)
+    represents NUMERIC as ``arrow.opaque[storage_type=string, type_name=numeric]``
+    to preserve precision beyond Arrow's ``decimal128`` limits. ``to_pydict()``
+    then yields Python ``str`` rather than ``Decimal``. Without this detection
+    every downstream consumer (UI, format_row, JSON, TSV, charts, runner) has
+    to know to re-parse — easier to normalise once at the executor layer.
+    """
+    try:
+        import pyarrow as pa
+
+        # ADBC's ``OpaqueType`` (and other Arrow extension wrappers we care
+        # about) carry both ``storage_type`` and ``type_name``. Plain Arrow
+        # types (string, decimal128, etc.) carry neither — duck-type the
+        # attribute pair rather than relying on a typecheck against
+        # ``pa.ExtensionType`` which OpaqueType is not an instance of.
+        storage = getattr(arrow_type, "storage_type", None)
+        type_name = getattr(arrow_type, "type_name", None)
+        if storage is None or type_name is None:
+            return False
+        if not pa.types.is_string(storage):
+            return False
+        if isinstance(type_name, bytes):
+            type_name = type_name.decode("utf-8", "ignore")
+        # Lazy import to avoid a circular dependency: db_executor is imported
+        # by routers, which import schemas, which would otherwise pull this in.
+        from orionbelt.service.value_formatting import is_numeric_type_hint
+
+        return is_numeric_type_hint(str(type_name))
+    except Exception:  # noqa: BLE001 — defensive: never block row delivery on a type probe
+        return False
+
+
 def _arrow_to_rows(table: Any, tz: ZoneInfo | None = None) -> list[list[Any]]:
-    """Convert an Arrow Table to a list of JSON-serializable rows."""
+    """Convert an Arrow Table to a list of JSON-serializable rows.
+
+    String-stored numeric extension types are parsed to ``Decimal`` before
+    the per-cell serialiser runs, so every downstream consumer sees the
+    same shape regardless of driver. ``_serialize_value`` then handles the
+    Decimal in its existing branch.
+    """
     pydict = table.to_pydict()
     col_names = list(pydict.keys())
     n_rows = table.num_rows
+
+    # Pre-compute which columns need string→Decimal parsing.
+    string_numeric_cols: set[str] = {
+        field.name for field in table.schema if _is_string_stored_numeric_arrow_type(field.type)
+    }
+
     result: list[list[Any]] = []
     for i in range(n_rows):
-        result.append([_serialize_value(pydict[name][i], tz) for name in col_names])
+        row: list[Any] = []
+        for name in col_names:
+            val = pydict[name][i]
+            if name in string_numeric_cols and isinstance(val, str):
+                with contextlib.suppress(TypeError, ValueError, InvalidOperation):
+                    val = Decimal(val)
+            row.append(_serialize_value(val, tz))
+        result.append(row)
     return result
 
 

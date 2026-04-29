@@ -115,6 +115,7 @@ testpaths = ["tests"]
 asyncio_mode = "auto"
 markers = [
     "docker: requires Docker (testcontainers) — run with: pytest -m docker",
+    "adbc: requires a reachable PostgreSQL via ADBC — run with: pytest -m adbc",
 ]
 
 [tool.mypy]
