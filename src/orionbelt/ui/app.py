@@ -2787,23 +2787,96 @@ def create_blocks(
                     lines=10,
                 )
 
-                def _fetch_settings_yaml(api_url_val: str) -> str:
+                def _fetch_settings_yaml(
+                    api_url_val: str,
+                    sess_state: dict[str, str] | None,
+                    mdl_state: dict[str, str] | None,
+                    model_yaml_val: str,
+                ) -> str:
+                    """Fetch /v1/settings, scoped to the active session+model
+                    when one has been compiled in this UI session so the
+                    returned ``model_settings`` / ``timezone`` blocks reflect
+                    the model the user actually loaded.
+
+                    If the user has typed/pasted a model but not compiled
+                    yet, the server doesn't know about it. Parse the local
+                    YAML's ``settings:`` block and overlay it on the response
+                    so the model's TZ/dialect choices are visible without
+                    needing a compile round-trip. Server-resolved fields
+                    (host TZ, DB session TZ, effective values) still come
+                    from the API.
+                    """
                     url = api_url_val.rstrip("/") if api_url_val else _DEFAULT_API_URL
+                    params: dict[str, str] = {}
+                    sid = (sess_state or {}).get("session_id")
+                    mid = (mdl_state or {}).get("model_id")
+                    if sid:
+                        params["session_id"] = sid
+                        if mid:
+                            params["model_id"] = mid
                     try:
-                        resp = httpx.get(f"{url}/v1/settings", timeout=5, headers=_API_HEADERS)
+                        resp = httpx.get(
+                            f"{url}/v1/settings",
+                            params=params or None,
+                            timeout=5,
+                            headers=_API_HEADERS,
+                        )
                         resp.raise_for_status()
                         data = resp.json()
-                        # Remove model_yaml from display (too large)
-                        data.pop("model_yaml", None)
-                        return yaml.dump(data, default_flow_style=False, sort_keys=False)
                     except httpx.ConnectError:
                         return f"# Error: Cannot connect to API at {url}"
                     except Exception as exc:
                         return f"# Error: {exc}"
 
+                    # Remove model_yaml from display (too large)
+                    data.pop("model_yaml", None)
+
+                    # Overlay the locally-edited model's settings block when
+                    # the API response is missing it (no compile yet).
+                    local_settings: dict[str, Any] = {}
+                    try:
+                        raw = yaml.safe_load(model_yaml_val or "") or {}
+                        if isinstance(raw, dict):
+                            block = raw.get("settings")
+                            if isinstance(block, dict):
+                                local_settings = block
+                    except Exception:  # noqa: BLE001 — best-effort overlay
+                        local_settings = {}
+
+                    if local_settings:
+                        # Only overwrite fields the API didn't supply, so a
+                        # truly compiled session keeps the server's view.
+                        existing_ms = data.get("model_settings") or {}
+                        merged_ms = {**local_settings, **existing_ms}
+                        data["model_settings"] = merged_ms
+
+                        tz = data.get("timezone") or {}
+                        if "model" not in tz and local_settings.get("defaultTimezone"):
+                            tz["model"] = local_settings["defaultTimezone"]
+                        if "override_database_timezone" not in tz:
+                            tz["override_database_timezone"] = bool(
+                                local_settings.get("overrideDatabaseTimezone", False)
+                            )
+                        if "effective" not in tz:
+                            tz["effective"] = (
+                                local_settings.get("defaultTimezone")
+                                or tz.get("host")
+                                or "UTC"
+                            )
+                        data["timezone"] = tz
+
+                        dl = data.get("dialect") or {}
+                        if "model" not in dl and local_settings.get("defaultDialect"):
+                            dl["model"] = local_settings["defaultDialect"]
+                        if dl.get("model") and "effective" not in dl:
+                            dl["effective"] = dl["model"]
+                        data["dialect"] = dl
+
+                    return yaml.dump(data, default_flow_style=False, sort_keys=False)
+
                 settings_tab.select(
                     fn=_fetch_settings_yaml,
-                    inputs=[api_url],
+                    inputs=[api_url, session_state, model_state, model_input],
                     outputs=[settings_output],
                 )
 

@@ -718,31 +718,97 @@ Returns **404** if no sessions exist, **409 Conflict** if multiple sessions or m
 
 Return public configuration for API clients (UI, MCP, etc.).
 
-**Response (200):**
+**Query parameters (optional)** — both default to `null`:
+
+| Param | Description |
+|-------|-------------|
+| `session_id` | Scope `model_settings`, `timezone`, and `dialect.model` to this session. If the session holds exactly one model, that model is used; otherwise the model-specific blocks are omitted (request `model_id` to disambiguate). |
+| `model_id` | Pin to a specific model in `session_id`. Returns 400 without `session_id`, 404 if the session or model is unknown. |
+
+**Resolution rules without query parameters:**
+
+- single-model mode → uses the preloaded model
+- multi-model mode → uses the unique model across all sessions if exactly one is loaded; otherwise the model-specific blocks are omitted
+
+**Response (200) — multi-model mode:**
 
 ```json
 {
+  "version": "2.1.0",
+  "api_version": "v1",
   "single_model_mode": false,
-  "model_yaml": null,
-  "session_ttl_seconds": 1800
+  "session_ttl_seconds": 1800,
+  "session_max_age_seconds": 86400,
+  "max_sessions": 500,
+  "max_models_per_session": 10,
+  "query_execute": false,
+  "dialect": {
+    "env": "duckdb",
+    "effective": "duckdb"
+  }
 }
 ```
 
-When `MODEL_FILE` is configured:
+**Response (200) — single-model mode (`MODEL_FILE` is configured):**
 
 ```json
 {
+  "version": "2.1.0",
+  "api_version": "v1",
   "single_model_mode": true,
-  "model_yaml": "version: 1.0\ndataObjects:\n  ...",
-  "session_ttl_seconds": 1800
+  "model_yaml": "version: 1.0\nsettings:\n  defaultTimezone: Europe/Berlin\n  ...",
+  "session_ttl_seconds": 1800,
+  "session_max_age_seconds": 86400,
+  "max_sessions": 500,
+  "max_models_per_session": 10,
+  "query_execute": true,
+  "model_settings": {
+    "defaultTimezone": "Europe/Berlin",
+    "defaultDialect": "snowflake",
+    "overrideDatabaseTimezone": false,
+    "defaultNumericDataType": "decimal(38, 4)"
+  },
+  "timezone": {
+    "model": "Europe/Berlin",
+    "host": "Europe/Berlin",
+    "database": null,
+    "effective": "Europe/Berlin",
+    "override_database_timezone": false
+  },
+  "dialect": {
+    "model": "snowflake",
+    "env": "duckdb",
+    "effective": "snowflake"
+  }
 }
 ```
 
 | Field | Type | Description |
 |-------|------|-------------|
+| `version` | string | OrionBelt Semantic Layer release version |
+| `api_version` | string | REST API version prefix (`v1`) |
 | `single_model_mode` | bool | Whether model upload/removal is disabled |
-| `model_yaml` | string \| null | Pre-loaded OBML YAML (only when single-model mode is active) |
+| `model_yaml` | string \| null | Pre-loaded OBML YAML (single-model mode only) |
 | `session_ttl_seconds` | int | Session inactivity timeout |
+| `session_max_age_seconds` | int | Absolute max session lifetime |
+| `max_sessions` | int | Global concurrent session cap |
+| `max_models_per_session` | int | Maximum models per session |
+| `query_execute` | bool | Whether `POST /query/execute` is available |
+| `flight` | object \| null | Arrow Flight SQL info (when Flight is enabled) |
+| `model_settings` | object \| null | Loaded model's `settings:` block (single-model mode) |
+| `timezone` | object \| null | Timezone resolution chain (single-model mode) |
+| `dialect` | object | SQL dialect resolution chain (always present) |
+
+**`model_settings`** mirrors the OBML `settings:` block in camelCase — `defaultTimezone`, `defaultDialect`, `overrideDatabaseTimezone`, `defaultNumericDataType`. Any key the model omits is also omitted from the response.
+
+**`timezone`** is the chain `db_executor.resolve_timezone()` walks at execute time:
+
+- `override_database_timezone: true` → `model` wins, falling back to `host` then `UTC`.
+- otherwise → cached `database` session timezone wins (when known), then `model`, then `host`, then `UTC`.
+
+The endpoint never probes the database — `database` is `null` until a query has run for that dialect. `effective` is the timezone that will be applied right now.
+
+**`dialect`** mirrors how the planner resolves the dialect when the request body omits `dialect`: `model.defaultDialect` → `DB_VENDOR` env → `postgres`. `effective` is what would be used for a dialect-less request.
 
 ---
 

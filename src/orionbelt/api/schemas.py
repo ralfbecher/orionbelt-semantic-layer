@@ -180,6 +180,72 @@ class FlightSettingsInfo(BaseModel):
     db_vendor: str = "duckdb"
 
 
+class ModelSettingsInfo(BaseModel):
+    """Model-level ``settings:`` block from the loaded OBML model."""
+
+    model_config = {"populate_by_name": True}
+
+    default_numeric_data_type: str | None = Field(
+        default=None,
+        alias="defaultNumericDataType",
+        description="Default decimal(p, s) type used when a column omits dataType",
+    )
+    default_timezone: str | None = Field(
+        default=None,
+        alias="defaultTimezone",
+        description="IANA timezone applied to naive timestamps in results",
+    )
+    override_database_timezone: bool = Field(
+        default=False,
+        alias="overrideDatabaseTimezone",
+        description="When true, model timezone wins over the DB session timezone",
+    )
+    default_dialect: str | None = Field(
+        default=None,
+        alias="defaultDialect",
+        description="SQL dialect used when callers omit `dialect` on query requests",
+    )
+
+
+class TimezoneResolutionInfo(BaseModel):
+    """Timezone resolution chain for naive timestamp coercion at execute time.
+
+    Effective timezone (in priority order):
+    - ``override_database_timezone`` true: ``model`` → ``host`` → UTC
+    - else: ``database`` (if detected) → ``model`` → ``host`` → UTC
+
+    ``database`` is populated lazily on first query execution per dialect; it
+    is ``null`` until then. Reading this endpoint never probes the database.
+    """
+
+    model: str | None = Field(default=None, description="settings.defaultTimezone")
+    host: str | None = Field(default=None, description="OS / process timezone")
+    database: str | None = Field(
+        default=None,
+        description="Detected database session timezone (null if not probed yet)",
+    )
+    effective: str = Field(
+        description="The timezone that resolve_timezone() returns at this moment"
+    )
+    override_database_timezone: bool = Field(
+        default=False,
+        description="Whether the model overrides the DB session timezone",
+    )
+
+
+class DialectResolutionInfo(BaseModel):
+    """Dialect resolution chain for query compilation.
+
+    Order on each request: explicit ``dialect`` body field →
+    ``settings.defaultDialect`` → ``DB_VENDOR`` env → ``"postgres"``.
+    ``effective`` here is what gets used when a caller omits ``dialect``.
+    """
+
+    model: str | None = Field(default=None, description="settings.defaultDialect")
+    env: str | None = Field(default=None, description="DB_VENDOR env (server config)")
+    effective: str = Field(description="Dialect used when request omits `dialect`")
+
+
 class SettingsResponse(BaseModel):
     """Response for GET /settings — public configuration for clients."""
 
@@ -210,6 +276,18 @@ class SettingsResponse(BaseModel):
     flight: FlightSettingsInfo | None = Field(
         default=None,
         description="Arrow Flight SQL server info (present only when Flight is enabled)",
+    )
+    model_settings: ModelSettingsInfo | None = Field(
+        default=None,
+        description="Loaded model's `settings:` block (single-model mode only)",
+    )
+    timezone: TimezoneResolutionInfo | None = Field(
+        default=None,
+        description="Timezone resolution chain (single-model mode only)",
+    )
+    dialect: DialectResolutionInfo | None = Field(
+        default=None,
+        description="SQL dialect resolution chain",
     )
 
 

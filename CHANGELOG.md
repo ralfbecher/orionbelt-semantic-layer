@@ -19,6 +19,11 @@ All notable changes to OrionBelt Semantic Layer are documented here.
 - **`UNION ALL BY NAME` optimization for raw CFL on DuckDB and Snowflake.** On dialects that support it, per-leg NULL padding is skipped — each leg only emits the columns it has, and the database fills missing columns automatically. Output rows are identical; SQL is shorter and more readable.
 - **Public-doc gating flags** (`EXPOSE_API_DOCS`, `EXPOSE_OPENAPI_SCHEMA`). Default `true` to preserve the public-demo behaviour. Set `EXPOSE_API_DOCS=false` to hide `/docs` and `/redoc`; `EXPOSE_OPENAPI_SCHEMA` toggles `/openapi.json` independently. The Dockerfile and `deploy-gcloud.sh` pin both to `true` explicitly so the demo stays exposed even if defaults flip later.
 - **`/v1/settings` now returns `version` and `api_version`.** Clients can negotiate features from a single call instead of also hitting `/health`.
+- **`/v1/settings` exposes the loaded model's `settings:` block plus the timezone and dialect resolution chains.** New optional sub-objects on the response:
+  - `model_settings` — every key from the model's `settings:` block (`defaultTimezone`, `defaultDialect`, `overrideDatabaseTimezone`, `defaultNumericDataType`), in OBML camelCase to mirror the YAML.
+  - `timezone` — `{model, host, database, effective, override_database_timezone}`. The chain matches what `db_executor.resolve_timezone()` does at execute time: when `overrideDatabaseTimezone` is true the model wins; otherwise the cached DB session timezone (if any) takes priority. Endpoint never probes the DB — `database` is `null` until a query has run.
+  - `dialect` — `{model, env, effective}`. `effective` is what the planner uses when a request omits `dialect`: model.defaultDialect → DB_VENDOR → `postgres`. Always present.
+- **`/v1/settings` accepts `?session_id=...&model_id=...` to scope the model-specific blocks in multi-model mode.** Resolution: single-model mode → preloaded model; both params → explicit lookup (404 on miss); `session_id` only → auto-pick when that session has exactly one model; no params in multi-model mode → auto-pick if a single model is loaded across all sessions, else the model blocks are omitted (no error). `model_id` without `session_id` → 400.
 
 ### Changed
 
