@@ -2645,8 +2645,13 @@
 </tr>
 <tr>
 <td>Cardinality</td>
-<td><code>joinType</code> (inner/left/right)</td>
-<td><code>relationship:</code> (<code>one_to_one</code>/<code>many_to_one</code>/etc.) drives symmetric aggregates</td>
+<td><code>joinType</code>: <code>many-to-one</code>, <code>one-to-one</code>, <code>many-to-many</code></td>
+<td><code>relationship</code>: <code>one_to_one</code>, <code>many_to_one</code>, <code>one_to_many</code>, <code>many_to_many</code></td>
+</tr>
+<tr>
+<td>What cardinality drives</td>
+<td>Static fanout detection + CFL multi-fact planning</td>
+<td>Symmetric aggregates</td>
 </tr>
 <tr>
 <td>Join condition</td>

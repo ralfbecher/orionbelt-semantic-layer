@@ -2577,8 +2577,13 @@
 </tr>
 <tr>
 <td>Cardinality</td>
-<td><code>joinType</code> (inner/left/right)</td>
-<td>Cardinality is part of the join keyword (<code>join_one</code> vs <code>join_many</code>) — drives symmetric aggregate logic</td>
+<td><code>joinType</code>: <code>many-to-one</code>, <code>one-to-one</code>, <code>many-to-many</code></td>
+<td>Cardinality is part of the join keyword: <code>join_one</code>, <code>join_many</code>, <code>join_cross</code></td>
+</tr>
+<tr>
+<td>What cardinality drives</td>
+<td>Static fanout detection + CFL multi-fact planning</td>
+<td>Symmetric aggregate logic</td>
 </tr>
 <tr>
 <td>Multiple paths between same tables</td>
