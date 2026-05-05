@@ -260,6 +260,15 @@ class DialectResolutionInfo(BaseModel):
     effective: str = Field(description="Dialect used when request omits `dialect`")
 
 
+class OneshotBatchLimits(BaseModel):
+    """Server-side limits for the one-shot batch endpoint."""
+
+    max_queries: int
+    max_parallelism: int
+    default_timeout_ms: int
+    batch_timeout_ms: int
+
+
 class SettingsResponse(BaseModel):
     """Response for GET /settings — public configuration for clients."""
 
@@ -302,6 +311,10 @@ class SettingsResponse(BaseModel):
     dialect: DialectResolutionInfo | None = Field(
         default=None,
         description="SQL dialect resolution chain",
+    )
+    oneshot_batch: OneshotBatchLimits | None = Field(
+        default=None,
+        description="Limits for POST /v1/oneshot/batch",
     )
 
 
@@ -354,6 +367,14 @@ class ModelLoadRequest(BaseModel):
         default=None,
         description="Optional model ID of an already-loaded parent model in the session",
     )
+    dedup: bool = Field(
+        default=True,
+        description=(
+            "When True (default), identical OBML content already loaded in this session "
+            "reuses the existing model_id (response.model_load == 'reused'). "
+            "When False, always loads fresh."
+        ),
+    )
 
     @model_validator(mode="after")
     def _parse_model_json_string(self) -> ModelLoadRequest:
@@ -371,6 +392,13 @@ class ModelLoadResponse(BaseModel):
     measures: int
     metrics: int
     warnings: list[str] = Field(default_factory=list)
+    model_load: str = Field(
+        default="fresh",
+        description=(
+            "Whether the load parsed a fresh model or reused an existing one. "
+            "Values: 'fresh' | 'reused'."
+        ),
+    )
 
 
 class ModelSummaryResponse(BaseModel):
@@ -635,3 +663,146 @@ class SPARQLResponse(BaseModel):
         default_factory=list, description="Rows of variable bindings"
     )
     boolean: bool | None = Field(default=None, description="ASK query result")
+
+
+# ---------------------------------------------------------------------------
+# One-shot batch schemas (PLAN_oneshot_batch.md)
+# ---------------------------------------------------------------------------
+
+
+class OneshotBatchQueryItem(BaseModel):
+    """A single query in a one-shot batch."""
+
+    id: str = Field(description="Caller-provided ID, must be unique within the batch")
+    query: QueryObject
+    execute: bool | None = Field(
+        default=None,
+        description="Per-query override for compile-only vs. execute (default inherits batch).",
+    )
+    dialect: str | None = Field(
+        default=None,
+        description="Per-query dialect override (default inherits batch).",
+    )
+
+
+class OneshotBatchRequest(BaseModel):
+    """Request body for POST /v1/oneshot/batch."""
+
+    session_id: str | None = Field(
+        default=None,
+        description="Existing session to use. If omitted, a new session is created.",
+    )
+    model_yaml: str | None = Field(
+        default=None,
+        description=(
+            "OBML YAML. Mutually exclusive with `model_id`. One of them must be provided."
+        ),
+        max_length=5_000_000,
+    )
+    model_id: str | None = Field(
+        default=None,
+        description=(
+            "ID of an already-loaded model in the given session. "
+            "Mutually exclusive with `model_yaml`."
+        ),
+    )
+    queries: list[OneshotBatchQueryItem] = Field(
+        description="List of queries to run. Min 1, server caps maximum.",
+        min_length=1,
+    )
+    dialect: str | None = Field(
+        default=None,
+        description="Default dialect for all queries in the batch.",
+    )
+    execute: bool = Field(
+        default=False,
+        description="Default execute flag for all queries.",
+    )
+    max_parallelism: int | None = Field(
+        default=None,
+        description="Max concurrent query executions. Server caps this.",
+        ge=1,
+    )
+    fail_fast: bool = Field(
+        default=False,
+        description="If true, cancel remaining queries on first failure.",
+    )
+    persist_model: bool = Field(
+        default=False,
+        description=(
+            "If true, a model loaded via `model_yaml` is kept in the session after the call. "
+            "Ignored when `model_id` is supplied."
+        ),
+    )
+    dedup: bool = Field(
+        default=True,
+        description=(
+            "When true, identical OBML content already loaded in the resolved session reuses "
+            "the existing model_id. When false, always loads fresh. Ignored when `model_id` "
+            "is supplied."
+        ),
+    )
+
+    @model_validator(mode="after")
+    def _validate_request(self) -> OneshotBatchRequest:
+        # Exactly one of model_yaml / model_id must be provided.
+        has_yaml = bool(self.model_yaml)
+        has_id = bool(self.model_id)
+        if has_yaml and has_id:
+            raise ValueError("Provide either model_yaml or model_id, not both")
+        if not has_yaml and not has_id:
+            raise ValueError("Provide either model_yaml or model_id")
+        # Reject duplicate query IDs early so callers get a clear error.
+        seen: set[str] = set()
+        for q in self.queries:
+            if q.id in seen:
+                raise ValueError(f"Duplicate query id: '{q.id}'")
+            seen.add(q.id)
+        return self
+
+
+class OneshotBatchQueryError(BaseModel):
+    """Error envelope for a single failed query in a batch."""
+
+    code: str
+    message: str
+    path: str | None = None
+    hint: str | None = None
+
+
+class OneshotBatchQueryResult(BaseModel):
+    """Result of a single query in a one-shot batch."""
+
+    id: str
+    status: str = Field(description="One of: 'ok', 'error', 'cancelled'")
+    sql: str | None = None
+    dialect: str | None = None
+    sql_valid: bool | None = None
+    explain: ExplainPlanResponse | None = None
+    columns: list[ColumnMetadata] | None = None
+    rows: list[list[object]] | None = None
+    row_count: int | None = None
+    execution_time_ms: float | None = None
+    executed: bool | None = Field(
+        default=None,
+        description="Whether this query executed (vs compile-only). Only set when status='ok'.",
+    )
+    warnings: list[str] = Field(default_factory=list)
+    error: OneshotBatchQueryError | None = None
+
+
+class OneshotBatchResponse(BaseModel):
+    """Response body for POST /v1/oneshot/batch."""
+
+    session_id: str
+    model_id: str
+    model_persisted: bool
+    model_load: str = Field(
+        default="fresh",
+        description=(
+            "How the model was acquired: 'fresh' (parsed and loaded), 'reused' (dedup hit), "
+            "or 'referenced' (existing model_id supplied by caller)."
+        ),
+    )
+    results: list[OneshotBatchQueryResult] = Field(default_factory=list)
+    batch_warnings: list[str] = Field(default_factory=list)

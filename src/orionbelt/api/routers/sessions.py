@@ -175,6 +175,7 @@ async def load_model(
             raw_dict=cast("dict[str, object] | None", body.model_json),
             extends_yaml=body.extends,
             inherits_model_id=body.inherits,
+            dedup=body.dedup,
         )
     except ModelCapacityError as exc:
         raise HTTPException(status_code=429, detail=str(exc)) from None
@@ -201,6 +202,7 @@ async def load_model(
         measures=result.measures,
         metrics=result.metrics,
         warnings=result.warnings,
+        model_load=result.model_load,
     )
 
 

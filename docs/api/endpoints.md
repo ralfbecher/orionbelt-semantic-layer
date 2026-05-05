@@ -13,7 +13,7 @@ Returns the service status and version.
 ```json
 {
   "status": "ok",
-  "version": "2.1.4"
+  "version": "2.2.0"
 }
 ```
 
@@ -102,9 +102,18 @@ Load an OBML semantic model into a session. The model is parsed, validated, and 
 
 ```json
 {
-  "model_yaml": "version: 1.0\ndataObjects:\n  Orders:\n    code: ORDERS\n    ..."
+  "model_yaml": "version: 1.0\ndataObjects:\n  Orders:\n    code: ORDERS\n    ...",
+  "dedup": true
 }
 ```
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `model_yaml` | string | — | OBML YAML (or use `model_json`). |
+| `model_json` | object/string | — | OBML as JSON (or use `model_yaml`). |
+| `extends` | array | — | Inline YAML fragments to merge. |
+| `inherits` | string | — | Parent model_id to inherit from. |
+| `dedup` | bool | `true` | When true, identical OBML content already loaded in this session reuses the existing `model_id`. Set `false` to force a fresh parse. |
 
 **Response (201):**
 
@@ -115,9 +124,12 @@ Load an OBML semantic model into a session. The model is parsed, validated, and 
   "dimensions": 3,
   "measures": 2,
   "metrics": 1,
-  "warnings": []
+  "warnings": [],
+  "model_load": "fresh"
 }
 ```
+
+`model_load` is `"fresh"` when the OBML was parsed and loaded normally, `"reused"` when an identical model was already present in the session (no parsing/validation work was done; the existing `model_id` is returned). Dedup applies only to plain `model_yaml` loads — supplying `extends` or `inherits` always loads fresh.
 
 **Error (403):** Single-model mode: model upload is disabled.
 
@@ -385,6 +397,114 @@ UK	9.870,00
 | 503 | Query execution not available (`FLIGHT_ENABLED` not set) |
 
 **Top-level shortcut:** `POST /v1/query/execute` — auto-resolves session/model, auto-detects dialect from `DB_VENDOR`.
+
+---
+
+## One-shot Batch
+
+### `POST /v1/oneshot/batch`
+
+Load (or reference) a model and run multiple independent queries against it in a single round trip. Designed for agent workflows: one model, N sub-questions, parallel execution under a server-capped semaphore. See `design/PLAN_oneshot_batch.md` for the full design.
+
+**Request:**
+
+```json
+{
+  "session_id": null,
+  "model_yaml": "version: 1.0\ndataObjects: ...",
+  "model_id": null,
+  "queries": [
+    {
+      "id": "revenue_by_country",
+      "query": {
+        "select": {"dimensions": ["Customer Country"], "measures": ["Total Revenue"]},
+        "limit": 100
+      }
+    },
+    {
+      "id": "revenue_by_product",
+      "query": {"select": {"dimensions": ["Product"], "measures": ["Total Revenue"]}},
+      "execute": false
+    }
+  ],
+  "dialect": "postgres",
+  "execute": true,
+  "max_parallelism": 4,
+  "fail_fast": false,
+  "persist_model": false,
+  "dedup": true
+}
+```
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `session_id` | string | auto-create | Existing session, otherwise OBSL creates one. |
+| `model_yaml` | string | — | OBML YAML. Mutually exclusive with `model_id`. |
+| `model_id` | string | — | ID of an already-loaded model in the session. Mutually exclusive with `model_yaml`. |
+| `queries` | array | required | List of queries (1..max_queries). Each needs a unique `id`. |
+| `queries[].execute` | bool | inherits batch | Per-query override for compile-only vs. execute. |
+| `queries[].dialect` | string | inherits batch | Per-query dialect override. |
+| `dialect` | string | model/env | Default dialect for the batch. |
+| `execute` | bool | `false` | Default execute flag for the batch. |
+| `max_parallelism` | int | server cap | Concurrency cap (silently lowered to the server max). |
+| `fail_fast` | bool | `false` | Cancel remaining queries on first failure. |
+| `persist_model` | bool | `false` | Keep the model loaded after the batch (only for `model_yaml` loads). |
+| `dedup` | bool | `true` | Reuse an existing identical model loaded in this session. |
+
+**Response (200):**
+
+```json
+{
+  "session_id": "a1b2c3d4...",
+  "model_id": "abcd1234",
+  "model_persisted": false,
+  "model_load": "fresh",
+  "results": [
+    {
+      "id": "revenue_by_country",
+      "status": "ok",
+      "sql": "SELECT ...",
+      "dialect": "postgres",
+      "sql_valid": true,
+      "executed": true,
+      "columns": [{"name": "Customer Country", "type": "string"}],
+      "rows": [["US", 15230.5]],
+      "row_count": 42,
+      "execution_time_ms": 38.2,
+      "warnings": []
+    },
+    {
+      "id": "revenue_by_product",
+      "status": "ok",
+      "sql": "SELECT ...",
+      "dialect": "postgres",
+      "sql_valid": true,
+      "executed": false,
+      "warnings": []
+    }
+  ],
+  "batch_warnings": []
+}
+```
+
+`model_load` is `"fresh"` (parsed and loaded), `"reused"` (matched dedup index), or `"referenced"` (caller supplied `model_id`).
+
+Per-query `status` is `"ok"`, `"error"` (with an `error` envelope: `{code, message, path, hint}`), or `"cancelled"` (only when `fail_fast: true` triggers and remaining queries are short-circuited).
+
+**Error (422):** Validation failure (duplicate query IDs, both/neither of `model_yaml`/`model_id`, batch over `ONESHOT_BATCH_MAX_QUERIES`, or model load failure).
+
+**Error (404):** Session or `model_id` not found.
+
+**Error (410):** Session expired.
+
+**Limits** (configurable, see `GET /v1/settings.oneshot_batch`):
+
+| Setting | Default |
+|---|---|
+| `ONESHOT_BATCH_MAX_QUERIES` | 50 |
+| `ONESHOT_BATCH_MAX_PARALLELISM` | 8 |
+| `ONESHOT_BATCH_DEFAULT_TIMEOUT_MS` | 30000 (per-query) |
+| `ONESHOT_BATCH_BATCH_TIMEOUT_MS` | 120000 (whole batch) |
 
 ---
 
@@ -734,7 +854,7 @@ Return public configuration for API clients (UI, MCP, etc.).
 
 ```json
 {
-  "version": "2.1.4",
+  "version": "2.2.0",
   "api_version": "v1",
   "single_model_mode": false,
   "session_ttl_seconds": 1800,
@@ -753,7 +873,7 @@ Return public configuration for API clients (UI, MCP, etc.).
 
 ```json
 {
-  "version": "2.1.4",
+  "version": "2.2.0",
   "api_version": "v1",
   "single_model_mode": true,
   "model_yaml": "version: 1.0\nsettings:\n  defaultTimezone: Europe/Berlin\n  ...",

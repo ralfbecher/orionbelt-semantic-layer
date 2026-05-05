@@ -11,6 +11,7 @@ from orionbelt import __version__
 from orionbelt.api.deps import (
     get_db_vendor,
     get_flight_info,
+    get_oneshot_batch_config,
     get_preload_model_yaml,
     get_session_manager,
     is_query_execute_enabled,
@@ -20,6 +21,7 @@ from orionbelt.api.schemas import (
     DialectResolutionInfo,
     FlightSettingsInfo,
     ModelSettingsInfo,
+    OneshotBatchLimits,
     SettingsResponse,
     TimezoneResolutionInfo,
 )
@@ -257,6 +259,14 @@ async def get_settings(
         effective=_resolve_effective_dialect(settings_block, db_vendor),
     )
 
+    batch_cfg = get_oneshot_batch_config()
+    batch_limits = OneshotBatchLimits(
+        max_queries=batch_cfg.max_queries,
+        max_parallelism=batch_cfg.max_parallelism,
+        default_timeout_ms=batch_cfg.default_timeout_ms,
+        batch_timeout_ms=batch_cfg.batch_timeout_ms,
+    )
+
     return SettingsResponse(
         version=__version__,
         api_version="v1",
@@ -271,4 +281,5 @@ async def get_settings(
         model_settings=model_settings_info,
         timezone=timezone_info,
         dialect=dialect_info,
+        oneshot_batch=batch_limits,
     )

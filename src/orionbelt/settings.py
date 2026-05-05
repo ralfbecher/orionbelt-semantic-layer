@@ -75,3 +75,9 @@ class Settings(BaseSettings):
     flight_auth_mode: str = "none"  # "none" or "token"
     flight_api_token: str | None = None
     db_vendor: str = "duckdb"  # default vendor driver for Flight query execution
+
+    # One-shot batch endpoint (POST /v1/oneshot/batch). See PLAN_oneshot_batch.md.
+    oneshot_batch_max_queries: int = 50
+    oneshot_batch_max_parallelism: int = 8
+    oneshot_batch_default_timeout_ms: int = 30000  # per-query
+    oneshot_batch_batch_timeout_ms: int = 120000  # whole batch

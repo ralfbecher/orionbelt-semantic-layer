@@ -2,6 +2,21 @@
 
 All notable changes to OrionBelt Semantic Layer are documented here.
 
+## [2.2.0] - 2026-05-05
+
+### Added
+
+- **`POST /v1/oneshot/batch` — one-shot batch endpoint.** Loads (or references) an OBML model and runs N independent queries against it in a single round trip. Designed for agent workflows where one model + multiple sub-questions is the dominant pattern. Supports `model_yaml` (transient or persisted via `persist_model: true`) or `model_id` (reference an already-loaded model). Queries run concurrently under an `asyncio.Semaphore` capped by `ONESHOT_BATCH_MAX_PARALLELISM` (default 8). Per-query overrides for `dialect` and `execute`. Stable result ordering keyed by caller-provided `id`. Partial failure is the default — each result carries its own `status` (`ok` / `error` / `cancelled`) and `error` envelope. `fail_fast: true` cancels remaining queries on first failure. Whole-batch and per-query timeouts are honored. Server limits surface via `GET /v1/settings.oneshot_batch`. See `design/PLAN_oneshot_batch.md`.
+- **Model load deduplication.** `POST /v1/sessions/{sid}/models` and `POST /v1/oneshot/batch` now reuse an existing `model_id` when the same OBML bytes (whitespace-normalized) are already loaded in the session. The response includes a new `model_load` field (`"fresh"` | `"reused"` | `"referenced"` for batch). Skips parsing, validation, and OBSL graph generation on the dedup path. Disable with `dedup: false`. Index is per-session (session isolation preserved) and is cleared automatically on model removal. See `design/PLAN_model_load_dedup.md`.
+
+### Settings
+
+- New env vars: `ONESHOT_BATCH_MAX_QUERIES` (50), `ONESHOT_BATCH_MAX_PARALLELISM` (8), `ONESHOT_BATCH_DEFAULT_TIMEOUT_MS` (30000), `ONESHOT_BATCH_BATCH_TIMEOUT_MS` (120000). All exposed in `GET /v1/settings.oneshot_batch`.
+
+### Behavior change
+
+- Identical OBML loads in the same session now return the same `model_id` instead of minting a new one each time. Disable per-call with `dedup: false`.
+
 ## [2.1.4] - 2026-05-03
 
 ### Fixed

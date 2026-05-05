@@ -13,7 +13,7 @@ from fastapi import APIRouter, FastAPI, Request
 from fastapi.responses import JSONResponse, Response
 
 from orionbelt import __version__
-from orionbelt.api.deps import init_session_manager, reset_session_manager
+from orionbelt.api.deps import OneshotBatchConfig, init_session_manager, reset_session_manager
 from orionbelt.api.logging_config import configure_logging
 from orionbelt.api.middleware import (
     RequestBodyLimitMiddleware,
@@ -27,6 +27,7 @@ from orionbelt.api.routers import (
     dialects,
     graph,
     model_api,
+    oneshot,
     reference,
     sessions,
     shortcuts,
@@ -125,6 +126,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
         db_vendor=settings.db_vendor,
         query_default_limit=settings.query_default_limit,
         default_locale=settings.default_locale,
+        oneshot_batch_config=OneshotBatchConfig(
+            max_queries=settings.oneshot_batch_max_queries,
+            max_parallelism=settings.oneshot_batch_max_parallelism,
+            default_timeout_ms=settings.oneshot_batch_default_timeout_ms,
+            batch_timeout_ms=settings.oneshot_batch_batch_timeout_ms,
+        ),
     )
 
     # Start Arrow Flight SQL server if ob-flight-extension is installed
@@ -230,6 +237,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     v1.include_router(shortcuts.router, tags=["model-discovery"])
     v1.include_router(convert.router, prefix="/convert", tags=["convert"])
     v1.include_router(dialects.router, prefix="/dialects", tags=["dialects"])
+    v1.include_router(oneshot.router, prefix="/oneshot", tags=["oneshot"])
     v1.include_router(reference.router, prefix="/reference", tags=["reference"])
     v1.include_router(settings_router.router, prefix="/settings", tags=["settings"])
     app.include_router(v1)
