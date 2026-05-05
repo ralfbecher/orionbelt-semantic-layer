@@ -17,7 +17,8 @@ How OrionBelt Semantic Layer (OBSL) stacks up against the leading semantic layer
 | First-class period-over-period metric | ✅ | Via `offset_window` | Per-query | Via table calc | Query-time `time_shift` | Via MDX |
 | Conversion / funnel metrics | ❌ | ✅ | Patterns | Patterns | Patterns | Patterns |
 | Symmetric aggregates | ❌ (uses CFL) | ❌ | ✅ | ✅ | ✅ | ✅ (OLAP) |
-| Multi-rooted DAG | ✅ via CFL `UNION ALL` planner | Implicit via shared entities (no union planner) | Aliased / joined sources (no union planner) | Explore-per-fact + Looker `merged_results` (API-side merge) | `view`s stitching joined cubes (model-time) | Per-Cube fact base; multi-cube via conformed dims or virtual cubes |
+| Multi-rooted modeling (peer-rooted facts) | ✅ independent `dataObject`s | ✅ independent `semantic_model`s | ❌ single-rooted `source:` | ❌ single-rooted `explore:` (joined facts only) | ✅ independent cubes | ✅ multiple facts in one Cube via conformed dims |
+| Multi-fact query plan | `UNION ALL` (CFL) | JOIN via shared entities | n/a | JOIN inside explore (symmetric agg) | JOIN via cube graph | JOIN with OLAP aggregation |
 | Named secondary join paths | ✅ first-class | ❌ | ❌ | ❌ | ❌ | ✅ (role-playing dims) |
 | Nested / hierarchical results | ❌ | ❌ | ✅ (`nest:`) | ❌ | ❌ | ❌ |
 | OLAP hierarchies (multi-level, parent-child) | ❌ | ❌ | ❌ | Partial | ❌ | ✅ first-class |
@@ -56,16 +57,32 @@ This matters when your warehouse doesn't fit a clean star: you need ship-address
 
 ### How each tool actually handles multi-fact queries
 
-The at-a-glance row is necessarily terse. The substance:
+Two separate questions matter here, and they cut differently across tools:
 
-- **OBSL** — `compiler/cfl.py` (the **Composite Fact Layer** planner) emits one `UNION ALL` leg per fact, with NULL padding for measures that don't apply to a leg. Multi-fact is a first-class query-time primitive; the planner detects when measures span genuinely independent facts (via directed reachability on the join graph) and routes only those queries through CFL.
-- **dbt SL (MetricFlow)** — each `semantic_model` declares one primary entity. When a query references metrics from two semantic models, MetricFlow attempts to find a shared entity and joins through it. Works when entities line up; fails (or silently produces wrong rows) when they don't. **No explicit multi-fact UNION planner.**
-- **Malloy** — every `source:` is single-rooted by language design (one underlying table or one parent source, extended via `join_one` / `join_many`). There's **no syntactic primitive for a multi-rooted source**: `join_one` / `join_many` are extensions of one source's tree, so they always presume a single root. Attempting to declare two unrelated facts as peer roots in one source fails at the join definitions — there is no peer-of-peer join construct. Multi-fact reporting therefore means separate queries or query-layer stitching; symmetric aggregates make the single-rooted tree query-safe but don't compose multiple roots.
-- **LookML / Looker** — each `explore` is single-rooted (one base view + joins fanning out). Multi-fact reporting builds two explores. Looker (the *runtime*, not LookML the language) provides **`merged_results`** which executes two queries and merges their results in the API layer — useful but post-join, not a model-time primitive.
-- **Cube** — `view`s stitch measures/dimensions from joined cubes into a unified surface. This is the intended pattern (not a workaround) but it's **predesigned at model time**: you decide which cubes a view exposes upfront. Query-time choice between two valid join paths between the same cube pair isn't a first-class primitive.
-- **AtScale** — each AtScale **Cube** (its term for a data model) has a single fact base. Multi-fact via (a) multiple cubes, (b) one cube joining facts via **conformed dimensions**, or (c) **virtual cubes** that combine cubes. Multi-path joins are handled via **role-playing dimensions** — elegant but model-time, not the per-query `pathName` selection OBSL provides.
+1. **Modeling-time**: does the language let you declare independent peer entities (multiple facts) with their own joins to shared dimensions, or are joins scoped to a single base context (one explore, one source) so peer-rooted topology can't be expressed at all?
+2. **Query-time**: when a query asks for measures from multiple facts, is the SQL plan a single `JOIN` graph (with fanout risk, mitigated by symmetric aggregates) or `UNION ALL` legs?
 
-The structural difference: OBSL plans multi-fact at *query time* via a graph reachability check + UNION ALL; the others either restrict to single-rooted (Malloy, LookML) or push multi-fact resolution upstream into model design (Cube views, AtScale virtual cubes, dbt entity alignment).
+A constraint that's universal: every tool here requires you to **declare entities (tables/cubes/sources/dataObjects) first** — you can't ad-hoc add a join to an undefined table. The differences are about how those declared entities can be wired together.
+
+| Tool | Peer-rooted modeling | Multi-fact query plan |
+|---|---|---|
+| **OBSL** | ✅ `dataObject`s are independent peers, each with its own joins | `UNION ALL` (CFL) |
+| **dbt SL (MetricFlow)** | ✅ `semantic_model`s are independent peers; joins via shared entities | JOIN via shared entities |
+| **Malloy** | ❌ every `source:` is single-rooted; `join_one` / `join_many` always presume one root | n/a (separate queries) |
+| **LookML** | ❌ joins live inside one `explore` (one base view + joined views) | JOIN inside the explore (symmetric agg) |
+| **Looker (runtime)** | n/a | `merged_results` merges two queries' results in the API layer |
+| **Cube** | ✅ cubes are independent peers with `joins:` blocks; query planner traverses the cube graph | JOIN via cube graph (`view`s curate exposure) |
+| **AtScale** | ✅ multiple fact datasets in one Cube connected by conformed dimensions; virtual cubes compose Cubes | JOIN with OLAP-style aggregation |
+
+So **peer-rooted modeling** isn't unique to OBSL — Cube, dbt MetricFlow, and AtScale all support it. **Single-rooted-only** sits with Malloy and LookML, by language design.
+
+**What's structurally distinct about OBSL** narrows to:
+
+1. **`UNION ALL` query plan** for multi-fact (each leg JOINs only its own fact to its dim path; no fanout risk, no symmetric-aggregate accounting). The others use a single JOIN graph. Different scaling characteristics and a cleaner mental model, at the cost of two SQL passes per leg.
+2. **Named multi-path joins** as a *per-query* selection primitive (`secondary: true` + `pathName` + `usePathNames`). LookML uses `from:` aliasing, AtScale uses role-playing dimensions, Cube/MetricFlow workaround via duplicate cubes/aliases — all model-time. Per-query path choice is OBSL-only.
+3. **Static fanout detection** as an explicit error class (`compiler/fanout.py` raises `FanoutError`) instead of trusting symmetric aggregates to silently correct.
+
+AtScale's conformed-dimensions-within-a-Cube + virtual cubes is the closest peer in *modeling capability*; the genuine differences there are (1) and (2).
 
 ## Where OBSL fits best
 
