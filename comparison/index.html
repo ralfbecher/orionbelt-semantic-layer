@@ -1524,6 +1524,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Topology: a recurring theme">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#how-each-tool-actually-handles-multi-fact-queries" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How each tool actually handles multi-fact queries
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1948,6 +1965,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Topology: a recurring theme">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#how-each-tool-actually-handles-multi-fact-queries" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How each tool actually handles multi-fact queries
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -2106,28 +2140,37 @@
 <td>✅ (OLAP)</td>
 </tr>
 <tr>
-<td>Multi-rooted DAG</td>
-<td>✅ via CFL</td>
-<td>Implicit</td>
-<td>Workaround</td>
-<td>One-explore-per-fact</td>
-<td>Workaround via <code>view</code>s</td>
-<td>Cube-rooted</td>
+<td>Multi-rooted modeling (peer-rooted facts)</td>
+<td>✅ independent <code>dataObjects</code></td>
+<td>✅ independent <code>semantic_models</code></td>
+<td>❌ single-rooted <code>source</code></td>
+<td>❌ single-rooted <code>explore</code> (joined facts only)</td>
+<td>✅ independent cubes</td>
+<td>✅ multiple facts in one Cube via conformed dims</td>
 </tr>
 <tr>
-<td>Named secondary join paths</td>
-<td>✅ first-class</td>
-<td>❌</td>
-<td>❌</td>
-<td>❌</td>
-<td>❌</td>
-<td>✅ (role-playing dims)</td>
+<td>Multi-fact query plan</td>
+<td><code>UNION ALL</code> legs (CFL)</td>
+<td><code>FULL OUTER JOIN</code> on shared entities</td>
+<td>n/a</td>
+<td>JOIN inside explore (symmetric agg)</td>
+<td>Single JOIN path via Dijkstra-resolved cube graph</td>
+<td>JOIN with OLAP aggregation</td>
+</tr>
+<tr>
+<td>Multi-path joins (between same pair)</td>
+<td>✅ per-query selection via <code>pathName</code> + <code>usePathNames</code></td>
+<td>❌ no path-name primitive</td>
+<td>❌ aliased sources (model-time)</td>
+<td><code>from</code> aliasing (model-time)</td>
+<td>Dijkstra + member-type priority heuristic; pin via <code>views</code></td>
+<td>Role-playing dimensions (model-time)</td>
 </tr>
 <tr>
 <td>Nested / hierarchical results</td>
 <td>❌</td>
 <td>❌</td>
-<td>✅ (<code>nest:</code>)</td>
+<td>✅ (<code>nest</code>)</td>
 <td>❌</td>
 <td>❌</td>
 <td>❌</td>
@@ -2205,6 +2248,15 @@
 <td>✅ autonomous</td>
 </tr>
 <tr>
+<td>Result cache</td>
+<td>✅ freshness-driven file cache (TTL from <code>dataObject.refresh</code>; ETL heartbeat invalidation)</td>
+<td>dbt Cloud query cache</td>
+<td>❌</td>
+<td>Looker query cache (<code>persist_for</code>) + aggregate awareness</td>
+<td>Tiered (in-memory + optional Redis + Cube Store) with refresh-key TTL</td>
+<td>Built-in cache + autonomous aggregates</td>
+</tr>
+<tr>
 <td>Row-level security in model</td>
 <td>❌</td>
 <td>Via dbt</td>
@@ -2251,6 +2303,89 @@
 <li><strong>Cycle detection</strong> — explicit, not silent</li>
 </ul>
 <p>This matters when your warehouse doesn't fit a clean star: you need ship-address vs. billing-address joins to the same dimension, or a single API surface that exposes revenue <em>and</em> support tickets together. See the <a href="../guide/compilation/">Compilation Pipeline</a> guide for how this flows through the planner.</p>
+<h3 id="how-each-tool-actually-handles-multi-fact-queries">How each tool actually handles multi-fact queries<a class="headerlink" href="#how-each-tool-actually-handles-multi-fact-queries" title="Permanent link">&para;</a></h3>
+<p>Two separate questions matter here, and they cut differently across tools:</p>
+<ol>
+<li><strong>Modeling-time</strong>: does the language let you declare independent peer entities (multiple facts) with their own joins to shared dimensions, or are joins scoped to a single base context (one explore, one source) so peer-rooted topology can't be expressed at all?</li>
+<li><strong>Query-time</strong>: when a query asks for measures from multiple facts, is the SQL plan a single <code>JOIN</code> graph (with fanout risk, mitigated by symmetric aggregates) or <code>UNION ALL</code> legs?</li>
+</ol>
+<p>A constraint that's universal: every tool here requires you to <strong>declare entities (tables/cubes/sources/dataObjects) first</strong> — you can't ad-hoc add a join to an undefined table. The differences are about how those declared entities can be wired together.</p>
+<table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Peer-rooted modeling</th>
+<th>Multi-fact query plan</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>OBSL</strong></td>
+<td>✅ <code>dataObjects</code> are independent peers, each with its own joins</td>
+<td><code>UNION ALL</code> legs (CFL) with NULL-padding for missing measures</td>
+</tr>
+<tr>
+<td><strong>dbt SL (MetricFlow)</strong></td>
+<td>✅ <code>semantic_models</code> are independent peers; joins via shared entities</td>
+<td><code>FULL OUTER JOIN</code> on the shared entity (per dbt's <code>join-logic.md</code>)</td>
+</tr>
+<tr>
+<td><strong>Malloy</strong></td>
+<td>❌ every <code>source</code> is single-rooted; <code>join_one</code> / <code>join_many</code> always presume one root</td>
+<td>n/a (separate queries)</td>
+</tr>
+<tr>
+<td><strong>LookML</strong></td>
+<td>❌ joins live inside one <code>explore</code> (one base view + joined views)</td>
+<td>JOIN inside the explore (symmetric agg)</td>
+</tr>
+<tr>
+<td><strong>Looker (runtime)</strong></td>
+<td>n/a</td>
+<td><code>merged_results</code> merges two queries' results in the API layer</td>
+</tr>
+<tr>
+<td><strong>Cube</strong></td>
+<td>✅ cubes are independent peers with <code>joins</code> blocks; planner traverses the cube graph (Dijkstra) — <em>shortest path is not always the semantically correct one</em></td>
+<td>Single JOIN path resolved at query time; <code>views</code> recommended when multiple paths exist</td>
+</tr>
+<tr>
+<td><strong>AtScale</strong></td>
+<td>✅ multiple fact datasets in one Cube connected by conformed dimensions; virtual cubes compose Cubes</td>
+<td>JOIN with OLAP-style aggregation</td>
+</tr>
+</tbody>
+</table>
+<p>So <strong>peer-rooted modeling</strong> isn't unique to OBSL — Cube, dbt MetricFlow, and AtScale all support it. <strong>Single-rooted-only</strong> sits with Malloy and LookML, by language design.</p>
+<p>The <strong>multi-fact query plans split three ways</strong>, and the correctness story is non-trivial for two of them:</p>
+<ul>
+<li>
+<p><strong><code>UNION ALL</code> (OBSL)</strong> — one leg per fact; each leg <code>SELECT … FROM fact_n JOIN dims … GROUP BY …</code>. The two facts are <em>never in the same <code>FROM</code> clause</em>, so the <strong>chasm trap</strong> (cross-product when both facts have multiple rows per shared dim key) cannot occur by construction. No symmetric-aggregate accounting required. The cost is two SQL passes, one per leg.</p>
+</li>
+<li>
+<p><strong><code>FULL OUTER JOIN</code> on shared entity (dbt MetricFlow)</strong> — peer fact tables joined on the entity. <strong>Correctness depends on pre-aggregating each side before the join</strong>: if <code>sales</code> has 3 rows for user_1 and <code>returns</code> has 2, a raw <code>FROM sales FULL OUTER JOIN returns ON user_id</code> produces 6 rows and inflated sums. MetricFlow handles this via per-side aggregation CTEs before the FULL OUTER JOIN, but the pattern gets more delicate when the query also groups by additional dimensions or mixes measure types.</p>
+</li>
+<li>
+<p><strong>Single JOIN path with symmetric aggregates (Cube, LookML, AtScale)</strong> — planner picks one path through the join graph (Dijkstra in Cube; explore-base-rooted in LookML; OLAP aggregation in AtScale) and wraps each measure's aggregation in <strong>symmetric-aggregate</strong> SQL (DISTINCT-aware SUMs, COUNT(DISTINCT …) over surrogate keys, etc.) to undo the fanout the JOIN introduces. Works for many common shapes — but it's a <em>correction during aggregation</em> rather than a structural fix, and edge cases (multiple unique-distinct columns, nested aggregations, mixed COUNT/SUM) can still produce surprising numbers. Cube's own docs recommend <code>views</code> for "join predictability and stability" — i.e., pin the path at model-design time rather than trusting the planner to pick correctly.</p>
+</li>
+</ul>
+<p>OBSL's UNION ALL plan trades extra SQL passes for the absence of an entire class of fanout problem.</p>
+<p>For <strong>multi-path joins</strong> between the same pair of entities (e.g., <code>Order.ship_address_id</code> vs <code>Order.bill_address_id</code> both pointing to <code>Address</code>):</p>
+<ul>
+<li><strong>OBSL</strong>: declare both with <code>secondary: true</code> + <code>pathName</code>; pick at query time via <code>usePathNames</code>. <strong>Per-query selection — unique here.</strong></li>
+<li><strong>Cube</strong>: graph allows multiple paths; planner resolves with Dijkstra + a member-type priority heuristic (measures → dimensions → segments → time dimensions); pin via a <code>view</code> for predictability. <strong>Graph-aware but not per-query selectable</strong> — and the choice of <em>shortest path</em> is a graph-theoretic answer to what is fundamentally a semantic question. When a query asks for "orders by address," shortest-path picks one of <code>ship_address_id</code> / <code>bill_address_id</code> based on edge weights, not on the consumer's intent. The two paths may yield genuinely different correct answers; Dijkstra picks the one the heuristic prefers. Views can pin the choice, but only at model-design time, not per query.</li>
+<li><strong>AtScale</strong>: role-playing dimensions — same dim aliased into multiple roles (<code>OrderDate</code>, <code>ShipDate</code>). Model-time aliasing.</li>
+<li><strong>LookML</strong>: <code>from</code> aliasing — same view declared twice in an explore under different aliases. Model-time.</li>
+<li><strong>Malloy</strong>: aliased sources (<code>source: ship_addr is address</code>). Model-time.</li>
+<li><strong>dbt MetricFlow</strong>: no first-class path-name primitive.</li>
+</ul>
+<p><strong>What's structurally distinct about OBSL</strong> after the corrections:</p>
+<ol>
+<li><strong><code>UNION ALL</code> plan avoids the chasm trap by construction</strong> — the two facts never share a <code>FROM</code> clause, so cross-product fanout is impossible. MetricFlow's <code>FULL OUTER JOIN</code> and Cube/LookML/AtScale's single-JOIN-path approach both have to <em>correct for</em> fanout (via pre-aggregation CTEs or symmetric aggregates respectively); CFL avoids needing a correction at all.</li>
+<li><strong>Per-query path selection</strong> for multi-path joins — Cube has graph-aware multi-path resolution (heuristic), but OBSL is the only one where the <em>consumer of the query</em> picks the path explicitly. Shortest-path is a graph-theoretic answer to a semantic question.</li>
+<li><strong>Static fanout detection</strong> as an explicit error class (<code>compiler/fanout.py</code> raises <code>FanoutError</code>) — wrong-direction many-to-one joins fail at compile time rather than producing silently-wrong row counts.</li>
+</ol>
+<p>AtScale's conformed-dimensions-within-a-Cube + virtual cubes is the closest peer in <em>modeling capability</em>. Nothing in this comparison set matches OBSL's <em>combination</em> of UNION-ALL multi-fact plan + per-query path selection.</p>
 <h2 id="where-obsl-fits-best">Where OBSL fits best<a class="headerlink" href="#where-obsl-fits-best" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>Embedded analytics</strong> in a SaaS product where consumers (apps, agents, BI tools) need a stable JSON Query API and you don't want to ship a DSL interpreter.</li>
@@ -2262,7 +2397,7 @@
 <h2 id="where-another-tool-may-be-a-better-fit">Where another tool may be a better fit<a class="headerlink" href="#where-another-tool-may-be-a-better-fit" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>dbt SL</strong> if you've standardized on dbt and want metrics tightly coupled to your transformation pipeline, with dbt Cloud governance.</li>
-<li><strong>Malloy</strong> for analyst-driven exploration and BI authoring, especially if you need hierarchical (<code>nest:</code>) result shapes.</li>
+<li><strong>Malloy</strong> for analyst-driven exploration and BI authoring, especially if you need hierarchical (<code>nest</code>) result shapes.</li>
 <li><strong>Looker</strong> if you're buying an end-to-end BI platform with dashboards, alerts, RLS, and PDTs — and the per-user licensing fits your org.</li>
 <li><strong>Cube</strong> if you need pre-aggregations for sub-second analytics on large datasets, a Postgres-wire SQL API for BI-tool connectivity, or first-class multi-tenancy/RLS — and you're willing to operate (or pay for Cube Cloud to operate) the heavier runtime.</li>
 <li><strong>AtScale</strong> if your business users live in Excel pivot tables and need native MDX, or you need DAX for Power BI live connections — no other tool in this comparison set speaks those protocols.</li>
