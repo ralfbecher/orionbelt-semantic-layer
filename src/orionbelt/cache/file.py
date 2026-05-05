@@ -268,6 +268,24 @@ class FileCache(Cache):
             return
         await self._evict(key, row[0])
 
+    async def clear(self) -> int:
+        try:
+            with self._lock:
+                self._meta.execute("BEGIN")
+                rows = self._meta.execute(
+                    "DELETE FROM cache_entries RETURNING file_path"
+                ).fetchall()
+                self._meta.execute("DELETE FROM cache_entry_tables")
+                self._meta.execute("COMMIT")
+        except Exception as exc:
+            logger.warning("cache.clear error: %s", exc)
+            with contextlib.suppress(Exception):
+                self._meta.execute("ROLLBACK")
+            return 0
+        for (file_path,) in rows:
+            self._unlink(file_path)
+        return len(rows)
+
     async def delete_session(self, session_id: str) -> int:
         try:
             with self._lock:
@@ -368,7 +386,9 @@ class FileCache(Cache):
             hit_count_total=hits,
             miss_count_total=misses,
             hit_rate=hit_rate,
-            oldest_entry=oldest.isoformat() if isinstance(oldest, datetime) else None,
+            oldest_entry=(
+                oldest.astimezone(UTC).isoformat() if isinstance(oldest, datetime) else None
+            ),
             next_sweep_at=next_sweep,
             tracked_physical_tables=tracked_count,
             heartbeat_invalidations_total=int(counter_map.get("heartbeat_invalidations", 0)),

@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
+import time
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -266,9 +267,11 @@ async def _run_query(
             cache_config=cache_config,
             physical_tables=physical_tables,
         )
+        _cache_t0 = time.monotonic()
         cached_hit = await _try_oneshot_cache_get(cache, cache_key)
         if cached_hit is not None:
             envelope, cached_at_iso = cached_hit
+            fetch_elapsed_ms = round((time.monotonic() - _cache_t0) * 1000, 2)
             from orionbelt.api.schemas import ColumnMetadata as _ColMeta
 
             cached_columns = [
@@ -289,7 +292,7 @@ async def _run_query(
                 columns=cached_columns,
                 rows=envelope.rows,
                 row_count=envelope.row_count,
-                execution_time_ms=envelope.execution_time_ms,
+                execution_time_ms=fetch_elapsed_ms,
                 executed=True,
                 warnings=warnings,
                 physical_tables=physical_tables,

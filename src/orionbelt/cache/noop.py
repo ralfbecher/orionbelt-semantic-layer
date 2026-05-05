@@ -44,6 +44,12 @@ class NoopCache(Cache):
     async def stats(self) -> CacheStats:
         return CacheStats(backend=self.backend_name)
 
+    async def sweep_once(self) -> tuple[int, int]:
+        return (0, 0)
+
+    async def clear(self) -> int:
+        return 0
+
     async def record_hit(self, key: str) -> None:
         return None
 

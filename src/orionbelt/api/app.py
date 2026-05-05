@@ -343,22 +343,26 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     try:
         import gradio as gr
 
-        from orionbelt.api.deps import (
-            get_flight_info,
-            is_query_execute_enabled,
-            is_single_model_mode,
-        )
         from orionbelt.ui.app import create_blocks
 
         api_url = f"http://localhost:{settings.effective_port}"
-        fi = get_flight_info()
+        # Resolve from Settings directly: the UI is mounted in create_app(), which
+        # runs before the lifespan hook initialises deps.py globals, so calling
+        # is_query_execute_enabled()/is_single_model_mode()/get_flight_info() here
+        # would always read defaults. Mirror the same logic used in lifespan().
+        query_execute_enabled = settings.query_execute or settings.flight_enabled
         ui_settings: dict[str, object] = {
-            "single_model_mode": is_single_model_mode(),
-            "query_execute": is_query_execute_enabled(),
+            "single_model_mode": settings.model_file is not None,
+            "query_execute": query_execute_enabled,
             "session_ttl_seconds": settings.session_ttl_seconds,
         }
-        if fi:
-            ui_settings["flight"] = fi
+        if settings.flight_enabled:
+            ui_settings["flight"] = {
+                "enabled": True,
+                "port": settings.flight_port,
+                "auth_mode": settings.flight_auth_mode,
+                "db_vendor": settings.db_vendor,
+            }
         demo = create_blocks(default_api_url=api_url, embedded_settings=ui_settings)
         from pathlib import Path
 

@@ -79,6 +79,20 @@ class Cache(Protocol):
     async def stats(self) -> CacheStats:
         """Return summary statistics."""
 
+    async def sweep_once(self) -> tuple[int, int]:
+        """Run one TTL + capacity eviction pass.
+
+        Returns ``(ttl_evicted, capacity_evicted)``. Backends that don't store
+        anything (e.g. noop) return ``(0, 0)``.
+        """
+
+    async def clear(self) -> int:
+        """Drop every entry regardless of TTL or dependencies.
+
+        Returns the number of entries removed. Counters (hits/misses) are
+        preserved as historical telemetry.
+        """
+
     async def record_hit(self, key: str) -> None:
         """Increment hit counters. Fire-and-forget; cheap when noop."""
 

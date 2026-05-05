@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
+import time
 from dataclasses import asdict
 from datetime import datetime
 from typing import Any, Literal, cast
@@ -916,12 +917,14 @@ async def _run_with_cache(
             cache_config=cache_config,
             physical_tables=compile_result.physical_tables,
         )
+        _cache_t0 = time.monotonic()
         cached_envelope = await _try_cache_get(cache, cache_key)
         if cached_envelope is not None:
             return _build_cached_response(
                 envelope=cached_envelope,
                 cache_key=cache_key,
                 ttl_outcome=ttl_outcome,
+                fetch_elapsed_ms=round((time.monotonic() - _cache_t0) * 1000, 2),
             )
 
     try:
@@ -1096,8 +1099,15 @@ def _build_cached_response(
     envelope: Any,
     cache_key: str,
     ttl_outcome: Any,
+    fetch_elapsed_ms: float,
 ) -> QueryExecuteResponse:
-    """Reconstruct a :class:`QueryExecuteResponse` from a cached Parquet entry."""
+    """Reconstruct a :class:`QueryExecuteResponse` from a cached Parquet entry.
+
+    ``fetch_elapsed_ms`` is the wall-clock time spent reading + decoding the
+    cache entry. It replaces the original DB execution time on the wire so
+    callers see a realistic "this came from cache" duration; the original is
+    preserved on disk in the Parquet sidecar for forensic inspection.
+    """
     from orionbelt.api.schemas import StructuredWarning
 
     columns = [
@@ -1127,7 +1137,7 @@ def _build_cached_response(
         columns=columns,
         rows=envelope.rows,
         row_count=envelope.row_count,
-        execution_time_ms=envelope.execution_time_ms,
+        execution_time_ms=fetch_elapsed_ms,
         timezone=envelope.timezone,
         resolved=ResolvedInfoResponse(**(envelope.resolved or {})),
         warnings=warnings_resp,

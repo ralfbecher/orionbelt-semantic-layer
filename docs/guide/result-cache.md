@@ -91,6 +91,39 @@ Always responds. With `CACHE_BACKEND=noop` the response shows `backend: "noop"` 
 }
 ```
 
+## Manual sweep
+
+```
+POST /v1/cache/sweep
+```
+
+Triggers one TTL + capacity eviction pass on demand — equivalent to a single tick of the periodic sweeper. Returns the number of entries evicted by each policy.
+
+```json
+{
+  "backend": "file",
+  "ttl_evicted": 17,
+  "capacity_evicted": 0
+}
+```
+
+With `CACHE_BACKEND=noop` returns zero counts.
+
+## Clear cache
+
+```
+POST /v1/cache/clear
+```
+
+Drops every cache entry regardless of TTL or freshness contract — useful from the UI Settings panel when you want to start fresh. Counters (hits, misses, heartbeat invalidations) are preserved as historical telemetry.
+
+```json
+{
+  "backend": "file",
+  "entries_cleared": 1247
+}
+```
+
 ## What's cached
 
 - Only canonical JSON `query/execute` responses with `format_values=false` are cached. TSV and locale-formatted JSON are skipped — caching them would require keying on locale/format.
@@ -104,7 +137,7 @@ The file backend uses two layers:
 - **DuckDB** (`{CACHE_DIR}/meta.duckdb`) for the control plane: cache entries, dependency tracking, heartbeats, sweep queries.
 - **Parquet files** (`{CACHE_DIR}/results/…`) for the actual result payloads. Self-describing, type-precise, inspectable with the DuckDB CLI.
 
-Capacity eviction is LRU (`last_hit_at NULLS FIRST, created_at ASC`); TTL eviction is lazy on read plus a periodic sweep every `CACHE_SWEEP_INTERVAL_SECONDS` (default 15 minutes).
+Capacity eviction is LRU (`last_hit_at NULLS FIRST, created_at ASC`); TTL eviction is lazy on read plus a periodic sweep every `CACHE_SWEEP_INTERVAL_SECONDS` (default 1 day). Lazy TTL on read keeps user-facing freshness correct, so the sweeper only matters for reclaiming disk from entries that expire without being read again.
 
 ## Cache lifecycle across restarts
 

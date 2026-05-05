@@ -252,6 +252,21 @@ class CacheStatsResponse(BaseModel):
     heartbeat_invalidations_total: int = 0
 
 
+class CacheSweepResponse(BaseModel):
+    """Response body for POST /v1/cache/sweep."""
+
+    backend: str
+    ttl_evicted: int = 0
+    capacity_evicted: int = 0
+
+
+class CacheClearResponse(BaseModel):
+    """Response body for POST /v1/cache/clear."""
+
+    backend: str
+    entries_cleared: int = 0
+
+
 class HeartbeatRequest(BaseModel):
     """Request body for POST /v1/heartbeat.
 
