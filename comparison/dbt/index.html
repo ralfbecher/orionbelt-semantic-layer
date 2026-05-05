@@ -2538,7 +2538,7 @@ Grains for grain-to-date: <code>year</code>, <code>quarter</code>, <code>month</
 </tr>
 <tr>
 <td>Caching</td>
-<td>None built-in</td>
+<td>Freshness-driven result cache (file backend, off by default): TTL derived from per-<code>dataObject</code> <code>refresh:</code> contract; ETL <code>POST /v1/heartbeat</code> invalidates dependent entries by physical table</td>
 <td>dbt Cloud query cache</td>
 </tr>
 <tr>
@@ -2564,7 +2564,6 @@ Grains for grain-to-date: <code>year</code>, <code>quarter</code>, <code>month</
 <ol>
 <li><strong><code>conversion</code> metric type</strong> — funnel-style metric: count of base events that converted to a target event within a window.</li>
 <li><strong><code>metric_time</code> virtual dimension</strong> — a unified time axis across heterogeneous fact tables, abstracting per-table date columns. (Partially achievable today via dimensions on each data object, but not as a single canonical handle.)</li>
-<li><strong>(Nice to have) Caching layer</strong> — query result cache keyed on (model version, query, filters).</li>
 <li><strong>(Nice to have) GraphQL or JDBC surface</strong> — for BI tool integration parity.</li>
 </ol>
 <p>Conversely, dbt SL would need to add to match OBSL's strengths:</p>
