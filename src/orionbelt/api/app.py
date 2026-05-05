@@ -177,19 +177,20 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
             cache.start_sweep_task()  # type: ignore[attr-defined]
         except Exception:
             logger.exception("Failed to start cache sweep task")
+        logger.info("Cache enabled: backend=%s", cache.backend_name)
+        logger.info("Cache dir=%s", settings.cache_dir)
+        logger.info("Cache min_ttl=%ds", settings.cache_min_ttl_seconds)
+        logger.info("Cache max_ttl=%ds", settings.cache_max_ttl_seconds)
+        logger.info("Cache max_value=%dB", settings.cache_max_value_bytes)
+        logger.info("Cache max_disk=%dB", settings.cache_max_disk_bytes)
+        logger.info("Cache sweep=%ds", settings.cache_sweep_interval_seconds)
+        logger.info("Cache unknown_policy=%s", settings.cache_unknown_freshness_policy)
         logger.info(
-            "Cache enabled: backend=%s dir=%s min_ttl=%ds max_ttl=%ds "
-            "max_value=%dB max_disk=%dB sweep=%ds unknown_policy=%s "
-            "unknown_default_ttl=%ds heartbeat_auth=%s",
-            cache.backend_name,
-            settings.cache_dir,
-            settings.cache_min_ttl_seconds,
-            settings.cache_max_ttl_seconds,
-            settings.cache_max_value_bytes,
-            settings.cache_max_disk_bytes,
-            settings.cache_sweep_interval_seconds,
-            settings.cache_unknown_freshness_policy,
+            "Cache unknown_default_ttl=%ds",
             settings.cache_unknown_freshness_default_ttl,
+        )
+        logger.info(
+            "Cache heartbeat_auth=%s",
             "configured" if settings.heartbeat_auth_token else "disabled (404)",
         )
     elif cache.backend_name != "noop":
