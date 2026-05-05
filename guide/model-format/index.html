@@ -1478,6 +1478,28 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#refresh-contracts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Refresh contracts
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Examples
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#validation-rules" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1504,7 +1526,7 @@
 </nav>
 <div class="obml-version-badge">
   OBML v1.0<br>
-  OrionBelt v2.1.4
+  OrionBelt v2.2.0
 </div>
       
     </li>
@@ -1667,6 +1689,62 @@
     
   
     OBSL Graph & SPARQL
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../freshness-contracts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Freshness Contracts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../result-cache/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Result Cache
   
 
     
@@ -3216,6 +3294,28 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#refresh-contracts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Refresh contracts
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Examples
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#validation-rules" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3242,7 +3342,7 @@
 </nav>
 <div class="obml-version-badge">
   OBML v1.0<br>
-  OrionBelt v2.1.4
+  OrionBelt v2.2.0
 </div>
                   </div>
                 </div>
@@ -5031,6 +5131,83 @@
 </span><span id="__span-37-5"><a id="__codelineno-37-5" name="__codelineno-37-5" href="#__codelineno-37-5"></a><span class="p">}</span>
 </span></code></pre></div>
 <p>Produces: <code>WHERE "STATUS" = 'completed' AND "COUNTRY" = 'Germany'</code></p>
+<h2 id="refresh-contracts">Refresh contracts<a class="headerlink" href="#refresh-contracts" title="Permanent link">&para;</a></h2>
+<p>The optional <code>refresh:</code> block on a <code>dataObject</code> declares the freshness contract of the physical table that the dataObject maps to. It drives the result-cache TTL: a query's effective TTL is the minimum across the refresh contracts of every physical table it touches. See the dedicated guide page for full details: <a href="../freshness-contracts/">Freshness contracts</a>.</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-38-1"><a id="__codelineno-38-1" name="__codelineno-38-1" href="#__codelineno-38-1"></a><span class="nt">dataObjects</span><span class="p">:</span>
+</span><span id="__span-38-2"><a id="__codelineno-38-2" name="__codelineno-38-2" href="#__codelineno-38-2"></a><span class="w">  </span><span class="nt">Orders</span><span class="p">:</span>
+</span><span id="__span-38-3"><a id="__codelineno-38-3" name="__codelineno-38-3" href="#__codelineno-38-3"></a><span class="w">    </span><span class="nt">code</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ORDERS</span>
+</span><span id="__span-38-4"><a id="__codelineno-38-4" name="__codelineno-38-4" href="#__codelineno-38-4"></a><span class="w">    </span><span class="nt">database</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">WAREHOUSE</span>
+</span><span id="__span-38-5"><a id="__codelineno-38-5" name="__codelineno-38-5" href="#__codelineno-38-5"></a><span class="w">    </span><span class="nt">schema</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">PUBLIC</span>
+</span><span id="__span-38-6"><a id="__codelineno-38-6" name="__codelineno-38-6" href="#__codelineno-38-6"></a><span class="w">    </span><span class="nt">refresh</span><span class="p">:</span>
+</span><span id="__span-38-7"><a id="__codelineno-38-7" name="__codelineno-38-7" href="#__codelineno-38-7"></a><span class="w">      </span><span class="nt">mode</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">interval</span><span class="w">     </span><span class="c1"># or: heartbeat | static</span>
+</span><span id="__span-38-8"><a id="__codelineno-38-8" name="__codelineno-38-8" href="#__codelineno-38-8"></a><span class="w">      </span><span class="nt">interval</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1h</span><span class="w">       </span><span class="c1"># required for interval mode</span>
+</span><span id="__span-38-9"><a id="__codelineno-38-9" name="__codelineno-38-9" href="#__codelineno-38-9"></a><span class="w">    </span><span class="nt">columns</span><span class="p">:</span>
+</span><span id="__span-38-10"><a id="__codelineno-38-10" name="__codelineno-38-10" href="#__codelineno-38-10"></a><span class="w">      </span><span class="l l-Scalar l-Scalar-Plain">...</span>
+</span></code></pre></div>
+<p>Two <code>dataObject</code> entries that map to the same physical table should declare equivalent contracts. When they disagree, OBSL emits a <code>SHARED_TABLE_CONTRACT_DISAGREEMENT</code> warning at load time and applies the strictest contract.</p>
+<h2 id="examples">Examples<a class="headerlink" href="#examples" title="Permanent link">&para;</a></h2>
+<p>The optional top-level <code>examples:</code> block lists canonical queries authored alongside the model — the kinds of questions the model is designed to answer. Surfaced through <code>GET /v1/sessions/{sid}/models/{mid}/examples</code> so agents can ground on the model in one round trip without guessing from dimension and measure names alone.</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-39-1"><a id="__codelineno-39-1" name="__codelineno-39-1" href="#__codelineno-39-1"></a><span class="nt">examples</span><span class="p">:</span>
+</span><span id="__span-39-2"><a id="__codelineno-39-2" name="__codelineno-39-2" href="#__codelineno-39-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">revenue_by_country</span>
+</span><span id="__span-39-3"><a id="__codelineno-39-3" name="__codelineno-39-3" href="#__codelineno-39-3"></a><span class="w">    </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Total</span><span class="nv"> </span><span class="s">completed-order</span><span class="nv"> </span><span class="s">revenue,</span><span class="nv"> </span><span class="s">broken</span><span class="nv"> </span><span class="s">down</span><span class="nv"> </span><span class="s">by</span><span class="nv"> </span><span class="s">customer</span><span class="nv"> </span><span class="s">country,</span><span class="nv"> </span><span class="s">last</span><span class="nv"> </span><span class="s">90</span><span class="nv"> </span><span class="s">days.&quot;</span>
+</span><span id="__span-39-4"><a id="__codelineno-39-4" name="__codelineno-39-4" href="#__codelineno-39-4"></a><span class="w">    </span><span class="nt">intent_tags</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">revenue</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">geography</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;trailing</span><span class="nv"> </span><span class="s">window&quot;</span><span class="p p-Indicator">]</span>
+</span><span id="__span-39-5"><a id="__codelineno-39-5" name="__codelineno-39-5" href="#__codelineno-39-5"></a><span class="w">    </span><span class="nt">query</span><span class="p">:</span>
+</span><span id="__span-39-6"><a id="__codelineno-39-6" name="__codelineno-39-6" href="#__codelineno-39-6"></a><span class="w">      </span><span class="nt">select</span><span class="p">:</span>
+</span><span id="__span-39-7"><a id="__codelineno-39-7" name="__codelineno-39-7" href="#__codelineno-39-7"></a><span class="w">        </span><span class="nt">dimensions</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;Customer</span><span class="nv"> </span><span class="s">Country&quot;</span><span class="p p-Indicator">]</span>
+</span><span id="__span-39-8"><a id="__codelineno-39-8" name="__codelineno-39-8" href="#__codelineno-39-8"></a><span class="w">        </span><span class="nt">measures</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;Total</span><span class="nv"> </span><span class="s">Revenue&quot;</span><span class="p p-Indicator">]</span>
+</span><span id="__span-39-9"><a id="__codelineno-39-9" name="__codelineno-39-9" href="#__codelineno-39-9"></a><span class="w">      </span><span class="nt">where</span><span class="p">:</span>
+</span><span id="__span-39-10"><a id="__codelineno-39-10" name="__codelineno-39-10" href="#__codelineno-39-10"></a><span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">field</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Order</span><span class="nv"> </span><span class="s">Date&quot;</span>
+</span><span id="__span-39-11"><a id="__codelineno-39-11" name="__codelineno-39-11" href="#__codelineno-39-11"></a><span class="w">          </span><span class="nt">op</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&gt;=&quot;</span>
+</span><span id="__span-39-12"><a id="__codelineno-39-12" name="__codelineno-39-12" href="#__codelineno-39-12"></a><span class="w">          </span><span class="nt">value</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;2026-01-01&quot;</span>
+</span><span id="__span-39-13"><a id="__codelineno-39-13" name="__codelineno-39-13" href="#__codelineno-39-13"></a><span class="w">      </span><span class="nt">order_by</span><span class="p">:</span>
+</span><span id="__span-39-14"><a id="__codelineno-39-14" name="__codelineno-39-14" href="#__codelineno-39-14"></a><span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> field</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Total</span><span class="nv"> </span><span class="s">Revenue&quot;</span><span class="p p-Indicator">,</span><span class="nt"> direction</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;desc&quot;</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</span><span id="__span-39-15"><a id="__codelineno-39-15" name="__codelineno-39-15" href="#__codelineno-39-15"></a><span class="w">      </span><span class="nt">limit</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">100</span>
+</span><span id="__span-39-16"><a id="__codelineno-39-16" name="__codelineno-39-16" href="#__codelineno-39-16"></a>
+</span><span id="__span-39-17"><a id="__codelineno-39-17" name="__codelineno-39-17" href="#__codelineno-39-17"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">refund_rate_by_product</span>
+</span><span id="__span-39-18"><a id="__codelineno-39-18" name="__codelineno-39-18" href="#__codelineno-39-18"></a><span class="w">    </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Returns</span><span class="nv"> </span><span class="s">as</span><span class="nv"> </span><span class="s">percentage</span><span class="nv"> </span><span class="s">of</span><span class="nv"> </span><span class="s">sales,</span><span class="nv"> </span><span class="s">by</span><span class="nv"> </span><span class="s">product.&quot;</span>
+</span><span id="__span-39-19"><a id="__codelineno-39-19" name="__codelineno-39-19" href="#__codelineno-39-19"></a><span class="w">    </span><span class="nt">intent_tags</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">returns</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">rate</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">product</span><span class="p p-Indicator">]</span>
+</span><span id="__span-39-20"><a id="__codelineno-39-20" name="__codelineno-39-20" href="#__codelineno-39-20"></a><span class="w">    </span><span class="nt">query</span><span class="p">:</span>
+</span><span id="__span-39-21"><a id="__codelineno-39-21" name="__codelineno-39-21" href="#__codelineno-39-21"></a><span class="w">      </span><span class="nt">select</span><span class="p">:</span>
+</span><span id="__span-39-22"><a id="__codelineno-39-22" name="__codelineno-39-22" href="#__codelineno-39-22"></a><span class="w">        </span><span class="nt">dimensions</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;Product</span><span class="nv"> </span><span class="s">Name&quot;</span><span class="p p-Indicator">]</span>
+</span><span id="__span-39-23"><a id="__codelineno-39-23" name="__codelineno-39-23" href="#__codelineno-39-23"></a><span class="w">        </span><span class="nt">measures</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;Refund</span><span class="nv"> </span><span class="s">Rate&quot;</span><span class="p p-Indicator">]</span>
+</span></code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name</code></td>
+<td>string</td>
+<td>yes</td>
+<td>Snake_case identifier, unique within the examples block.</td>
+</tr>
+<tr>
+<td><code>description</code></td>
+<td>string</td>
+<td>yes</td>
+<td>One- or two-sentence explanation of what this example shows.</td>
+</tr>
+<tr>
+<td><code>intent_tags</code></td>
+<td>list of strings</td>
+<td>no</td>
+<td>Free-form tags. The <code>?intent=</code> query parameter on the examples list endpoint matches against these (exact → contains → fuzzy fallback). camelCase alias <code>intentTags</code> is accepted.</td>
+</tr>
+<tr>
+<td><code>query</code></td>
+<td>object</td>
+<td>yes</td>
+<td>Full QueryObject payload — same shape accepted by <code>/query/sql</code>.</td>
+</tr>
+</tbody>
+</table>
+<p>The single-example endpoint (<code>GET .../examples/{name}</code>) returns the full query plus a best-effort <code>compiled_sql_preview</code> so agents can inspect what the example would produce without executing it.</p>
 <h2 id="validation-rules">Validation Rules<a class="headerlink" href="#validation-rules" title="Permanent link">&para;</a></h2>
 <p>OrionBelt validates models against these rules:</p>
 <ol>

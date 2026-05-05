@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://ralfbecher.github.io/orionbelt-semantic-layer/reference/architecture/">
+        <link rel="canonical" href="https://ralfbecher.github.io/orionbelt-semantic-layer/guide/freshness-contracts/">
       
       
-        <link rel="prev" href="../python-api/">
+        <link rel="prev" href="../obsl/">
       
       
-        <link rel="next" href="../configuration/">
+        <link rel="next" href="../result-cache/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>Architecture - OrionBelt Semantic Layer</title>
+        <title>Freshness Contracts - OrionBelt Semantic Layer</title>
       
     
     
@@ -92,7 +92,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#architecture" class="md-skip">
+        <a href="#freshness-contracts-the-obml-refresh-block" class="md-skip">
           Skip to content
         </a>
       
@@ -144,7 +144,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Architecture
+              Freshness Contracts
             
           </span>
         </div>
@@ -294,11 +294,13 @@
   
   
   
+    
+  
   
     
     
-      <li class="md-tabs__item">
-        <a href="../../guide/model-format/" class="md-tabs__link">
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../model-format/" class="md-tabs__link">
           
   
   
@@ -374,13 +376,11 @@
   
   
   
-    
-  
   
     
     
-      <li class="md-tabs__item md-tabs__item--active">
-        <a href="../python-api/" class="md-tabs__link">
+      <li class="md-tabs__item">
+        <a href="../../reference/python-api/" class="md-tabs__link">
           
   
   
@@ -659,28 +659,31 @@
       
   
   
+    
   
   
+  
     
     
     
     
+      
+        
+        
       
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
         
           
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
-        
-          
-          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
             
   
   
@@ -698,7 +701,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             
@@ -716,7 +719,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guide/model-format/" class="md-nav__link">
+      <a href="../model-format/" class="md-nav__link">
         
   
   
@@ -744,7 +747,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guide/query-language/" class="md-nav__link">
+      <a href="../query-language/" class="md-nav__link">
         
   
   
@@ -772,7 +775,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guide/dialects/" class="md-nav__link">
+      <a href="../dialects/" class="md-nav__link">
         
   
   
@@ -800,7 +803,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guide/grain-filter-context/" class="md-nav__link">
+      <a href="../grain-filter-context/" class="md-nav__link">
         
   
   
@@ -828,7 +831,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guide/period-over-period/" class="md-nav__link">
+      <a href="../period-over-period/" class="md-nav__link">
         
   
   
@@ -856,7 +859,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guide/compilation/" class="md-nav__link">
+      <a href="../compilation/" class="md-nav__link">
         
   
   
@@ -884,7 +887,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guide/obsl/" class="md-nav__link">
+      <a href="../obsl/" class="md-nav__link">
         
   
   
@@ -909,10 +912,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../guide/freshness-contracts/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Freshness Contracts
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -928,6 +958,135 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#where-it-lives" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where it lives
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#modes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Modes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#field-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Field reference
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Field reference">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#interval-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Interval mode
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#heartbeat-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Heartbeat mode
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#static-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Static mode
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#multi-fact-one-source" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Multi-fact, one source
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#obsl-graph-integration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OBSL graph integration
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#validation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Validation
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+<div class="obml-version-badge">
+  OBML v1.0<br>
+  OrionBelt v2.2.0
+</div>
+      
     </li>
   
 
@@ -940,7 +1099,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guide/result-cache/" class="md-nav__link">
+      <a href="../result-cache/" class="md-nav__link">
         
   
   
@@ -968,7 +1127,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guide/ui/" class="md-nav__link">
+      <a href="../ui/" class="md-nav__link">
         
   
   
@@ -996,7 +1155,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guide/integrations/" class="md-nav__link">
+      <a href="../integrations/" class="md-nav__link">
         
   
   
@@ -1024,7 +1183,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guide/osi/" class="md-nav__link">
+      <a href="../osi/" class="md-nav__link">
         
   
   
@@ -1603,31 +1762,28 @@
       
   
   
-    
   
   
-  
     
     
     
     
-      
-        
-        
       
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" checked>
         
           
-          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
             
   
   
@@ -1645,7 +1801,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_7">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1663,7 +1819,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../python-api/" class="md-nav__link">
+      <a href="../../reference/python-api/" class="md-nav__link">
         
   
   
@@ -1688,37 +1844,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Architecture
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../reference/architecture/" class="md-nav__link">
         
   
   
@@ -1734,52 +1863,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#compilation-pipeline" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Compilation Pipeline
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#key-components" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Key Components
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-<div class="obml-version-badge">
-  OBML v1.0<br>
-  OrionBelt v2.2.0
-</div>
-      
     </li>
   
 
@@ -1792,7 +1875,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../configuration/" class="md-nav__link">
+      <a href="../../reference/configuration/" class="md-nav__link">
         
   
   
@@ -1874,10 +1957,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#compilation-pipeline" class="md-nav__link">
+  <a href="#where-it-lives" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Compilation Pipeline
+        Where it lives
       
     </span>
   </a>
@@ -1885,10 +1968,93 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#key-components" class="md-nav__link">
+  <a href="#modes" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Key Components
+        Modes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#field-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Field reference
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Field reference">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#interval-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Interval mode
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#heartbeat-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Heartbeat mode
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#static-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Static mode
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#multi-fact-one-source" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Multi-fact, one source
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#obsl-graph-integration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OBSL graph integration
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#validation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Validation
       
     </span>
   </a>
@@ -1919,53 +2085,162 @@
   
 
 
-<h1 id="architecture">Architecture<a class="headerlink" href="#architecture" title="Permanent link">&para;</a></h1>
-<p>OrionBelt compiles YAML semantic models into dialect-specific SQL through a multi-phase pipeline.</p>
-<h2 id="compilation-pipeline">Compilation Pipeline<a class="headerlink" href="#compilation-pipeline" title="Permanent link">&para;</a></h2>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>YAML Model          Query Object
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    |                    |
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    v                    v
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a> ┌───────────┐    ┌──────────────┐
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a> │  Parser   │    │  Resolution  │  ← Phase 1: resolve refs, select fact table,
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a> │  (ruamel) │    │              │    find join paths, classify filters
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a> └────┬──────┘    └──────┬───────┘
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>      │                  │
-</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>      v                  v
-</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a> SemanticModel    ResolvedQuery
-</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>      │                  │
-</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>      │    ┌─────────────┘
-</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>      │    │
-</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>      v    v
-</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a> ┌───────────────┐
-</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a> │   Planner     │  ← Phase 2: Star Schema or CFL (multi-fact)
-</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a> │  (star / cfl) │    builds SQL AST with joins, grouping, CTEs
-</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a> └───────┬───────┘
-</span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>         │
-</span><span id="__span-0-20"><a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>         v
-</span><span id="__span-0-21"><a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>    SQL AST (Select, Join, Expr...)
-</span><span id="__span-0-22"><a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>         │
-</span><span id="__span-0-23"><a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>         v
-</span><span id="__span-0-24"><a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a> ┌───────────────┐
-</span><span id="__span-0-25"><a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a> │   Codegen     │  ← Phase 3: dialect renders AST to SQL string
-</span><span id="__span-0-26"><a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a> │  (dialect)    │    handles quoting, time grains, functions
-</span><span id="__span-0-27"><a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a> └───────┬───────┘
-</span><span id="__span-0-28"><a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a>         │
-</span><span id="__span-0-29"><a id="__codelineno-0-29" name="__codelineno-0-29" href="#__codelineno-0-29"></a>         v
-</span><span id="__span-0-30"><a id="__codelineno-0-30" name="__codelineno-0-30" href="#__codelineno-0-30"></a>    SQL String (dialect-specific)
+<h1 id="freshness-contracts-the-obml-refresh-block">Freshness contracts (the OBML <code>refresh:</code> block)<a class="headerlink" href="#freshness-contracts-the-obml-refresh-block" title="Permanent link">&para;</a></h1>
+<p>A freshness contract describes how the <strong>physical table</strong> that a <code>dataObject</code> maps to refreshes. It's the input to OBSL's :doc:<code>result cache &lt;result-cache&gt;</code> TTL composition. Authored once per source table.</p>
+<h2 id="where-it-lives">Where it lives<a class="headerlink" href="#where-it-lives" title="Permanent link">&para;</a></h2>
+<p>On the <code>dataObject</code>, alongside <code>code</code>, <code>database</code>, <code>schema</code>. Two <code>dataObject</code> entries that map to the same physical table should declare equivalent contracts; if they disagree, OBSL emits a <code>SHARED_TABLE_CONTRACT_DISAGREEMENT</code> warning at load time and applies the strictest.</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">dataObjects</span><span class="p">:</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nt">Orders</span><span class="p">:</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="nt">database</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">WAREHOUSE</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">    </span><span class="nt">schema</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">PUBLIC</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">    </span><span class="nt">code</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ORDERS</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">    </span><span class="nt">refresh</span><span class="p">:</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">      </span><span class="nt">mode</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">interval</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">      </span><span class="nt">interval</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1h</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">      </span><span class="nt">anchor</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;00:00&quot;</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">      </span><span class="nt">timezone</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">UTC</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">    </span><span class="nt">columns</span><span class="p">:</span>
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="w">      </span><span class="l l-Scalar l-Scalar-Plain">...</span>
 </span></code></pre></div>
-<h2 id="key-components">Key Components<a class="headerlink" href="#key-components" title="Permanent link">&para;</a></h2>
-<ul>
-<li><strong>Parser</strong> (<code>parser/</code>) — ruamel.yaml loader with source position tracking for error reporting</li>
-<li><strong>Resolution</strong> (<code>compiler/resolution.py</code>) — selects the base data object (fact table), resolves dimension/measure references, determines join paths, classifies filters</li>
-<li><strong>Planner</strong> — two strategies:<ul>
-<li><strong>Star Schema</strong> (<code>compiler/star.py</code>) — single-fact queries with LEFT JOINs</li>
-<li><strong>CFL</strong> (<code>compiler/cfl.py</code>) — multi-fact Composite Fact Layer using UNION ALL + NULL padding</li>
-</ul>
-</li>
-<li><strong>Codegen</strong> (<code>compiler/codegen.py</code> + <code>dialect/</code>) — renders the SQL AST to a dialect-specific SQL string</li>
-<li><strong>Validator</strong> (<code>compiler/validator.py</code>) — post-generation sqlglot syntax check (non-blocking warnings)</li>
-</ul>
-<p>The pipeline is orchestrated by <code>CompilationPipeline</code> in <code>compiler/pipeline.py</code>. See the <a href="../../guide/compilation/">Compilation Pipeline guide</a> for details.</p>
+<h2 id="modes">Modes<a class="headerlink" href="#modes" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Mode</th>
+<th>When to use</th>
+<th>Required fields</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>interval</code></td>
+<td>Table refreshes on a fixed cadence (hourly batch, daily ETL, etc.)</td>
+<td><code>interval</code></td>
+</tr>
+<tr>
+<td><code>heartbeat</code></td>
+<td>Table refreshes irregularly; an external job pings the heartbeat endpoint after each refresh</td>
+<td><code>max_staleness</code></td>
+</tr>
+<tr>
+<td><code>static</code></td>
+<td>Table effectively never changes (lookup tables, country codes)</td>
+<td>none</td>
+</tr>
+</tbody>
+</table>
+<p>A <code>dataObject</code> without a <code>refresh:</code> block is treated as <strong>unknown</strong>. By default, queries touching unknown-freshness tables are not cached (<code>CACHE_UNKNOWN_FRESHNESS_POLICY=no_cache</code>).</p>
+<h2 id="field-reference">Field reference<a class="headerlink" href="#field-reference" title="Permanent link">&para;</a></h2>
+<h3 id="interval-mode">Interval mode<a class="headerlink" href="#interval-mode" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>interval</code></td>
+<td>duration</td>
+<td>required</td>
+<td>ISO 8601 (<code>PT1H</code>, <code>P1D</code>) or shorthand (<code>1h</code>, <code>15m</code>, <code>1d</code>). Sub-second values rejected.</td>
+</tr>
+<tr>
+<td><code>anchor</code></td>
+<td><code>HH:MM</code> string</td>
+<td>null</td>
+<td>Optional time-of-day anchor. With no anchor, "next refresh" = <code>last_observed + interval</code>. With an anchor, refresh boundaries align to the anchor in <code>timezone</code>.</td>
+</tr>
+<tr>
+<td><code>timezone</code></td>
+<td>IANA TZ</td>
+<td><code>UTC</code></td>
+<td>Only used when <code>anchor</code> is set.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="heartbeat-mode">Heartbeat mode<a class="headerlink" href="#heartbeat-mode" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>max_staleness</code> (alias <code>maxStaleness</code>)</td>
+<td>duration</td>
+<td>required</td>
+<td>Maximum time between heartbeats before the table is considered stale. The cache TTL is <code>max_staleness - time_since_last_heartbeat</code>.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="static-mode">Static mode<a class="headerlink" href="#static-mode" title="Permanent link">&para;</a></h3>
+<p>No fields. Use sparingly — appropriate for true reference data only. Static tables don't constrain TTL composition; a query whose every touched table is <code>static</code> caches up to <code>CACHE_MAX_TTL_SECONDS</code>.</p>
+<h2 id="multi-fact-one-source">Multi-fact, one source<a class="headerlink" href="#multi-fact-one-source" title="Permanent link">&para;</a></h2>
+<p>The cleanest case for source-level contracts:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nt">dataObjects</span><span class="p">:</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">Sales</span><span class="p">:</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="nt">database</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">WAREHOUSE</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="nt">schema</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">PUBLIC</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">    </span><span class="nt">code</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ORDERS</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">    </span><span class="nt">filter</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;is_return</span><span class="nv"> </span><span class="s">=</span><span class="nv"> </span><span class="s">false&quot;</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">    </span><span class="nt">refresh</span><span class="p">:</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">      </span><span class="nt">mode</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">heartbeat</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">      </span><span class="nt">maxStaleness</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">5m</span>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">  </span><span class="nt">Returns</span><span class="p">:</span>
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">    </span><span class="nt">database</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">WAREHOUSE</span>
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="w">    </span><span class="nt">schema</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">PUBLIC</span>
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="w">    </span><span class="nt">code</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ORDERS</span>
+</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="w">    </span><span class="nt">filter</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;is_return</span><span class="nv"> </span><span class="s">=</span><span class="nv"> </span><span class="s">true&quot;</span>
+</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="w">    </span><span class="nt">refresh</span><span class="p">:</span>
+</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="w">      </span><span class="nt">mode</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">heartbeat</span>
+</span><span id="__span-1-17"><a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a><span class="w">      </span><span class="nt">maxStaleness</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">5m</span>
+</span></code></pre></div>
+<p><code>Sales</code> and <code>Returns</code> are two semantic facets on top of the same physical table. A multi-fact CFL query touching both collapses to <strong>one</strong> physical table reference (<code>WAREHOUSE.PUBLIC.ORDERS</code>). One heartbeat to that table invalidates every cached query depending on it — even if the query went through both <code>Sales</code> and <code>Returns</code>.</p>
+<h2 id="obsl-graph-integration">OBSL graph integration<a class="headerlink" href="#obsl-graph-integration" title="Permanent link">&para;</a></h2>
+<p>The contract is exposed in the model's RDF graph as <code>obsl:hasRefreshPolicy</code> on <code>obsl:DataObject</code>:</p>
+<div class="language-sparql highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="k">PREFIX</span> <span class="nn">obsl</span><span class="p">:</span> <span class="nl">&lt;https://ralforion.com/ns/obsl#&gt;</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="k">PREFIX</span> <span class="nn">rdfs</span><span class="p">:</span> <span class="nl">&lt;http://www.w3.org/2000/01/rdf-schema#&gt;</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="k">SELECT</span> <span class="nv">?label</span> <span class="nv">?database</span> <span class="nv">?schema</span> <span class="nv">?code</span> <span class="nv">?mode</span> <span class="nv">?interval</span> <span class="k">WHERE</span> <span class="p">{</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    <span class="nv">?do</span> <span class="k">a</span> <span class="nn">obsl</span><span class="p">:</span><span class="nt">DataObject</span> <span class="p">;</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>        <span class="nn">rdfs</span><span class="p">:</span><span class="nt">label</span> <span class="nv">?label</span> <span class="p">;</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>        <span class="nn">obsl</span><span class="p">:</span><span class="nt">database</span> <span class="nv">?database</span> <span class="p">;</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>        <span class="nn">obsl</span><span class="p">:</span><span class="nt">schema</span> <span class="nv">?schema</span> <span class="p">;</span>
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>        <span class="nn">obsl</span><span class="p">:</span><span class="nt">code</span> <span class="nv">?code</span> <span class="p">;</span>
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>        <span class="nn">obsl</span><span class="p">:</span><span class="nt">hasRefreshPolicy</span> <span class="nv">?policy</span> <span class="p">.</span>
+</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>    <span class="nv">?policy</span> <span class="nn">obsl</span><span class="p">:</span><span class="nt">refreshMode</span> <span class="nv">?mode</span> <span class="p">.</span>
+</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>    <span class="k">OPTIONAL</span> <span class="p">{</span> <span class="nv">?policy</span> <span class="nn">obsl</span><span class="p">:</span><span class="nt">refreshInterval</span> <span class="nv">?interval</span> <span class="p">}</span>
+</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="p">}</span>
+</span></code></pre></div>
+<p>Agents can ask the model what it expects of its sources — the freshness contract is data, not configuration.</p>
+<h2 id="validation">Validation<a class="headerlink" href="#validation" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Code</th>
+<th>When</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>REFRESH_PARSE_ERROR</code></td>
+<td><code>refresh.mode</code> missing or invalid; <code>interval</code> mode missing <code>interval</code>; <code>heartbeat</code> mode missing <code>max_staleness</code>.</td>
+</tr>
+<tr>
+<td><code>SHARED_TABLE_CONTRACT_DISAGREEMENT</code></td>
+<td>Two dataObjects on the same physical table declare disagreeing refresh blocks. Warning, not error — the strictest contract is applied and the query keeps working.</td>
+</tr>
+</tbody>
+</table>
+<p>The strictness ordering: <code>unknown</code> &gt; <code>heartbeat</code> &gt; <code>interval</code> &gt; <code>static</code>. Within the same mode, the smaller window wins (shorter interval, smaller <code>max_staleness</code>).</p>
 
 
 

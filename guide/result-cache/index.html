@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://ralfbecher.github.io/orionbelt-semantic-layer/reference/architecture/">
+        <link rel="canonical" href="https://ralfbecher.github.io/orionbelt-semantic-layer/guide/result-cache/">
       
       
-        <link rel="prev" href="../python-api/">
+        <link rel="prev" href="../freshness-contracts/">
       
       
-        <link rel="next" href="../configuration/">
+        <link rel="next" href="../ui/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>Architecture - OrionBelt Semantic Layer</title>
+        <title>Result Cache - OrionBelt Semantic Layer</title>
       
     
     
@@ -92,7 +92,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#architecture" class="md-skip">
+        <a href="#freshness-driven-result-cache" class="md-skip">
           Skip to content
         </a>
       
@@ -144,7 +144,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Architecture
+              Result Cache
             
           </span>
         </div>
@@ -294,11 +294,13 @@
   
   
   
+    
+  
   
     
     
-      <li class="md-tabs__item">
-        <a href="../../guide/model-format/" class="md-tabs__link">
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../model-format/" class="md-tabs__link">
           
   
   
@@ -374,13 +376,11 @@
   
   
   
-    
-  
   
     
     
-      <li class="md-tabs__item md-tabs__item--active">
-        <a href="../python-api/" class="md-tabs__link">
+      <li class="md-tabs__item">
+        <a href="../../reference/python-api/" class="md-tabs__link">
           
   
   
@@ -659,28 +659,31 @@
       
   
   
+    
   
   
+  
     
     
     
     
+      
+        
+        
       
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
         
           
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
-        
-          
-          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
             
   
   
@@ -698,7 +701,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             
@@ -716,7 +719,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guide/model-format/" class="md-nav__link">
+      <a href="../model-format/" class="md-nav__link">
         
   
   
@@ -744,7 +747,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guide/query-language/" class="md-nav__link">
+      <a href="../query-language/" class="md-nav__link">
         
   
   
@@ -772,7 +775,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guide/dialects/" class="md-nav__link">
+      <a href="../dialects/" class="md-nav__link">
         
   
   
@@ -800,7 +803,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guide/grain-filter-context/" class="md-nav__link">
+      <a href="../grain-filter-context/" class="md-nav__link">
         
   
   
@@ -828,7 +831,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guide/period-over-period/" class="md-nav__link">
+      <a href="../period-over-period/" class="md-nav__link">
         
   
   
@@ -856,7 +859,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guide/compilation/" class="md-nav__link">
+      <a href="../compilation/" class="md-nav__link">
         
   
   
@@ -884,7 +887,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guide/obsl/" class="md-nav__link">
+      <a href="../obsl/" class="md-nav__link">
         
   
   
@@ -912,7 +915,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guide/freshness-contracts/" class="md-nav__link">
+      <a href="../freshness-contracts/" class="md-nav__link">
         
   
   
@@ -937,10 +940,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../guide/result-cache/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Result Cache
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -956,6 +986,184 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#why-source-level" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why source-level
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#default-behavior" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Default behavior
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#enabling-the-cache" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Enabling the cache
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ttl-composition" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TTL composition
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#heartbeats" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Heartbeats
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#per-query-response-fields" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Per-query response fields
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ui-controls" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UI controls
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cache-stats" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cache stats
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#manual-sweep" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Manual sweep
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#clear-cache" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Clear cache
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#whats-cached" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What's cached
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#storage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Storage
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cache-lifecycle-across-restarts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cache lifecycle across restarts
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#failure-semantics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Failure semantics
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+<div class="obml-version-badge">
+  OBML v1.0<br>
+  OrionBelt v2.2.0
+</div>
+      
     </li>
   
 
@@ -968,7 +1176,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guide/ui/" class="md-nav__link">
+      <a href="../ui/" class="md-nav__link">
         
   
   
@@ -996,7 +1204,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guide/integrations/" class="md-nav__link">
+      <a href="../integrations/" class="md-nav__link">
         
   
   
@@ -1024,7 +1232,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../guide/osi/" class="md-nav__link">
+      <a href="../osi/" class="md-nav__link">
         
   
   
@@ -1603,31 +1811,28 @@
       
   
   
-    
   
   
-  
     
     
     
     
-      
-        
-        
       
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" checked>
         
           
-          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
             
   
   
@@ -1645,7 +1850,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_7">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1663,7 +1868,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../python-api/" class="md-nav__link">
+      <a href="../../reference/python-api/" class="md-nav__link">
         
   
   
@@ -1688,37 +1893,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Architecture
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../reference/architecture/" class="md-nav__link">
         
   
   
@@ -1734,52 +1912,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#compilation-pipeline" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Compilation Pipeline
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#key-components" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Key Components
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-<div class="obml-version-badge">
-  OBML v1.0<br>
-  OrionBelt v2.2.0
-</div>
-      
     </li>
   
 
@@ -1792,7 +1924,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../configuration/" class="md-nav__link">
+      <a href="../../reference/configuration/" class="md-nav__link">
         
   
   
@@ -1874,10 +2006,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#compilation-pipeline" class="md-nav__link">
+  <a href="#why-source-level" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Compilation Pipeline
+        Why source-level
       
     </span>
   </a>
@@ -1885,10 +2017,142 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#key-components" class="md-nav__link">
+  <a href="#default-behavior" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Key Components
+        Default behavior
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#enabling-the-cache" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Enabling the cache
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ttl-composition" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TTL composition
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#heartbeats" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Heartbeats
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#per-query-response-fields" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Per-query response fields
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ui-controls" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UI controls
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cache-stats" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cache stats
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#manual-sweep" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Manual sweep
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#clear-cache" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Clear cache
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#whats-cached" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What's cached
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#storage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Storage
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cache-lifecycle-across-restarts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cache lifecycle across restarts
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#failure-semantics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Failure semantics
       
     </span>
   </a>
@@ -1919,53 +2183,145 @@
   
 
 
-<h1 id="architecture">Architecture<a class="headerlink" href="#architecture" title="Permanent link">&para;</a></h1>
-<p>OrionBelt compiles YAML semantic models into dialect-specific SQL through a multi-phase pipeline.</p>
-<h2 id="compilation-pipeline">Compilation Pipeline<a class="headerlink" href="#compilation-pipeline" title="Permanent link">&para;</a></h2>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>YAML Model          Query Object
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    |                    |
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    v                    v
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a> ┌───────────┐    ┌──────────────┐
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a> │  Parser   │    │  Resolution  │  ← Phase 1: resolve refs, select fact table,
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a> │  (ruamel) │    │              │    find join paths, classify filters
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a> └────┬──────┘    └──────┬───────┘
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>      │                  │
-</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>      v                  v
-</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a> SemanticModel    ResolvedQuery
-</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>      │                  │
-</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>      │    ┌─────────────┘
-</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>      │    │
-</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>      v    v
-</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a> ┌───────────────┐
-</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a> │   Planner     │  ← Phase 2: Star Schema or CFL (multi-fact)
-</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a> │  (star / cfl) │    builds SQL AST with joins, grouping, CTEs
-</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a> └───────┬───────┘
-</span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>         │
-</span><span id="__span-0-20"><a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>         v
-</span><span id="__span-0-21"><a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>    SQL AST (Select, Join, Expr...)
-</span><span id="__span-0-22"><a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>         │
-</span><span id="__span-0-23"><a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>         v
-</span><span id="__span-0-24"><a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a> ┌───────────────┐
-</span><span id="__span-0-25"><a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a> │   Codegen     │  ← Phase 3: dialect renders AST to SQL string
-</span><span id="__span-0-26"><a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a> │  (dialect)    │    handles quoting, time grains, functions
-</span><span id="__span-0-27"><a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a> └───────┬───────┘
-</span><span id="__span-0-28"><a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a>         │
-</span><span id="__span-0-29"><a id="__codelineno-0-29" name="__codelineno-0-29" href="#__codelineno-0-29"></a>         v
-</span><span id="__span-0-30"><a id="__codelineno-0-30" name="__codelineno-0-30" href="#__codelineno-0-30"></a>    SQL String (dialect-specific)
+<h1 id="freshness-driven-result-cache">Freshness-driven result cache<a class="headerlink" href="#freshness-driven-result-cache" title="Permanent link">&para;</a></h1>
+<p>OrionBelt's result cache is <strong>freshness-driven</strong>: instead of asking callers to pick a TTL, the cache derives one from the refresh contracts of the <strong>physical source tables</strong> a query touched. A heartbeat from the warehouse invalidates every cached query that depends on that table, regardless of how many semantic facets the model split it into.</p>
+<p>This page explains how it works and how to enable it. For the underlying design, see <code>design/PLAN_freshness_driven_cache.md</code>.</p>
+<div class="admonition note">
+<p class="admonition-title">Not 'semantic caching'</p>
+<p>The phrase "semantic cache" in AI/LLM contexts means embedding-based similarity matching of natural-language queries — a completely unrelated concept. OBSL uses <strong>freshness-driven cache</strong> or <strong>source-aware result cache</strong>.</p>
+</div>
+<h2 id="why-source-level">Why source-level<a class="headerlink" href="#why-source-level" title="Permanent link">&para;</a></h2>
+<p>Most semantic layers attach freshness to the abstraction (a cube, an Explore, a saved query). When two cubes read the same physical table, each declares its own TTL — and they can drift. OBSL flips that: the contract lives on the <code>dataObject</code> that maps to the table, declared once. Two <code>dataObject</code> entries on the same table inherit the same contract automatically. One ETL heartbeat to the table invalidates every dependent cached query in one stroke.</p>
+<h2 id="default-behavior">Default behavior<a class="headerlink" href="#default-behavior" title="Permanent link">&para;</a></h2>
+<p>The cache is <strong>off by default</strong>: <code>CACHE_BACKEND=noop</code>. Every <code>get</code> misses, every <code>set</code> is a no-op. No new dependencies, no behavioral change for users who don't enable it.</p>
+<h2 id="enabling-the-cache">Enabling the cache<a class="headerlink" href="#enabling-the-cache" title="Permanent link">&para;</a></h2>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nv">CACHE_BACKEND</span><span class="o">=</span>file
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nv">CACHE_DIR</span><span class="o">=</span>/var/lib/orionbelt/cache
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="nv">HEARTBEAT_AUTH_TOKEN</span><span class="o">=</span>&lt;random-secret&gt;
 </span></code></pre></div>
-<h2 id="key-components">Key Components<a class="headerlink" href="#key-components" title="Permanent link">&para;</a></h2>
+<p><code>CACHE_DIR</code> must be writable. For the cache to survive container restarts, mount it on persistent storage.</p>
+<p>For multi-replica deployments, keep <code>CACHE_BACKEND=noop</code> until a Redis backend lands — the file cache is per-replica, and heartbeat invalidations only fire on the receiving replica.</p>
+<h2 id="ttl-composition">TTL composition<a class="headerlink" href="#ttl-composition" title="Permanent link">&para;</a></h2>
+<p>For a query that touches physical tables <code>{T1, …, Tn}</code>:</p>
+<ol>
+<li>Look up each table's :doc:<code>refresh contract &lt;freshness-contracts&gt;</code>.</li>
+<li>For each non-static table, compute its <em>contribution</em> (seconds until next refresh, or <code>max_staleness - elapsed_since_last_heartbeat</code>).</li>
+<li>The effective TTL is the <strong>minimum</strong> contribution.</li>
+<li>If any touched table has no declared contract, the query is <strong>not cached</strong> by default (<code>CACHE_UNKNOWN_FRESHNESS_POLICY=no_cache</code>). Operators who know their warehouse refresh patterns can set the policy to <code>default_ttl</code> and <code>CACHE_UNKNOWN_FRESHNESS_DEFAULT_TTL</code> to opt in.</li>
+<li>Below <code>CACHE_MIN_TTL_SECONDS</code> (default 5s), the entry is not cached — heartbeat-mode tables with very short <code>max_staleness</code> would otherwise thrash.</li>
+</ol>
+<p>A query whose every touched table has <code>mode: static</code> is cached for <code>CACHE_MAX_TTL_SECONDS</code> (default 24h).</p>
+<h2 id="heartbeats">Heartbeats<a class="headerlink" href="#heartbeats" title="Permanent link">&para;</a></h2>
+<p>When ETL refreshes a table, ping the heartbeat endpoint:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>https://your-deployment/v1/heartbeat<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">     </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$HEARTBEAT_AUTH_TOKEN</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">     </span>-H<span class="w"> </span><span class="s2">&quot;Content-Type: application/json&quot;</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">     </span>-d<span class="w"> </span><span class="s1">&#39;{&quot;database&quot;: &quot;WAREHOUSE&quot;, &quot;schema&quot;: &quot;PUBLIC&quot;, &quot;table&quot;: &quot;ORDERS&quot;}&#39;</span>
+</span></code></pre></div>
+<p>The body identifies a <strong>physical</strong> table by <code>database.schema.table</code>. There's no <code>dataObject</code> reference — ETL knows what it just refreshed; OBSL maps that to every cached query that touched the table, across every dataObject and every session.</p>
+<p>The endpoint requires a bearer token (<code>HEARTBEAT_AUTH_TOKEN</code>). When the env var is unset, the route returns 404.</p>
+<h2 id="per-query-response-fields">Per-query response fields<a class="headerlink" href="#per-query-response-fields" title="Permanent link">&para;</a></h2>
+<p>Every <code>query/execute</code> JSON response gains:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>cached</code></td>
+<td>Whether this result came from the cache.</td>
+</tr>
+<tr>
+<td><code>cached_at</code></td>
+<td>ISO 8601 timestamp the cached result was first computed.</td>
+</tr>
+<tr>
+<td><code>ttl_seconds</code></td>
+<td>Effective TTL applied to this entry.</td>
+</tr>
+<tr>
+<td><code>ttl_source</code></td>
+<td><code>freshness_derived</code>, <code>caller_capped</code>, <code>default_unknown</code>, <code>no_cache</code>, or <code>no_cache:&lt;reason&gt;</code>.</td>
+</tr>
+<tr>
+<td><code>ttl_limiting_table</code></td>
+<td>The physical table whose contract drove the TTL.</td>
+</tr>
+<tr>
+<td><code>physical_tables</code></td>
+<td>Deduplicated <code>database.schema.code</code> strings the query touched.</td>
+</tr>
+</tbody>
+</table>
+<p>On cache hits, <code>execution_time_ms</code> reports the wall-clock time spent reading + decoding the cached entry — <em>not</em> the original database run time. The original DB timing is preserved on disk in the Parquet sidecar; combine <code>cached: true</code> with <code>execution_time_ms</code> to distinguish "fresh from warehouse" vs "served from cache" durations.</p>
+<h2 id="ui-controls">UI controls<a class="headerlink" href="#ui-controls" title="Permanent link">&para;</a></h2>
+<p>The Gradio UI exposes a <strong>Cache Stats</strong> panel in the Settings tab next to the API Settings YAML. It auto-loads when the tab opens and provides three buttons:</p>
 <ul>
-<li><strong>Parser</strong> (<code>parser/</code>) — ruamel.yaml loader with source position tracking for error reporting</li>
-<li><strong>Resolution</strong> (<code>compiler/resolution.py</code>) — selects the base data object (fact table), resolves dimension/measure references, determines join paths, classifies filters</li>
-<li><strong>Planner</strong> — two strategies:<ul>
-<li><strong>Star Schema</strong> (<code>compiler/star.py</code>) — single-fact queries with LEFT JOINs</li>
-<li><strong>CFL</strong> (<code>compiler/cfl.py</code>) — multi-fact Composite Fact Layer using UNION ALL + NULL padding</li>
+<li><strong>Refresh Cache Stats</strong> — re-fetches <code>GET /v1/cache/stats</code> so you see current counters.</li>
+<li><strong>Sweep Cache now</strong> — calls <code>POST /v1/cache/sweep</code> then refreshes stats. Useful when you want to reclaim disk from expired entries before the next periodic sweep (default 1 day).</li>
+<li><strong>Clear Cache</strong> — calls <code>POST /v1/cache/clear</code> then refreshes stats. Drops all entries; counters are preserved.</li>
 </ul>
-</li>
-<li><strong>Codegen</strong> (<code>compiler/codegen.py</code> + <code>dialect/</code>) — renders the SQL AST to a dialect-specific SQL string</li>
-<li><strong>Validator</strong> (<code>compiler/validator.py</code>) — post-generation sqlglot syntax check (non-blocking warnings)</li>
+<p>The Query Results tab also annotates each execution with <code>(cache)</code> or <code>(database)</code> next to <code>execution_time_ms</code> so you can see at a glance which path served the result.</p>
+<h2 id="cache-stats">Cache stats<a class="headerlink" href="#cache-stats" title="Permanent link">&para;</a></h2>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>GET /v1/cache/stats
+</span></code></pre></div>
+<p>Always responds. With <code>CACHE_BACKEND=noop</code> the response shows <code>backend: "noop"</code> and zero counters.</p>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="p">{</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">&quot;backend&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;file&quot;</span><span class="p">,</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span><span class="nt">&quot;entry_count&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1247</span><span class="p">,</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span><span class="nt">&quot;total_size_bytes&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">234567890</span><span class="p">,</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">  </span><span class="nt">&quot;max_size_bytes&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5368709120</span><span class="p">,</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">  </span><span class="nt">&quot;hit_count_total&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">9821</span><span class="p">,</span>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">  </span><span class="nt">&quot;miss_count_total&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4203</span><span class="p">,</span>
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">  </span><span class="nt">&quot;hit_rate&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.700</span><span class="p">,</span>
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">  </span><span class="nt">&quot;oldest_entry&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2026-04-15T12:30:00Z&quot;</span><span class="p">,</span>
+</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="w">  </span><span class="nt">&quot;next_sweep_at&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2026-04-15T12:45:00Z&quot;</span><span class="p">,</span>
+</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="w">  </span><span class="nt">&quot;tracked_physical_tables&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">8</span><span class="p">,</span>
+</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="w">  </span><span class="nt">&quot;heartbeat_invalidations_total&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">142</span>
+</span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="p">}</span>
+</span></code></pre></div>
+<h2 id="manual-sweep">Manual sweep<a class="headerlink" href="#manual-sweep" title="Permanent link">&para;</a></h2>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>POST /v1/cache/sweep
+</span></code></pre></div>
+<p>Triggers one TTL + capacity eviction pass on demand — equivalent to a single tick of the periodic sweeper. Returns the number of entries evicted by each policy.</p>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="p">{</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="nt">&quot;backend&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;file&quot;</span><span class="p">,</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span><span class="nt">&quot;ttl_evicted&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">17</span><span class="p">,</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">  </span><span class="nt">&quot;capacity_evicted&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="p">}</span>
+</span></code></pre></div>
+<p>With <code>CACHE_BACKEND=noop</code> returns zero counts.</p>
+<h2 id="clear-cache">Clear cache<a class="headerlink" href="#clear-cache" title="Permanent link">&para;</a></h2>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>POST /v1/cache/clear
+</span></code></pre></div>
+<p>Drops every cache entry regardless of TTL or freshness contract — useful from the UI Settings panel when you want to start fresh. Counters (hits, misses, heartbeat invalidations) are preserved as historical telemetry.</p>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="p">{</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span><span class="nt">&quot;backend&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;file&quot;</span><span class="p">,</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">  </span><span class="nt">&quot;entries_cleared&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1247</span>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="p">}</span>
+</span></code></pre></div>
+<h2 id="whats-cached">What's cached<a class="headerlink" href="#whats-cached" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Only canonical JSON <code>query/execute</code> responses with <code>format_values=false</code> are cached. TSV and locale-formatted JSON are skipped — caching them would require keying on locale/format.</li>
+<li><code>query/sql</code> and <code>query/plan</code> are not cached (they don't execute against the warehouse).</li>
+<li>Results larger than <code>CACHE_MAX_VALUE_BYTES</code> (default 10 MB) skip the cache.</li>
 </ul>
-<p>The pipeline is orchestrated by <code>CompilationPipeline</code> in <code>compiler/pipeline.py</code>. See the <a href="../../guide/compilation/">Compilation Pipeline guide</a> for details.</p>
+<h2 id="storage">Storage<a class="headerlink" href="#storage" title="Permanent link">&para;</a></h2>
+<p>The file backend uses two layers:</p>
+<ul>
+<li><strong>DuckDB</strong> (<code>{CACHE_DIR}/meta.duckdb</code>) for the control plane: cache entries, dependency tracking, heartbeats, sweep queries.</li>
+<li><strong>Parquet files</strong> (<code>{CACHE_DIR}/results/…</code>) for the actual result payloads. Self-describing, type-precise, inspectable with the DuckDB CLI.</li>
+</ul>
+<p>Capacity eviction is LRU (<code>last_hit_at NULLS FIRST, created_at ASC</code>); TTL eviction is lazy on read plus a periodic sweep every <code>CACHE_SWEEP_INTERVAL_SECONDS</code> (default 1 day). Lazy TTL on read keeps user-facing freshness correct, so the sweeper only matters for reclaiming disk from entries that expire without being read again.</p>
+<h2 id="cache-lifecycle-across-restarts">Cache lifecycle across restarts<a class="headerlink" href="#cache-lifecycle-across-restarts" title="Permanent link">&para;</a></h2>
+<p>The persisted cache state (<code>meta.duckdb</code> + <code>results/</code>) is <strong>wiped on every server startup</strong>. The reason is structural: <code>model_id</code> is generated as a fresh UUID on every model load, so any cache entries from a previous process run reference model_ids that no longer exist — they're orphans by construction. Starting empty avoids accumulating dead state between restarts.</p>
+<p>If your deployment restarts frequently and you'd rather keep warm cache across restarts, the cache key would need to switch from <code>model_id</code> to a content hash. Not done in v1; revisit if real demand emerges.</p>
+<p>Sibling files in <code>CACHE_DIR</code> (anything not under <code>meta.duckdb*</code> or <code>results/</code>) are not touched.</p>
+<h2 id="failure-semantics">Failure semantics<a class="headerlink" href="#failure-semantics" title="Permanent link">&para;</a></h2>
+<p>The cache <strong>fails closed</strong>: any error (DuckDB failure, missing file, decode error) degrades to a cache miss and the query is executed normally. Cached results never produce wrong data — at worst they're skipped.</p>
 
 
 
