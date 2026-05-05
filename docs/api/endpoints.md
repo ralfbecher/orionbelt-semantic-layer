@@ -441,7 +441,8 @@ Load (or reference) a model and run multiple independent queries against it in a
 | `session_id` | string | auto-create | Existing session, otherwise OBSL creates one. |
 | `model_yaml` | string | — | OBML YAML. Mutually exclusive with `model_id`. |
 | `model_id` | string | — | ID of an already-loaded model in the session. Mutually exclusive with `model_yaml`. |
-| `queries` | array | required | List of queries (1..max_queries). Each needs a unique `id`. |
+| `queries` | array | required | List of queries (1..max_queries). |
+| `queries[].id` | string | auto (`q0`,`q1`,...) | Optional caller ID. Must be unique within the batch when supplied. Omit to let the server assign positional IDs. |
 | `queries[].execute` | bool | inherits batch | Per-query override for compile-only vs. execute. |
 | `queries[].dialect` | string | inherits batch | Per-query dialect override. |
 | `dialect` | string | model/env | Default dialect for the batch. |

@@ -673,7 +673,13 @@ class SPARQLResponse(BaseModel):
 class OneshotBatchQueryItem(BaseModel):
     """A single query in a one-shot batch."""
 
-    id: str = Field(description="Caller-provided ID, must be unique within the batch")
+    id: str | None = Field(
+        default=None,
+        description=(
+            "Optional caller-provided ID. Must be unique within the batch when supplied. "
+            "When omitted, the server assigns 'q0', 'q1', ... based on submission order."
+        ),
+    )
     query: QueryObject
     execute: bool | None = Field(
         default=None,
@@ -752,9 +758,15 @@ class OneshotBatchRequest(BaseModel):
             raise ValueError("Provide either model_yaml or model_id, not both")
         if not has_yaml and not has_id:
             raise ValueError("Provide either model_yaml or model_id")
-        # Reject duplicate query IDs early so callers get a clear error.
+        # Auto-assign an id (q0, q1, ...) for any query that omits one. Then
+        # check uniqueness across the resulting set so a caller-supplied
+        # "q3" can't collide silently with an auto-assigned "q3".
+        for idx, q in enumerate(self.queries):
+            if q.id is None:
+                q.id = f"q{idx}"
         seen: set[str] = set()
         for q in self.queries:
+            assert q.id is not None  # filled in above
             if q.id in seen:
                 raise ValueError(f"Duplicate query id: '{q.id}'")
             seen.add(q.id)

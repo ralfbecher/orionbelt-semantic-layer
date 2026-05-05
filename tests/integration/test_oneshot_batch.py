@@ -142,6 +142,46 @@ class TestOneshotBatchValidation:
         )
         assert r.status_code == 422
 
+    async def test_auto_assigned_ids(self, client: AsyncClient) -> None:
+        # Omit id on every query — server fills in q0, q1.
+        no_id_queries = [
+            {"query": _TWO_QUERIES[0]["query"]},
+            {"query": _TWO_QUERIES[1]["query"]},
+        ]
+        r = await client.post(
+            "/v1/oneshot/batch",
+            json={"model_yaml": SAMPLE_MODEL_YAML, "queries": no_id_queries},
+        )
+        assert r.status_code == 200, r.text
+        ids = [res["id"] for res in r.json()["results"]]
+        assert ids == ["q0", "q1"]
+
+    async def test_mixed_explicit_and_auto_ids(self, client: AsyncClient) -> None:
+        # Mix: explicit id on the second only — first gets auto "q0".
+        mixed = [
+            {"query": _TWO_QUERIES[0]["query"]},
+            {"id": "named", "query": _TWO_QUERIES[1]["query"]},
+        ]
+        r = await client.post(
+            "/v1/oneshot/batch",
+            json={"model_yaml": SAMPLE_MODEL_YAML, "queries": mixed},
+        )
+        assert r.status_code == 200
+        ids = [res["id"] for res in r.json()["results"]]
+        assert ids == ["q0", "named"]
+
+    async def test_explicit_id_collides_with_auto_pattern(self, client: AsyncClient) -> None:
+        # Slot 0 auto-assigns "q0"; the explicit "q0" at slot 1 collides.
+        clashing = [
+            {"query": _TWO_QUERIES[0]["query"]},
+            {"id": "q0", "query": _TWO_QUERIES[1]["query"]},
+        ]
+        r = await client.post(
+            "/v1/oneshot/batch",
+            json={"model_yaml": SAMPLE_MODEL_YAML, "queries": clashing},
+        )
+        assert r.status_code == 422
+
     async def test_invalid_yaml(self, client: AsyncClient) -> None:
         r = await client.post(
             "/v1/oneshot/batch",
