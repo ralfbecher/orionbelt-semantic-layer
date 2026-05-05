@@ -18,8 +18,8 @@ How OrionBelt Semantic Layer (OBSL) stacks up against the leading semantic layer
 | Conversion / funnel metrics | ❌ | ✅ | Patterns | Patterns | Patterns | Patterns |
 | Symmetric aggregates | ❌ (uses CFL) | ❌ | ✅ | ✅ | ✅ | ✅ (OLAP) |
 | Multi-rooted modeling (peer-rooted facts) | ✅ independent `dataObject`s | ✅ independent `semantic_model`s | ❌ single-rooted `source:` | ❌ single-rooted `explore:` (joined facts only) | ✅ independent cubes | ✅ multiple facts in one Cube via conformed dims |
-| Multi-fact query plan | `UNION ALL` (CFL) | JOIN via shared entities | n/a | JOIN inside explore (symmetric agg) | JOIN via cube graph | JOIN with OLAP aggregation |
-| Named secondary join paths | ✅ first-class | ❌ | ❌ | ❌ | ❌ | ✅ (role-playing dims) |
+| Multi-fact query plan | `UNION ALL` legs (CFL) | `FULL OUTER JOIN` on shared entities | n/a | JOIN inside explore (symmetric agg) | Single JOIN path via Dijkstra-resolved cube graph | JOIN with OLAP aggregation |
+| Multi-path joins (between same pair) | ✅ per-query selection via `pathName` + `usePathNames` | ❌ no path-name primitive | ❌ aliased sources (model-time) | `from:` aliasing (model-time) | Dijkstra + member-type priority heuristic; pin via `view`s | Role-playing dimensions (model-time) |
 | Nested / hierarchical results | ❌ | ❌ | ✅ (`nest:`) | ❌ | ❌ | ❌ |
 | OLAP hierarchies (multi-level, parent-child) | ❌ | ❌ | ❌ | Partial | ❌ | ✅ first-class |
 | MDX / Excel pivot tables | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ unique |
@@ -66,23 +66,38 @@ A constraint that's universal: every tool here requires you to **declare entitie
 
 | Tool | Peer-rooted modeling | Multi-fact query plan |
 |---|---|---|
-| **OBSL** | ✅ `dataObject`s are independent peers, each with its own joins | `UNION ALL` (CFL) |
-| **dbt SL (MetricFlow)** | ✅ `semantic_model`s are independent peers; joins via shared entities | JOIN via shared entities |
+| **OBSL** | ✅ `dataObject`s are independent peers, each with its own joins | `UNION ALL` legs (CFL) with NULL-padding for missing measures |
+| **dbt SL (MetricFlow)** | ✅ `semantic_model`s are independent peers; joins via shared entities | `FULL OUTER JOIN` on the shared entity (per dbt's `join-logic.md`) |
 | **Malloy** | ❌ every `source:` is single-rooted; `join_one` / `join_many` always presume one root | n/a (separate queries) |
 | **LookML** | ❌ joins live inside one `explore` (one base view + joined views) | JOIN inside the explore (symmetric agg) |
 | **Looker (runtime)** | n/a | `merged_results` merges two queries' results in the API layer |
-| **Cube** | ✅ cubes are independent peers with `joins:` blocks; query planner traverses the cube graph | JOIN via cube graph (`view`s curate exposure) |
+| **Cube** | ✅ cubes are independent peers with `joins:` blocks; planner traverses the cube graph (Dijkstra) | Single JOIN path resolved at query time; `view`s recommended when multiple paths exist |
 | **AtScale** | ✅ multiple fact datasets in one Cube connected by conformed dimensions; virtual cubes compose Cubes | JOIN with OLAP-style aggregation |
 
 So **peer-rooted modeling** isn't unique to OBSL — Cube, dbt MetricFlow, and AtScale all support it. **Single-rooted-only** sits with Malloy and LookML, by language design.
 
-**What's structurally distinct about OBSL** narrows to:
+The **multi-fact query plans split three ways**:
 
-1. **`UNION ALL` query plan** for multi-fact (each leg JOINs only its own fact to its dim path; no fanout risk, no symmetric-aggregate accounting). The others use a single JOIN graph. Different scaling characteristics and a cleaner mental model, at the cost of two SQL passes per leg.
-2. **Named multi-path joins** as a *per-query* selection primitive (`secondary: true` + `pathName` + `usePathNames`). LookML uses `from:` aliasing, AtScale uses role-playing dimensions, Cube/MetricFlow workaround via duplicate cubes/aliases — all model-time. Per-query path choice is OBSL-only.
-3. **Static fanout detection** as an explicit error class (`compiler/fanout.py` raises `FanoutError`) instead of trusting symmetric aggregates to silently correct.
+- **`UNION ALL` (OBSL)** — one leg per fact; each leg joins only its own fact to its dim path; no fanout risk, no symmetric-aggregate accounting needed.
+- **`FULL OUTER JOIN` on shared entity (dbt MetricFlow)** — peer fact tables joined on the entity; rows preserved when either side has data. Cleaner than a single-rooted LEFT JOIN graph; semantically close to UNION ALL but in a single SQL pass.
+- **Single JOIN path (Cube, LookML, AtScale)** — query planner picks one path through the join graph (Dijkstra in Cube; explore-rooted in LookML; OLAP aggregation in AtScale) and uses symmetric aggregates to handle fanout.
 
-AtScale's conformed-dimensions-within-a-Cube + virtual cubes is the closest peer in *modeling capability*; the genuine differences there are (1) and (2).
+For **multi-path joins** between the same pair of entities (e.g., `Order.ship_address_id` vs `Order.bill_address_id` both pointing to `Address`):
+
+- **OBSL**: declare both with `secondary: true` + `pathName`; pick at query time via `usePathNames`. **Per-query selection — unique here.**
+- **Cube**: graph allows multiple paths; planner resolves with a member-type priority heuristic (measures → dimensions → segments → time dimensions); pin via a `view` for predictability. **Graph-aware but not per-query selectable.**
+- **AtScale**: role-playing dimensions — same dim aliased into multiple roles (`OrderDate`, `ShipDate`). Model-time aliasing.
+- **LookML**: `from:` aliasing — same view declared twice in an explore under different aliases. Model-time.
+- **Malloy**: aliased sources (`source: ship_addr is address`). Model-time.
+- **dbt MetricFlow**: no first-class path-name primitive.
+
+**What's structurally distinct about OBSL** after the corrections:
+
+1. **`UNION ALL` query plan** for multi-fact — closest peer is MetricFlow's `FULL OUTER JOIN` (similar peer-symmetric semantics, different mechanism); everyone else uses a single JOIN graph.
+2. **Per-query path selection** for multi-path joins — Cube has graph-aware multi-path resolution (heuristic), but OBSL is the only one where the *consumer of the query* picks the path explicitly.
+3. **Static fanout detection** as an explicit error class (`compiler/fanout.py` raises `FanoutError`) instead of relying on symmetric aggregates to silently correct.
+
+AtScale's conformed-dimensions-within-a-Cube + virtual cubes is the closest peer in *modeling capability*; dbt MetricFlow's `FULL OUTER JOIN` is the closest peer in *query plan*. OBSL's combination of UNION-ALL plan + per-query path selection is what's unique.
 
 ## Where OBSL fits best
 
