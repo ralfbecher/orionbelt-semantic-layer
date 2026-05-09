@@ -18,8 +18,11 @@ settings:
   defaultNumericDataType: "decimal(18, 2)"
   # Naive timestamps in the demo are interpreted as Europe/Zagreb local
   # time. Queries can still override per-request via the ``timezone``
-  # query parameter on /v1/query/execute.
+  # query parameter on /v1/query/execute. The auto-detected DuckDB
+  # session TZ is Etc/UTC; setting overrideDatabaseTimezone: true
+  # makes ``defaultTimezone`` win in the resolved effective TZ.
   defaultTimezone: "Europe/Zagreb"
+  overrideDatabaseTimezone: true
 
 dataObjects:
   Sales:

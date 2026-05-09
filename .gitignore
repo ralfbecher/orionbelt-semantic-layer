@@ -22,8 +22,8 @@ htmlcov/
 *.log
 .DS_Store
 .claude/
-cache/
-usage/
+/cache/
+/usage/
 security/
 infra/
 site/
