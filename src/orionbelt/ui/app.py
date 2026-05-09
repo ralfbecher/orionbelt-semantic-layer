@@ -2168,12 +2168,25 @@ def create_blocks(
     cohosted = default_api_url is not None
     api_base = default_api_url or _DEFAULT_API_URL
     dialects = _fetch_dialects(api_base) if not cohosted else _FALLBACK_DIALECTS
-    default_dialect = (
-        "postgres" if "postgres" in dialects else (dialects[0] if dialects else "postgres")
-    )
 
     # In embedded mode use pre-supplied settings; standalone fetches via HTTP
     api_settings = embedded_settings if embedded_settings is not None else _fetch_settings(api_base)
+
+    # Pick the initial dialect from what the API will *actually* use, not
+    # an alphabetical fallback: dialect.effective reflects the model's
+    # settings.defaultDialect (or DB_VENDOR env). That keeps the dropdown
+    # honest before the user touches it; on Compile they can switch to
+    # any other registered dialect for SQL preview, and Execute Query
+    # snaps back via _resolve_execution_dialect.
+    api_effective_dialect = (api_settings.get("dialect") or {}).get("effective")
+    if isinstance(api_effective_dialect, str) and api_effective_dialect in dialects:
+        default_dialect = api_effective_dialect
+    elif "postgres" in dialects:
+        default_dialect = "postgres"
+    elif dialects:
+        default_dialect = dialects[0]
+    else:
+        default_dialect = "postgres"
     single_model = api_settings.get("single_model_mode", False)
     query_exec_enabled = api_settings.get("query_execute", False)
     if single_model and api_settings.get("model_yaml"):
