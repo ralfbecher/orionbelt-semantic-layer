@@ -158,22 +158,7 @@ def _load_golden(query_id: str) -> list[list[Any]]:
 # test is tracked but doesn't break CI.
 # ---------------------------------------------------------------------------
 
-_KNOWN_ISSUES: dict[tuple[str, str], str] = {
-    # Rolling AVG over decimal goes through DOUBLE intermediates inside
-    # each engine's window machinery. ULP-scale rounding mode differs
-    # between DuckDB (half-up) and Postgres / MySQL / ClickHouse — at
-    # the half-cent boundary they land on different sides. Real engine
-    # variance, not an OBSL bug.
-    ("postgres", "11_rolling_30_day_sales"): (
-        "Engine variance: rolling AVG rounding mode differs at .5-cent boundary"
-    ),
-    ("mysql", "11_rolling_30_day_sales"): (
-        "Engine variance: rolling AVG rounding mode differs at .5-cent boundary"
-    ),
-    ("clickhouse", "11_rolling_30_day_sales"): (
-        "Engine variance: rolling AVG rounding mode differs at .5-cent boundary"
-    ),
-}
+_KNOWN_ISSUES: dict[tuple[str, str], str] = {}
 
 
 def _assert_matches_golden(

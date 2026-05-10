@@ -123,18 +123,33 @@ class ClickHouseDialect(Dialect):
         return super()._compile_binary_op(left, op, right)
 
     def _compile_cast(self, inner: Expr, type_name: str) -> str:
-        """ClickHouse: wrap target type in ``Nullable(...)``.
+        """ClickHouse: wrap target type in ``Nullable(...)`` and round to
+        the target Decimal scale before casting.
 
-        ClickHouse base types (Float64, Int64, Decimal, Date, ...) are
-        non-nullable by default and reject ``NULL`` values, e.g. CFL
-        UNION-ALL legs that pad missing measures with ``CAST(NULL AS Float64)``
-        or outer aggregations whose group has no rows in a given leg.
-        Wrapping in ``Nullable`` accepts both NULL and non-NULL values.
+        Two ClickHouse-specific quirks the wrapping handles:
+
+        * Base types are non-nullable by default; CFL UNION-ALL legs and
+          outer aggregations over empty groups need ``Nullable(...)`` to
+          accept ``NULL`` without raising.
+        * ``CAST(x AS Decimal(P, S))`` *truncates* the input (e.g.
+          ``CAST(4323.99 AS Decimal(18, 0)) → 4323``), which diverges
+          from DuckDB / Postgres / MySQL whose decimal CAST rounds. To
+          align cross-vendor rounding (and stay consistent with the
+          metric's declared precision), pre-round the inner expression
+          to the target scale before casting.
         """
         resolved_type = self._resolve_type_name(type_name)
-        if not resolved_type.startswith("Nullable("):
-            resolved_type = f"Nullable({resolved_type})"
-        return f"CAST({self.compile_expr(inner)} AS {resolved_type})"
+        nullable = resolved_type
+        if not nullable.startswith("Nullable("):
+            nullable = f"Nullable({resolved_type})"
+        inner_sql = self.compile_expr(inner)
+        # Detect Decimal(P, S) targets and round to scale S first.
+        upper = resolved_type.upper()
+        if upper.startswith("DECIMAL") or upper.startswith("NULLABLE(DECIMAL"):
+            scale_token = resolved_type.split(",")[-1].rstrip(") ")
+            scale = int(scale_token.strip())
+            inner_sql = f"round({inner_sql}, {scale})"
+        return f"CAST({inner_sql} AS {nullable})"
 
     def render_cast(self, expr: Expr, target_type: str) -> Expr:
         # ClickHouse uses toType functions for common casts

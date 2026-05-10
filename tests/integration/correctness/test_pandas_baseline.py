@@ -148,20 +148,13 @@ def test_rolling_30_day_sales(
     """OBSL ``Rolling 30 Day Sales`` == 30-row rolling AVG of daily totals.
 
     Note: OBSL emits ``ROWS BETWEEN 29 PRECEDING AND CURRENT ROW`` — a
-    *row*-based window, not a 30-day calendar window. So the baseline must
-    also use ``rolling(30)`` over the densely-grouped daily rows (one row
-    per day-with-sales), not over a calendar spine.
+    *row*-based window, not a 30-day calendar window. The baseline
+    matches with ``rolling(30)`` over densely-grouped daily rows.
 
-    ``Rolling 30 Day Sales`` declares ``decimal(18, 2)`` and OBSL casts
-    the windowed AVG to that type. DuckDB's window-AVG over a DECIMAL
-    column is computed via DOUBLE intermediates internally, so values
-    that *should* be exactly ``.5`` (e.g. ``20109.225``) are stored as
-    binary-approximate floats and the subsequent CAST drifts ±0.01 vs.
-    a pure-Decimal computation. The baseline therefore mirrors the
-    float intermediate (``rolling.mean()`` in pandas, which uses NumPy
-    float64) and only quantizes at the end. This trades exact Decimal
-    cross-check for fidelity to OBSL's actual arithmetic — a tradeoff
-    the plan explicitly allows for averages (§10.1).
+    The metric declares ``decimal(18, 0)`` (whole dollars) so the half-
+    cent boundary that diverged across engines (DuckDB HALF_UP vs
+    Postgres / MySQL HALF_EVEN, plus ClickHouse engine-internal) is no
+    longer reachable. Comparison is strict ``Decimal`` equality.
     """
     base = commerce_db.execute(
         """
@@ -173,9 +166,12 @@ def test_rolling_30_day_sales(
         """
     ).fetchdf()
 
+    # Mirror DuckDB's window-AVG: float intermediate, quantize at the
+    # end to whole dollars. Whole-dollar quantization is engine-stable
+    # (the .5 boundary requires hundredths to surface).
     base["expected_float"] = base["total"].astype(float).rolling(window=30, min_periods=1).mean()
     expected: dict[_dt.date, Decimal] = {
-        _to_date(row.day): _quantize(Decimal(repr(row.expected_float)), scale=2)
+        _to_date(row.day): _quantize(Decimal(repr(row.expected_float)), scale=0)
         for row in base.itertuples(index=False)
     }
 
@@ -193,18 +189,12 @@ def test_rolling_30_day_sales(
         f"Day sets differ: only-in-OBSL={set(obsl) - set(expected)}, "
         f"only-in-baseline={set(expected) - set(obsl)}"
     )
-    # ±0.01 tolerance: the half-boundary case still has a 1-in-thousand
-    # chance of binary-rounding differently between NumPy's pandas
-    # rolling mean and DuckDB's window AVG. Tightening below this would
-    # be brittle without producing more bug-detection signal.
-    one_cent = Decimal("0.01")
     for day in sorted(expected):
-        diff = abs(obsl[day] - expected[day])
-        assert diff <= one_cent, (
+        assert obsl[day] == expected[day], (
             f"Rolling 30 Day Sales for {day}: OBSL={obsl[day]}, "
             f"pandas baseline={expected[day]}, diff={obsl[day] - expected[day]}. "
-            f"A mismatch beyond ±0.01 suggests a window-frame bug (e.g. "
-            f"``30 PRECEDING`` interpreted as 30 days rather than 30 rows) "
+            f"A mismatch suggests a window-frame bug (e.g. ``30 "
+            f"PRECEDING`` interpreted as 30 days rather than 30 rows) "
             f"or wrong sort order."
         )
 
