@@ -13,6 +13,7 @@ from orionbelt.ast.nodes import (
     Cast,
     ColumnRef,
     Expr,
+    FunctionCall,
     Select,
 )
 from orionbelt.compiler.graph import JoinGraph
@@ -22,6 +23,19 @@ from orionbelt.models.semantic import DataObject, SemanticModel
 
 if TYPE_CHECKING:
     from orionbelt.dialect.base import Dialect
+
+
+_GROUPING_FLAG_PREFIX = "_g_"
+
+
+def _grouping_flag_alias(dim_alias: str) -> str:
+    """Build the GROUPING() flag column alias for a dimension.
+
+    Per PLAN_with_rollup.md §"Output: GROUPING() flag columns" — convention is
+    ``_g_<dim>`` with a stable prefix so callers can filter on detail vs
+    subtotal vs grand-total rows.
+    """
+    return f"{_GROUPING_FLAG_PREFIX}{dim_alias}"
 
 
 def _substitute_measure_refs(
@@ -93,11 +107,14 @@ class StarSchemaPlanner:
         base_alias = resolved.base_object
 
         # SELECT: dimensions (apply time grain truncation if specified)
+        grouping_dim_aliases: list[str] = []
         for dim in resolved.dimensions:
             col: Expr = make_column_expr(model, dim.object_name, dim.column_name)
             if dim.grain and dialect:
                 col = dialect.render_time_grain(col, dim.grain)
             builder.select(AliasedExpr(expr=col, alias=dim.name))
+            if resolved.grouping is not None:
+                grouping_dim_aliases.append(dim.name)
 
         # SELECT: measures (aggregated) — for metrics, substitute component refs
         settings = model.settings
@@ -160,6 +177,13 @@ class StarSchemaPlanner:
             if dim.grain and dialect:
                 gb_col = dialect.render_time_grain(gb_col, dim.grain)
             builder.group_by(gb_col)
+
+        # GROUPING() flag columns + grouping modifier (rollup/cube)
+        if resolved.grouping is not None and grouping_dim_aliases:
+            builder.grouping(resolved.grouping.value)
+            for alias in grouping_dim_aliases:
+                flag_col = FunctionCall(name="GROUPING", args=[ColumnRef(name=alias)])
+                builder.select(AliasedExpr(expr=flag_col, alias=_grouping_flag_alias(alias)))
 
         # HAVING — expand alias references to actual CAST'd aggregate expressions
         for hf in resolved.having_filters:

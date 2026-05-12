@@ -92,9 +92,7 @@ def rows_to_batch(
     Transposes row-major data to column-major for Arrow.
     """
     if not rows:
-        return pa.RecordBatch.from_pydict(
-            {field.name: [] for field in schema}, schema=schema
-        )
+        return pa.RecordBatch.from_pydict({field.name: [] for field in schema}, schema=schema)
     n_cols = len(schema)
     columns: dict[str, list[Any]] = {schema.field(i).name: [] for i in range(n_cols)}
     for row in rows:

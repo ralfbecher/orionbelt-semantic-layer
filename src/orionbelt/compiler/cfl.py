@@ -33,7 +33,7 @@ from orionbelt.compiler.resolution import (
     ResolvedQuery,
     make_column_expr,
 )
-from orionbelt.compiler.star import CflLegInfo, QueryPlan
+from orionbelt.compiler.star import CflLegInfo, QueryPlan, _grouping_flag_alias
 from orionbelt.compiler.type_resolver import resolve_measure_data_type, resolve_metric_data_type
 from orionbelt.dialect.base import Dialect
 from orionbelt.models.semantic import DataObject, SemanticModel
@@ -704,6 +704,21 @@ class CFLPlanner:
             else:
                 outer_builder.group_by(ColumnRef(name=dim.name))
 
+        # GROUPING() flag columns + grouping modifier (rollup/cube) — outer query only
+        # so subtotal rows compose correctly over the unioned facts (the
+        # individual UNION ALL legs stay at detail grain).
+        if resolved.grouping is not None and resolved.dimensions:
+            outer_builder.grouping(resolved.grouping.value)
+            flag_aliases: list[str] = []
+            for dim in resolved.dimensions:
+                alias_name = dim.coalesce_alias or dim.name
+                if alias_name in flag_aliases:
+                    continue
+                flag_aliases.append(alias_name)
+            for alias in flag_aliases:
+                flag_col = FunctionCall(name="GROUPING", args=[ColumnRef(name=alias)])
+                outer_builder.select(AliasedExpr(expr=flag_col, alias=_grouping_flag_alias(alias)))
+
         # HAVING — expand alias references to actual CAST'd aggregate expressions
         for hf in resolved.having_filters:
             outer_builder.having(_expand_cfl_measure_refs(hf.expression, outer_measure_exprs))
@@ -730,6 +745,7 @@ class CFLPlanner:
             limit=outer_select.limit,
             offset=outer_select.offset,
             ctes=[union_cte],
+            grouping=outer_select.grouping,
         )
 
         return QueryPlan(ast=final, cfl_legs=leg_infos)

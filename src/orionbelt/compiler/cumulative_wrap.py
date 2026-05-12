@@ -181,6 +181,7 @@ def wrap_with_cumulative(
         limit=None,
         offset=None,
         ctes=[],
+        grouping=ast.grouping,
     )
 
     cte_name = "cumulative_base"

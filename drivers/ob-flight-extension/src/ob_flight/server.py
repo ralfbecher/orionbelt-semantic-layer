@@ -19,6 +19,7 @@ from ob_flight.catalog import (
     build_measures_data,
     build_metrics_data,
     model_to_flight_infos,
+    model_virtual_table_name,
 )
 from ob_flight.converters import rows_to_batch, schema_from_description
 from ob_flight.db_router import connect as db_connect
@@ -26,6 +27,7 @@ from ob_flight.flight_sql import (
     ACTION_CLOSE_PREPARED_STATEMENT,
     ACTION_CREATE_PREPARED_STATEMENT,
     CMD_GET_CATALOGS,
+    CMD_GET_COLUMNS,
     CMD_GET_CROSS_REFERENCE,
     CMD_GET_DB_SCHEMAS,
     CMD_GET_EXPORTED_KEYS,
@@ -38,6 +40,7 @@ from ob_flight.flight_sql import (
     CMD_PREPARED_STATEMENT_QUERY,
     CMD_STATEMENT_QUERY,
     build_catalogs_table,
+    build_columns_table,
     build_db_schemas_table,
     build_empty_imported_keys_table,
     build_empty_keys_table,
@@ -66,7 +69,14 @@ _CATALOG_COMMANDS = {
     CMD_GET_IMPORTED_KEYS,
     CMD_GET_EXPORTED_KEYS,
     CMD_GET_CROSS_REFERENCE,
+    CMD_GET_COLUMNS,
 }
+
+
+# Governance modes for the Flight SQL surface. See PLAN_flight_natural_sql.md §3.2.
+_MODE_SEMANTIC = "semantic"
+_MODE_DATA_OBJECT = "data_object"
+_MODE_RAW = "raw"
 
 
 class OBFlightServer(flight.FlightServerBase):
@@ -87,11 +97,15 @@ class OBFlightServer(flight.FlightServerBase):
         session_manager: Any = None,
         default_dialect: str = "duckdb",
         batch_size: int = 1024,
+        allow_raw_sql: bool = False,
+        allow_data_object_sql: bool = False,
     ) -> None:
         super().__init__(location, auth_handler=auth_handler)
         self._session_manager = session_manager
         self._default_dialect = default_dialect
         self._batch_size = batch_size
+        self._allow_raw_sql = allow_raw_sql
+        self._allow_data_object_sql = allow_data_object_sql
         self._lock = threading.Lock()
         # Pending queries: ticket_id -> (payload, timestamp)
         # payload is either ("sql", sql, dialect) or ("catalog", type_url)
@@ -106,9 +120,7 @@ class OBFlightServer(flight.FlightServerBase):
         now = time.monotonic()
         with self._lock:
             # Evict expired entries
-            expired = [
-                k for k, (_, ts) in self._pending.items() if now - ts > self._pending_ttl
-            ]
+            expired = [k for k, (_, ts) in self._pending.items() if now - ts > self._pending_ttl]
             for k in expired:
                 del self._pending[k]
             self._pending[ticket_id] = (payload, now)
@@ -129,7 +141,9 @@ class OBFlightServer(flight.FlightServerBase):
         """Get the default model from the session manager.
 
         Returns (model, dialect) tuple.
-        Uses the default session's first model (single-model mode).
+        Uses the default session's first model (single-model mode). Stamps
+        the model_id onto the model as ``_ob_model_id`` so the virtual-table
+        name resolver and catalog code can find it.
         """
         if self._session_manager is None:
             raise flight.FlightUnavailableError("No session manager configured")
@@ -145,6 +159,14 @@ class OBFlightServer(flight.FlightServerBase):
 
         model_id = models[0].model_id
         model = store.get_model(model_id)
+        # Surface the model_id for downstream catalog code that needs to
+        # produce a stable virtual-table name. Pydantic v2 doesn't allow
+        # setattr on undeclared fields by default, so we use the underlying
+        # __dict__ to side-step validation.
+        try:
+            model.__dict__["_ob_model_id"] = model_id
+        except Exception:
+            pass
         return model, self._default_dialect
 
     def _rewrite_table_names(self, sql: str, model: Any) -> str:
@@ -177,18 +199,148 @@ class OBFlightServer(flight.FlightServerBase):
                 sql = sql.replace(f"{schema_name}.{code}", code)
         return sql
 
-    def _prepare_sql(self, sql: str) -> tuple[str, str, Any]:
-        """Resolve model, rewrite table names, compile OBML if needed.
+    def _classify_sql(self, sql: str, model: Any) -> str:
+        """Classify a SQL query by the FROM target.
 
-        Returns (final_sql, dialect, model).
+        Returns one of ``semantic | data_object | raw``. See
+        ``design/PLAN_flight_natural_sql.md`` §3.2.
         """
+        # Strip the bare trailing ``WITH ROLLUP``/``WITH CUBE`` before parsing
+        # — sqlglot requires a GROUP BY in front of those modifiers, but the
+        # semantic-SQL surface lets callers write them as a trailing flag.
+        from orionbelt.compiler.sql_translator import _strip_trailing_grouping
+
+        cleaned, _ = _strip_trailing_grouping(sql)
+
+        try:
+            import sqlglot
+
+            ast = sqlglot.parse_one(cleaned)
+        except Exception:
+            return _MODE_RAW
+
+        from_node = ast.args.get("from") if hasattr(ast, "args") else None
+        if from_node is None:
+            return _MODE_RAW
+        # sqlglot's From wraps the source as ``.this`` (a Table node) or
+        # ``.expressions[0]`` for legacy parse paths. Cover both.
+        table_node = getattr(from_node, "this", None)
+        if table_node is None and getattr(from_node, "expressions", None):
+            table_node = from_node.expressions[0]
+        if table_node is None:
+            return _MODE_RAW
+        name = getattr(table_node, "name", None) or table_node.sql()
+        target = str(name).strip('"').strip("`").strip("'").lower()
+
+        vt = model_virtual_table_name(model).lower()
+        if target == vt:
+            return _MODE_SEMANTIC
+
+        if hasattr(model, "data_objects") and model.data_objects:
+            for obj_name, obj in model.data_objects.items():
+                if target in (
+                    obj_name.lower(),
+                    (getattr(obj, "label", obj_name) or obj_name).lower(),
+                ):
+                    return _MODE_DATA_OBJECT
+        return _MODE_RAW
+
+    def _semantic_result_schema(self, query: Any, model: Any) -> pa.Schema:
+        """Build the result Arrow schema for a semantic query without DB I/O.
+
+        Reads ``result_type`` from each selected dimension / measure / metric.
+        See ``design/PLAN_flight_natural_sql.md`` §3.4 "Schema probe".
+        """
+        from ob_flight.catalog import _obml_type_to_arrow
+
+        fields: list[pa.Field] = []
+        dims = getattr(query.select, "dimensions", [])
+        measures = getattr(query.select, "measures", [])
+        for name in dims:
+            label = name if isinstance(name, str) else getattr(name, "alias", None)
+            if label is None:
+                continue
+            dim = model.dimensions.get(label)
+            rt = getattr(getattr(dim, "result_type", None), "value", None) or "string"
+            fields.append(pa.field(label, _obml_type_to_arrow(rt)))
+        for label in measures:
+            meas = model.measures.get(label)
+            met = model.metrics.get(label) if meas is None else None
+            if meas is not None:
+                rt = getattr(getattr(meas, "result_type", None), "value", None) or "float"
+                fields.append(pa.field(label, _obml_type_to_arrow(rt)))
+            elif met is not None:
+                fields.append(pa.field(label, pa.float64()))
+            else:
+                fields.append(pa.field(label, pa.float64()))
+        if query.grouping is not None:
+            # GROUPING() flag columns — int64, one per dimension. See
+            # PLAN_with_rollup.md §"Output: GROUPING() flag columns".
+            for name in dims:
+                label = name if isinstance(name, str) else getattr(name, "alias", None)
+                if label is None:
+                    continue
+                fields.append(pa.field(f"_g_{label}", pa.int64()))
+        return pa.schema(fields)
+
+    def _prepare_sql(self, sql: str) -> tuple[str, str, Any, pa.Schema | None]:
+        """Resolve model, classify SQL, translate / compile / passthrough.
+
+        Returns ``(final_sql, dialect, model, schema_hint)``. ``schema_hint``
+        is non-None when the SQL is in semantic mode — caller can skip the
+        DB dry-run for ``GetFlightInfo``. Raises
+        :class:`flight.FlightServerError` when the SQL is rejected by the
+        governance settings (raw passthrough off, data-object passthrough off).
+        """
+        from orionbelt.compiler.pipeline import CompilationPipeline
+        from orionbelt.compiler.sql_translator import (
+            SQLTranslationError,
+            translate_sql_to_query,
+        )
+
         model, dialect = self._get_model()
+
+        # OBML YAML wrapped as a SQL string — power-user path
         if is_obml(sql):
             obml = parse_obml(sql)
             sql = self._compile_obml(obml, model, dialect)
             logger.info("Compiled OBML to SQL: %s", sql[:200])
-        sql = self._rewrite_table_names(sql, model)
-        return sql, dialect, model
+            sql = self._rewrite_table_names(sql, model)
+            return sql, dialect, model, None
+
+        mode = self._classify_sql(sql, model)
+        if mode == _MODE_SEMANTIC:
+            try:
+                query = translate_sql_to_query(sql, model)
+            except SQLTranslationError as exc:
+                detail = "; ".join(f"[{e.code}] {e.message}" for e in exc.errors)
+                raise flight.FlightServerError(
+                    f"OrionBelt Semantic QL translation failed: {detail}"
+                ) from None
+            compiled = CompilationPipeline().compile(query, model, dialect)
+            sql = self._rewrite_table_names(compiled.sql, model)
+            logger.info("Compiled OBSQL → %s", sql[:200])
+            schema_hint = self._semantic_result_schema(query, model)
+            return sql, dialect, model, schema_hint
+
+        if mode == _MODE_DATA_OBJECT:
+            if not self._allow_data_object_sql:
+                raise flight.FlightServerError(
+                    "[DATA_OBJECT_SQL_DISABLED] FROM <data object> is disabled. "
+                    "Either query the semantic virtual table or set "
+                    "FLIGHT_ALLOW_DATA_OBJECT_SQL=true."
+                )
+            sql = self._rewrite_table_names(sql, model)
+            return sql, dialect, model, None
+
+        # mode == raw
+        if not self._allow_raw_sql:
+            raise flight.FlightServerError(
+                "[RAW_SQL_DISABLED] Raw SQL pass-through is disabled. "
+                "Query the semantic virtual table, or set FLIGHT_ALLOW_RAW_SQL=true "
+                "on the server."
+            )
+        return sql, dialect, model, None
 
     @staticmethod
     def _detect_virtual_table(sql: str) -> str | None:
@@ -245,16 +397,29 @@ class OBFlightServer(flight.FlightServerBase):
             conn.close()
 
     def _build_tables_from_model(self) -> pa.Table:
-        """Build tables metadata from the semantic model data objects.
+        """Build the CommandGetTables response.
 
-        Each data object becomes a virtual "table" in DBeaver's schema browser,
-        showing only the columns defined on that data object.
+        Always lists the semantic virtual table first. Data-object tables
+        are listed only when ``FLIGHT_ALLOW_DATA_OBJECT_SQL=true``.
         """
         try:
             model, _ = self._get_model()
         except Exception:
             model = None
-        return build_tables_table(model)
+        return build_tables_table(model, expose_data_objects=self._allow_data_object_sql)
+
+    def _build_columns_from_model(self) -> pa.Table:
+        """Build the CommandGetColumns response.
+
+        Returns dim / measure / metric columns of the semantic virtual
+        table, plus physical columns of each data object when those are
+        exposed via ``FLIGHT_ALLOW_DATA_OBJECT_SQL=true``.
+        """
+        try:
+            model, _ = self._get_model()
+        except Exception:
+            model = None
+        return build_columns_table(model, expose_data_objects=self._allow_data_object_sql)
 
     def _compile_obml(self, obml: dict[str, Any], model: Any, dialect: str) -> str:
         """Compile OBML to SQL using the OrionBelt pipeline directly."""
@@ -284,9 +449,11 @@ class OBFlightServer(flight.FlightServerBase):
                 sql = parse_statement_query(value)
                 if sql is None:
                     raise flight.FlightServerError("Failed to parse SQL from Flight SQL command")
-                sql, dialect, _ = self._prepare_sql(sql)
+                sql, dialect, _, schema_hint = self._prepare_sql(sql)
                 self._store_pending(ticket_id, ("sql", sql, dialect))
-                schema = self._probe_schema(sql, dialect)
+                schema = (
+                    schema_hint if schema_hint is not None else self._probe_schema(sql, dialect)
+                )
 
             elif type_url == CMD_PREPARED_STATEMENT_QUERY:
                 # Look up prepared statement by handle
@@ -313,9 +480,9 @@ class OBFlightServer(flight.FlightServerBase):
 
         # Plain text: SQL or OBML
         query_str = command_bytes.decode("utf-8")
-        sql, dialect, _ = self._prepare_sql(query_str)
+        sql, dialect, _, schema_hint = self._prepare_sql(query_str)
         self._store_pending(ticket_id, ("sql", sql, dialect))
-        schema = self._probe_schema(sql, dialect)
+        schema = schema_hint if schema_hint is not None else self._probe_schema(sql, dialect)
         ticket = flight.Ticket(ticket_id.encode("utf-8"))
         endpoint = flight.FlightEndpoint(ticket, [])
         return flight.FlightInfo(schema, descriptor, [endpoint], -1, -1)
@@ -351,6 +518,8 @@ class OBFlightServer(flight.FlightServerBase):
             table = build_db_schemas_table()
         elif type_url == CMD_GET_TABLES:
             table = self._build_tables_from_model()
+        elif type_url == CMD_GET_COLUMNS:
+            table = self._build_columns_from_model()
         elif type_url == CMD_GET_TABLE_TYPES:
             table = build_table_types_table()
         elif type_url in (CMD_GET_PRIMARY_KEYS, CMD_GET_EXPORTED_KEYS, CMD_GET_CROSS_REFERENCE):
@@ -410,9 +579,7 @@ class OBFlightServer(flight.FlightServerBase):
         finally:
             conn.close()
 
-    def do_action(
-        self, context: flight.ServerCallContext, action: flight.Action
-    ) -> Any:
+    def do_action(self, context: flight.ServerCallContext, action: flight.Action) -> Any:
         """Handle Flight SQL actions (CreatePreparedStatement, ClosePreparedStatement)."""
         action_type = action.type
 
@@ -421,8 +588,8 @@ class OBFlightServer(flight.FlightServerBase):
             if sql is None:
                 raise flight.FlightServerError("Failed to parse prepared statement query")
 
-            sql, dialect, _ = self._prepare_sql(sql)
-            schema = self._probe_schema(sql, dialect)
+            sql, dialect, _, schema_hint = self._prepare_sql(sql)
+            schema = schema_hint if schema_hint is not None else self._probe_schema(sql, dialect)
 
             handle = uuid.uuid4().bytes
             handle_hex = handle.hex()
@@ -446,13 +613,13 @@ class OBFlightServer(flight.FlightServerBase):
         else:
             raise flight.FlightServerError(f"Unsupported action: {action_type}")
 
-    def list_flights(
-        self, context: flight.ServerCallContext, criteria: bytes
-    ) -> Any:
-        """List semantic model data objects as browsable tables in DBeaver."""
+    def list_flights(self, context: flight.ServerCallContext, criteria: bytes) -> Any:
+        """List the semantic virtual table (and optionally data objects)."""
         try:
             model, _ = self._get_model()
         except Exception:
             return
-        for info in model_to_flight_infos(model, "default"):
+        for info in model_to_flight_infos(
+            model, "default", expose_data_objects=self._allow_data_object_sql
+        ):
             yield info

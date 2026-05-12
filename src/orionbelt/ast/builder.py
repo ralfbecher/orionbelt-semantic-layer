@@ -38,6 +38,7 @@ class QueryBuilder:
         self._offset: int | None = None
         self._ctes: list[CTE] = []
         self._distinct: bool = False
+        self._grouping: str | None = None
 
     def select(self, *columns: Expr) -> Self:
         self._columns.extend(columns)
@@ -103,6 +104,11 @@ class QueryBuilder:
         self._distinct = value
         return self
 
+    def grouping(self, mode: str | None) -> Self:
+        """Set the hierarchical grouping modifier ('rollup' or 'cube')."""
+        self._grouping = mode
+        return self
+
     def build(self) -> Select:
         return Select(
             columns=self._columns,
@@ -116,6 +122,7 @@ class QueryBuilder:
             offset=self._offset,
             ctes=self._ctes,
             distinct=self._distinct,
+            grouping=self._grouping,
         )
 
 

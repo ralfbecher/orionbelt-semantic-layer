@@ -94,13 +94,9 @@ class TestCompileObml:
 
         model, _ = server._get_model()
 
-        with patch(
-            "orionbelt.compiler.pipeline.CompilationPipeline", mock_pipeline_cls
-        ):
+        with patch("orionbelt.compiler.pipeline.CompilationPipeline", mock_pipeline_cls):
             with patch("orionbelt.models.query.QueryObject", mock_qo_cls):
-                sql = server._compile_obml(
-                    {"select": {"dimensions": ["Region"]}}, model, "duckdb"
-                )
+                sql = server._compile_obml({"select": {"dimensions": ["Region"]}}, model, "duckdb")
                 assert sql == "SELECT region FROM orders"
                 mock_qo_cls.model_validate.assert_called_once()
                 mock_pipeline_cls.return_value.compile.assert_called_once()
@@ -280,9 +276,7 @@ class TestDoGet:
         server._batch_size = 1024
 
         ticket_id = "empty-ticket"
-        server._pending = {
-            ticket_id: ("sql", "SELECT * FROM t WHERE 1=0", "duckdb")
-        }
+        server._pending = {ticket_id: ("sql", "SELECT * FROM t WHERE 1=0", "duckdb")}
 
         from ob_driver_core.type_codes import STRING
 

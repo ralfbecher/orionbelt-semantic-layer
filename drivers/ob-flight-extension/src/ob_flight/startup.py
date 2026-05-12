@@ -13,25 +13,26 @@ _server: Any = None
 _thread: threading.Thread | None = None
 
 
+def _env_flag(name: str) -> bool:
+    """Read a boolean env var (case-insensitive 'true'/'1')."""
+    return os.getenv(name, "").lower() in ("1", "true", "yes")
+
+
 def start_flight_background(
     *,
     session_manager: Any = None,
     port: int | None = None,
     auth_handler: Any = None,
     default_dialect: str | None = None,
+    allow_raw_sql: bool | None = None,
+    allow_data_object_sql: bool | None = None,
 ) -> threading.Thread:
     """Launch the Flight SQL server in a daemon thread.
 
-    Parameters
-    ----------
-    session_manager : SessionManager
-        The shared SessionManager from the FastAPI lifespan.
-    port : int, optional
-        gRPC port (default: FLIGHT_PORT env var or 8815).
-    auth_handler : ServerAuthHandler, optional
-        Auth handler (default: created from FLIGHT_AUTH_MODE env var).
-    default_dialect : str, optional
-        DB dialect (default: DB_VENDOR env var or "duckdb").
+    Governance defaults follow ``design/PLAN_flight_natural_sql.md``: raw
+    SQL pass-through and FROM-<data-object-label> are both off by default.
+    Operators opt in via ``FLIGHT_ALLOW_RAW_SQL`` /
+    ``FLIGHT_ALLOW_DATA_OBJECT_SQL`` (or the explicit kwargs).
     """
     global _server, _thread
 
@@ -49,11 +50,18 @@ def start_flight_background(
         default_dialect = os.getenv("DB_VENDOR", "duckdb")
     location = f"grpc://0.0.0.0:{port}"
 
+    if allow_raw_sql is None:
+        allow_raw_sql = _env_flag("FLIGHT_ALLOW_RAW_SQL")
+    if allow_data_object_sql is None:
+        allow_data_object_sql = _env_flag("FLIGHT_ALLOW_DATA_OBJECT_SQL")
+
     _server = OBFlightServer(
         location,
         auth_handler=auth_handler,
         session_manager=session_manager,
         default_dialect=default_dialect,
+        allow_raw_sql=allow_raw_sql,
+        allow_data_object_sql=allow_data_object_sql,
     )
 
     _thread = threading.Thread(
@@ -79,9 +87,7 @@ def stop_flight_server() -> None:
         server = _server
         # Call shutdown() from a helper thread — it blocks and we don't want
         # to stall the FastAPI lifespan finalizer.
-        shutdown_thread = threading.Thread(
-            target=_shutdown_safely, args=(server,), daemon=True
-        )
+        shutdown_thread = threading.Thread(target=_shutdown_safely, args=(server,), daemon=True)
         shutdown_thread.start()
         shutdown_thread.join(timeout=3)
         # Wait for the serve() thread to finish too

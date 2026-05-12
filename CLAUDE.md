@@ -176,6 +176,8 @@ All API routes are prefixed with `/v1/` except `/health` and `/robots.txt`.
 | POST | `/v1/sessions/{id}/validate` | Validate YAML |
 | POST | `/v1/sessions/{id}/query/sql` | Compile query (includes explain) |
 | POST | `/v1/sessions/{id}/query/execute` | Compile and execute query. Supports `?format=tsv`, `?format_values=true`, `?locale=`, `?timezone=` |
+| POST | `/v1/sessions/{id}/query/semantic-ql` | OrionBelt Semantic QL (OBSQL): translate BI-style SQL (SELECT dim, measure FROM `<model>`) → QueryObject → execute. Same response shape as `/query/execute` |
+| POST | `/v1/sessions/{id}/query/semantic-ql/compile` | OrionBelt Semantic QL: translate + compile only, returns compiled SQL + translated QueryObject JSON |
 | GET | `/v1/sessions/{id}/models/{mid}/diagram/er` | Mermaid ER diagram |
 | GET | `/v1/sessions/{id}/models/{mid}/schema` | Full model as JSON |
 | GET | `/v1/sessions/{id}/models/{mid}/dimensions` | List dimensions |
@@ -197,7 +199,7 @@ All API routes are prefixed with `/v1/` except `/health` and `/robots.txt`.
 | POST | `/v1/cache/clear` | Drop every cache entry (counters preserved) |
 | GET | `/v1/reference/obml` | OBML reference documentation |
 
-Top-level shortcuts (auto-resolve when single session/model): `/v1/schema`, `/v1/dimensions`, `/v1/measures`, `/v1/metrics`, `/v1/explain/{name}`, `/v1/find`, `/v1/join-graph`, `/v1/graph`, `/v1/sparql`, `/v1/query/sql`, `/v1/query/execute`.
+Top-level shortcuts (auto-resolve when single session/model): `/v1/schema`, `/v1/dimensions`, `/v1/measures`, `/v1/metrics`, `/v1/explain/{name}`, `/v1/find`, `/v1/join-graph`, `/v1/graph`, `/v1/sparql`, `/v1/query/sql`, `/v1/query/execute`, `/v1/query/semantic-ql`, `/v1/query/semantic-ql/compile`.
 
 ## Configuration
 
@@ -219,6 +221,8 @@ Environment variables or `.env` file (via pydantic-settings):
 | `LOG_FORMAT` | `console` | `console` (pretty), `json` (structured), `cloudrun` (JSON, no access logs) |
 | `API_BASE_URL` | — | API URL for standalone UI |
 | `ROOT_PATH` | — | ASGI root path for UI behind load balancer |
+| `FLIGHT_ALLOW_RAW_SQL` | `false` | Allow raw SQL pass-through on the Flight server (default rejects with `RAW_SQL_DISABLED`). Governance escape hatch. |
+| `FLIGHT_ALLOW_DATA_OBJECT_SQL` | `false` | Expose data-object tables and allow `FROM <data_object_label>` (default rejects with `DATA_OBJECT_SQL_DISABLED`). |
 
 ## Tooling Notes
 

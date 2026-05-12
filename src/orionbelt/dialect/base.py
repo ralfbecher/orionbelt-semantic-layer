@@ -322,8 +322,7 @@ class Dialect(ABC):
 
         # GROUP BY
         if node.group_by:
-            groups = ", ".join(self.compile_expr(g) for g in node.group_by)
-            parts.append(f"GROUP BY {groups}")
+            parts.append(self.compile_group_by(node.group_by, node.grouping))
 
         # HAVING
         if node.having:
@@ -343,6 +342,21 @@ class Dialect(ABC):
             parts.append(f"OFFSET {node.offset}")
 
         return "\n".join(parts)
+
+    def compile_group_by(self, group_by: list[Expr], grouping: str | None) -> str:
+        """Render the GROUP BY clause.
+
+        Default ANSI form (Postgres, Snowflake, DuckDB, BigQuery, Databricks,
+        Dremio, MySQL): ``GROUP BY ROLLUP(a, b)`` / ``GROUP BY CUBE(a, b)``.
+        ClickHouse overrides to the trailing-modifier form
+        (``GROUP BY a, b WITH ROLLUP``).
+        """
+        groups = ", ".join(self.compile_expr(g) for g in group_by)
+        if grouping == "rollup":
+            return f"GROUP BY ROLLUP({groups})"
+        if grouping == "cube":
+            return f"GROUP BY CUBE({groups})"
+        return f"GROUP BY {groups}"
 
     def compile_from(self, node: From) -> str:
         if isinstance(node.source, Select):

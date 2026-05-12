@@ -1009,3 +1009,156 @@ class TestQueryOffset:
         sql = response.json()["sql"]
         assert "LIMIT 10" in sql
         assert "OFFSET" not in sql
+
+
+class TestOBSQLEndpoint:
+    """POST /v1/sessions/{id}/query/semantic-ql — see PLAN_flight_natural_sql.md."""
+
+    async def _setup(self, client: AsyncClient) -> tuple[str, str]:
+        sid = (await client.post("/v1/sessions")).json()["session_id"]
+        load = await client.post(
+            f"/v1/sessions/{sid}/models", json={"model_yaml": SAMPLE_MODEL_YAML}
+        )
+        return sid, load.json()["model_id"]
+
+    async def test_compile_happy_path(self, client: AsyncClient) -> None:
+        sid, mid = await self._setup(client)
+        r = await client.post(
+            f"/v1/sessions/{sid}/query/semantic-ql/compile",
+            json={
+                "model_id": mid,
+                "sql": (
+                    'SELECT "Customer Country", "Total Revenue" FROM sample_model '
+                    "WHERE \"Customer Country\" = 'US' "
+                    'ORDER BY "Total Revenue" DESC LIMIT 10'
+                ),
+                "dialect": "postgres",
+            },
+        )
+        assert r.status_code == 200, r.text
+        data = r.json()
+        assert "SELECT" in data["sql"]
+        assert data["dialect"] == "postgres"
+        # The intermediate QueryObject must round-trip
+        q = data["query"]
+        assert q["select"]["dimensions"] == ["Customer Country"]
+        assert q["select"]["measures"] == ["Total Revenue"]
+        assert q["limit"] == 10
+
+    async def test_compile_unknown_select_item(self, client: AsyncClient) -> None:
+        sid, mid = await self._setup(client)
+        r = await client.post(
+            f"/v1/sessions/{sid}/query/semantic-ql/compile",
+            json={"model_id": mid, "sql": 'SELECT "Bogus Column" FROM m'},
+        )
+        assert r.status_code == 400
+        codes = [e["code"] for e in r.json()["detail"]["errors"]]
+        assert "UNKNOWN_SELECT_ITEM" in codes
+
+    async def test_compile_join_rejected(self, client: AsyncClient) -> None:
+        sid, mid = await self._setup(client)
+        r = await client.post(
+            f"/v1/sessions/{sid}/query/semantic-ql/compile",
+            json={
+                "model_id": mid,
+                "sql": 'SELECT "Customer Country" FROM m JOIN n ON 1 = 1',
+            },
+        )
+        assert r.status_code == 400
+        codes = [e["code"] for e in r.json()["detail"]["errors"]]
+        assert "UNSUPPORTED_SQL_FEATURE" in codes
+
+    async def test_compile_group_by_ignored(self, client: AsyncClient) -> None:
+        """Explicit GROUP BY in Semantic QL is silently accepted."""
+        sid, mid = await self._setup(client)
+        r = await client.post(
+            f"/v1/sessions/{sid}/query/semantic-ql/compile",
+            json={
+                "model_id": mid,
+                "sql": (
+                    'SELECT "Customer Country", "Total Revenue" FROM m GROUP BY "Customer Country"'
+                ),
+            },
+        )
+        assert r.status_code == 200
+
+    async def test_compile_measure_in_where_routes_to_having(self, client: AsyncClient) -> None:
+        sid, mid = await self._setup(client)
+        r = await client.post(
+            f"/v1/sessions/{sid}/query/semantic-ql/compile",
+            json={
+                "model_id": mid,
+                "sql": (
+                    'SELECT "Customer Country", "Total Revenue" FROM m WHERE "Total Revenue" > 1000'
+                ),
+            },
+        )
+        assert r.status_code == 200
+        q = r.json()["query"]
+        assert len(q["having"]) == 1
+        assert q["having"][0]["field"] == "Total Revenue"
+        assert q["where"] == []
+
+    async def test_compile_with_rollup(self, client: AsyncClient) -> None:
+        sid, mid = await self._setup(client)
+        r = await client.post(
+            f"/v1/sessions/{sid}/query/semantic-ql/compile",
+            json={
+                "model_id": mid,
+                "sql": ('SELECT "Customer Country", "Total Revenue" FROM m WITH ROLLUP'),
+                "dialect": "postgres",
+            },
+        )
+        assert r.status_code == 200
+        body = r.json()
+        assert body["query"]["grouping"] == "rollup"
+        # Pretty-printed: "GROUP BY\n  ROLLUP (..." — match across whitespace
+        normalized = " ".join(body["sql"].split())
+        assert "GROUP BY ROLLUP" in normalized
+
+    async def test_compile_with_cube_clickhouse_trailing_form(self, client: AsyncClient) -> None:
+        sid, mid = await self._setup(client)
+        r = await client.post(
+            f"/v1/sessions/{sid}/query/semantic-ql/compile",
+            json={
+                "model_id": mid,
+                "sql": ('SELECT "Customer Country", "Total Revenue" FROM m WITH CUBE'),
+                "dialect": "clickhouse",
+            },
+        )
+        assert r.status_code == 200
+        normalized = " ".join(r.json()["sql"].split())
+        assert "WITH CUBE" in normalized
+        assert "GROUP BY CUBE (" not in normalized  # ClickHouse uses trailing form
+
+    async def test_top_level_shortcut(self, client: AsyncClient) -> None:
+        sid, _ = await self._setup(client)
+        # Only one model loaded — shortcut should auto-resolve
+        r = await client.post(
+            "/v1/query/semantic-ql/compile",
+            json={
+                "sql": 'SELECT "Customer Country", "Total Revenue" FROM m',
+            },
+        )
+        # session_id was created so __default__ resolution requires single session
+        # NOTE: the shortcut uses _resolve_store_and_model which may find
+        # this user-created session. Either 200 or 409 is acceptable here;
+        # we assert it's not 500.
+        assert r.status_code in (200, 409), r.text
+        if r.status_code == 200:
+            assert "SELECT" in r.json()["sql"]
+        # silence unused variable warning
+        assert sid
+
+    async def test_execute_unavailable_returns_503(self, client: AsyncClient) -> None:
+        """Without QUERY_EXECUTE the execute endpoint returns 503 not 500."""
+        sid, mid = await self._setup(client)
+        r = await client.post(
+            f"/v1/sessions/{sid}/query/semantic-ql",
+            json={
+                "model_id": mid,
+                "sql": 'SELECT "Customer Country" FROM m',
+            },
+        )
+        # Test fixtures do not enable query_execute by default
+        assert r.status_code in (200, 503)

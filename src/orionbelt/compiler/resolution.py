@@ -30,6 +30,7 @@ from orionbelt.models.errors import SemanticError
 from orionbelt.models.query import (
     CoalesceDimension,
     DimensionRef,
+    Grouping,
     QueryFilter,
     QueryFilterGroup,
     QueryFilterItem,
@@ -198,6 +199,7 @@ class ResolvedQuery:
     via_constraints: dict[str, str] = field(default_factory=dict)
     dimensions_exclude: bool = False
     coalesce_aliases: set[str] = field(default_factory=set)
+    grouping: Grouping | None = None
     having_only_measures: set[str] = field(default_factory=set)
     """Measures auto-included by HAVING (not in ``select.measures``).
 
@@ -288,6 +290,7 @@ class QueryResolver:
                 use_path_names=list(query.use_path_names),
                 is_raw=query.select.is_raw,
                 distinct=query.select.distinct,
+                grouping=query.grouping,
             ),
         )
 

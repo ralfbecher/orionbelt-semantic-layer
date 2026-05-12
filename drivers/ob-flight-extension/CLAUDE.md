@@ -222,7 +222,44 @@ when the FastAPI process exits or is killed by Docker.
 | FLIGHT_API_TOKEN | | Static token for auth mode "token" |
 | FLIGHT_DEFAULT_MODEL | | Fallback model_id if path empty |
 | FLIGHT_PRELOAD_MODELS | | Comma-sep .obml.yaml paths, loaded at startup |
+| FLIGHT_ALLOW_RAW_SQL | false | Allow raw warehouse SQL pass-through. Default rejects unknown FROM targets with RAW_SQL_DISABLED. |
+| FLIGHT_ALLOW_DATA_OBJECT_SQL | false | Allow FROM-<data_object_label>. Default hides data objects; the semantic virtual table is the canonical surface. |
 | DB_VENDOR | snowflake | Default vendor for db_router |
+
+---
+
+## OrionBelt Semantic QL (OBSQL) (v2.4.0+)
+
+**OrionBelt Semantic QL** — short form **OBSQL** — is OBSL's natural SQL
+surface. The server exposes each model as **one virtual table** named
+`<model_id>` with columns = dimensions + measures + metrics. BI tools
+(Tableau, Power BI, DBeaver) browse this table and write Semantic QL
+against it:
+
+```sql
+SELECT "Region", "Total Sales"
+FROM   sales_model
+WHERE  "Year" = 2025
+ORDER  BY "Total Sales" DESC
+LIMIT  100
+```
+
+`server._classify_sql(sql, model)` parses the FROM target and dispatches
+to one of three modes:
+
+| FROM target | Mode | Path |
+|---|---|---|
+| `<model_id>` (the virtual table) | `semantic` | `translate_sql_to_query` → `CompilationPipeline.compile` |
+| data-object label | `data_object` | rewritten via `_rewrite_table_names`, gated by `FLIGHT_ALLOW_DATA_OBJECT_SQL` |
+| anything else | `raw` | rejected with `RAW_SQL_DISABLED` unless `FLIGHT_ALLOW_RAW_SQL=true` |
+
+Semantic-mode queries also benefit from a **schema probe shortcut**: the
+result `pa.Schema` is built from the `QueryObject` + model metadata,
+avoiding a warehouse round-trip on `GetFlightInfo`.
+
+`WITH ROLLUP` / `WITH CUBE` (trailing modifier or `GROUP BY ROLLUP(...)`
+function form) is supported end-to-end — see
+`design/PLAN_with_rollup.md`.
 
 ---
 

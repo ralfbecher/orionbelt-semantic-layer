@@ -118,39 +118,59 @@ class TestObjectToSchema:
         assert schema.field(0).name == "my_column"
 
 
+def _make_model_with_dim(name: str = "sales_model") -> MagicMock:
+    """Build a model mock with one dim + one measure → produces a non-empty
+    virtual table schema. See PLAN_flight_natural_sql.md §3.5."""
+    dim = MagicMock()
+    dim.label = "Region"
+    dim.result_type = MagicMock(value="string")
+    dim.time_grain = None
+    dim.description = None
+    dim.column = "region"
+    dim.view = "Sales"
+
+    meas = MagicMock()
+    meas.label = "Total Sales"
+    meas.aggregation = "sum"
+    meas.expression = None
+    meas.result_type = MagicMock(value="float")
+    meas.columns = []
+    meas.description = None
+
+    col = MagicMock()
+    col.label = "X"
+    col.abstract_type = MagicMock(value="string")
+    obj = MagicMock()
+    obj.columns = {"X": col}
+
+    model = MagicMock()
+    model.label = name
+    model.id = name
+    model.name = name
+    model.data_objects = {"Sales": obj}
+    model.dimensions = {"Region": dim}
+    model.measures = {"Total Sales": meas}
+    model.metrics = {}
+    return model
+
+
 class TestModelToFlightInfos:
-    def test_basic(self):
-        col = MagicMock()
-        col.label = "ID"
-        col.abstract_type = "int"
-
-        obj = MagicMock()
-        obj.columns = {"ID": col}
-
-        model = MagicMock()
-        model.data_objects = {"Orders": obj}
-
+    def test_default_hides_data_objects(self):
+        """Default: virtual table + _dimensions/_measures/_metrics = 4."""
+        model = _make_model_with_dim()
         infos = model_to_flight_infos(model, "test-model")
-        # 1 data object + 3 virtual tables (_dimensions, _measures, _metrics)
         assert len(infos) == 4
-        assert infos[0].descriptor.path == [b"test-model", b"Orders"]
+        # First info is the semantic virtual table
+        assert infos[0].descriptor.path == [b"test-model", b"sales_model"]
 
-    def test_multiple_objects(self):
-        col = MagicMock()
-        col.label = "X"
-        col.abstract_type = "string"
-
-        obj1 = MagicMock()
-        obj1.columns = {"X": col}
-        obj2 = MagicMock()
-        obj2.columns = {"X": col}
-
-        model = MagicMock()
-        model.data_objects = {"A": obj1, "B": obj2}
-
-        infos = model_to_flight_infos(model, "m1")
-        # 2 data objects + 3 virtual tables
-        assert len(infos) == 5
+    def test_expose_data_objects(self):
+        """expose_data_objects=True: virtual table + each data object + 3 meta."""
+        model = _make_model_with_dim()
+        infos = model_to_flight_infos(model, "test-model", expose_data_objects=True)
+        assert len(infos) == 5  # vt + Sales + 3 meta
+        labels = {info.descriptor.path[-1] for info in infos}
+        assert b"sales_model" in labels
+        assert b"Sales" in labels
 
     def test_no_data_objects(self):
         model = MagicMock()
@@ -163,41 +183,23 @@ class TestModelToFlightInfos:
         infos = model_to_flight_infos(model, "m1")
         assert len(infos) == 0
 
-    def test_schema_preserved_in_flight_info(self):
-        col1 = MagicMock()
-        col1.label = "Name"
-        col1.abstract_type = "string"
-        col2 = MagicMock()
-        col2.label = "Amount"
-        col2.abstract_type = "float"
-
-        obj = MagicMock()
-        obj.columns = {"Name": col1, "Amount": col2}
-
-        model = MagicMock()
-        model.data_objects = {"Sales": obj}
-
-        infos = model_to_flight_infos(model, "m1")
-        schema = infos[0].schema
-        assert len(schema) == 2
-        assert schema.field(0).name == "Name"
-        assert schema.field(1).name == "Amount"
-
     def test_virtual_tables_included(self):
-        col = MagicMock()
-        col.label = "X"
-        col.abstract_type = "string"
-        obj = MagicMock()
-        obj.columns = {"X": col}
-
-        model = MagicMock()
-        model.data_objects = {"T": obj}
-
+        model = _make_model_with_dim()
         infos = model_to_flight_infos(model, "m1")
-        vt_paths = {info.descriptor.path[-1] for info in infos[1:]}
+        vt_paths = {info.descriptor.path[-1] for info in infos}
         assert b"_dimensions" in vt_paths
         assert b"_measures" in vt_paths
         assert b"_metrics" in vt_paths
+
+    def test_virtual_table_schema_has_dims_and_measures(self):
+        """The semantic virtual table exposes dims + measures + metrics."""
+        from ob_flight.catalog import model_to_virtual_table_schema
+
+        model = _make_model_with_dim()
+        schema = model_to_virtual_table_schema(model)
+        names = [f.name for f in schema]
+        assert "Region" in names
+        assert "Total Sales" in names
 
 
 class TestBuildDimensionsData:

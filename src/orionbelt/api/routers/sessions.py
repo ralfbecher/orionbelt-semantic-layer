@@ -40,6 +40,8 @@ from orionbelt.api.schemas import (
     QueryPlanRequest,
     QueryPlanResponse,
     ResolvedInfoResponse,
+    SemanticQLCompileResponse,
+    SemanticQLRequest,
     SessionCreateRequest,
     SessionListResponse,
     SessionQueryExecuteRequest,
@@ -60,6 +62,7 @@ from orionbelt.cache.parquet_codec import decode as cache_decode
 from orionbelt.cache.protocol import Cache
 from orionbelt.compiler.fanout import FanoutError
 from orionbelt.compiler.resolution import ResolutionError
+from orionbelt.compiler.sql_translator import SQLTranslationError, translate_sql_to_query
 from orionbelt.compiler.validator import format_sql
 from orionbelt.dialect.base import UnsupportedAggregationError
 from orionbelt.dialect.registry import UnsupportedDialectError
@@ -822,6 +825,194 @@ async def execute_query(
         result = store.compile_query(body.model_id, query, dialect)
     except KeyError:
         raise HTTPException(status_code=404, detail=f"Model '{body.model_id}' not found") from None
+    except UnsupportedDialectError:
+        raise HTTPException(status_code=400, detail=f"Unsupported dialect: '{dialect}'") from None
+    except ResolutionError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "error": "Query resolution failed",
+                "errors": [
+                    {"code": e.code, "message": e.message, "path": e.path} for e in exc.errors
+                ],
+            },
+        ) from None
+    except FanoutError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail={"error": "Query fanout detected", "message": exc.message},
+        ) from None
+    except UnsupportedAggregationError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "error": "Unsupported aggregation",
+                "message": str(exc),
+                "dialect": exc.dialect,
+                "aggregation": exc.aggregation,
+            },
+        ) from None
+
+    return await _run_with_cache(
+        store=store,
+        model=model,
+        compile_result=result,
+        query=query,
+        session_id=session_id,
+        model_id=body.model_id,
+        dialect=dialect,
+        cache=cache,
+        cache_config=cache_config,
+        response_format=format,
+        format_values=format_values,
+        locale=locale,
+        timezone_override=timezone,
+    )
+
+
+# -- OrionBelt Semantic QL (OBSQL) ------------------------------------------
+
+
+def _obsql_translation_errors(exc: SQLTranslationError) -> HTTPException:
+    """Map a SQLTranslationError to an HTTP 400 with structured error list."""
+    return HTTPException(
+        status_code=400,
+        detail={
+            "error": "OrionBelt Semantic QL translation failed",
+            "errors": [
+                {"code": e.code, "message": e.message, "context": e.context} for e in exc.errors
+            ],
+        },
+    )
+
+
+@router.post(
+    "/{session_id}/query/semantic-ql/compile",
+    response_model=SemanticQLCompileResponse,
+    tags=["query"],
+)
+async def compile_semantic_ql(
+    session_id: str,
+    body: SemanticQLRequest,
+    mgr: SessionManager = Depends(get_session_manager),  # noqa: B008
+) -> SemanticQLCompileResponse:
+    """Translate OrionBelt Semantic QL (OBSQL) to a QueryObject and compile.
+
+    Does not execute. The response includes the translated QueryObject
+    JSON so callers can see *what their SQL became*. See
+    ``design/PLAN_flight_natural_sql.md``.
+    """
+    from orionbelt.api.deps import get_db_vendor
+
+    store = _get_store(session_id, mgr)
+    try:
+        model = store.get_model(body.model_id)
+    except KeyError:
+        raise HTTPException(status_code=404, detail=f"Model '{body.model_id}' not found") from None
+
+    try:
+        query = translate_sql_to_query(body.sql, model)
+    except SQLTranslationError as exc:
+        raise _obsql_translation_errors(exc) from None
+
+    dialect = _resolve_dialect(request_dialect=body.dialect, model=model, fallback=get_db_vendor())
+    try:
+        result = store.compile_query(body.model_id, query, dialect)
+    except UnsupportedDialectError:
+        raise HTTPException(status_code=400, detail=f"Unsupported dialect: '{dialect}'") from None
+    except ResolutionError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "error": "Query resolution failed",
+                "errors": [
+                    {"code": e.code, "message": e.message, "path": e.path} for e in exc.errors
+                ],
+            },
+        ) from None
+    except FanoutError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail={"error": "Query fanout detected", "message": exc.message},
+        ) from None
+    except UnsupportedAggregationError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "error": "Unsupported aggregation",
+                "message": str(exc),
+                "dialect": exc.dialect,
+                "aggregation": exc.aggregation,
+            },
+        ) from None
+
+    return SemanticQLCompileResponse(
+        sql=format_sql(result.sql, result.dialect),
+        dialect=result.dialect,
+        query=query.model_dump(by_alias=True, mode="json"),
+        resolved=ResolvedInfoResponse(
+            fact_tables=result.resolved.fact_tables,
+            dimensions=result.resolved.dimensions,
+            measures=result.resolved.measures,
+        ),
+        warnings=[semantic_error_to_warning(w) for w in result.warnings],
+        sql_valid=result.sql_valid,
+        explain=_build_explain_response(result),
+        physical_tables=list(result.physical_tables),
+    )
+
+
+@router.post(
+    "/{session_id}/query/semantic-ql",
+    response_model=QueryExecuteResponse,
+    tags=["query"],
+)
+async def execute_semantic_ql(
+    session_id: str,
+    body: SemanticQLRequest,
+    format: Literal["json", "tsv"] = "json",  # noqa: A002 — public query parameter
+    format_values: bool = False,
+    locale: str | None = None,
+    timezone: str | None = None,
+    mgr: SessionManager = Depends(get_session_manager),  # noqa: B008
+    cache: Cache = Depends(get_cache),  # noqa: B008
+    cache_config: CacheRuntimeConfig = Depends(get_cache_config),  # noqa: B008
+) -> QueryExecuteResponse | Response:
+    """Translate OrionBelt Semantic QL (OBSQL) → QueryObject and execute.
+
+    Same response shape as ``POST /query/execute`` (rows + schema +
+    compiled SQL + explain + cache metadata). Supports ``?format=tsv``,
+    ``?format_values=true``, ``?locale=``, ``?timezone=``.
+
+    Requires ``QUERY_EXECUTE=true``. See ``design/PLAN_flight_natural_sql.md``.
+    """
+    if not is_query_execute_enabled():
+        raise HTTPException(
+            status_code=503,
+            detail="Query execution is not available. Set QUERY_EXECUTE=true "
+            "and configure DB_VENDOR + credentials.",
+        )
+
+    from orionbelt.api.deps import get_db_vendor
+
+    store = _get_store(session_id, mgr)
+    try:
+        model = store.get_model(body.model_id)
+    except KeyError:
+        raise HTTPException(status_code=404, detail=f"Model '{body.model_id}' not found") from None
+
+    try:
+        query = translate_sql_to_query(body.sql, model)
+    except SQLTranslationError as exc:
+        raise _obsql_translation_errors(exc) from None
+
+    # Default row limit if the user didn't specify LIMIT
+    if query.limit is None:
+        query = query.model_copy(update={"limit": get_query_default_limit()})
+
+    dialect = _resolve_dialect(request_dialect=body.dialect, model=model, fallback=get_db_vendor())
+    try:
+        result = store.compile_query(body.model_id, query, dialect)
     except UnsupportedDialectError:
         raise HTTPException(status_code=400, detail=f"Unsupported dialect: '{dialect}'") from None
     except ResolutionError as exc:
