@@ -260,11 +260,13 @@ def model_to_flight_infos(
 ) -> list[flight.FlightInfo]:
     """Convert a SemanticModel to a list of FlightInfo entries.
 
-    By default (``expose_data_objects=False``) only the semantic virtual
-    table and ``_dimensions / _measures / _metrics`` virtual tables are
-    listed — see ``design/PLAN_flight_natural_sql.md`` §3.5. Set
-    ``expose_data_objects=True`` to also list each data object (used when
-    ``flight_allow_data_object_sql`` is on, for raw column passthrough).
+    By default (``expose_data_objects=False``, the v2.4.0+ behaviour) only
+    the semantic virtual table and ``_dimensions / _measures / _metrics``
+    metadata views are listed — data-object physical tables are not
+    exposed. The ``expose_data_objects`` kwarg is preserved for
+    introspection use cases (e.g. building admin tooling) but no callers
+    in the shipped surface set it to True. See
+    ``design/PLAN_flight_natural_sql.md`` §3.5.
     """
     infos: list[flight.FlightInfo] = []
     if not hasattr(model, "data_objects") or not model.data_objects:

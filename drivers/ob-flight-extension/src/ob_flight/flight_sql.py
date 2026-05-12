@@ -229,10 +229,11 @@ def build_db_schemas_table() -> pa.Table:
 def build_tables_table(model: Any, *, expose_data_objects: bool = False) -> pa.Table:
     """Build response for CommandGetTables from the semantic model.
 
-    Always lists the semantic virtual table first (the canonical query
-    surface) and the ``_dimensions / _measures / _metrics`` views. Data
-    objects are listed only when ``expose_data_objects=True``
-    (``FLIGHT_ALLOW_DATA_OBJECT_SQL=true``). See
+    Lists the semantic virtual table first (the canonical query surface)
+    plus ``_dimensions / _measures / _metrics`` metadata views. Data
+    objects are intentionally hidden in v2.4.0+ — they're not queryable.
+    The ``expose_data_objects`` kwarg is preserved for introspection
+    tooling but no shipped surface enables it. See
     ``design/PLAN_flight_natural_sql.md`` §3.5.
     """
     from ob_flight.catalog import (
@@ -260,7 +261,8 @@ def build_tables_table(model: Any, *, expose_data_objects: bool = False) -> pa.T
             types.append("TABLE")
             table_schemas.append(vt_schema.serialize().to_pybytes())
 
-    # Data-object tables — gated behind FLIGHT_ALLOW_DATA_OBJECT_SQL
+    # Data-object tables — only exposed when an internal caller passes
+    # expose_data_objects=True (none do in v2.4.0+). Preserved for tooling.
     if expose_data_objects and has_objects:
         for obj_name, obj in model.data_objects.items():
             label = getattr(obj, "label", obj_name) or obj_name

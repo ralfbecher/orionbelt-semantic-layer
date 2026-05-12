@@ -13,27 +13,22 @@ _server: Any = None
 _thread: threading.Thread | None = None
 
 
-def _env_flag(name: str) -> bool:
-    """Read a boolean env var (case-insensitive 'true'/'1')."""
-    return os.getenv(name, "").lower() in ("1", "true", "yes")
-
-
 def start_flight_background(
     *,
     session_manager: Any = None,
     port: int | None = None,
     auth_handler: Any = None,
     default_dialect: str | None = None,
-    allow_data_object_sql: bool | None = None,
 ) -> threading.Thread:
     """Launch the Flight SQL server in a daemon thread.
 
-    Governance is hard-coded: OBSL is a semantic layer, not a JDBC proxy.
-    Raw SQL pass-through is **not configurable** — it's always rejected
-    with ``RAW_SQL_REJECTED``. Only the data-object pass-through (column-
-    validated, SELECT-only) is operator-toggleable via
-    ``FLIGHT_ALLOW_DATA_OBJECT_SQL`` (default false). See
-    ``design/PLAN_flight_natural_sql.md``.
+    Governance is hard-coded in v2.4.0+: OBSL is a semantic layer, not a
+    JDBC proxy. Raw SQL pass-through is **not configurable** — it always
+    rejects with ``RAW_SQL_REJECTED``. DDL/DML always reject with
+    ``WRITE_OPERATION_REJECTED``. Catalog discovery (SHOW / DESCRIBE /
+    information_schema / pg_catalog) is answered from the model in-process
+    and never touches the warehouse. See ``design/PLAN_flight_natural_sql.md``
+    §3.2 for the full mode table.
     """
     global _server, _thread
 
@@ -51,15 +46,11 @@ def start_flight_background(
         default_dialect = os.getenv("DB_VENDOR", "duckdb")
     location = f"grpc://0.0.0.0:{port}"
 
-    if allow_data_object_sql is None:
-        allow_data_object_sql = _env_flag("FLIGHT_ALLOW_DATA_OBJECT_SQL")
-
     _server = OBFlightServer(
         location,
         auth_handler=auth_handler,
         session_manager=session_manager,
         default_dialect=default_dialect,
-        allow_data_object_sql=allow_data_object_sql,
     )
 
     _thread = threading.Thread(

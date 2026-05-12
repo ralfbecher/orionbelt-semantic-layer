@@ -78,14 +78,9 @@ class Settings(BaseSettings):
 
     # Flight Semantic QL governance. See design/PLAN_flight_natural_sql.md.
     # Semantic QL / OBSQL (SELECT dim, measure FROM <model>) is always enabled.
-    # Raw SQL pass-through is **not** configurable — OBSL is a semantic layer,
-    # not a JDBC proxy. Unrecognised FROM targets always reject with
-    # RAW_SQL_REJECTED. DDL/DML always reject with WRITE_OPERATION_REJECTED.
-    #
-    # The one operator-toggleable knob: data-object pass-through (column-
-    # validated SELECT only, no joins). Default off keeps the surface fully
-    # semantic; turn on to expose raw physical columns.
-    flight_allow_data_object_sql: bool = False
+    # Raw SQL pass-through and write operations are **not** configurable —
+    # OBSL is a semantic layer, not a JDBC proxy. There are no env flags
+    # that allow arbitrary SQL through to the warehouse.
 
     # One-shot batch endpoint (POST /v1/oneshot/batch). See PLAN_oneshot_batch.md.
     oneshot_batch_max_queries: int = 50
