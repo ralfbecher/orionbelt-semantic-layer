@@ -473,20 +473,44 @@ class OBFlightServer(flight.FlightServerBase):
             # surface a more specific error in _prepare_sql.
             return _MODE_REJECTED
 
-        # SELECT with no FROM — typically scalar probes (SELECT 1,
-        # SELECT version(), SELECT current_schema()). Treat as catalog if
-        # the projected names are known canned-probe functions.
+        # SELECT with no FROM:
+        # * canned-probe functions (version, current_schema, …) → CATALOG
+        # * literal-only (SELECT 1) → CATALOG (connectivity probe)
+        # * column identifiers that all match the model's dims / measures /
+        #   metrics → SEMANTIC. "No FROM" is shorthand for "FROM <model>"
+        #   on a single-model connection, so requiring the FROM is a tax.
+        #   Any identifier that doesn't match falls through to REJECTED
+        #   so users get RAW_SQL_REJECTED rather than UNKNOWN_SELECT_ITEM.
         from_node = ast.args.get("from")
         if from_node is None:
+            known_labels = {label.lower() for label in model.dimensions}
+            known_labels |= {label.lower() for label in model.measures}
+            known_labels |= {label.lower() for label in model.metrics}
+
+            saw_canned_probe = False
+            saw_literal_only = True
+            identifier_count = 0
+            unmatched_identifier = False
             for proj in ast.expressions:
-                if isinstance(proj, exp.Alias):
-                    proj = proj.this
-                if isinstance(proj, exp.Anonymous | exp.Func):
-                    fname = (getattr(proj, "name", "") or "").lower()
+                inner = proj.this if isinstance(proj, exp.Alias) else proj
+                if isinstance(inner, exp.Anonymous | exp.Func):
+                    fname = (getattr(inner, "name", "") or "").lower()
                     if fname in _CATALOG_SCALAR_PROBES:
-                        return _MODE_CATALOG
-                if isinstance(proj, exp.Literal):
-                    return _MODE_CATALOG  # SELECT 1 → connectivity probe
+                        saw_canned_probe = True
+                    saw_literal_only = False
+                elif isinstance(inner, exp.Literal):
+                    pass  # keep saw_literal_only True
+                elif isinstance(inner, exp.Column):
+                    identifier_count += 1
+                    saw_literal_only = False
+                    if (getattr(inner, "name", "") or "").lower() not in known_labels:
+                        unmatched_identifier = True
+                else:
+                    saw_literal_only = False
+            if identifier_count > 0 and not unmatched_identifier:
+                return _MODE_SEMANTIC
+            if saw_canned_probe or saw_literal_only:
+                return _MODE_CATALOG
             return _MODE_REJECTED
 
         # FROM something — examine the target

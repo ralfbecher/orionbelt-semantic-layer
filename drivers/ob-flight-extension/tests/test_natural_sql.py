@@ -245,6 +245,17 @@ class TestClassifySQL:
         assert server._classify_sql("SELECT * FROM _measures", model) == "catalog"
         assert server._classify_sql("SELECT * FROM _metrics", model) == "catalog"
 
+    def test_no_from_with_known_columns_is_semantic(self, model) -> None:
+        """SELECT "dim", "measure" without FROM resolves to the implicit model."""
+        server = _make_server(model)
+        sql = 'SELECT "Customer Country", "Total Revenue"'
+        assert server._classify_sql(sql, model) == "semantic"
+
+    def test_no_from_with_unknown_columns_is_rejected(self, model) -> None:
+        """Unknown identifiers without FROM don't silently route to semantic."""
+        server = _make_server(model)
+        assert server._classify_sql('SELECT "nope", "also_nope"', model) == "rejected"
+
 
 class TestPrepareSQL:
     def test_semantic_compiles(self, model) -> None:
