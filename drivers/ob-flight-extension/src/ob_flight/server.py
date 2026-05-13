@@ -653,6 +653,14 @@ class OBFlightServer(flight.FlightServerBase):
         semantic mode, but this guard ensures write ops can't reach the
         warehouse via *any* path.
         """
+        # Short-circuit catalog-discovery statements before sqlglot — those
+        # are explicitly allowed and parsing them logs a noisy "unsupported
+        # syntax. Falling back to Command" warning in sqlglot's default
+        # dialect, which would fire on every BI-tool catalog probe.
+        upper = sql.strip().upper()
+        if upper.startswith(("SHOW ", "DESCRIBE ", "DESC ", "USE ", "SET ")):
+            return
+
         try:
             import sqlglot
             import sqlglot.expressions as exp
