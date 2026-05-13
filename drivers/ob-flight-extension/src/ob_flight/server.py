@@ -447,6 +447,14 @@ class OBFlightServer(flight.FlightServerBase):
 
         cleaned, _ = _strip_trailing_grouping(sql)
 
+        # SHOW / DESCRIBE / USE / SET — short-circuit before sqlglot. sqlglot
+        # logs a "unsupported syntax. Falling back to ... Command" warning on
+        # each of these in its default dialect, which spams the log on every
+        # BI-tool catalog probe.
+        cleaned_upper = cleaned.strip().upper()
+        if cleaned_upper.startswith(("SHOW ", "DESCRIBE ", "DESC ", "USE ", "SET ")):
+            return _MODE_CATALOG
+
         try:
             import sqlglot
             import sqlglot.expressions as exp
@@ -691,6 +699,19 @@ class OBFlightServer(flight.FlightServerBase):
         import sqlglot
         import sqlglot.expressions as exp
 
+        # Fast-path SHOW / DESCRIBE / USE / SET by raw text — sqlglot logs a
+        # "unsupported syntax. Falling back to ... Command" warning on each
+        # of these in its default dialect, which spams the log on every
+        # BI-tool catalog probe. The dispatch below is the same as the
+        # Command branch, so skipping sqlglot here is a pure log-noise win.
+        raw_upper = sql.strip().upper()
+        if raw_upper.startswith(("SHOW ", "DESCRIBE ", "DESC ")):
+            if raw_upper.startswith(("DESCRIBE ", "DESC ")) or "COLUMN" in raw_upper:
+                return self._catalog_columns_table(model)
+            return self._catalog_tables_table(model)
+        if raw_upper.startswith(("USE ", "SET ")):
+            return self._catalog_empty_table()
+
         try:
             ast = sqlglot.parse_one(sql)
         except Exception:
@@ -757,10 +778,20 @@ class OBFlightServer(flight.FlightServerBase):
 
     @staticmethod
     def _catalog_tables_table(model: Any) -> pa.Table:
-        """One row per queryable virtual table (model + metadata views)."""
+        """One row per queryable virtual table (model + metadata views).
+
+        Drops the spec-mandated ``table_schema`` binary column for the
+        text-mode ``SHOW TABLES`` / ``information_schema.tables`` path —
+        the IPC bytes are unreadable in a CLI / pandas display. The
+        protobuf ``CommandGetTables`` handler (``_build_tables_from_model``)
+        keeps the full table for JDBC clients that decode the binary.
+        """
         from ob_flight.flight_sql import build_tables_table
 
-        return build_tables_table(model)
+        table = build_tables_table(model)
+        if "table_schema" in table.column_names:
+            table = table.drop_columns(["table_schema"])
+        return table
 
     @staticmethod
     def _catalog_columns_table(model: Any) -> pa.Table:
