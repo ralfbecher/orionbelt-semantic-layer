@@ -182,6 +182,86 @@ class TestAutoOrderOnLimit:
         assert desc is True
 
 
+class TestRollupCubeOrdering:
+    """ROLLUP / CUBE auto-orders with NULLS FIRST so totals bubble to the top.
+
+    Without explicit ORDER BY: append ORDER BY <all dims> NULLS FIRST.
+    With explicit ORDER BY that omits NULLS position: backfill NULLS FIRST.
+    """
+
+    def test_rollup_auto_orders_with_nulls_first(self) -> None:
+        from orionbelt.models.query import Grouping, NullsPosition
+
+        model = _load_model()
+        resolver = QueryResolver()
+        query = QueryObject(
+            select=QuerySelect(
+                dimensions=["Customer Country"],
+                measures=["Total Revenue"],
+            ),
+            grouping=Grouping.ROLLUP,
+        )
+        resolved = resolver.resolve(query, model)
+        assert len(resolved.order_by_exprs) >= 1
+        _expr, desc, nulls = resolved.order_by_exprs[0]
+        assert desc is False
+        assert nulls is NullsPosition.FIRST
+
+    def test_cube_auto_orders_with_nulls_first(self) -> None:
+        from orionbelt.models.query import Grouping, NullsPosition
+
+        model = _load_model()
+        resolver = QueryResolver()
+        query = QueryObject(
+            select=QuerySelect(
+                dimensions=["Customer Country"],
+                measures=["Total Revenue"],
+            ),
+            grouping=Grouping.CUBE,
+        )
+        resolved = resolver.resolve(query, model)
+        assert len(resolved.order_by_exprs) >= 1
+        _expr, _desc, nulls = resolved.order_by_exprs[0]
+        assert nulls is NullsPosition.FIRST
+
+    def test_rollup_backfills_nulls_first_on_explicit_order_by(self) -> None:
+        """Explicit ORDER BY without NULLS clause inherits NULLS FIRST under ROLLUP."""
+        from orionbelt.models.query import Grouping, NullsPosition
+
+        model = _load_model()
+        resolver = QueryResolver()
+        query = QueryObject(
+            select=QuerySelect(
+                dimensions=["Customer Country"],
+                measures=["Total Revenue"],
+            ),
+            order_by=[{"field": "Customer Country", "direction": "asc"}],
+            grouping=Grouping.ROLLUP,
+        )
+        resolved = resolver.resolve(query, model)
+        assert len(resolved.order_by_exprs) == 1
+        _expr, _desc, nulls = resolved.order_by_exprs[0]
+        assert nulls is NullsPosition.FIRST
+
+    def test_rollup_respects_explicit_nulls_last(self) -> None:
+        """User-specified NULLS LAST under ROLLUP must NOT be overridden."""
+        from orionbelt.models.query import Grouping, NullsPosition
+
+        model = _load_model()
+        resolver = QueryResolver()
+        query = QueryObject(
+            select=QuerySelect(
+                dimensions=["Customer Country"],
+                measures=["Total Revenue"],
+            ),
+            order_by=[{"field": "Customer Country", "direction": "asc", "nulls": "last"}],
+            grouping=Grouping.ROLLUP,
+        )
+        resolved = resolver.resolve(query, model)
+        _expr, _desc, nulls = resolved.order_by_exprs[0]
+        assert nulls is NullsPosition.LAST
+
+
 class TestStarSchemaPlanner:
     def test_plan_simple_query(self) -> None:
         model = _load_model()

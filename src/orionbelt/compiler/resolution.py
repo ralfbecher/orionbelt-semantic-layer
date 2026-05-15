@@ -478,19 +478,39 @@ class QueryResolver:
             if expr:
                 ctx.result.order_by_exprs.append((expr, ob.direction == "desc", ob.nulls))
 
-        # 8. Auto-order on LIMIT — when limit is set with no explicit ORDER BY,
-        # append ORDER BY over all SELECT dimensions (or raw fields) so results
-        # are deterministic. Without this, ``LIMIT N`` returns any N rows the
-        # engine emits, and the cache (keyed on compiled SQL) would freeze one
-        # arbitrary slice forever. Aggregate-only queries (no dims, no fields)
-        # are already single-row deterministic — skip.
-        if ctx.result.limit is not None and not ctx.result.order_by_exprs:
+        # 8. ROLLUP / CUBE: backfill NULLS FIRST on any explicit ORDER BY entry
+        # that didn't specify a NULLs position. Subtotal and grand-total rows
+        # carry NULLs in the rolled-up group-by columns, and BI tools expect
+        # those totals at the top of the result — not interleaved with details.
+        if ctx.result.grouping is not None and ctx.result.order_by_exprs:
+            ctx.result.order_by_exprs = [
+                (expr, desc, NullsPosition.FIRST if nulls is None else nulls)
+                for expr, desc, nulls in ctx.result.order_by_exprs
+            ]
+
+        # 9. Auto-order — when no explicit ORDER BY, append ORDER BY over all
+        # SELECT dimensions (or raw fields) under two conditions:
+        #   (a) LIMIT is set: cache hashes on compiled SQL; without ORDER BY
+        #       ``LIMIT N`` returns any N rows, freezing one arbitrary slice.
+        #   (b) ROLLUP / CUBE: subtotal layout is otherwise unpredictable.
+        # ROLLUP / CUBE defaults to NULLS FIRST (totals at the top).
+        # Aggregate-only queries (no dims, no fields) are already single-row
+        # deterministic — skip.
+        needs_auto_order = not ctx.result.order_by_exprs and (
+            ctx.result.limit is not None or ctx.result.grouping is not None
+        )
+        if needs_auto_order:
+            nulls_default = NullsPosition.FIRST if ctx.result.grouping is not None else None
             if ctx.result.is_raw and ctx.result.fields:
                 for f in ctx.result.fields:
-                    ctx.result.order_by_exprs.append((ColumnRef(name=f.alias), False, None))
+                    ctx.result.order_by_exprs.append(
+                        (ColumnRef(name=f.alias), False, nulls_default)
+                    )
             elif ctx.result.dimensions:
                 for dim in ctx.result.dimensions:
-                    ctx.result.order_by_exprs.append((ColumnRef(name=dim.name), False, None))
+                    ctx.result.order_by_exprs.append(
+                        (ColumnRef(name=dim.name), False, nulls_default)
+                    )
 
         if ctx.errors:
             raise ResolutionError(ctx.errors)

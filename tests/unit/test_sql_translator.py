@@ -439,6 +439,79 @@ def test_group_by_with_rollup_trailing(model: SemanticModel) -> None:
     assert q.grouping == Grouping.ROLLUP
 
 
+# --- SQL comments -------------------------------------------------------------
+
+
+def test_trailing_line_comment_after_with_cube(model: SemanticModel) -> None:
+    """``WITH CUBE -- comment`` must classify as semantic, not RAW_SQL_REJECTED.
+
+    The trailing-modifier regex looks for end-of-statement / ORDER BY /
+    LIMIT etc. after ``WITH CUBE``; a trailing ``--`` line comment used
+    to hide that marker, breaking sqlglot parsing downstream. Stripping
+    comments first makes the modifier strip cleanly.
+    """
+    q = translate_sql_to_query(
+        'SELECT "Customer Country", "Total Revenue" FROM m WITH CUBE -- ORDER BY 1 NULLS FIRST',
+        model,
+    )
+    assert q.grouping == Grouping.CUBE
+
+
+def test_trailing_line_comment_after_with_rollup(model: SemanticModel) -> None:
+    q = translate_sql_to_query(
+        'SELECT "Customer Country", "Total Revenue" FROM m WITH ROLLUP -- notes here',
+        model,
+    )
+    assert q.grouping == Grouping.ROLLUP
+
+
+def test_block_comment_between_clauses(model: SemanticModel) -> None:
+    q = translate_sql_to_query(
+        'SELECT "Customer Country", "Total Revenue" /* picker hint */ FROM m WITH ROLLUP',
+        model,
+    )
+    assert q.grouping == Grouping.ROLLUP
+
+
+def test_multiline_block_comment(model: SemanticModel) -> None:
+    """Block comments may span multiple lines (DBeaver pastes pretty-printed SQL)."""
+    sql = (
+        'SELECT "Customer Country", "Total Revenue"\n'
+        "/* multi-line\n"
+        "   comment block\n"
+        "   spans newlines */\n"
+        "FROM m WITH CUBE"
+    )
+    q = translate_sql_to_query(sql, model)
+    assert q.grouping == Grouping.CUBE
+
+
+def test_hash_line_comment(model: SemanticModel) -> None:
+    """MySQL / BigQuery support ``#`` as a line comment."""
+    q = translate_sql_to_query(
+        'SELECT "Customer Country", "Total Revenue" FROM m WITH CUBE # MySQL-style comment',
+        model,
+    )
+    assert q.grouping == Grouping.CUBE
+
+
+def test_leading_hash_comment_line(model: SemanticModel) -> None:
+    sql = '# header comment\nSELECT "Customer Country", "Total Revenue" FROM m'
+    q = translate_sql_to_query(sql, model)
+    assert q.grouping is None
+
+
+def test_comment_inside_string_literal_preserved(model: SemanticModel) -> None:
+    """A ``--`` inside a quoted string must NOT be treated as a comment."""
+    q = translate_sql_to_query(
+        'SELECT "Customer Country", "Total Revenue" FROM m WHERE "Customer Country" = \'A--B\'',
+        model,
+    )
+    # If the literal had been corrupted by comment stripping, translation
+    # would have failed. Reaching this line is the assertion.
+    assert q.grouping is None
+
+
 # --- rejections ---------------------------------------------------------------
 
 

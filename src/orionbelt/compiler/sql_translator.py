@@ -394,6 +394,80 @@ def translate_sql_to_query(sql: str, model: SemanticModel) -> QueryObject:
 # ---------------------------------------------------------------------------
 
 
+def _strip_sql_comments(sql: str) -> str:
+    """Remove SQL comments in all three vendor-supported syntaxes.
+
+    Recognised forms (collapsed across the 8 OBSL-supported dialects):
+
+    * ``-- ...`` to end of line — universal (Postgres, MySQL, Snowflake,
+      ClickHouse, DuckDB, Databricks, BigQuery, Dremio).
+    * ``# ...`` to end of line — MySQL / MariaDB / BigQuery.
+    * ``/* ... */`` block, may span multiple lines — universal.
+
+    Comments inside string literals (``'...'``) and quoted identifiers
+    (``"..."``) are preserved. Required at the entry of OBSQL handling
+    because the trailing-modifier regexes (``WITH ROLLUP`` / ``WITH
+    CUBE``) need to see what *actually* comes after the modifier — and
+    a trailing ``-- ORDER BY ...`` (or ``# ...``) comment would
+    otherwise hide the end-of-statement marker, causing the modifier
+    to slip past the strip and break sqlglot parsing.
+
+    Block comments are replaced with a single space so ``a/*x*/b``
+    doesn't fuse into ``ab``.
+    """
+    if "--" not in sql and "/*" not in sql and "#" not in sql:
+        return sql
+
+    out: list[str] = []
+    i = 0
+    n = len(sql)
+    while i < n:
+        ch = sql[i]
+        # Pass through quoted strings and quoted identifiers intact.
+        if ch in ("'", '"'):
+            quote = ch
+            out.append(ch)
+            i += 1
+            while i < n:
+                c = sql[i]
+                out.append(c)
+                if c == quote:
+                    # SQL doubled-quote escape: '' inside '...', "" inside "..."
+                    if i + 1 < n and sql[i + 1] == quote:
+                        out.append(sql[i + 1])
+                        i += 2
+                        continue
+                    i += 1
+                    break
+                # Backslash escape — accepted by MySQL/ClickHouse/BigQuery; harmless on others
+                if c == "\\" and i + 1 < n:
+                    out.append(sql[i + 1])
+                    i += 2
+                    continue
+                i += 1
+            continue
+        # Line comment ``-- ...`` (universal) or ``# ...`` (MySQL/BigQuery).
+        is_line_comment = (ch == "-" and i + 1 < n and sql[i + 1] == "-") or ch == "#"
+        if is_line_comment:
+            i += 2 if ch == "-" else 1
+            while i < n and sql[i] != "\n":
+                i += 1
+            # Keep the newline so downstream parsing still sees the boundary.
+            continue
+        # Block comment ``/* ... */`` — non-nesting per SQL standard; may
+        # span multiple lines (the inner loop just walks past ``\n``).
+        if ch == "/" and i + 1 < n and sql[i + 1] == "*":
+            i += 2
+            while i < n - 1 and not (sql[i] == "*" and sql[i + 1] == "/"):
+                i += 1
+            i = min(i + 2, n)
+            out.append(" ")
+            continue
+        out.append(ch)
+        i += 1
+    return "".join(out)
+
+
 def _strip_trailing_grouping(sql: str) -> tuple[str, Grouping | None]:
     """Detect and strip a bare trailing ``WITH ROLLUP`` / ``WITH CUBE``.
 
@@ -403,8 +477,12 @@ def _strip_trailing_grouping(sql: str) -> tuple[str, Grouping | None]:
     in front, so we strip the trailing form and translate it into the
     canonical grouping marker. ``GROUP BY ROLLUP(...)`` / ``GROUP BY ... WITH
     ROLLUP`` are also accepted (handled by sqlglot natively).
+
+    Strips SQL comments first so a trailing ``-- comment`` after the
+    modifier doesn't hide the end-of-statement marker the trailing
+    regex looks for.
     """
-    s = sql.rstrip()
+    s = _strip_sql_comments(sql).rstrip()
     if _TRAILING_WITH_CUBE.search(s):
         return _TRAILING_WITH_CUBE.sub("", s).rstrip(), Grouping.CUBE
     if _TRAILING_WITH_ROLLUP.search(s):
