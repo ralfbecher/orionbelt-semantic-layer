@@ -19,6 +19,7 @@ from orionbelt.ast.nodes import (
 from orionbelt.compiler.graph import JoinGraph
 from orionbelt.compiler.resolution import ResolvedMeasure, ResolvedQuery, make_column_expr
 from orionbelt.compiler.type_resolver import resolve_measure_data_type, resolve_metric_data_type
+from orionbelt.models.query import NullsPosition
 from orionbelt.models.semantic import DataObject, SemanticModel
 
 if TYPE_CHECKING:
@@ -26,6 +27,17 @@ if TYPE_CHECKING:
 
 
 _GROUPING_FLAG_PREFIX = "_g_"
+
+
+def _nulls_last(nulls: NullsPosition | None) -> bool | None:
+    """Map a QueryOrderBy.nulls value to the AST's ``nulls_last`` flag.
+
+    ``None`` keeps the dialect default; explicit ``FIRST`` / ``LAST``
+    forces the corresponding ``NULLS FIRST`` / ``NULLS LAST`` clause.
+    """
+    if nulls is None:
+        return None
+    return nulls == NullsPosition.LAST
 
 
 def _grouping_flag_alias(dim_alias: str) -> str:
@@ -199,10 +211,10 @@ class StarSchemaPlanner:
         grained_cols: dict[tuple[str, str | None], str] = {
             (d.source_column, d.object_name): d.name for d in resolved.dimensions if d.grain
         }
-        for expr, desc in resolved.order_by_exprs:
+        for expr, desc, nulls in resolved.order_by_exprs:
             if isinstance(expr, ColumnRef) and (expr.name, expr.table) in grained_cols:
                 expr = ColumnRef(name=grained_cols[(expr.name, expr.table)])
-            builder.order_by(expr, desc=desc)
+            builder.order_by(expr, desc=desc, nulls_last=_nulls_last(nulls))
 
         # LIMIT / OFFSET
         if resolved.limit is not None:

@@ -84,8 +84,8 @@ class QueryBuilder:
             self._having = BinaryOp(left=self._having, op="AND", right=condition)
         return self
 
-    def order_by(self, expr: Expr, desc: bool = False) -> Self:
-        self._order_by.append(OrderByItem(expr=expr, desc=desc))
+    def order_by(self, expr: Expr, desc: bool = False, nulls_last: bool | None = None) -> Self:
+        self._order_by.append(OrderByItem(expr=expr, desc=desc, nulls_last=nulls_last))
         return self
 
     def limit(self, n: int) -> Self:

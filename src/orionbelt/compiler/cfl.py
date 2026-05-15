@@ -33,7 +33,7 @@ from orionbelt.compiler.resolution import (
     ResolvedQuery,
     make_column_expr,
 )
-from orionbelt.compiler.star import CflLegInfo, QueryPlan, _grouping_flag_alias
+from orionbelt.compiler.star import CflLegInfo, QueryPlan, _grouping_flag_alias, _nulls_last
 from orionbelt.compiler.type_resolver import resolve_measure_data_type, resolve_metric_data_type
 from orionbelt.dialect.base import Dialect
 from orionbelt.models.semantic import DataObject, SemanticModel
@@ -724,8 +724,12 @@ class CFLPlanner:
             outer_builder.having(_expand_cfl_measure_refs(hf.expression, outer_measure_exprs))
 
         # ORDER BY and LIMIT — remap to CTE aliases
-        for expr, desc in resolved.order_by_exprs:
-            outer_builder.order_by(self._remap_cfl_order_by(expr, resolved, model), desc=desc)
+        for expr, desc, nulls in resolved.order_by_exprs:
+            outer_builder.order_by(
+                self._remap_cfl_order_by(expr, resolved, model),
+                desc=desc,
+                nulls_last=_nulls_last(nulls),
+            )
         if resolved.limit is not None:
             outer_builder.limit(resolved.limit)
         if resolved.offset is not None:
@@ -821,8 +825,12 @@ class CFLPlanner:
             outer_builder.select(AliasedExpr(expr=ColumnRef(name=dim.name), alias=dim.name))
         outer_builder.from_("non_combinations", alias="non_combinations")
 
-        for expr, desc in resolved.order_by_exprs:
-            outer_builder.order_by(self._remap_cfl_order_by(expr, resolved, model), desc=desc)
+        for expr, desc, nulls in resolved.order_by_exprs:
+            outer_builder.order_by(
+                self._remap_cfl_order_by(expr, resolved, model),
+                desc=desc,
+                nulls_last=_nulls_last(nulls),
+            )
         if resolved.limit is not None:
             outer_builder.limit(resolved.limit)
         if resolved.offset is not None:

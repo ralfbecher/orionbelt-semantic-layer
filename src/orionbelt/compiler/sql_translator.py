@@ -30,6 +30,7 @@ from orionbelt.models.errors import SemanticError
 from orionbelt.models.query import (
     FilterOperator,
     Grouping,
+    NullsPosition,
     QueryFilter,
     QueryObject,
     QueryOrderBy,
@@ -41,8 +42,13 @@ from orionbelt.models.semantic import SemanticModel
 __all__ = ["SQLTranslationError", "translate_sql_to_query"]
 
 
-_TRAILING_WITH_ROLLUP = re.compile(r"\bWITH\s+ROLLUP\s*;?\s*$", re.IGNORECASE)
-_TRAILING_WITH_CUBE = re.compile(r"\bWITH\s+CUBE\s*;?\s*$", re.IGNORECASE)
+# Match ``WITH ROLLUP`` / ``WITH CUBE`` in trailing-modifier position: either at
+# end of statement (``;?`` then EOL) or right before ORDER BY / LIMIT / OFFSET /
+# HAVING / FETCH. The lookahead keeps any trailing clauses intact so they can
+# still be parsed by sqlglot.
+_TRAILING_CLAUSE = r"(?=\s*(?:;|$|ORDER\s+BY\b|LIMIT\b|OFFSET\b|HAVING\b|FETCH\b))"
+_TRAILING_WITH_ROLLUP = re.compile(rf"\bWITH\s+ROLLUP\b{_TRAILING_CLAUSE}", re.IGNORECASE)
+_TRAILING_WITH_CUBE = re.compile(rf"\bWITH\s+CUBE\b{_TRAILING_CLAUSE}", re.IGNORECASE)
 
 
 # Map sqlglot aggregate subclasses to canonical aggregation names matching
@@ -1096,8 +1102,11 @@ def _translate_order_by(
     Accepts:
       * a bare column / identifier (must match a SELECT alias)
       * a positive integer literal (1-based position into the SELECT list)
+      * optional ``ASC`` / ``DESC`` direction
+      * optional ``NULLS FIRST`` / ``NULLS LAST`` position
     """
     desc = ob.args.get("desc", False)
+    nulls = _nulls_position(ob)
     inner = ob.this
 
     # Position literal
@@ -1115,7 +1124,7 @@ def _translate_order_by(
             )
             return None
         field = aliases_in_select[pos - 1]
-        return QueryOrderBy(field=field, direction=_dir(desc))
+        return QueryOrderBy(field=field, direction=_dir(desc), nulls=nulls)
 
     name = _column_name(inner)
     if name is None:
@@ -1141,8 +1150,21 @@ def _translate_order_by(
             )
         )
         return None
-    return QueryOrderBy(field=canonical(name), direction=_dir(desc))
+    return QueryOrderBy(field=canonical(name), direction=_dir(desc), nulls=nulls)
 
 
 def _dir(desc: bool) -> SortDirection:
     return SortDirection.DESC if desc else SortDirection.ASC
+
+
+def _nulls_position(ob: exp.Expression) -> NullsPosition | None:
+    """Read the ``NULLS FIRST`` / ``NULLS LAST`` clause off a sqlglot Ordered node.
+
+    sqlglot stores the modifier on ``Ordered.args["nulls_first"]`` as a bool
+    (True = NULLS FIRST, False = NULLS LAST). ``None`` means unspecified —
+    propagate the dialect default rather than forcing one or the other.
+    """
+    nf = ob.args.get("nulls_first")
+    if nf is None:
+        return None
+    return NullsPosition.FIRST if nf else NullsPosition.LAST

@@ -31,6 +31,7 @@ from orionbelt.models.query import (
     CoalesceDimension,
     DimensionRef,
     Grouping,
+    NullsPosition,
     QueryFilter,
     QueryFilterGroup,
     QueryFilterItem,
@@ -188,7 +189,7 @@ class ResolvedQuery:
     join_steps: list[JoinStep] = field(default_factory=list)
     where_filters: list[ResolvedFilter] = field(default_factory=list)
     having_filters: list[ResolvedFilter] = field(default_factory=list)
-    order_by_exprs: list[tuple[Expr, bool]] = field(default_factory=list)
+    order_by_exprs: list[tuple[Expr, bool, NullsPosition | None]] = field(default_factory=list)
     limit: int | None = None
     offset: int | None = None
     warnings: list[SemanticError] = field(default_factory=list)
@@ -475,7 +476,7 @@ class QueryResolver:
         for ob in query.order_by:
             expr = self._resolve_order_by_field(ctx, ob.field, select_count)
             if expr:
-                ctx.result.order_by_exprs.append((expr, ob.direction == "desc"))
+                ctx.result.order_by_exprs.append((expr, ob.direction == "desc", ob.nulls))
 
         if ctx.errors:
             raise ResolutionError(ctx.errors)

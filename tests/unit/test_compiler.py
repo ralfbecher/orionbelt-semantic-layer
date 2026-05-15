@@ -796,7 +796,7 @@ class TestOrderByValidation:
         )
         resolved = resolver.resolve(query, model)
         assert len(resolved.order_by_exprs) == 1
-        expr, _desc = resolved.order_by_exprs[0]
+        expr, _desc, _nulls = resolved.order_by_exprs[0]
         assert isinstance(expr, Literal) and expr.value == 1
 
     def test_order_by_numeric_out_of_range(self) -> None:

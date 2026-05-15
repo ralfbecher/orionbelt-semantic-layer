@@ -66,6 +66,20 @@ class SortDirection(StrEnum):
     DESC = "desc"
 
 
+class NullsPosition(StrEnum):
+    """Where NULL values sort in an ORDER BY clause.
+
+    Mirrors SQL standard ``NULLS FIRST`` / ``NULLS LAST``. ``None`` on
+    ``QueryOrderBy.nulls`` lets the dialect default apply: Postgres
+    treats NULLs as larger than non-NULLs (so ASC → last, DESC → first);
+    MySQL is the opposite. Setting this explicitly forces deterministic
+    behavior across dialects.
+    """
+
+    FIRST = "first"
+    LAST = "last"
+
+
 class DimensionRef(BaseModel):
     """Reference to a dimension, optionally with time grain.
 
@@ -144,6 +158,7 @@ class QueryOrderBy(BaseModel):
 
     field: str
     direction: SortDirection = SortDirection.ASC
+    nulls: NullsPosition | None = None
 
 
 class CoalesceDimension(BaseModel):
