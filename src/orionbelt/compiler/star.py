@@ -10,7 +10,6 @@ from orionbelt.ast.builder import QueryBuilder
 from orionbelt.ast.nodes import (
     AliasedExpr,
     BinaryOp,
-    Cast,
     ColumnRef,
     Expr,
     FunctionCall,
@@ -140,8 +139,7 @@ class StarSchemaPlanner:
                 if metric and dialect:
                     resolved_type = resolve_metric_data_type(metric, settings)
                     if resolved_type:
-                        type_sql = dialect.render_obml_type(resolved_type)
-                        expr = Cast(expr=expr, type_name=type_sql)
+                        expr = dialect.cast_to_obml_type(expr, resolved_type)
                 builder.select(AliasedExpr(expr=expr, alias=measure.name))
             else:
                 expr = measure.expression
@@ -149,8 +147,7 @@ class StarSchemaPlanner:
                 if model_measure and dialect:
                     resolved_type = resolve_measure_data_type(model_measure, settings)
                     if resolved_type:
-                        type_sql = dialect.render_obml_type(resolved_type)
-                        expr = Cast(expr=expr, type_name=type_sql)
+                        expr = dialect.cast_to_obml_type(expr, resolved_type)
                 builder.select(AliasedExpr(expr=expr, alias=measure.name))
             measure_exprs[measure.name] = expr
 

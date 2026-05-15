@@ -87,7 +87,7 @@ class TestPostgresDialect:
         ast = QueryBuilder().select(Star()).from_("orders").build()
         sql = dialect.compile(ast)
         assert "SELECT *" in sql
-        assert "FROM orders" in sql
+        assert 'FROM "orders"' in sql
 
     def test_compile_with_alias(self, dialect: PostgresDialect) -> None:
         ast = (
@@ -408,7 +408,7 @@ class TestMySQLDialect:
         ast = QueryBuilder().select(Star()).from_("orders").build()
         sql = dialect.compile(ast)
         assert "SELECT *" in sql
-        assert "FROM orders" in sql
+        assert "FROM `orders`" in sql
 
     def test_compile_aggregation(self, dialect: MySQLDialect) -> None:
         ast = (

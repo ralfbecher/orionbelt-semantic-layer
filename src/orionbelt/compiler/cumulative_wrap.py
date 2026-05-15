@@ -21,7 +21,6 @@ from typing import TYPE_CHECKING
 from orionbelt.ast.nodes import (
     CTE,
     AliasedExpr,
-    Cast,
     ColumnRef,
     Expr,
     From,
@@ -247,7 +246,7 @@ def _apply_measure_cast(
     resolved_type = resolve_measure_data_type(base_meas, model.settings)
     if resolved_type is None:
         return expr
-    return Cast(expr=expr, type_name=dialect.render_obml_type(resolved_type))
+    return dialect.cast_to_obml_type(expr, resolved_type)
 
 
 def _apply_metric_cast(
@@ -272,7 +271,7 @@ def _apply_metric_cast(
     resolved_type = resolve_metric_data_type(metric, model.settings)
     if resolved_type is None:
         return expr
-    return Cast(expr=expr, type_name=dialect.render_obml_type(resolved_type))
+    return dialect.cast_to_obml_type(expr, resolved_type)
 
 
 def _get_alias(expr: Expr) -> str | None:

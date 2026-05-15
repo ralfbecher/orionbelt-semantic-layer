@@ -144,6 +144,9 @@ asyncio_mode = "auto"
 markers = [
     "docker: requires Docker (testcontainers) — run with: pytest -m docker",
     "adbc: requires a reachable PostgreSQL via ADBC — run with: pytest -m adbc",
+    "snowflake: requires a live Snowflake account (SNOWFLAKE_* env vars) — run with: pytest -m snowflake",
+    "bigquery: requires a live BigQuery project (BIGQUERY_* env vars + ADC) — run with: pytest -m bigquery",
+    "databricks: requires a live Databricks workspace (DATABRICKS_* env vars) — run with: pytest -m databricks",
 ]
 
 [tool.mypy]

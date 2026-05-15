@@ -506,7 +506,17 @@ class CFLPlanner:
                             )
                             leg_builder.select(AliasedExpr(expr=null_expr, alias=alias))
                 elif m.name in this_measure_names:
-                    leg_builder.select(AliasedExpr(expr=self._unwrap_aggregation(m), alias=m.name))
+                    # Cast the own-measure column to the same type used for
+                    # NULL padding in sibling legs, so every leg's column
+                    # agrees on a single type. Without this, strict-typed
+                    # engines (ClickHouse with UNION ALL) produce a Variant
+                    # type that SUM can't aggregate ("ILLEGAL_TYPE_OF_ARGUMENT
+                    # Variant(Decimal, Float64)").
+                    own_expr: Expr = self._unwrap_aggregation(m)
+                    own_type_name = self._resolve_null_type_for_field(m, 0, model, dialect)
+                    if own_type_name:
+                        own_expr = Cast(expr=own_expr, type_name=own_type_name)
+                    leg_builder.select(AliasedExpr(expr=own_expr, alias=m.name))
                 elif not union_by_name:
                     model_measure = model.measures.get(m.name)
                     null_type_name = self._resolve_null_type_for_field(m, 0, model, dialect)
@@ -664,8 +674,7 @@ class CFLPlanner:
             if model_measure and dialect:
                 resolved_type = resolve_measure_data_type(model_measure, settings)
                 if resolved_type:
-                    type_sql = dialect.render_obml_type(resolved_type)
-                    agg_expr = Cast(expr=agg_expr, type_name=type_sql)
+                    agg_expr = dialect.cast_to_obml_type(agg_expr, resolved_type)
             outer_builder.select(AliasedExpr(expr=agg_expr, alias=m.name))
             outer_measure_exprs[m.name] = agg_expr
 
@@ -677,8 +686,7 @@ class CFLPlanner:
                 if metric and dialect:
                     resolved_type = resolve_metric_data_type(metric, settings)
                     if resolved_type:
-                        type_sql = dialect.render_obml_type(resolved_type)
-                        metric_expr = Cast(expr=metric_expr, type_name=type_sql)
+                        metric_expr = dialect.cast_to_obml_type(metric_expr, resolved_type)
                 outer_builder.select(AliasedExpr(expr=metric_expr, alias=m.name))
                 outer_measure_exprs[m.name] = metric_expr
 

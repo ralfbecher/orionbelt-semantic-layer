@@ -102,6 +102,17 @@ class Dialect(ABC):
             return f"DECIMAL({p}, {s})"
         return self._OBML_SIMPLE_TYPE_MAP.get(obml_type.name, obml_type.name.upper())
 
+    def cast_to_obml_type(self, expr: Expr, obml_type: OBMLType) -> Expr:
+        """Build an Expr that coerces ``expr`` to the given OBML type.
+
+        Default form is a plain ``CAST(expr AS <type>)``. Dialects whose
+        ``CAST`` doesn't accept a parameterized decimal (notably BigQuery
+        — "Parameterized types are not allowed in CAST expressions") can
+        override to wrap the cast with a ROUND to honour the user-specified
+        scale.
+        """
+        return Cast(expr=expr, type_name=self.render_obml_type(obml_type))
+
     def _resolve_type_name(self, type_name: str) -> str:
         """Map an abstract type name to a dialect-specific SQL type.
 
@@ -363,7 +374,7 @@ class Dialect(ABC):
             sub = self.compile_select(node.source)
             result = f"(\n{sub}\n)"
         else:
-            result = str(node.source)
+            result = self._render_source_string(node.source)
         if node.alias:
             result += f" AS {self.quote_identifier(node.alias)}"
         return result
@@ -372,7 +383,7 @@ class Dialect(ABC):
         if isinstance(node.source, Select):
             source = f"(\n{self.compile_select(node.source)}\n)"
         else:
-            source = str(node.source)
+            source = self._render_source_string(node.source)
         if node.alias:
             source += f" AS {self.quote_identifier(node.alias)}"
 
@@ -380,6 +391,19 @@ class Dialect(ABC):
         if node.on:
             parts.append(f"ON {self.compile_expr(node.on)}")
         return " ".join(parts)
+
+    def _render_source_string(self, source: str) -> str:
+        """Render a ``From``/``Join`` string source.
+
+        Wrap modules emit bare CTE names (e.g. ``base``); the star/CFL
+        planners emit pre-quoted qualified table strings (e.g.
+        ``"DB"."SCHEMA"."TABLE"``). Quote the former so case-sensitive
+        dialects like Snowflake match the CTE declaration; pass the latter
+        through unchanged.
+        """
+        if source.isidentifier():
+            return self.quote_identifier(source)
+        return source
 
     def compile_order_by(self, node: OrderByItem) -> str:
         result = self.compile_expr(node.expr)
