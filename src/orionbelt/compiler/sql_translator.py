@@ -348,7 +348,7 @@ def translate_sql_to_query(sql: str, model: SemanticModel) -> QueryObject:
             if item is not None:
                 order_by.append(item)
 
-    # --- LIMIT ---
+    # --- LIMIT / OFFSET ---
     limit_value: int | None = None
     limit_node = ast.args.get("limit")
     if limit_node is not None:
@@ -362,6 +362,19 @@ def translate_sql_to_query(sql: str, model: SemanticModel) -> QueryObject:
                 )
             )
 
+    offset_value: int | None = None
+    offset_node = ast.args.get("offset")
+    if offset_node is not None:
+        try:
+            offset_value = int(offset_node.expression.sql())
+        except (AttributeError, ValueError):
+            errors.append(
+                SemanticError(
+                    code="UNSUPPORTED_SQL_FEATURE",
+                    message=f"OFFSET must be an integer literal — got `{offset_node.sql()}`.",
+                )
+            )
+
     if errors:
         raise SQLTranslationError(errors)
 
@@ -371,6 +384,7 @@ def translate_sql_to_query(sql: str, model: SemanticModel) -> QueryObject:
         having=list(having_filters),
         order_by=order_by,
         limit=limit_value,
+        offset=offset_value,
         grouping=grouping_value,
     )
 
@@ -697,7 +711,7 @@ def _build_raw_mode_query(
                 )
             )
 
-    # LIMIT
+    # LIMIT / OFFSET
     limit_value: int | None = None
     limit_node = ast.args.get("limit")
     if limit_node is not None:
@@ -708,6 +722,19 @@ def _build_raw_mode_query(
                 SemanticError(
                     code="UNSUPPORTED_SQL_FEATURE",
                     message=f"LIMIT must be an integer literal — got `{limit_node.sql()}`.",
+                )
+            )
+
+    offset_value: int | None = None
+    offset_node = ast.args.get("offset")
+    if offset_node is not None:
+        try:
+            offset_value = int(offset_node.expression.sql())
+        except (AttributeError, ValueError):
+            errors.append(
+                SemanticError(
+                    code="UNSUPPORTED_SQL_FEATURE",
+                    message=f"OFFSET must be an integer literal — got `{offset_node.sql()}`.",
                 )
             )
 
@@ -731,6 +758,7 @@ def _build_raw_mode_query(
         where=list(where_filters),
         order_by=order_by,
         limit=limit_value,
+        offset=offset_value,
     )
 
 

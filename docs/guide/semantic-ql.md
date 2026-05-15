@@ -44,15 +44,19 @@ SELECT <dimension or measure labels>
 [FROM  <model_name>]
 [WHERE <predicates>]
 [HAVING <predicates>]
-[ORDER BY <label or position> [ASC | DESC]]
-[LIMIT <n>]
 [WITH ROLLUP | WITH CUBE]
+[ORDER BY <label or position> [ASC | DESC] [NULLS FIRST | NULLS LAST] [, ...]]
+[LIMIT <n>]
+[OFFSET <n>]
 ```
 
 `FROM` is optional on a connection where the model is implicit (single-model
 mode, or multi-model with the `database` selector set). `SELECT "dim", "measure"`
 means the same as `SELECT "dim", "measure" FROM <model>` — see
 [No-FROM mode](#no-from-mode-implicit-model) below.
+
+`WITH ROLLUP` / `WITH CUBE` is accepted either trailing or in its
+spec-correct slot before `ORDER BY` / `LIMIT`.
 
 | Clause     | Rules |
 |------------|-------|
@@ -61,9 +65,10 @@ means the same as `SELECT "dim", "measure" FROM <model>` — see
 | `WHERE`    | `column op literal` atoms joined by `AND`. Measure / metric references are auto-routed to `HAVING`. Top-level `OR` is rejected. |
 | `HAVING`   | Same shape as `WHERE`; passes through unchanged. |
 | `GROUP BY` | Silently ignored — implicit from the dimensions in `SELECT`. BI tools auto-emit it; we tolerate it for compatibility. |
-| `ORDER BY` | Identifier (must be a SELECT alias) or 1-based position. |
+| `ORDER BY` | Identifier (must be a SELECT alias) or 1-based position. Optional `ASC`/`DESC` and `NULLS FIRST`/`NULLS LAST`. Without the null position, dialect defaults apply (Postgres / Snowflake / DuckDB / Dremio put NULLs *last* on ASC; MySQL / ClickHouse / BigQuery / Databricks the opposite — set it explicitly for portable behavior). |
 | `LIMIT`    | Integer literal. |
-| `WITH ROLLUP` / `WITH CUBE` | Trailing modifier — see below. |
+| `OFFSET`   | Integer literal. Useful for keyset / page pagination after `ORDER BY`. |
+| `WITH ROLLUP` / `WITH CUBE` | Trailing modifier (or spec-position before `ORDER BY`) — see below. |
 
 ## Selecting measures: three accepted forms
 

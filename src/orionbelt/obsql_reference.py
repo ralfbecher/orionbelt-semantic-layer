@@ -30,14 +30,20 @@ Columns are the union of dimensions, measures, and metrics. There is no
 
 ```
 SELECT <ident_list>
-FROM   <model_id>
+[FROM  <model_id>]
 [WHERE <predicates>]
 [HAVING <predicates>]
 [GROUP BY <ignored>]
-[ORDER BY <alias | position> [ASC | DESC]]
-[LIMIT <int>]
 [WITH ROLLUP | WITH CUBE]
+[ORDER BY <alias | position> [ASC | DESC] [NULLS FIRST | NULLS LAST] [, ...]]
+[LIMIT <int>]
+[OFFSET <int>]
 ```
+
+``FROM`` is optional when the connection has a resolved model
+(single-model mode or multi-model with the ``database`` selector).
+``WITH ROLLUP`` / ``WITH CUBE`` can appear either trailing or in its
+spec-correct slot before ``ORDER BY`` / ``LIMIT``.
 
 ### SELECT items
 
@@ -69,12 +75,27 @@ Silently accepted but ignored — implicit from the dimensions in SELECT.
 
 ### ORDER BY
 
-* By alias (must match a SELECT item)
-* By 1-based position (``ORDER BY 2 DESC``)
+* By alias (must match a SELECT item) or 1-based position
+  (``ORDER BY 2 DESC``)
+* Optional direction: ``ASC`` (default) or ``DESC``
+* Optional null position: ``NULLS FIRST`` or ``NULLS LAST``. Without
+  it the dialect default applies — Postgres / Snowflake / DuckDB /
+  Dremio put NULLs *last* on ASC, *first* on DESC; MySQL / ClickHouse
+  / BigQuery / Databricks the opposite. Set it explicitly for portable
+  ordering across the 8 supported dialects.
 
-### LIMIT
+Examples:
 
-Integer literal.
+```sql
+ORDER BY 1, 2                       -- both ASC, dialect-default NULLs
+ORDER BY "Total Sales" DESC          -- one column, descending
+ORDER BY 1 NULLS FIRST, 2 DESC NULLS LAST
+```
+
+### LIMIT / OFFSET
+
+Both accept integer literals. ``OFFSET`` without ``ORDER BY`` returns
+arbitrary rows — pair them for deterministic pagination.
 
 ### WITH ROLLUP / WITH CUBE
 
