@@ -59,6 +59,27 @@ from ob_flight.flight_sql import (
 logger = logging.getLogger("ob_flight.server")
 
 
+def _arrow_to_obsl_type_hint(arrow_type: pa.DataType) -> str:
+    """Map an Arrow DataType to the OBSL ``ColumnMetadata.type`` vocabulary
+    (``string`` / ``number`` / ``datetime`` / ``binary``). Used when Flight
+    writes to the shared result cache so REST readers decode column types
+    correctly instead of falling back to ``string``.
+    """
+    if pa.types.is_integer(arrow_type) or pa.types.is_floating(arrow_type):
+        return "number"
+    if pa.types.is_decimal(arrow_type):
+        return "number"
+    if (
+        pa.types.is_date(arrow_type)
+        or pa.types.is_timestamp(arrow_type)
+        or pa.types.is_time(arrow_type)
+    ):
+        return "datetime"
+    if pa.types.is_binary(arrow_type) or pa.types.is_large_binary(arrow_type):
+        return "binary"
+    return "string"
+
+
 # Flight SQL catalog command type URLs that return metadata (no DB execution)
 _CATALOG_COMMANDS = {
     CMD_GET_CATALOGS,
@@ -1063,11 +1084,38 @@ class OBFlightServer(flight.FlightServerBase):
         finally:
             conn.close()
 
+    def _resolve_model_for_catalog(
+        self,
+        catalog_filter: str | None,
+        context: flight.ServerCallContext | None,
+    ) -> Any:
+        """Resolve the model for a metadata request.
+
+        Priority: the protobuf-body ``catalog`` filter (field 1) wins over
+        the context-header / auto-resolve fallback in :meth:`_get_model`,
+        because Flight SQL clients use the body field to explicitly target
+        a catalog when browsing the schema tree in multi-model mode.
+        Unknown catalog → return None (empty metadata, no fallback).
+        """
+        if catalog_filter and self._session_manager is not None:
+            try:
+                store = self._session_manager.get_store(catalog_filter)
+                model, _ = self._stamp_model(store, catalog_filter)
+                return model
+            except Exception:
+                return None
+        try:
+            model, _ = self._get_model(context)
+            return model
+        except Exception:
+            return None
+
     def _build_tables_from_model(
         self,
         context: flight.ServerCallContext | None = None,
         *,
         table_filter: str | None = None,
+        catalog_filter: str | None = None,
     ) -> pa.Table:
         """Build the CommandGetTables response.
 
@@ -1075,12 +1123,11 @@ class OBFlightServer(flight.FlightServerBase):
         ``_metrics`` views. Data objects are intentionally hidden — they're
         not queryable through the semantic layer. ``table_filter``, when
         set, scopes the response to a single table name (DBeaver sends
-        one filter request per expanded tree node).
+        one filter request per expanded tree node). ``catalog_filter``
+        (protobuf field 1) routes the response to that catalog's model
+        in multi-model mode.
         """
-        try:
-            model, _ = self._get_model(context)
-        except Exception:
-            model = None
+        model = self._resolve_model_for_catalog(catalog_filter, context)
         return build_tables_table(model, table_filter=table_filter)
 
     def _build_columns_from_model(
@@ -1088,6 +1135,7 @@ class OBFlightServer(flight.FlightServerBase):
         context: flight.ServerCallContext | None = None,
         *,
         table_filter: str | None = None,
+        catalog_filter: str | None = None,
     ) -> pa.Table:
         """Build the CommandGetColumns response.
 
@@ -1096,11 +1144,10 @@ class OBFlightServer(flight.FlightServerBase):
         ``table_filter`` scopes the response to one table — without it,
         DBeaver displays the unfiltered union under every view (the
         cross-pollution bug v2.4.0 had until this commit).
+        ``catalog_filter`` (protobuf field 1) routes the response to the
+        matching catalog's model.
         """
-        try:
-            model, _ = self._get_model(context)
-        except Exception:
-            model = None
+        model = self._resolve_model_for_catalog(catalog_filter, context)
         return build_columns_table(model, table_filter=table_filter)
 
     def _compile_obml(self, obml: dict[str, Any], model: Any, dialect: str) -> Any:
@@ -1276,9 +1323,10 @@ class OBFlightServer(flight.FlightServerBase):
         clients (DBeaver) send one filter request per expanded node and
         expect the response scoped to that node's table name.
         """
-        from ob_flight.flight_sql import parse_table_filter
+        from ob_flight.flight_sql import parse_catalog_filter, parse_table_filter
 
         table_filter = parse_table_filter(cmd_value) if cmd_value else None
+        catalog_filter = parse_catalog_filter(cmd_value) if cmd_value else None
 
         if type_url == CMD_GET_CATALOGS:
             # One catalog per loaded model — this is what populates the
@@ -1287,9 +1335,13 @@ class OBFlightServer(flight.FlightServerBase):
         elif type_url == CMD_GET_DB_SCHEMAS:
             table = build_db_schemas_table(self._list_available_model_names())
         elif type_url == CMD_GET_TABLES:
-            table = self._build_tables_from_model(context, table_filter=table_filter)
+            table = self._build_tables_from_model(
+                context, table_filter=table_filter, catalog_filter=catalog_filter
+            )
         elif type_url == CMD_GET_COLUMNS:
-            table = self._build_columns_from_model(context, table_filter=table_filter)
+            table = self._build_columns_from_model(
+                context, table_filter=table_filter, catalog_filter=catalog_filter
+            )
         elif type_url == CMD_GET_TABLE_TYPES:
             table = build_table_types_table()
         elif type_url in (CMD_GET_PRIMARY_KEYS, CMD_GET_EXPORTED_KEYS, CMD_GET_CROSS_REFERENCE):
@@ -1432,8 +1484,13 @@ class OBFlightServer(flight.FlightServerBase):
         list_of_lists: list[list[Any]] = [
             [row.get(name) for name in table.column_names] for row in rows
         ]
+        # REST's ColumnMetadata uses ``type`` (Pydantic field name) with the
+        # vocabulary ``string`` / ``number`` / ``datetime`` / ``binary`` —
+        # match it so a Flight-written cache entry decoded by REST yields
+        # the right column types instead of falling back to ``string``.
         columns_meta = [
-            {"name": field.name, "data_type": str(field.type)} for field in table.schema
+            {"name": field.name, "type": _arrow_to_obsl_type_hint(field.type)}
+            for field in table.schema
         ]
 
         try:

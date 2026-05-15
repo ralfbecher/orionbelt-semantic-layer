@@ -604,6 +604,33 @@ class TestQueryPlanEndpoint:
         assert data["would_compile"] is False
         assert len(data["warnings"]) > 0
 
+    async def test_plan_mysql_cube_returns_structured_error(self, client: AsyncClient) -> None:
+        """Regression: ``/query/plan`` previously surfaced MySQL CUBE as a
+        500 because the UnsupportedGroupingError handler was missing on
+        this endpoint (other compile/execute paths already handled it).
+        """
+        sid, mid = await self._setup(client)
+        r = await client.post(
+            f"/v1/sessions/{sid}/query/plan",
+            json={
+                "model_id": mid,
+                "query": {
+                    "select": {
+                        "dimensions": ["Customer Country"],
+                        "measures": ["Total Revenue"],
+                    },
+                    "grouping": "cube",
+                },
+                "dialect": "mysql",
+            },
+        )
+        assert r.status_code == 200, r.text
+        data = r.json()
+        assert data["status"] == "error"
+        assert data["would_compile"] is False
+        codes = [w["code"] for w in data["warnings"]]
+        assert "UNSUPPORTED_GROUPING" in codes
+
     async def test_plan_database_explain_unavailable_emits_warning(
         self, client: AsyncClient
     ) -> None:

@@ -281,6 +281,24 @@ def parse_table_filter(value: bytes) -> str | None:
     wildcards (``%`` matches anything, ``_`` matches one char) — we only
     extract the literal.
     """
+    return _parse_filter_field(value, target_field=3)
+
+
+def parse_catalog_filter(value: bytes) -> str | None:
+    """Extract the ``catalog`` protobuf field (1) from a Flight SQL
+    ``CommandGetTables`` / ``CommandGetColumns`` body.
+
+    The Flight SQL spec exposes per-command catalog selection in addition
+    to the gRPC ``database`` / ``catalog`` headers. When set, BI clients
+    expect the metadata response scoped to that catalog (= model name in
+    OBSL's multi-model mode). Returning the wrong model's metadata for a
+    different selected catalog confused DBeaver's schema tree.
+    """
+    return _parse_filter_field(value, target_field=1)
+
+
+def _parse_filter_field(value: bytes, *, target_field: int) -> str | None:
+    """Scan a Flight SQL command body for one length-delimited string field."""
     try:
         offset = 0
         while offset < len(value):
@@ -291,7 +309,7 @@ def parse_table_filter(value: bytes) -> str | None:
                 length, offset = _read_varint(value, offset)
                 field_data = value[offset : offset + length]
                 offset += length
-                if field_number == 3:
+                if field_number == target_field:
                     return field_data.decode("utf-8")
             elif wire_type == 0:
                 _, offset = _read_varint(value, offset)

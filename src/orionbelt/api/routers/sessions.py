@@ -701,6 +701,19 @@ async def plan_query(
             ],
             would_compile=False,
         )
+    except UnsupportedGroupingError as exc:
+        return QueryPlanResponse(
+            status="error",
+            warnings=[
+                StructuredWarning(
+                    code="UNSUPPORTED_GROUPING",
+                    severity="error",
+                    message=str(exc),
+                    context={"dialect": exc.dialect, "grouping": exc.grouping},
+                )
+            ],
+            would_compile=False,
+        )
 
     physical_tables = _physical_tables_for(model, result)
     join_path = _join_path_steps(result)

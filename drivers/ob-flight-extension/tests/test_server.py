@@ -525,3 +525,86 @@ class TestFlightCacheEnvelope:
         assert env.physical_tables == ["main.t"]
         assert [c["name"] for c in env.columns] == ["id", "name"]
         assert env.rows == [[1, "alice"], [2, "bob"]]
+
+    def test_flight_cache_column_type_key_matches_rest_decoder(self) -> None:
+        """Regression: Flight encoded column metadata under ``data_type`` but
+        REST's decoder reads ``type``. A REST hit on a Flight-written entry
+        decoded every column as ``string``, dropping numeric/datetime types.
+        """
+        from orionbelt.cache import parquet_codec
+
+        server = _make_server()
+        captured: dict = {}
+
+        class FakeCache:
+            async def set(self, key, payload, **kwargs):
+                captured["payload"] = payload
+
+        server._cache = FakeCache()
+
+        # Mix of numeric, datetime, and string columns to exercise the
+        # Arrow-to-type-hint mapping.
+        table = pa.table(
+            {
+                "id": pa.array([1, 2], type=pa.int64()),
+                "amount": pa.array([1.5, 2.5], type=pa.float64()),
+                "ts": pa.array([0, 1], type=pa.timestamp("us")),
+                "name": pa.array(["a", "b"], type=pa.utf8()),
+            }
+        )
+        server._cache_put_table(
+            table,
+            {
+                "key": "k2",
+                "ttl": 60,
+                "physical_tables": [],
+                "session_id": "s",
+                "model_id": "m",
+                "sql": "SELECT id, amount, ts, name FROM t",
+                "dialect": "postgres",
+            },
+        )
+
+        env = parquet_codec.decode(captured["payload"])
+        by_name = {c["name"]: c for c in env.columns}
+        # REST schema uses ``type`` (the Pydantic field name), not ``data_type``.
+        # Vocabulary: string / number / datetime / binary.
+        assert by_name["id"].get("type") == "number"
+        assert by_name["amount"].get("type") == "number"
+        assert by_name["ts"].get("type") == "datetime"
+        assert by_name["name"].get("type") == "string"
+        # The old (broken) key must NOT be present.
+        assert all("data_type" not in c for c in env.columns)
+
+
+class TestFlightCatalogFilter:
+    """Regression: ``CommandGetTables`` / ``CommandGetColumns`` ignored
+    protobuf field 1 (catalog), so BI clients selecting a catalog via the
+    command body got fallback metadata instead of the chosen model's.
+    """
+
+    def test_parse_catalog_filter_extracts_field_1(self) -> None:
+        from ob_flight.flight_sql import parse_catalog_filter
+
+        # Hand-build a minimal proto body with field 1 (string) = "commerce"
+        # and field 3 (string) = "_dimensions". Tag = (field << 3) | wire_type.
+        # wire_type=2 (length-delimited) → tag bytes = field*8 + 2.
+        catalog = b"commerce"
+        table = b"_dimensions"
+        body = (
+            bytes([0x0A])  # tag for field 1, wire_type 2
+            + bytes([len(catalog)])
+            + catalog
+            + bytes([0x1A])  # tag for field 3, wire_type 2
+            + bytes([len(table)])
+            + table
+        )
+        assert parse_catalog_filter(body) == "commerce"
+
+    def test_parse_catalog_filter_returns_none_when_absent(self) -> None:
+        from ob_flight.flight_sql import parse_catalog_filter
+
+        # Only field 3 (table_name_filter_pattern) — no catalog set.
+        table = b"_metrics"
+        body = bytes([0x1A]) + bytes([len(table)]) + table
+        assert parse_catalog_filter(body) is None
