@@ -1620,7 +1620,7 @@ class OBFlightServer(flight.FlightServerBase):  # type: ignore[misc]
         else:
             raise flight.FlightServerError(f"Unsupported action: {action_type}")
 
-    def list_flights(self, context: flight.ServerCallContext, criteria: bytes) -> Any:
+    def list_flights(self, context: flight.ServerCallContext, _criteria: bytes) -> Any:
         """List the semantic virtual table + metadata views."""
         try:
             model, _ = self._get_model(context)

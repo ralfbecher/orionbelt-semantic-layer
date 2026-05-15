@@ -62,9 +62,6 @@ METADATA_VIEW_NAMES: tuple[str, ...] = (
     "_metrics_metadata",
 )
 
-# Back-compat alias: prior name used in server / tests.
-VIRTUAL_TABLE_NAMES: tuple[str, ...] = LABEL_VIEW_NAMES + METADATA_VIEW_NAMES
-
 DIMENSIONS_METADATA_SCHEMA = pa.schema(
     [
         pa.field("name", pa.utf8()),

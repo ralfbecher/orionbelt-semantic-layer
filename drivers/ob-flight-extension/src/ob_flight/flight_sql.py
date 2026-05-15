@@ -34,9 +34,6 @@ CMD_PREPARED_STATEMENT_QUERY = (
 # Flight SQL action types (used in do_action)
 ACTION_CREATE_PREPARED_STATEMENT = "CreatePreparedStatement"
 ACTION_CLOSE_PREPARED_STATEMENT = "ClosePreparedStatement"
-ACTION_CREATE_PREPARED_STATEMENT_REQ = (
-    "type.googleapis.com/arrow.flight.protocol.sql.ActionCreatePreparedStatementRequest"
-)
 
 # Standard Flight SQL schemas for catalog responses
 CATALOG_SCHEMA = pa.schema([pa.field("catalog_name", pa.utf8())])
