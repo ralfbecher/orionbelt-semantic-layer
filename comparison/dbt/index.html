@@ -772,6 +772,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../guide/semantic-ql/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OrionBelt Semantic QL (OBSQL)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../guide/dialects/" class="md-nav__link">
         
   
@@ -1697,7 +1725,7 @@
 </nav>
 <div class="obml-version-badge">
   OBML v1.0<br>
-  OrionBelt v2.3.1
+  OrionBelt v2.4.0
 </div>
       
     </li>
@@ -2170,7 +2198,7 @@
 </nav>
 <div class="obml-version-badge">
   OBML v1.0<br>
-  OrionBelt v2.3.1
+  OrionBelt v2.4.0
 </div>
                   </div>
                 </div>
@@ -2497,13 +2525,28 @@ Grains for grain-to-date: <code>year</code>, <code>quarter</code>, <code>month</
 </thead>
 <tbody>
 <tr>
+<td>Natural SQL surface</td>
+<td><strong>OrionBelt Semantic QL (OBSQL)</strong> — write <code>SELECT "Region", "Total Sales" FROM sales</code> (or without FROM); <code>MEASURE()</code> marker; aggregate-wrap matching against declared aggregation; <code>WITH ROLLUP</code> / <code>WITH CUBE</code> first-class</td>
+<td>No — dbt SL has no SQL surface; you ask for metrics via GraphQL or the <code>dbt sl query</code> CLI, both DSL-specific</td>
+</tr>
+<tr>
+<td>Catalog discovery from BI tools</td>
+<td><code>SHOW TABLES</code>, <code>DESCRIBE &lt;model&gt;</code>, <code>information_schema.*</code>, <code>pg_catalog.*</code> answered from the model in-process — never touches the warehouse</td>
+<td>n/a</td>
+</tr>
+<tr>
+<td>Governance</td>
+<td><strong>Closed by design</strong> — raw warehouse SQL and DDL/DML always reject with <code>RAW_SQL_REJECTED</code> / <code>WRITE_OPERATION_REJECTED</code>. No env flag to bypass</td>
+<td>n/a</td>
+</tr>
+<tr>
 <td>REST API</td>
 <td>Yes — full session lifecycle, validate/compile/execute, ER diagram, <code>find</code>, lineage <code>explain</code>, OSI conversion</td>
 <td>No (REST not offered)</td>
 </tr>
 <tr>
 <td>Arrow Flight SQL</td>
-<td>Yes — gRPC server on port 8815; BI tools (DBeaver, Tableau JDBC, Power BI ODBC) connect natively</td>
+<td>Yes — gRPC server on port 8815; BI tools (DBeaver, Tableau JDBC, Power BI ODBC) connect natively. Multi-model addressing via the <code>database</code> gRPC header.</td>
 <td>No</td>
 </tr>
 <tr>

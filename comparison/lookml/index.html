@@ -772,6 +772,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../guide/semantic-ql/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OrionBelt Semantic QL (OBSQL)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../guide/dialects/" class="md-nav__link">
         
   
@@ -1903,7 +1931,7 @@
 </nav>
 <div class="obml-version-badge">
   OBML v1.0<br>
-  OrionBelt v2.3.1
+  OrionBelt v2.4.0
 </div>
       
     </li>
@@ -2470,7 +2498,7 @@
 </nav>
 <div class="obml-version-badge">
   OBML v1.0<br>
-  OrionBelt v2.3.1
+  OrionBelt v2.4.0
 </div>
                   </div>
                 </div>
@@ -2871,13 +2899,28 @@
 </thead>
 <tbody>
 <tr>
+<td>Natural SQL surface</td>
+<td><strong>OrionBelt Semantic QL (OBSQL)</strong> — <code>SELECT "dim", "measure" FROM &lt;model&gt;</code> (or no FROM); <code>MEASURE()</code> marker; aggregate-wrap matching; <code>WITH ROLLUP</code> / <code>WITH CUBE</code> first-class. Routes BI-tool SQL through the same compiler as the JSON API.</td>
+<td>Looker has a "SQL Runner" that runs raw warehouse SQL bypassing LookML — useful for inspection but not governed by the semantic layer. The semantic surface itself is reached only through the Looker UI or Looker API.</td>
+</tr>
+<tr>
+<td>Catalog discovery from BI tools</td>
+<td><code>SHOW TABLES</code>, <code>DESCRIBE</code>, <code>information_schema.*</code>, <code>pg_catalog.*</code> answered from the model in-process — BI tools browse the catalog without warehouse round-trips</td>
+<td>n/a (Looker is the BI tool — no catalog endpoint to expose)</td>
+</tr>
+<tr>
+<td>Governance</td>
+<td><strong>Closed by design</strong> — raw warehouse SQL and DDL/DML always reject (<code>RAW_SQL_REJECTED</code> / <code>WRITE_OPERATION_REJECTED</code>). No env flag to bypass.</td>
+<td>SQL Runner is intentionally a hole; access grants gate the <em>Looker</em> surface, not raw SQL</td>
+</tr>
+<tr>
 <td>REST API</td>
 <td>Yes — first-party FastAPI service</td>
 <td>Yes — Looker API (rich, mature, but proprietary)</td>
 </tr>
 <tr>
 <td>Arrow Flight SQL</td>
-<td>Yes — gRPC server on port 8815 for BI tool connectivity (DBeaver, Tableau, Power BI via Arrow Flight SQL JDBC/ODBC)</td>
+<td>Yes — gRPC server on port 8815 for BI tool connectivity (DBeaver, Tableau, Power BI via Arrow Flight SQL JDBC/ODBC). Multi-model addressing via the <code>database</code> gRPC header.</td>
 <td>No (Looker is the BI front-end itself)</td>
 </tr>
 <tr>

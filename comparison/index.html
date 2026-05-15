@@ -772,6 +772,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../guide/semantic-ql/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OrionBelt Semantic QL (OBSQL)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../guide/dialects/" class="md-nav__link">
         
   
@@ -1609,7 +1637,7 @@
 </nav>
 <div class="obml-version-badge">
   OBML v1.0<br>
-  OrionBelt v2.3.1
+  OrionBelt v2.4.0
 </div>
       
     </li>
@@ -2050,7 +2078,7 @@
 </nav>
 <div class="obml-version-badge">
   OBML v1.0<br>
-  OrionBelt v2.3.1
+  OrionBelt v2.4.0
 </div>
                   </div>
                 </div>
@@ -2124,11 +2152,11 @@
 </tr>
 <tr>
 <td>Query interface</td>
-<td>REST + <strong>Arrow Flight SQL</strong> + DB-API</td>
+<td><strong><a href="../guide/semantic-ql/">OrionBelt Semantic QL</a></strong> (OBSQL) + <strong>Arrow Flight SQL</strong> + REST + DB-API</td>
 <td>GraphQL/JDBC (Cloud)</td>
 <td>Malloy language</td>
 <td>Looker UI / API</td>
-<td>REST + GraphQL + <strong>Postgres-wire SQL</strong></td>
+<td><strong>Cube SQL API</strong> (Postgres-wire) + REST + GraphQL</td>
 <td><strong>MDX + DAX</strong> + JDBC/ODBC + REST</td>
 </tr>
 <tr>
@@ -2166,6 +2194,33 @@
 <td>✅</td>
 <td>✅</td>
 <td>✅ (OLAP)</td>
+</tr>
+<tr>
+<td>Hierarchical subtotals (<code>WITH ROLLUP</code> / <code>WITH CUBE</code>)</td>
+<td>✅ first-class in <strong>Semantic QL</strong> (trailing modifier + <code>GROUPING()</code> flag columns; dialect-portable across all 8 drivers)</td>
+<td>❌ presentation concern</td>
+<td>❌</td>
+<td>UI-only checkbox; no LookML construct</td>
+<td>"Rollup" means pre-aggregation tables, not the SQL operator</td>
+<td>Via MDX/DAX</td>
+</tr>
+<tr>
+<td>Natural SQL query surface</td>
+<td>✅ <strong>Semantic QL</strong> (OBSQL) with explicit <code>MEASURE()</code> marker + aggregate-wrap matching</td>
+<td>❌</td>
+<td>n/a (Malloy DSL)</td>
+<td>n/a (LookML DSL)</td>
+<td>✅ Cube SQL API (Postgres-wire)</td>
+<td>n/a (MDX/DAX)</td>
+</tr>
+<tr>
+<td>Read-only governance — <strong>no raw-SQL or write-op escape hatch</strong></td>
+<td>✅ closed by design: raw SQL → <code>RAW_SQL_REJECTED</code>, DDL/DML → <code>WRITE_OPERATION_REJECTED</code>, catalog probes answered from the model</td>
+<td>dbt SL is read-only by API shape; no raw-SQL surface</td>
+<td>Malloy emits its own queries</td>
+<td>Looker SQL Runner allows raw SQL</td>
+<td>Cube SQL API rejects writes; raw SELECTs flow through</td>
+<td>AtScale routes through MDX/DAX</td>
 </tr>
 <tr>
 <td>Multi-rooted modeling (peer-rooted facts)</td>

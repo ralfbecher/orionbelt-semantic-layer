@@ -1,0 +1,3280 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Compile and execute YAML semantic models as analytical SQL across multiple database dialects.">
+      
+      
+      
+        <link rel="canonical" href="https://ralfbecher.github.io/orionbelt-semantic-layer/guide/semantic-ql/">
+      
+      
+        <link rel="prev" href="../query-language/">
+      
+      
+        <link rel="next" href="../dialects/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+    
+    
+      
+        <title>OrionBelt Semantic QL (OBSQL) - OrionBelt Semantic Layer</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="../../stylesheets/extra.css?v=213f014958">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+  
+
+
+  
+  
+
+<script id="__analytics">function __md_analytics(){function e(){dataLayer.push(arguments)}window.dataLayer=window.dataLayer||[],e("js",new Date),e("config","G-X19K4GX3EX"),document.addEventListener("DOMContentLoaded",(function(){document.forms.search&&document.forms.search.query.addEventListener("blur",(function(){this.value&&e("event","search",{search_term:this.value})}));document$.subscribe((function(){var t=document.forms.feedback;if(void 0!==t)for(var a of t.querySelectorAll("[type=submit]"))a.addEventListener("click",(function(a){a.preventDefault();var n=document.location.pathname,d=this.getAttribute("data-md-value");e("event","feedback",{page:n,data:d}),t.firstElementChild.disabled=!0;var r=t.querySelector(".md-feedback__note [data-md-value='"+d+"']");r&&(r.hidden=!1)})),t.hidden=!1})),location$.subscribe((function(t){e("config","G-X19K4GX3EX",{page_path:t.pathname})}))}));var t=document.createElement("script");t.async=!0,t.src="https://www.googletagmanager.com/gtag/js?id=G-X19K4GX3EX",document.getElementById("__analytics").insertAdjacentElement("afterEnd",t)}</script>
+  
+    <script>if("undefined"!=typeof __md_analytics){var consent=__md_get("__consent");consent&&consent.analytics&&__md_analytics()}</script>
+  
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="amber">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#orionbelt-semantic-ql-obsql" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+        <aside class="md-banner">
+          <div class="md-banner__inner md-grid md-typeset">
+            
+              <button class="md-banner__button md-icon" aria-label="Don't show this again">
+                
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+              </button>
+            
+            
+  <a href="https://ralforion.com/" style="color: inherit; text-decoration: none;">
+    Part of <strong>ralforion.com</strong> &nbsp;·&nbsp; back to home →
+  </a>
+
+          </div>
+          
+            <script>var el=document.querySelector("[data-md-component=announce]");if(el){var content=el.querySelector(".md-typeset");__md_hash(content.innerHTML)===__md_get("__announce")&&(el.hidden=!0)}</script>
+          
+        </aside>
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="OrionBelt Semantic Layer" class="md-header__button md-logo" aria-label="OrionBelt Semantic Layer" data-md-component="logo">
+      
+  <img src="../../assets/logo_w.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            OrionBelt Semantic Layer
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              OrionBelt Semantic QL (OBSQL)
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="amber"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="amber"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/ralfbecher/orionbelt-semantic-layer" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    orionbelt-semantic-layer
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../getting-started/installation/" class="md-tabs__link">
+          
+  
+  
+  Getting Started
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../model-format/" class="md-tabs__link">
+          
+  
+  
+  Guide
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../api/overview/" class="md-tabs__link">
+          
+  
+  
+  API
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../examples/sales-model/" class="md-tabs__link">
+          
+  
+  
+  Examples
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../comparison/" class="md-tabs__link">
+          
+  
+  
+  Comparison
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../reference/python-api/" class="md-tabs__link">
+          
+  
+  
+  Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../drivers/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Drivers & Flight SQL
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="OrionBelt Semantic Layer" class="md-nav__button md-logo" aria-label="OrionBelt Semantic Layer" data-md-component="logo">
+      
+  <img src="../../assets/logo_w.png" alt="logo">
+
+    </a>
+    OrionBelt Semantic Layer
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/ralfbecher/orionbelt-semantic-layer" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    orionbelt-semantic-layer
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick Start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/docker/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Docker & Deployment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/development/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../model-format/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OBML Model Format
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../query-language/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Query Language
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OrionBelt Semantic QL (OBSQL)
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OrionBelt Semantic QL (OBSQL)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#why-a-virtual-table" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why a virtual table?
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#accepted-shape" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Accepted shape
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#selecting-measures-three-accepted-forms" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Selecting measures: three accepted forms
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Selecting measures: three accepted forms">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#rule-for-aggregate-wrappers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rule for aggregate wrappers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#wrappers-on-metrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Wrappers on metrics
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#why-this-matters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why this matters
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#multi-model-addressing-v240" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Multi-model addressing (v2.4.0+)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Multi-model addressing (v2.4.0+)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#model-naming-rules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Model naming rules
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#discovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Discovery
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#auto-resolve" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Auto-resolve
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-happens-without-a-selector-when-ambiguous" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What happens without a selector when ambiguous
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#no-from-mode-implicit-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        No-FROM mode — implicit model
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#smoke-test-from-the-terminal" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Smoke-test from the terminal
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#raw-mode-detail-rows-via-qualified-columns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Raw mode — detail rows via qualified columns
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rejected-sql" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rejected SQL
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#hierarchical-subtotals-with-rollup-with-cube" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hierarchical subtotals: WITH ROLLUP / WITH CUBE
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Hierarchical subtotals: WITH ROLLUP / WITH CUBE">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#measure-additivity-under-rollup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Measure additivity under rollup
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#restrictions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Restrictions
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rest-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        REST examples
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="REST examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#execute" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Execute
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#compile-only-debugging" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Compile-only (debugging)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#arrow-flight-sql" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Arrow Flight SQL
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Arrow Flight SQL">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#governance-closed-by-design" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Governance — closed by design
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#schema-probe-shortcut" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Schema probe shortcut
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#bi-tool-setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        BI tool setup
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+<div class="obml-version-badge">
+  OBML v1.0<br>
+  OrionBelt v2.4.0
+</div>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dialects/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SQL Dialects
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../grain-filter-context/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Grain & Filter Context
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../period-over-period/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Period-over-Period Metrics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../compilation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Compilation Pipeline
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../correctness-and-drift-tests/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Correctness & Drift Tests
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../obsl/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OBSL Graph & SPARQL
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../freshness-contracts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Freshness Contracts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../result-cache/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Result Cache
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ui/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Gradio UI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../integrations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AI Integrations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../osi/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OSI Interoperability
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/endpoints/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Endpoints
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/openapi/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OpenAPI / Swagger
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Examples
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Examples
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/sales-model/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sales Model Walkthrough
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/multi-dialect/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multi-Dialect Output
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/multi-fact/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multi-Fact: Sales & Returns
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/tpcds/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    TPC-DS Benchmark
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Comparison
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Comparison
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../comparison/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../comparison/dbt/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    vs. dbt Semantic Layer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../comparison/malloy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    vs. Malloy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../comparison/lookml/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    vs. LookML / Looker
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../comparison/cube/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    vs. Cube
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../comparison/atscale/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    vs. AtScale
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/python-api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Python API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../drivers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Drivers & Flight SQL
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#why-a-virtual-table" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why a virtual table?
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#accepted-shape" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Accepted shape
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#selecting-measures-three-accepted-forms" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Selecting measures: three accepted forms
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Selecting measures: three accepted forms">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#rule-for-aggregate-wrappers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rule for aggregate wrappers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#wrappers-on-metrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Wrappers on metrics
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#why-this-matters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why this matters
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#multi-model-addressing-v240" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Multi-model addressing (v2.4.0+)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Multi-model addressing (v2.4.0+)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#model-naming-rules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Model naming rules
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#discovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Discovery
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#auto-resolve" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Auto-resolve
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-happens-without-a-selector-when-ambiguous" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What happens without a selector when ambiguous
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#no-from-mode-implicit-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        No-FROM mode — implicit model
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#smoke-test-from-the-terminal" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Smoke-test from the terminal
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#raw-mode-detail-rows-via-qualified-columns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Raw mode — detail rows via qualified columns
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rejected-sql" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rejected SQL
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#hierarchical-subtotals-with-rollup-with-cube" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hierarchical subtotals: WITH ROLLUP / WITH CUBE
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Hierarchical subtotals: WITH ROLLUP / WITH CUBE">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#measure-additivity-under-rollup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Measure additivity under rollup
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#restrictions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Restrictions
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rest-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        REST examples
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="REST examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#execute" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Execute
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#compile-only-debugging" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Compile-only (debugging)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#arrow-flight-sql" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Arrow Flight SQL
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Arrow Flight SQL">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#governance-closed-by-design" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Governance — closed by design
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#schema-probe-shortcut" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Schema probe shortcut
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#bi-tool-setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        BI tool setup
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+<div class="obml-version-badge">
+  OBML v1.0<br>
+  OrionBelt v2.4.0
+</div>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="orionbelt-semantic-ql-obsql">OrionBelt Semantic QL (OBSQL)<a class="headerlink" href="#orionbelt-semantic-ql-obsql" title="Permanent link">&para;</a></h1>
+<p><strong>Semantic QL</strong> is OrionBelt's natural SQL surface — BI-style SQL written
+against a <strong>per-model virtual table</strong> and translated to a <code>QueryObject</code> that
+flows through the standard compilation pipeline. The short brand form is
+<strong>OBSQL</strong>; both terms refer to the same language. It's the third member of
+the OrionBelt trio:</p>
+<table>
+<thead>
+<tr>
+<th>Short form</th>
+<th>Full name</th>
+<th>What it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>OBSL</strong></td>
+<td>OrionBelt <strong>Semantic Layer</strong></td>
+<td>The system</td>
+</tr>
+<tr>
+<td><strong>OBML</strong></td>
+<td>OrionBelt <strong>Modeling Language</strong></td>
+<td>YAML format for defining models</td>
+</tr>
+<tr>
+<td><strong>OBSQL</strong></td>
+<td>OrionBelt <strong>Semantic QL</strong></td>
+<td>SQL surface for querying them</td>
+</tr>
+</tbody>
+</table>
+<p>Semantic QL is the same SQL dialect on two transports:</p>
+<ul>
+<li><strong>REST</strong>: <code>POST /v1/sessions/{id}/query/semantic-ql</code> (and the
+  top-level shortcut <code>POST /v1/query/semantic-ql</code> in single-model mode)</li>
+<li><strong>Arrow Flight SQL</strong>: any plain SQL the Flight server receives is
+  classified by FROM target. Targets that match the model's virtual table
+  are translated through the same path. See the Flight server section
+  below.</li>
+</ul>
+<h2 id="why-a-virtual-table">Why a virtual table?<a class="headerlink" href="#why-a-virtual-table" title="Permanent link">&para;</a></h2>
+<p>BI tools (Tableau, Power BI, Metabase, Superset, DBeaver) compose SQL
+from a catalog tree and a column picker. They cannot author OBML YAML.
+Exposing the semantic model as <strong>one virtual table per model</strong>, with
+columns = dimensions + measures + metrics, gives those tools exactly the
+SQL surface they expect — without leaking warehouse joins to the user.</p>
+<p>Semantic QL is OBSL's take on a well-trodden pattern — Cube SQL API, dbt
+Semantic Layer JDBC, AtScale, and Snowflake <code>SEMANTIC_VIEW(...)</code> all
+expose semantic models as virtual SQL surfaces. The differentiator:
+Semantic QL ships with <strong>explicit measure markers</strong> (<code>MEASURE("X")</code>),
+<strong>aggregate-wrap matching</strong> (<code>SUM(sum_measure)</code> validated against the
+declared aggregation), and <strong>first-class hierarchical subtotals</strong>
+(<code>WITH ROLLUP</code> / <code>WITH CUBE</code>) — see the corresponding sections below.</p>
+<h2 id="accepted-shape">Accepted shape<a class="headerlink" href="#accepted-shape" title="Permanent link">&para;</a></h2>
+<div class="language-sql highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="k">SELECT</span><span class="w"> </span><span class="o">&lt;</span><span class="n">dimension</span><span class="w"> </span><span class="k">or</span><span class="w"> </span><span class="n">measure</span><span class="w"> </span><span class="n">labels</span><span class="o">&gt;</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="p">[</span><span class="k">FROM</span><span class="w">  </span><span class="o">&lt;</span><span class="n">model_name</span><span class="o">&gt;</span><span class="p">]</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">[</span><span class="k">WHERE</span><span class="w"> </span><span class="o">&lt;</span><span class="n">predicates</span><span class="o">&gt;</span><span class="p">]</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="p">[</span><span class="k">HAVING</span><span class="w"> </span><span class="o">&lt;</span><span class="n">predicates</span><span class="o">&gt;</span><span class="p">]</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="p">[</span><span class="k">WITH</span><span class="w"> </span><span class="k">ROLLUP</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="k">WITH</span><span class="w"> </span><span class="k">CUBE</span><span class="p">]</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="p">[</span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="o">&lt;</span><span class="n">label</span><span class="w"> </span><span class="k">or</span><span class="w"> </span><span class="k">position</span><span class="o">&gt;</span><span class="w"> </span><span class="p">[</span><span class="k">ASC</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="k">DESC</span><span class="p">]</span><span class="w"> </span><span class="p">[</span><span class="n">NULLS</span><span class="w"> </span><span class="k">FIRST</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="n">NULLS</span><span class="w"> </span><span class="k">LAST</span><span class="p">]</span><span class="w"> </span><span class="p">[,</span><span class="w"> </span><span class="p">...]]</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="p">[</span><span class="k">LIMIT</span><span class="w"> </span><span class="o">&lt;</span><span class="n">n</span><span class="o">&gt;</span><span class="p">]</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="p">[</span><span class="k">OFFSET</span><span class="w"> </span><span class="o">&lt;</span><span class="n">n</span><span class="o">&gt;</span><span class="p">]</span>
+</span></code></pre></div>
+<p><code>FROM</code> is optional on a connection where the model is implicit (single-model
+mode, or multi-model with the <code>database</code> selector set). <code>SELECT "dim", "measure"</code>
+means the same as <code>SELECT "dim", "measure" FROM &lt;model&gt;</code> — see
+<a href="#no-from-mode-implicit-model">No-FROM mode</a> below.</p>
+<p><code>WITH ROLLUP</code> / <code>WITH CUBE</code> is accepted either trailing or in its
+spec-correct slot before <code>ORDER BY</code> / <code>LIMIT</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Clause</th>
+<th>Rules</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>SELECT</code></td>
+<td>Bare identifiers, <code>MEASURE("&lt;label&gt;")</code>, or an aggregate wrapper that <strong>matches the measure's declared aggregation</strong> (<code>SUM("X")</code> on a SUM-measure, <code>COUNT(DISTINCT "X")</code> on a count_distinct-measure, etc.). Mismatched wraps (<code>MIN</code> on a SUM-measure) and <strong>any</strong> wrap on a metric reject with a message naming the declared aggregation. <code>SELECT *</code> and free-form expressions are rejected.</td>
+</tr>
+<tr>
+<td><code>FROM</code></td>
+<td>The model's virtual table, or omitted entirely. Any other target is rejected with <code>RAW_SQL_REJECTED</code> — OBSL is closed by design, there is no env flag to bypass.</td>
+</tr>
+<tr>
+<td><code>WHERE</code></td>
+<td><code>column op literal</code> atoms joined by <code>AND</code>. Measure / metric references are auto-routed to <code>HAVING</code>. Top-level <code>OR</code> is rejected.</td>
+</tr>
+<tr>
+<td><code>HAVING</code></td>
+<td>Same shape as <code>WHERE</code>; passes through unchanged.</td>
+</tr>
+<tr>
+<td><code>GROUP BY</code></td>
+<td>Silently ignored — implicit from the dimensions in <code>SELECT</code>. BI tools auto-emit it; we tolerate it for compatibility.</td>
+</tr>
+<tr>
+<td><code>ORDER BY</code></td>
+<td>Identifier (must be a SELECT alias) or 1-based position. Optional <code>ASC</code>/<code>DESC</code> and <code>NULLS FIRST</code>/<code>NULLS LAST</code>. Without the null position, dialect defaults apply (Postgres / Snowflake / DuckDB / Dremio put NULLs <em>last</em> on ASC; MySQL / ClickHouse / BigQuery / Databricks the opposite — set it explicitly for portable behavior).</td>
+</tr>
+<tr>
+<td><code>LIMIT</code></td>
+<td>Integer literal.</td>
+</tr>
+<tr>
+<td><code>OFFSET</code></td>
+<td>Integer literal. Useful for keyset / page pagination after <code>ORDER BY</code>.</td>
+</tr>
+<tr>
+<td><code>WITH ROLLUP</code> / <code>WITH CUBE</code></td>
+<td>Trailing modifier (or spec-position before <code>ORDER BY</code>) — see below.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="selecting-measures-three-accepted-forms">Selecting measures: three accepted forms<a class="headerlink" href="#selecting-measures-three-accepted-forms" title="Permanent link">&para;</a></h2>
+<p>The translator accepts three syntactically distinct ways to reference a
+measure or metric in <code>SELECT</code>:</p>
+<div class="language-sql highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1">-- 1. Bare label — terse, recommended for hand-written SQL</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="k">SELECT</span><span class="w"> </span><span class="ss">&quot;Region&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">&quot;Total Sales&quot;</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">sales_model</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="c1">-- 2. MEASURE() marker — Snowflake SEMANTIC_VIEW / Databricks metric-view syntax</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="k">SELECT</span><span class="w"> </span><span class="ss">&quot;Region&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">MEASURE</span><span class="p">(</span><span class="ss">&quot;Total Sales&quot;</span><span class="p">)</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">sales_model</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="c1">-- 3. Aggregate wrapper that matches the measure&#39;s declared aggregation</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="k">SELECT</span><span class="w"> </span><span class="ss">&quot;Region&quot;</span><span class="p">,</span><span class="w"> </span><span class="k">SUM</span><span class="p">(</span><span class="ss">&quot;Total Sales&quot;</span><span class="p">)</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">sales_model</span>
+</span></code></pre></div>
+<p>All three compile to identical vendor SQL — the wrapper is stripped at
+translation time.</p>
+<h3 id="rule-for-aggregate-wrappers">Rule for aggregate wrappers<a class="headerlink" href="#rule-for-aggregate-wrappers" title="Permanent link">&para;</a></h3>
+<p>For <strong>measures</strong>, the wrapping aggregate must equal the measure's
+declared <code>aggregation</code>. Mismatches reject with a clear error:</p>
+<table>
+<thead>
+<tr>
+<th>Measure declares</th>
+<th>Accepted wrap</th>
+<th>Rejected example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>sum</code></td>
+<td><code>SUM("X")</code></td>
+<td><code>MIN("X")</code>, <code>AVG("X")</code></td>
+</tr>
+<tr>
+<td><code>count</code></td>
+<td><code>COUNT("X")</code></td>
+<td><code>SUM("X")</code></td>
+</tr>
+<tr>
+<td><code>count_distinct</code></td>
+<td><code>COUNT(DISTINCT "X")</code></td>
+<td><code>COUNT("X")</code></td>
+</tr>
+<tr>
+<td><code>avg</code></td>
+<td><code>AVG("X")</code></td>
+<td>other</td>
+</tr>
+<tr>
+<td><code>min</code> / <code>max</code></td>
+<td>matching <code>MIN("X")</code> / <code>MAX("X")</code></td>
+<td>crossing them</td>
+</tr>
+</tbody>
+</table>
+<p>Error message names the declared aggregation so the caller can fix it:</p>
+<blockquote>
+<p><code>[UNSUPPORTED_SQL_FEATURE]</code> Measure <code>Order Count</code> is declared as <code>COUNT</code> —
+applying <code>SUM</code> would change its math. Use <code>COUNT("Order Count")</code>, bare
+<code>"Order Count"</code>, or <code>MEASURE("Order Count")</code>.</p>
+</blockquote>
+<h3 id="wrappers-on-metrics">Wrappers on metrics<a class="headerlink" href="#wrappers-on-metrics" title="Permanent link">&para;</a></h3>
+<p><strong>Metrics reject every aggregate wrapper</strong> — a derived expression like
+<code>Revenue per Order = SUM(amount) / COUNT(order_id)</code> is already evaluated
+at the query's grain, and no outer aggregate is mathematically correct.
+Use bare <code>"Revenue per Order"</code> or <code>MEASURE("Revenue per Order")</code>.</p>
+<blockquote>
+<p><code>[UNSUPPORTED_SQL_FEATURE]</code> Metric <code>Revenue per Order</code> is a derived
+expression already evaluated at the query's grain — applying <code>SUM(...)</code>
+would change its math. Use bare <code>"Revenue per Order"</code> or
+<code>MEASURE("Revenue per Order")</code>.</p>
+</blockquote>
+<h3 id="why-this-matters">Why this matters<a class="headerlink" href="#why-this-matters" title="Permanent link">&para;</a></h3>
+<p>BI tools (Tableau, Power BI, Metabase, Superset) emit <code>SUM(measure_col)</code>
+or <code>COUNT(measure_col)</code> reflexively when you drop a measure on a viz.
+For SUM-typed measures this now works seamlessly. For metrics, the user
+sees a concrete error pointing at the right syntax instead of silently
+getting wrong numbers (e.g., the classic "sum of per-region ratios"
+trap). Honesty over convenience — the semantic layer exists to make the
+math right.</p>
+<h2 id="multi-model-addressing-v240">Multi-model addressing (v2.4.0+)<a class="headerlink" href="#multi-model-addressing-v240" title="Permanent link">&para;</a></h2>
+<p>Start the server with multiple OBML files pre-loaded:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">MODEL_FILES</span><span class="o">=</span>examples/sales.yaml,examples/returns.yaml,examples/finance.yaml
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>uv<span class="w"> </span>run<span class="w"> </span>orionbelt-api
+</span></code></pre></div>
+<p>Each model becomes its own Flight SQL catalog. BI tools pick one via the
+<strong>Database</strong> field in their connection dialog:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>DBeaver:
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>  Connection → Database: sales
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>Tableau:
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>  Same field on the Arrow Flight JDBC connector
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>psql (pgwire, v2.5.0+):
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>  postgresql://obsl:KEY@host:5432/sales
+</span></code></pre></div>
+<p>pyarrow programmatic:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">pyarrow.flight</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">flight</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="n">options</span> <span class="o">=</span> <span class="n">flight</span><span class="o">.</span><span class="n">FlightCallOptions</span><span class="p">(</span><span class="n">headers</span><span class="o">=</span><span class="p">[(</span><span class="sa">b</span><span class="s2">&quot;database&quot;</span><span class="p">,</span> <span class="sa">b</span><span class="s2">&quot;sales&quot;</span><span class="p">)])</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="n">info</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">get_flight_info</span><span class="p">(</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>    <span class="n">flight</span><span class="o">.</span><span class="n">FlightDescriptor</span><span class="o">.</span><span class="n">for_command</span><span class="p">(</span><span class="sa">b</span><span class="s1">&#39;SELECT &quot;Region&quot;, &quot;Total Sales&quot; FROM sales&#39;</span><span class="p">),</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>    <span class="n">options</span><span class="o">=</span><span class="n">options</span><span class="p">,</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="p">)</span>
+</span></code></pre></div>
+<h3 id="model-naming-rules">Model naming rules<a class="headerlink" href="#model-naming-rules" title="Permanent link">&para;</a></h3>
+<p>Each OBML defines its addressing key via a top-level <code>name:</code> field; if
+unset, the filename stem is used. Both go through identical
+normalization:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>1. lowercase
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>2. replace runs of [space, dot, dash] with underscore
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>3. collapse underscore runs
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>4. strip leading/trailing underscores
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>5. strip a trailing `_obml` suffix
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>6. validate against ^[a-z][a-z0-9_]{0,62}$
+</span></code></pre></div>
+<p>Examples: <code>My Sales Model</code> → <code>my_sales_model</code>, <code>commerce.v2</code> →
+<code>commerce_v2</code>, <code>sales.obml.yaml</code> (filename) → <code>sales</code>.</p>
+<p>Reserved names (rejected at startup): <code>obsl</code>, <code>obml</code>, <code>obsql</code>, <code>model</code>,
+<code>default</code>, <code>public</code>, <code>information_schema</code>, <code>pg_catalog</code>,
+<code>sqlite_master</code>, <code>mysql</code>, <code>sys</code>, <code>admin</code>, <code>root</code>.</p>
+<p>Name collisions across <code>MODEL_FILES</code> entries error at startup with a
+clear message — no silent shadowing.</p>
+<h3 id="discovery">Discovery<a class="headerlink" href="#discovery" title="Permanent link">&para;</a></h3>
+<p><code>GET /v1/models</code> lists every loaded model:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>curl<span class="w"> </span>http://localhost:8000/v1/models
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="o">{</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">  </span><span class="s2">&quot;models&quot;</span>:<span class="w"> </span><span class="o">[</span>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">    </span><span class="o">{</span><span class="s2">&quot;name&quot;</span>:<span class="w"> </span><span class="s2">&quot;sales&quot;</span>,<span class="w">   </span><span class="s2">&quot;description&quot;</span>:<span class="w"> </span><span class="s2">&quot;...&quot;</span>,<span class="w"> </span><span class="s2">&quot;dimensions&quot;</span>:<span class="w"> </span><span class="m">12</span>,<span class="w"> </span><span class="s2">&quot;measures&quot;</span>:<span class="w"> </span><span class="m">8</span>,<span class="w"> </span>...<span class="o">}</span>,
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">    </span><span class="o">{</span><span class="s2">&quot;name&quot;</span>:<span class="w"> </span><span class="s2">&quot;returns&quot;</span>,<span class="w"> </span><span class="s2">&quot;description&quot;</span>:<span class="w"> </span><span class="s2">&quot;...&quot;</span>,<span class="w"> </span><span class="s2">&quot;dimensions&quot;</span>:<span class="w"> </span><span class="m">9</span>,<span class="w">  </span><span class="s2">&quot;measures&quot;</span>:<span class="w"> </span><span class="m">5</span>,<span class="w"> </span>...<span class="o">}</span>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">  </span><span class="o">]</span>,
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">  </span><span class="s2">&quot;count&quot;</span>:<span class="w"> </span><span class="m">2</span>
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="o">}</span>
+</span></code></pre></div>
+<h3 id="auto-resolve">Auto-resolve<a class="headerlink" href="#auto-resolve" title="Permanent link">&para;</a></h3>
+<p>If exactly one model is loaded (single-model mode or <code>MODEL_FILES</code>
+with one entry), no selector is needed — every connection targets it
+implicitly.</p>
+<h3 id="what-happens-without-a-selector-when-ambiguous">What happens without a selector when ambiguous<a class="headerlink" href="#what-happens-without-a-selector-when-ambiguous" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>[NO_MODEL_SELECTED] Multiple models are loaded and no selector was sent
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>on this connection. Pick one by setting the connection&#39;s `database`
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>field (or `x-obsl-model` header). Available models: returns, sales.
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>  DBeaver:    Connection → Database field = &lt;name&gt;
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>  Tableau:    Same field on the Arrow Flight JDBC connector
+</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>  pyarrow:    options = flight.FlightCallOptions(
+</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>                  headers=[(b&#39;database&#39;, b&#39;&lt;name&gt;&#39;)])
+</span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>  REST:       Use /v1/sessions/&lt;name&gt;/query/semantic-ql
+</span><span id="__span-7-10"><a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>
+</span><span id="__span-7-11"><a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a>Discover available models via GET /v1/models.
+</span></code></pre></div>
+<p>The error itself is the documentation — no need to remember anything.</p>
+<h2 id="no-from-mode-implicit-model">No-FROM mode — implicit model<a class="headerlink" href="#no-from-mode-implicit-model" title="Permanent link">&para;</a></h2>
+<p>On a connection with a resolved model (single-model, or multi-model with
+the <code>database</code> selector set), <code>FROM</code> is optional. These two queries are
+equivalent:</p>
+<div class="language-sql highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="k">SELECT</span><span class="w"> </span><span class="ss">&quot;Customer Country&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">&quot;Total Revenue&quot;</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="k">SELECT</span><span class="w"> </span><span class="ss">&quot;Customer Country&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">&quot;Total Revenue&quot;</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">sales_model</span>
+</span></code></pre></div>
+<p>Classification routes a no-FROM SELECT to semantic mode when <strong>every</strong>
+column identifier matches a dim / measure / metric on the resolved model.
+Unknown identifiers reject with <code>RAW_SQL_REJECTED</code> — not
+<code>UNKNOWN_SELECT_ITEM</code> — so users get a clear "this isn't a query against
+the model" signal rather than a translator error.</p>
+<p><code>SELECT 1</code>, <code>SELECT version()</code>, and other canned scalar probes keep their
+catalog routing (BI tools rely on these for connectivity checks).</p>
+<h2 id="smoke-test-from-the-terminal">Smoke-test from the terminal<a class="headerlink" href="#smoke-test-from-the-terminal" title="Permanent link">&para;</a></h2>
+<p>The repo ships <code>examples/obsql.py</code> — a ~150-line <code>pyarrow.flight</code> CLI for
+running OBSQL without a BI tool. Naming follows the <code>psql</code> / <code>snowsql</code>
+convention (the CLI shares its name with the language it runs).</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># Single-model or auto-resolve</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>examples/obsql.py<span class="w"> </span><span class="s1">&#39;SELECT version()&#39;</span>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>examples/obsql.py<span class="w"> </span><span class="s1">&#39;SHOW TABLES&#39;</span>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>examples/obsql.py<span class="w"> </span><span class="s1">&#39;SELECT &quot;Region&quot;, &quot;Total Sales&quot; LIMIT 5&#39;</span>
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>
+</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="c1"># Multi-model — pick with -m / --model</span>
+</span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>examples/obsql.py<span class="w"> </span>-m<span class="w"> </span>sales<span class="w"> </span><span class="s1">&#39;SHOW TABLES&#39;</span>
+</span><span id="__span-9-8"><a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a>
+</span><span id="__span-9-9"><a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a><span class="c1"># Discover loaded models via REST /v1/models</span>
+</span><span id="__span-9-10"><a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>examples/obsql.py<span class="w"> </span>--list<span class="w"> </span>--rest-port<span class="w"> </span><span class="m">8000</span>
+</span><span id="__span-9-11"><a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a>
+</span><span id="__span-9-12"><a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a><span class="c1"># Verify governance</span>
+</span><span id="__span-9-13"><a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>examples/obsql.py<span class="w"> </span><span class="s1">&#39;DROP TABLE foo&#39;</span><span class="w">       </span><span class="c1"># → WRITE_OPERATION_REJECTED</span>
+</span><span id="__span-9-14"><a id="__codelineno-9-14" name="__codelineno-9-14" href="#__codelineno-9-14"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>examples/obsql.py<span class="w"> </span><span class="s1">&#39;SELECT * FROM customers&#39;</span><span class="w">  </span><span class="c1"># → RAW_SQL_REJECTED</span>
+</span></code></pre></div>
+<p>The CLI sets the <code>database</code> gRPC metadata header from <code>-m</code> (matching what
+the Arrow Flight SQL JDBC driver sends when DBeaver's <em>Database</em> field is
+set), so it exercises the exact same routing path BI tools take.</p>
+<h2 id="raw-mode-detail-rows-via-qualified-columns">Raw mode — detail rows via qualified columns<a class="headerlink" href="#raw-mode-detail-rows-via-qualified-columns" title="Permanent link">&para;</a></h2>
+<p>Sometimes you need un-aggregated rows from a data object — the OBML
+"raw mode" shape. Trigger it by writing <strong>qualified</strong> <code>"DataObject"."column"</code>
+references in SELECT:</p>
+<div class="language-sql highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="k">SELECT</span><span class="w"> </span><span class="ss">&quot;Customers&quot;</span><span class="p">.</span><span class="ss">&quot;Customer Name&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">&quot;Customers&quot;</span><span class="p">.</span><span class="ss">&quot;Country&quot;</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="k">FROM</span><span class="w">   </span><span class="n">sales_model</span>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="k">WHERE</span><span class="w">  </span><span class="ss">&quot;Customers&quot;</span><span class="p">.</span><span class="ss">&quot;Country&quot;</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;US&#39;</span>
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="k">ORDER</span><span class="w">  </span><span class="k">BY</span><span class="w"> </span><span class="ss">&quot;Customers&quot;</span><span class="p">.</span><span class="ss">&quot;Country&quot;</span>
+</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="k">LIMIT</span><span class="w">  </span><span class="mi">100</span>
+</span></code></pre></div>
+<p>Compiles to a <code>QueryObject</code> with <code>select.fields=[...]</code> (no aggregation,
+no joins). Detection rule:</p>
+<ul>
+<li>Every SELECT item must be <code>"&lt;DataObject&gt;"."&lt;column&gt;"</code></li>
+<li>WHERE predicates target qualified columns the same way</li>
+<li><code>DISTINCT</code> is honoured (<code>SELECT DISTINCT "Customers"."Country" FROM ...</code>)</li>
+<li><code>HAVING</code>, <code>GROUP BY</code>, and <code>WITH ROLLUP</code> are <strong>rejected</strong> in raw mode</li>
+<li>Mixing a qualified raw column with a bare dim/measure → <code>MIXED_RAW_AND_AGGREGATE_MODE</code></li>
+</ul>
+<p>Raw mode is the OBSQL equivalent of REST <code>/query/execute</code> with
+<code>select.fields=[...]</code>. It bypasses the dim/measure abstraction but stays
+inside the semantic layer — model-defined row-level filters still
+apply, no joins, no warehouse-side ad-hoc SQL.</p>
+<h2 id="rejected-sql">Rejected SQL<a class="headerlink" href="#rejected-sql" title="Permanent link">&para;</a></h2>
+<p>The translator rejects shapes that don't fit the semantic model with
+stable error codes:</p>
+<table>
+<thead>
+<tr>
+<th>Code</th>
+<th>Triggered by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>UNKNOWN_SELECT_ITEM</code></td>
+<td>SELECT item that's not a known dim / measure / metric.</td>
+</tr>
+<tr>
+<td><code>UNKNOWN_FILTER_FIELD</code></td>
+<td>WHERE / HAVING field that's not a known dim / measure / metric.</td>
+</tr>
+<tr>
+<td><code>UNKNOWN_ORDER_BY_FIELD</code></td>
+<td>ORDER BY identifier missing from SELECT.</td>
+</tr>
+<tr>
+<td><code>INVALID_ORDER_BY_POSITION</code></td>
+<td>Numeric position outside <code>[1, n]</code>.</td>
+</tr>
+<tr>
+<td><code>UNSUPPORTED_SQL_FEATURE</code></td>
+<td>JOIN, CTE, subquery, UNION, window function, <code>SELECT *</code>, aggregate call wrapped around a measure, top-level <code>OR</code>.</td>
+</tr>
+<tr>
+<td><code>RAW_SQL_REJECTED</code></td>
+<td>Flight: FROM target is not the virtual table and not a catalog source. Raw warehouse SQL is <strong>never</strong> accepted (no flag to bypass).</td>
+</tr>
+<tr>
+<td><code>WRITE_OPERATION_REJECTED</code></td>
+<td>Flight or REST: <code>INSERT</code> / <code>UPDATE</code> / <code>DELETE</code> / <code>DROP</code> / <code>CREATE</code> / <code>ALTER</code> / <code>TRUNCATE</code> / <code>MERGE</code> / <code>GRANT</code> / <code>REVOKE</code> / <code>COMMIT</code> / <code>ROLLBACK</code>. OBSL is read-only.</td>
+</tr>
+<tr>
+<td><code>MIXED_RAW_AND_AGGREGATE_MODE</code></td>
+<td>SELECT mixes qualified raw-mode columns (<code>"DataObject"."column"</code>) with bare dim/measure labels. Use one form consistently.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="hierarchical-subtotals-with-rollup-with-cube">Hierarchical subtotals: <code>WITH ROLLUP</code> / <code>WITH CUBE</code><a class="headerlink" href="#hierarchical-subtotals-with-rollup-with-cube" title="Permanent link">&para;</a></h2>
+<p>Add a trailing modifier to compute hierarchical subtotals (<code>ROLLUP</code>) or
+the full cross-tab (<code>CUBE</code>):</p>
+<div class="language-sql highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="k">SELECT</span><span class="w"> </span><span class="ss">&quot;Region&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">&quot;Country&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">&quot;Total Sales&quot;</span>
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="k">FROM</span><span class="w">   </span><span class="n">sales_model</span>
+</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="k">WHERE</span><span class="w">  </span><span class="ss">&quot;Year&quot;</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2025</span>
+</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="k">WITH</span><span class="w"> </span><span class="k">ROLLUP</span>
+</span></code></pre></div>
+<p>The compiler emits the dialect-appropriate form:</p>
+<table>
+<thead>
+<tr>
+<th>Dialect</th>
+<th>Emitted SQL</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Postgres, Snowflake, Databricks, DuckDB, Dremio, BigQuery, MySQL</td>
+<td><code>GROUP BY ROLLUP(a, b)</code> / <code>GROUP BY CUBE(a, b)</code></td>
+</tr>
+<tr>
+<td>ClickHouse</td>
+<td><code>GROUP BY a, b WITH ROLLUP</code> / <code>GROUP BY a, b WITH CUBE</code></td>
+</tr>
+</tbody>
+</table>
+<p>For every selected dimension, a <code>GROUPING(dim) AS _g_&lt;dim&gt;</code> column is
+appended to the result schema. <code>0</code> means the row carries a real value for
+that dimension; <code>1</code> means it was rolled up (NULL value in the dim column).
+The flag columns are the only reliable way to tell a subtotal row from a
+detail row whose dim is legitimately NULL.</p>
+<div class="language-sql highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="c1">-- Keep only the country-level subtotals</span>
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="k">WHERE</span><span class="w"> </span><span class="n">_g_Region</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="k">AND</span><span class="w"> </span><span class="n">_g_Country</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span>
+</span></code></pre></div>
+<h3 id="measure-additivity-under-rollup">Measure additivity under rollup<a class="headerlink" href="#measure-additivity-under-rollup" title="Permanent link">&para;</a></h3>
+<p>OBSL doesn't classify measures by additivity or rewrite their SQL. The
+database recomputes each grouping level from base rows:</p>
+<ul>
+<li><strong>Additive measures</strong> (<code>SUM</code>, <code>COUNT</code>): subtotals sum to higher levels and to the grand total.</li>
+<li><strong>Non-additive measures</strong> (<code>COUNT(DISTINCT)</code>, <code>AVG</code>, percentiles, ratios defined as <code>AVG(x/y)</code>): each grouping level is individually correct, but subtotals <strong>do not sum</strong> to the grand total. Mathematically expected; not a bug.</li>
+<li><strong>Weighted ratios</strong> (<code>SUM(x) / SUM(y)</code>): roll up correctly at every level.</li>
+</ul>
+<h3 id="restrictions">Restrictions<a class="headerlink" href="#restrictions" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>WITH ROLLUP</code> / <code>WITH CUBE</code> require at least one dimension in <code>SELECT</code>.</li>
+<li>The two are mutually exclusive.</li>
+<li>Combining rollup/cube with <code>total: true</code> measures, period-over-period
+  metrics, or cumulative metrics emits an <code>INCOMPATIBLE_COMBINATION</code>
+  warning. The query still runs but the <code>_g_*</code> flag columns may not
+  appear in the final projection.</li>
+</ul>
+<h2 id="rest-examples">REST examples<a class="headerlink" href="#rest-examples" title="Permanent link">&para;</a></h2>
+<h3 id="execute">Execute<a class="headerlink" href="#execute" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>http://localhost:8000/v1/query/semantic-ql<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="w">  </span>-H<span class="w"> </span><span class="s1">&#39;content-type: application/json&#39;</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="w">  </span>-d<span class="w"> </span><span class="s1">&#39;{</span>
+</span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="s1">    &quot;sql&quot;: &quot;SELECT \&quot;Region\&quot;, \&quot;Total Sales\&quot; FROM sales_model WITH ROLLUP&quot;,</span>
+</span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="s1">    &quot;dialect&quot;: &quot;duckdb&quot;</span>
+</span><span id="__span-13-6"><a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a><span class="s1">  }&#39;</span>
+</span></code></pre></div>
+<p>The response shape matches <code>/v1/query/execute</code>: <code>sql</code>, <code>dialect</code>,
+<code>columns</code>, <code>rows</code>, <code>explain</code>, plus the freshness-cache metadata.</p>
+<h3 id="compile-only-debugging">Compile-only (debugging)<a class="headerlink" href="#compile-only-debugging" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>http://localhost:8000/v1/query/semantic-ql/compile<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">  </span>-H<span class="w"> </span><span class="s1">&#39;content-type: application/json&#39;</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="w">  </span>-d<span class="w"> </span><span class="s1">&#39;{ &quot;sql&quot;: &quot;SELECT \&quot;Region\&quot;, \&quot;Total Sales\&quot; FROM sales_model&quot; }&#39;</span>
+</span></code></pre></div>
+<p>The compile response also includes the <strong>translated <code>QueryObject</code> JSON</strong>
+under <code>query</code>, so you can see exactly what your SQL became.</p>
+<h2 id="arrow-flight-sql">Arrow Flight SQL<a class="headerlink" href="#arrow-flight-sql" title="Permanent link">&para;</a></h2>
+<p>The Flight server classifies every incoming SQL by its first <code>FROM</code>
+target:</p>
+<table>
+<thead>
+<tr>
+<th>FROM target</th>
+<th>Mode</th>
+<th>Behavior</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>&lt;model_name&gt;</code> (virtual table)</td>
+<td><code>semantic</code></td>
+<td>Translated → compiled → executed</td>
+</tr>
+<tr>
+<td><code>SHOW TABLES</code>, <code>DESCRIBE</code>, <code>information_schema.*</code>, <code>pg_catalog.*</code>, <code>SELECT version()</code> / <code>current_schema()</code> / <code>SELECT 1</code></td>
+<td><code>catalog</code></td>
+<td>Answered from the <strong>model</strong>; <strong>never</strong> touches the warehouse</td>
+</tr>
+<tr>
+<td><strong>anything else</strong></td>
+<td><code>rejected</code></td>
+<td><code>RAW_SQL_REJECTED</code> — no flag to bypass</td>
+</tr>
+<tr>
+<td>DDL/DML (<code>INSERT</code>, <code>UPDATE</code>, <code>DELETE</code>, <code>DROP</code>, <code>CREATE</code>, <code>ALTER</code>, <code>TRUNCATE</code>, …)</td>
+<td><code>rejected</code></td>
+<td><code>WRITE_OPERATION_REJECTED</code> — OBSL is read-only by design</td>
+</tr>
+</tbody>
+</table>
+<h3 id="governance-closed-by-design">Governance — closed by design<a class="headerlink" href="#governance-closed-by-design" title="Permanent link">&para;</a></h3>
+<p><strong>There are no env flags to enable raw SQL or write operations.</strong> OBSL is
+a semantic layer, not a JDBC proxy. The only thing the warehouse ever
+receives is SQL produced by the OBSL compiler:</p>
+<table>
+<thead>
+<tr>
+<th>Source</th>
+<th>What reaches the warehouse</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Semantic QL via Flight</td>
+<td>Compiled SQL from <code>CompilationPipeline</code></td>
+</tr>
+<tr>
+<td><code>QueryObject</code> via REST <code>/query/execute</code></td>
+<td>Compiled SQL from <code>CompilationPipeline</code></td>
+</tr>
+<tr>
+<td>OBML YAML via Flight</td>
+<td>Compiled SQL from <code>CompilationPipeline</code></td>
+</tr>
+<tr>
+<td>Catalog discovery (SHOW / DESCRIBE / information_schema / pg_catalog)</td>
+<td><strong>Nothing</strong> — answered from the model in-process</td>
+</tr>
+<tr>
+<td>Anything else</td>
+<td><strong>Nothing</strong> — rejected at the door</td>
+</tr>
+</tbody>
+</table>
+<p>Operators cannot accidentally open a hole. There is no "raw SQL" mode,
+no admin override, no escape hatch. If you need direct warehouse access,
+use the warehouse's own clients — not OBSL.</p>
+<p>The Flight catalog (<code>CommandGetTables</code>, <code>CommandGetColumns</code>,
+<code>ListFlights</code>) lists the <strong>semantic virtual table first</strong> with its
+dimension / measure / metric columns, plus the <code>_dimensions</code>,
+<code>_measures</code>, and <code>_metrics</code> metadata views. Data-object physical
+columns are not exposed.</p>
+<h3 id="schema-probe-shortcut">Schema probe shortcut<a class="headerlink" href="#schema-probe-shortcut" title="Permanent link">&para;</a></h3>
+<p>When a Flight client calls <code>GetFlightInfo</code> for a semantic-mode query, the
+result schema is built directly from the model — no warehouse round-trip
+is needed to learn the column types. Faster catalog navigation; no
+spurious <code>EXPLAIN</code>-shaped queries hit the database.</p>
+<h2 id="bi-tool-setup">BI tool setup<a class="headerlink" href="#bi-tool-setup" title="Permanent link">&para;</a></h2>
+<p>The general recipe across BI tools that speak Flight SQL:</p>
+<ol>
+<li>Install the Apache Arrow Flight SQL JDBC <code>.jar</code>.</li>
+<li>Connect to <code>jdbc:arrow-flight-sql://&lt;host&gt;:8815?useEncryption=false</code>.</li>
+<li>Browse the schema — you'll see one table per loaded model, with
+   columns labelled by dimension / measure / metric.</li>
+<li>In the SQL editor, write Semantic QL against that virtual table:</li>
+</ol>
+<div class="language-sql highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="k">SELECT</span><span class="w"> </span><span class="ss">&quot;Region&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">&quot;Total Sales&quot;</span>
+</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="k">FROM</span><span class="w">   </span><span class="n">sales_model</span>
+</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="k">WHERE</span><span class="w">  </span><span class="ss">&quot;Year&quot;</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2025</span>
+</span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="k">ORDER</span><span class="w">  </span><span class="k">BY</span><span class="w"> </span><span class="ss">&quot;Total Sales&quot;</span><span class="w"> </span><span class="k">DESC</span>
+</span><span id="__span-15-5"><a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a><span class="k">LIMIT</span><span class="w">  </span><span class="mi">100</span>
+</span></code></pre></div>
+<p>The semantic layer takes care of every join, every aggregate, every row-
+level rule. BI tools see exactly the columns they're allowed to combine.</p>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  <form class="md-feedback" name="feedback" hidden>
+    <fieldset>
+      <legend class="md-feedback__title">
+        Was this page helpful?
+      </legend>
+      <div class="md-feedback__inner">
+        <div class="md-feedback__list">
+          
+            <button class="md-feedback__icon md-icon" type="submit" title="This page was helpful" data-md-value="1">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 12a8 8 0 0 0-8-8 8 8 0 0 0-8 8 8 8 0 0 0 8 8 8 8 0 0 0 8-8m2 0a10 10 0 0 1-10 10A10 10 0 0 1 2 12 10 10 0 0 1 12 2a10 10 0 0 1 10 10M10 9.5c0 .8-.7 1.5-1.5 1.5S7 10.3 7 9.5 7.7 8 8.5 8s1.5.7 1.5 1.5m7 0c0 .8-.7 1.5-1.5 1.5S14 10.3 14 9.5 14.7 8 15.5 8s1.5.7 1.5 1.5m-5 7.73c-1.75 0-3.29-.73-4.19-1.81L9.23 14c.45.72 1.52 1.23 2.77 1.23s2.32-.51 2.77-1.23l1.42 1.42c-.9 1.08-2.44 1.81-4.19 1.81"/></svg>
+            </button>
+          
+            <button class="md-feedback__icon md-icon" type="submit" title="This page could be improved" data-md-value="0">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 12a8 8 0 0 0-8-8 8 8 0 0 0-8 8 8 8 0 0 0 8 8 8 8 0 0 0 8-8m2 0a10 10 0 0 1-10 10A10 10 0 0 1 2 12 10 10 0 0 1 12 2a10 10 0 0 1 10 10m-6.5-4c.8 0 1.5.7 1.5 1.5s-.7 1.5-1.5 1.5-1.5-.7-1.5-1.5.7-1.5 1.5-1.5M10 9.5c0 .8-.7 1.5-1.5 1.5S7 10.3 7 9.5 7.7 8 8.5 8s1.5.7 1.5 1.5m2 4.5c1.75 0 3.29.72 4.19 1.81l-1.42 1.42C14.32 16.5 13.25 16 12 16s-2.32.5-2.77 1.23l-1.42-1.42C8.71 14.72 10.25 14 12 14"/></svg>
+            </button>
+          
+        </div>
+        <div class="md-feedback__note">
+          
+            <div data-md-value="1" hidden>
+              
+              
+                
+              
+              
+              
+                
+                
+              
+              Thanks for your feedback!
+            </div>
+          
+            <div data-md-value="0" hidden>
+              
+              
+                
+              
+              
+              
+                
+                
+              
+              Thanks for your feedback! Help us improve by <a href="https://github.com/ralfbecher/orionbelt-semantic-layer/issues/new?labels=docs&template=docs-feedback.md" target="_blank" rel="noopener">opening a docs issue</a>.
+            </div>
+          
+        </div>
+      </div>
+    </fieldset>
+  </form>
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2025 RALFORION d.o.o. — BSL 1.1
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+      <div class="md-consent" data-md-component="consent" id="__consent" hidden>
+        <div class="md-consent__overlay"></div>
+        <aside class="md-consent__inner">
+          <form class="md-consent__form md-grid md-typeset" name="consent">
+            
+
+
+
+<h4>Cookie consent</h4>
+<p>We use cookies to recognize your repeated visits and preferences, as well as to measure the effectiveness of our documentation and whether users find what they're searching for. With your consent, you're helping us to make our documentation better.</p>
+<input class="md-toggle" type="checkbox" id="__settings" >
+<div class="md-consent__settings">
+  <ul class="task-list">
+    
+    
+      
+        
+  
+  
+    
+    
+  
+  <li class="task-list-item">
+    <label class="task-list-control">
+      <input type="checkbox" name="analytics" checked>
+      <span class="task-list-indicator"></span>
+      Google Analytics
+    </label>
+  </li>
+
+      
+    
+    
+      
+        
+  
+  
+    
+    
+  
+  <li class="task-list-item">
+    <label class="task-list-control">
+      <input type="checkbox" name="github" checked>
+      <span class="task-list-indicator"></span>
+      GitHub
+    </label>
+  </li>
+
+      
+    
+    
+  </ul>
+</div>
+<div class="md-consent__controls">
+  
+    
+      <button class="md-button md-button--primary">Accept</button>
+    
+    
+    
+  
+    
+    
+      <button type="reset" class="md-button md-button--primary">Reject</button>
+    
+    
+  
+    
+    
+    
+      <label class="md-button" for="__settings">Manage settings</label>
+    
+  
+</div>
+          </form>
+        </aside>
+      </div>
+      <script>var consent=__md_get("__consent");if(consent)for(var input of document.forms.consent.elements)input.name&&(input.checked=consent[input.name]||!1);else"file:"!==location.protocol&&setTimeout((function(){document.querySelector("[data-md-component=consent]").hidden=!1}),250);var form=document.forms.consent;for(var action of["submit","reset"])form.addEventListener(action,(function(e){if(e.preventDefault(),"reset"===e.type)for(var n of document.forms.consent.elements)n.name&&(n.checked=!1);__md_set("__consent",Object.fromEntries(Array.from(new FormData(form).keys()).map((function(e){return[e,!0]})))),location.hash="",location.reload()}))</script>
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "content.tabs.link", "toc.follow", "announce.dismiss"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

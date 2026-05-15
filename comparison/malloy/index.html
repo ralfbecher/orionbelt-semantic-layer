@@ -772,6 +772,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../guide/semantic-ql/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OrionBelt Semantic QL (OBSQL)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../guide/dialects/" class="md-nav__link">
         
   
@@ -1870,7 +1898,7 @@
 </nav>
 <div class="obml-version-badge">
   OBML v1.0<br>
-  OrionBelt v2.3.1
+  OrionBelt v2.4.0
 </div>
       
     </li>
@@ -2460,7 +2488,7 @@
 </nav>
 <div class="obml-version-badge">
   OBML v1.0<br>
-  OrionBelt v2.3.1
+  OrionBelt v2.4.0
 </div>
                   </div>
                 </div>
@@ -2787,13 +2815,33 @@
 </thead>
 <tbody>
 <tr>
+<td>Query language</td>
+<td><strong>OBSQL</strong> (BI-style SQL: <code>SELECT "dim", "measure" FROM &lt;model&gt;</code> or no FROM) <strong>+</strong> native JSON <code>QueryObject</code></td>
+<td><strong>Malloy DSL</strong> — language-defined query syntax (<code>run: source -&gt; { group_by: x, aggregate: y }</code>)</td>
+</tr>
+<tr>
+<td>Natural SQL surface</td>
+<td><strong>OrionBelt Semantic QL (OBSQL)</strong> through the same Flight SQL endpoint BI tools use; aggregate-wrap matching against declared aggregation; <code>WITH ROLLUP</code> / <code>WITH CUBE</code> first-class</td>
+<td>No — Malloy is its own language; BI tools speak SQL, not Malloy</td>
+</tr>
+<tr>
+<td>Catalog discovery from BI tools</td>
+<td><code>SHOW TABLES</code>, <code>DESCRIBE</code>, <code>information_schema.*</code>, <code>pg_catalog.*</code> answered from the model in-process</td>
+<td>n/a (Malloy clients call the Malloy language)</td>
+</tr>
+<tr>
+<td>Governance</td>
+<td><strong>Closed by design</strong> — <code>RAW_SQL_REJECTED</code> / <code>WRITE_OPERATION_REJECTED</code>. No env flag to bypass.</td>
+<td>n/a</td>
+</tr>
+<tr>
 <td>REST API</td>
 <td>Yes — first-party FastAPI service in this repo</td>
 <td>Yes — via the <strong>Publisher</strong> companion project (<code>malloydata/publisher</code>)</td>
 </tr>
 <tr>
 <td>Arrow Flight SQL</td>
-<td>Yes — gRPC server on port 8815; BI tools (DBeaver, Tableau, Power BI) connect via Arrow Flight SQL JDBC</td>
+<td>Yes — gRPC server on port 8815; BI tools (DBeaver, Tableau, Power BI) connect via Arrow Flight SQL JDBC. Multi-model addressing via the <code>database</code> gRPC header.</td>
 <td>No</td>
 </tr>
 <tr>
