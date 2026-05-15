@@ -362,6 +362,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
                 session_manager=mgr,
                 port=settings.flight_port,
                 default_dialect=settings.db_vendor,
+                cache=cache,
+                cache_config=cache_config,
             )
             settings.flight_enabled = True
             logger.info(

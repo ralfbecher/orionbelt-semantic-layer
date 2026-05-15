@@ -186,6 +186,8 @@ class OBFlightServer(flight.FlightServerBase):
         session_manager: Any = None,
         default_dialect: str = "duckdb",
         batch_size: int = 1024,
+        cache: Any = None,
+        cache_config: Any = None,
     ) -> None:
         super().__init__(
             location,
@@ -195,6 +197,12 @@ class OBFlightServer(flight.FlightServerBase):
         self._session_manager = session_manager
         self._default_dialect = default_dialect
         self._batch_size = batch_size
+        # Freshness-driven result cache + config. When ``cache`` is None
+        # (or its backend is "noop") the Flight path skips all cache ops.
+        # Wired from app.py lifespan so the Flight surface participates
+        # in the same TTL / heartbeat contracts as REST /query/execute.
+        self._cache = cache
+        self._cache_config = cache_config
         self._lock = threading.Lock()
         # Pending queries: ticket_id -> (payload, timestamp)
         # payload is either ("sql", sql, dialect) or ("catalog", type_url)
@@ -596,10 +604,14 @@ class OBFlightServer(flight.FlightServerBase):
         self,
         sql: str,
         context: flight.ServerCallContext | None = None,
-    ) -> tuple[str, str, Any, pa.Schema | None, str]:
+    ) -> tuple[str, str, Any, pa.Schema | None, str, dict | None]:
         """Resolve model, classify SQL, translate / compile / route.
 
-        Returns ``(final_sql_or_token, dialect, model, schema_hint, mode)``.
+        Returns ``(final_sql_or_token, dialect, model, schema_hint, mode,
+        cache_meta)``. ``cache_meta`` is a dict with ``key``, ``ttl``,
+        ``session_id``, ``model_id``, ``physical_tables`` when the semantic
+        query is cacheable; ``None`` otherwise (catalog mode, no cache
+        backend, OBML, or oversize-skip).
 
         * ``mode == _MODE_SEMANTIC`` — ``final_sql_or_token`` is compiled
           warehouse SQL; ``schema_hint`` is the result schema computed
@@ -644,7 +656,7 @@ class OBFlightServer(flight.FlightServerBase):
             sql = self._compile_obml(obml, model, dialect)
             logger.info("Compiled SQL:\n%s", sql)
             sql = self._rewrite_table_names(sql, model)
-            return sql, dialect, model, None, _MODE_SEMANTIC
+            return sql, dialect, model, None, _MODE_SEMANTIC, None
 
         mode = self._classify_sql(sql, model)
 
@@ -661,12 +673,18 @@ class OBFlightServer(flight.FlightServerBase):
             sql = self._rewrite_table_names(compiled.sql, model)
             logger.info("Compiled SQL:\n%s", sql)
             schema_hint = self._semantic_result_schema(query, model)
-            return sql, dialect, model, schema_hint, _MODE_SEMANTIC
+            cache_meta = self._build_cache_meta(
+                query=query,
+                dialect=dialect,
+                context=context,
+                physical_tables=list(getattr(compiled, "physical_tables", [])),
+            )
+            return sql, dialect, model, schema_hint, _MODE_SEMANTIC, cache_meta
 
         if mode == _MODE_CATALOG:
             # Don't compile or rewrite — the caller routes the original SQL
             # to a model-backed catalog handler. Schema is computed there.
-            return sql, dialect, model, None, _MODE_CATALOG
+            return sql, dialect, model, None, _MODE_CATALOG, None
 
         # _MODE_REJECTED — no escape hatch.
         raise flight.FlightServerError(
@@ -676,6 +694,89 @@ class OBFlightServer(flight.FlightServerBase):
             "(3) catalog discovery (SHOW / DESCRIBE / information_schema / "
             "pg_catalog). Arbitrary warehouse SQL is rejected by design."
         )
+
+    def _build_cache_meta(
+        self,
+        *,
+        query: Any,
+        dialect: str,
+        context: flight.ServerCallContext | None,
+        physical_tables: list[str],
+    ) -> dict | None:
+        """Compute cache key + TTL for a semantic Flight query.
+
+        Returns ``None`` when the cache backend is disabled or the TTL
+        resolver decides the query isn't cacheable (no refresh contracts
+        + ``no_cache`` unknown policy). The caller drops the cache_meta
+        and runs the warehouse query directly.
+        """
+        if self._cache is None or self._cache_config is None:
+            return None
+        backend = getattr(self._cache, "backend_name", "noop")
+        if backend == "noop":
+            return None
+
+        # Resolve session_id from the selector header. Falls back to the
+        # __default__ slot for legacy single-model deployments — matches
+        # how the REST endpoints derive session_id for the cache key.
+        selector = self._selector_from_context(context) or ""
+        if not selector:
+            # Use the protected list (auto-resolve) — single-entry path.
+            protected = self._list_available_model_names()
+            selector = protected[0] if len(protected) == 1 else "__default__"
+
+        try:
+            store = self._session_manager.get_store(selector)
+            models = store.list_models()
+            if not models:
+                return None
+            model_id = models[0].model_id
+        except Exception:
+            return None
+
+        from orionbelt.cache import build_cache_key, compute_effective_ttl
+
+        query_json = query.model_dump(by_alias=True, mode="json")
+        cache_key = build_cache_key(
+            session_id=selector,
+            model_id=model_id,
+            dialect=dialect,
+            query=query_json,
+        )
+
+        # Resolve TTL from refresh contracts + heartbeats — same logic
+        # the REST endpoint uses.
+        try:
+            contracts = store.refresh_contracts(model_id)
+        except Exception:
+            contracts = {}
+        heartbeats: dict = {}
+        snapshot = getattr(self._cache, "heartbeats_snapshot", None)
+        if callable(snapshot):
+            try:
+                heartbeats = snapshot()
+            except Exception:
+                heartbeats = {}
+        ttl_outcome = compute_effective_ttl(
+            physical_tables=physical_tables,
+            contracts=contracts,
+            heartbeats=heartbeats,
+            min_ttl_seconds=self._cache_config.min_ttl_seconds,
+            max_ttl_seconds=self._cache_config.max_ttl_seconds,
+            unknown_policy=self._cache_config.unknown_policy,
+            unknown_default_ttl_seconds=self._cache_config.unknown_default_ttl_seconds,
+        )
+        if ttl_outcome.ttl is None:
+            return None
+        return {
+            "key": cache_key,
+            "ttl": int(ttl_outcome.ttl.seconds),
+            "session_id": selector,
+            "model_id": model_id,
+            "physical_tables": physical_tables,
+            "dialect": dialect,
+            "query": query_json,
+        }
 
     @staticmethod
     def _reject_write_operation(sql: str) -> None:
@@ -1012,9 +1113,14 @@ class OBFlightServer(flight.FlightServerBase):
                 sql = parse_statement_query(value)
                 if sql is None:
                     raise flight.FlightServerError("Failed to parse SQL from Flight SQL command")
-                prepared_sql, dialect, prep_model, schema_hint, mode = self._prepare_sql(
-                    sql, context=context
-                )
+                (
+                    prepared_sql,
+                    dialect,
+                    prep_model,
+                    schema_hint,
+                    mode,
+                    cache_meta,
+                ) = self._prepare_sql(sql, context=context)
                 if mode == _MODE_CATALOG:
                     # Pre-compute the catalog table so the FlightInfo schema
                     # matches what do_get streams. Without this, JDBC clients
@@ -1024,7 +1130,9 @@ class OBFlightServer(flight.FlightServerBase):
                     self._store_pending(ticket_id, ("obsql_catalog_table", table))
                     schema = table.schema
                 else:
-                    self._store_pending(ticket_id, ("sql", prepared_sql, dialect))
+                    self._store_pending(
+                        ticket_id, ("sql", prepared_sql, dialect, cache_meta)
+                    )
                     schema = (
                         schema_hint
                         if schema_hint is not None
@@ -1039,13 +1147,15 @@ class OBFlightServer(flight.FlightServerBase):
                 handle_hex = handle.hex()
                 if handle_hex not in self._prepared:
                     raise flight.FlightServerError(f"Unknown prepared statement: {handle_hex}")
-                first, payload, schema = self._prepared[handle_hex]
+                entry = self._prepared[handle_hex]
+                first, payload, schema = entry[0], entry[1], entry[2]
+                cache_meta_pp = entry[3] if len(entry) > 3 else None
                 if first == "__catalog__":
                     # Precomputed catalog table — stream it directly.
                     self._store_pending(ticket_id, ("obsql_catalog_table", payload))
                 else:
                     # Regular SQL path: first=sql, payload=dialect.
-                    self._store_pending(ticket_id, ("sql", first, payload))
+                    self._store_pending(ticket_id, ("sql", first, payload, cache_meta_pp))
 
             elif type_url in _CATALOG_COMMANDS:
                 # Stash both the command type and its protobuf body so
@@ -1071,16 +1181,21 @@ class OBFlightServer(flight.FlightServerBase):
 
         # Plain text: SQL or OBML
         query_str = command_bytes.decode("utf-8")
-        prepared_sql, dialect, prep_model, schema_hint, mode = self._prepare_sql(
-            query_str, context=context
-        )
+        (
+            prepared_sql,
+            dialect,
+            prep_model,
+            schema_hint,
+            mode,
+            cache_meta,
+        ) = self._prepare_sql(query_str, context=context)
         if mode == _MODE_CATALOG:
             # Precompute table so FlightInfo advertises the real schema.
             table = self._handle_catalog_sql(prepared_sql, prep_model)
             self._store_pending(ticket_id, ("obsql_catalog_table", table))
             schema = table.schema
         else:
-            self._store_pending(ticket_id, ("sql", prepared_sql, dialect))
+            self._store_pending(ticket_id, ("sql", prepared_sql, dialect, cache_meta))
             schema = (
                 schema_hint
                 if schema_hint is not None
@@ -1120,9 +1235,11 @@ class OBFlightServer(flight.FlightServerBase):
             table = self._handle_catalog_sql(str(pending[1]), model)
             return flight.RecordBatchStream(table)
 
-        # kind == "sql"
-        _, sql, dialect = pending
-        return self._execute_sql(str(sql), str(dialect))
+        # kind == "sql" — possibly with a cache_meta as 4th element
+        sql = str(pending[1])
+        dialect = str(pending[2])
+        cache_meta = pending[3] if len(pending) > 3 else None
+        return self._execute_sql(sql, dialect, cache_meta=cache_meta)
 
     def _handle_catalog_command(
         self,
@@ -1175,16 +1292,35 @@ class OBFlightServer(flight.FlightServerBase):
         logger.debug("Catalog response for %s: %d rows", type_url.rsplit(".", 1)[-1], len(table))
         return flight.RecordBatchStream(table)
 
-    def _execute_sql(self, sql: str, dialect: str) -> flight.RecordBatchStream:
+    def _execute_sql(
+        self,
+        sql: str,
+        dialect: str,
+        cache_meta: dict | None = None,
+    ) -> flight.RecordBatchStream:
         """Execute SQL on the vendor database and stream results.
 
         Note: table name rewriting is already handled by ``_prepare_sql``
         during the ``get_flight_info`` phase — no need to rewrite here.
+
+        When ``cache_meta`` is set (semantic mode + cache backend
+        enabled), the function consults the freshness-driven result
+        cache first: on hit it decodes the cached Arrow payload and
+        returns it directly; on miss it executes against the warehouse
+        and writes the resulting ``pa.Table`` back to the cache under
+        the TTL resolved at prepare time. See PLAN_freshness_driven_cache.
         """
         # Virtual metadata tables — served from model, no DB needed
         vt = self._detect_virtual_table(sql)
         if vt is not None:
             return self._query_virtual_table(vt)
+
+        # Cache lookup — only when the prepare step gave us a key + ttl.
+        if cache_meta is not None and self._cache is not None:
+            cached_table = self._cache_get_table(cache_meta["key"])
+            if cached_table is not None:
+                logger.info("Flight cache HIT: key=%s rows=%d", cache_meta["key"], cached_table.num_rows)
+                return flight.RecordBatchStream(cached_table)
 
         conn = db_connect(dialect)
         try:
@@ -1215,9 +1351,92 @@ class OBFlightServer(flight.FlightServerBase):
                 batches = [rows_to_batch([], schema)]
 
             table = pa.Table.from_batches(batches)
+
+            # Cache populate — write back after a successful warehouse run.
+            if cache_meta is not None and self._cache is not None:
+                self._cache_put_table(table, cache_meta)
+
             return flight.RecordBatchStream(table)
         finally:
             conn.close()
+
+    def _cache_get_table(self, key: str) -> pa.Table | None:
+        """Look up a Flight cache entry. Returns the decoded ``pa.Table`` or None.
+
+        The cache stores parquet-encoded payloads (the same shape REST
+        uses). We round-trip through ``pq.read_table`` to drop the
+        envelope metadata and recover just the Arrow table.
+        """
+        import asyncio
+
+        try:
+            loop = asyncio.new_event_loop()
+            try:
+                result = loop.run_until_complete(self._cache.get(key))
+            finally:
+                loop.close()
+        except Exception:
+            logger.debug("cache.get failed for key=%s", key, exc_info=True)
+            return None
+        if result is None or not getattr(result, "payload", None):
+            return None
+        try:
+            import io
+
+            import pyarrow.parquet as pq
+
+            return pq.read_table(io.BytesIO(result.payload))
+        except Exception:
+            logger.debug("cache decode failed for key=%s", key, exc_info=True)
+            return None
+
+    def _cache_put_table(self, table: pa.Table, cache_meta: dict) -> None:
+        """Serialize a ``pa.Table`` to parquet and store under ``cache_meta``.
+
+        Errors are swallowed — cache write failures must never break
+        query execution.
+        """
+        import asyncio
+
+        import pyarrow.parquet as pq
+
+        try:
+            buf = pa.BufferOutputStream()
+            pq.write_table(table, buf, compression="snappy")
+            payload = bytes(buf.getvalue())
+        except Exception:
+            logger.debug("cache encode failed", exc_info=True)
+            return
+
+        from orionbelt.cache import query_hash as _query_hash
+
+        try:
+            loop = asyncio.new_event_loop()
+            try:
+                loop.run_until_complete(
+                    self._cache.set(
+                        cache_meta["key"],
+                        payload,
+                        ttl_seconds=cache_meta["ttl"],
+                        physical_tables=cache_meta["physical_tables"],
+                        session_id=cache_meta["session_id"],
+                        model_id=cache_meta["model_id"],
+                        query_hash=_query_hash(cache_meta.get("query", {})),
+                        dialect=cache_meta["dialect"],
+                        row_count=table.num_rows,
+                    )
+                )
+            finally:
+                loop.close()
+            logger.info(
+                "Flight cache STORE: key=%s ttl=%ds rows=%d size=%dB",
+                cache_meta["key"],
+                cache_meta["ttl"],
+                table.num_rows,
+                len(payload),
+            )
+        except Exception:
+            logger.debug("cache.set failed", exc_info=True)
 
     def do_action(self, context: flight.ServerCallContext, action: flight.Action) -> Any:
         """Handle Flight SQL actions (CreatePreparedStatement, ClosePreparedStatement)."""
@@ -1228,9 +1447,14 @@ class OBFlightServer(flight.FlightServerBase):
             if sql is None:
                 raise flight.FlightServerError("Failed to parse prepared statement query")
 
-            prepared_sql, dialect, prep_model, schema_hint, mode = self._prepare_sql(
-                sql, context=context
-            )
+            (
+                prepared_sql,
+                dialect,
+                prep_model,
+                schema_hint,
+                mode,
+                cache_meta,
+            ) = self._prepare_sql(sql, context=context)
             if mode == _MODE_CATALOG:
                 # DBeaver's SQL editor uses prepared statements, so we
                 # MUST advertise the real schema here. Precompute the
@@ -1251,7 +1475,9 @@ class OBFlightServer(flight.FlightServerBase):
                 )
                 handle = uuid.uuid4().bytes
                 handle_hex = handle.hex()
-                self._prepared[handle_hex] = (sql, dialect, schema)
+                # Stash cache_meta on the prepared entry under a 4th slot
+                # so CMD_PREPARED_STATEMENT_QUERY can forward it to do_get.
+                self._prepared[handle_hex] = (sql, dialect, schema, cache_meta)
 
             logger.debug(
                 "Created prepared statement %s (mode=%s, %d cols)",

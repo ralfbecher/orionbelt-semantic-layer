@@ -19,6 +19,8 @@ def start_flight_background(
     port: int | None = None,
     auth_handler: Any = None,
     default_dialect: str | None = None,
+    cache: Any = None,
+    cache_config: Any = None,
 ) -> threading.Thread:
     """Launch the Flight SQL server in a daemon thread.
 
@@ -51,6 +53,8 @@ def start_flight_background(
         auth_handler=auth_handler,
         session_manager=session_manager,
         default_dialect=default_dialect,
+        cache=cache,
+        cache_config=cache_config,
     )
 
     _thread = threading.Thread(
