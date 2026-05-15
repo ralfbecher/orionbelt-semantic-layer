@@ -28,6 +28,8 @@ def _make_server(mgr=None, dialect: str = "duckdb") -> OBFlightServer:
     server._prepared = {}
     server._pending_ttl = 300
     server._batch_size = 1024
+    server._cache = None
+    server._cache_config = None
     return server
 
 
@@ -121,8 +123,10 @@ class TestCompileObml:
 
         with patch("orionbelt.compiler.pipeline.CompilationPipeline", mock_pipeline_cls):
             with patch("orionbelt.models.query.QueryObject", mock_qo_cls):
-                sql = server._compile_obml({"select": {"dimensions": ["Region"]}}, model, "duckdb")
-                assert sql == "SELECT region FROM orders"
+                result = server._compile_obml(
+                    {"select": {"dimensions": ["Region"]}}, model, "duckdb"
+                )
+                assert result.sql == "SELECT region FROM orders"
                 mock_qo_cls.model_validate.assert_called_once()
                 mock_pipeline_cls.return_value.compile.assert_called_once()
 
@@ -163,7 +167,10 @@ class TestGetFlightInfo:
         context = MagicMock()
 
         compiled_sql = "SELECT region, SUM(amount) FROM orders GROUP BY region"
-        with patch.object(server, "_compile_obml", return_value=compiled_sql):
+        compiled = MagicMock()
+        compiled.sql = compiled_sql
+        compiled.physical_tables = []
+        with patch.object(server, "_compile_obml", return_value=compiled):
             with patch.object(server, "_probe_schema", return_value=self._mock_probe()):
                 server.get_flight_info(context, descriptor)
         assert len(server._pending) == 1

@@ -93,6 +93,11 @@ METRICS_METADATA_SCHEMA = pa.schema(
         pa.field("metric_type", pa.utf8()),
         pa.field("expression", pa.utf8()),
         pa.field("measure", pa.utf8()),
+        # Cumulative & period-over-period metrics require a time dimension —
+        # surface it so BI users know to pair the metric with that dimension.
+        pa.field("time_dimension", pa.utf8()),
+        pa.field("window", pa.int64()),
+        pa.field("grain_to_date", pa.utf8()),
         pa.field("description", pa.utf8()),
     ]
 )
@@ -316,15 +321,36 @@ def build_metrics_data(model: Any) -> pa.Table:
     metric_types: list[str] = []
     expressions: list[str | None] = []
     measures: list[str | None] = []
+    time_dimensions: list[str | None] = []
+    windows: list[int | None] = []
+    grain_to_dates: list[str | None] = []
     descriptions: list[str | None] = []
 
     if hasattr(model, "metrics") and model.metrics:
         for met_name, met in model.metrics.items():
             names.append(getattr(met, "label", met_name) or met_name)
             mt = getattr(met, "type", None)
-            metric_types.append(mt.value if hasattr(mt, "value") else str(mt or "derived"))
+            mt_value = mt.value if hasattr(mt, "value") else str(mt or "derived")
+            metric_types.append(mt_value)
             expressions.append(getattr(met, "expression", None))
             measures.append(getattr(met, "measure", None))
+
+            # Cumulative metrics carry ``time_dimension`` directly. PoP metrics
+            # hide theirs inside ``period_over_period.time_dimension``. Derived
+            # metrics have neither — emit NULL.
+            td = getattr(met, "time_dimension", None)
+            if not td:
+                pop = getattr(met, "period_over_period", None)
+                td = getattr(pop, "time_dimension", None) if pop is not None else None
+            time_dimensions.append(td or None)
+
+            win = getattr(met, "window", None)
+            windows.append(int(win) if isinstance(win, int) else None)
+
+            gtd = getattr(met, "grain_to_date", None)
+            gtd_value = gtd.value if hasattr(gtd, "value") else (str(gtd) if gtd else None)
+            grain_to_dates.append(gtd_value)
+
             descriptions.append(getattr(met, "description", None))
 
     return pa.table(
@@ -333,6 +359,9 @@ def build_metrics_data(model: Any) -> pa.Table:
             "metric_type": metric_types,
             "expression": expressions,
             "measure": measures,
+            "time_dimension": time_dimensions,
+            "window": windows,
+            "grain_to_date": grain_to_dates,
             "description": descriptions,
         },
         schema=METRICS_METADATA_SCHEMA,

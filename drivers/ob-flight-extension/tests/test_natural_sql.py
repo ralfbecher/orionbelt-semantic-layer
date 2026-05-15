@@ -121,6 +121,8 @@ def _make_server(model: object) -> OBFlightServer:
     server._pending = {}
     server._prepared = {}
     server._pending_ttl = 300
+    server._cache = None
+    server._cache_config = None
     return server
 
 
@@ -248,8 +250,7 @@ class TestClassifySQL:
         """`SELECT "X" FROM _<kind>` → compiled through the semantic pipeline."""
         server = _make_server(model)
         assert (
-            server._classify_sql('SELECT "Customer Country" FROM dimensions', model)
-            == "semantic"
+            server._classify_sql('SELECT "Customer Country" FROM dimensions', model) == "semantic"
         )
         assert server._classify_sql('SELECT "Total Revenue" FROM measures', model) == "semantic"
 
@@ -268,7 +269,7 @@ class TestClassifySQL:
 class TestPrepareSQL:
     def test_semantic_compiles(self, model) -> None:
         server = _make_server(model)
-        sql, dialect, _m, schema, mode = server._prepare_sql(
+        sql, dialect, _m, schema, mode, _cache = server._prepare_sql(
             'SELECT "Customer Country", "Total Revenue" FROM sample_model'
         )
         assert mode == "semantic"
@@ -319,12 +320,14 @@ class TestPrepareSQL:
     def test_catalog_query_routes_to_catalog_mode(self, model) -> None:
         """information_schema / SHOW / DESCRIBE return mode=catalog."""
         server = _make_server(model)
-        _sql, _d, _m, _schema, mode = server._prepare_sql("SELECT * FROM information_schema.tables")
+        _sql, _d, _m, _schema, mode, _cache = server._prepare_sql(
+            "SELECT * FROM information_schema.tables"
+        )
         assert mode == "catalog"
 
     def test_show_tables_routes_to_catalog_mode(self, model) -> None:
         server = _make_server(model)
-        _sql, _d, _m, _schema, mode = server._prepare_sql("SHOW TABLES")
+        _sql, _d, _m, _schema, mode, _cache = server._prepare_sql("SHOW TABLES")
         assert mode == "catalog"
 
 
@@ -407,7 +410,7 @@ class TestCatalogHandling:
 class TestSchemaProbeShortcut:
     def test_semantic_query_returns_arrow_schema_without_db(self, model) -> None:
         server = _make_server(model)
-        _sql, _d, _m, schema, _mode = server._prepare_sql(
+        _sql, _d, _m, schema, _mode, _cache = server._prepare_sql(
             'SELECT "Customer Country", "Total Revenue" FROM sample_model '
             "WHERE \"Customer Country\" = 'US'"
         )
@@ -418,7 +421,7 @@ class TestSchemaProbeShortcut:
 
     def test_rollup_adds_grouping_flag_columns(self, model) -> None:
         server = _make_server(model)
-        _sql, _d, _m, schema, _mode = server._prepare_sql(
+        _sql, _d, _m, schema, _mode, _cache = server._prepare_sql(
             'SELECT "Customer Country", "Total Revenue" FROM sample_model WITH ROLLUP'
         )
         assert schema is not None
