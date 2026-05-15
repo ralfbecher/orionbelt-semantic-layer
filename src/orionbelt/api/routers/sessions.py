@@ -346,6 +346,7 @@ async def compile_query(
         model_for_dialect = store.get_model(body.model_id)
     except KeyError:
         raise HTTPException(status_code=404, detail=f"Model '{body.model_id}' not found") from None
+    logger.info("QueryObject request:\n%s", body.query.model_dump_json(by_alias=True, indent=2))
     dialect = _resolve_dialect(request_dialect=body.dialect, model=model_for_dialect)
     try:
         result = store.compile_query(body.model_id, body.query, dialect)
@@ -378,6 +379,7 @@ async def compile_query(
                 "aggregation": exc.aggregation,
             },
         ) from None
+    logger.info("Compiled SQL:\n%s", result.sql)
     explain_resp = None
     if result.explain:
         explain_resp = ExplainPlanResponse(
@@ -820,6 +822,8 @@ async def execute_query(
         raise HTTPException(status_code=404, detail=f"Model '{body.model_id}' not found") from None
     from orionbelt.api.deps import get_db_vendor
 
+    logger.info("QueryObject request:\n%s", query.model_dump_json(by_alias=True, indent=2))
+
     dialect = _resolve_dialect(request_dialect=body.dialect, model=model, fallback=get_db_vendor())
     try:
         result = store.compile_query(body.model_id, query, dialect)
@@ -852,6 +856,8 @@ async def execute_query(
                 "aggregation": exc.aggregation,
             },
         ) from None
+
+    logger.info("Compiled SQL:\n%s", result.sql)
 
     return await _run_with_cache(
         store=store,
@@ -910,6 +916,8 @@ async def compile_semantic_ql(
     except KeyError:
         raise HTTPException(status_code=404, detail=f"Model '{body.model_id}' not found") from None
 
+    logger.info("OBSQL request:\n%s", body.sql)
+
     try:
         query = translate_sql_to_query(body.sql, model)
     except SQLTranslationError as exc:
@@ -945,6 +953,8 @@ async def compile_semantic_ql(
                 "aggregation": exc.aggregation,
             },
         ) from None
+
+    logger.info("Compiled SQL:\n%s", result.sql)
 
     return SemanticQLCompileResponse(
         sql=format_sql(result.sql, result.dialect),
@@ -1001,6 +1011,8 @@ async def execute_semantic_ql(
     except KeyError:
         raise HTTPException(status_code=404, detail=f"Model '{body.model_id}' not found") from None
 
+    logger.info("OBSQL request:\n%s", body.sql)
+
     try:
         query = translate_sql_to_query(body.sql, model)
     except SQLTranslationError as exc:
@@ -1040,6 +1052,8 @@ async def execute_semantic_ql(
                 "aggregation": exc.aggregation,
             },
         ) from None
+
+    logger.info("Compiled SQL:\n%s", result.sql)
 
     return await _run_with_cache(
         store=store,

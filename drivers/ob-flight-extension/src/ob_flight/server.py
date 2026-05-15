@@ -640,14 +640,16 @@ class OBFlightServer(flight.FlightServerBase):
         # OBML YAML wrapped as a SQL string — power-user path
         if is_obml(sql):
             obml = parse_obml(sql)
+            logger.info("OBML request:\n%s", sql)
             sql = self._compile_obml(obml, model, dialect)
-            logger.info("Compiled OBML to SQL: %s", sql[:200])
+            logger.info("Compiled SQL:\n%s", sql)
             sql = self._rewrite_table_names(sql, model)
             return sql, dialect, model, None, _MODE_SEMANTIC
 
         mode = self._classify_sql(sql, model)
 
         if mode == _MODE_SEMANTIC:
+            logger.info("OBSQL request:\n%s", sql)
             try:
                 query = translate_sql_to_query(sql, model)
             except SQLTranslationError as exc:
@@ -657,7 +659,7 @@ class OBFlightServer(flight.FlightServerBase):
                 ) from None
             compiled = CompilationPipeline().compile(query, model, dialect)
             sql = self._rewrite_table_names(compiled.sql, model)
-            logger.info("Compiled OBSQL → %s", sql[:200])
+            logger.info("Compiled SQL:\n%s", sql)
             schema_hint = self._semantic_result_schema(query, model)
             return sql, dialect, model, schema_hint, _MODE_SEMANTIC
 
