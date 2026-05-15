@@ -1285,7 +1285,7 @@ class OBFlightServer(flight.FlightServerBase):
             # "Database" dropdown in DBeaver/Tableau/Power BI.
             table = build_catalogs_table(self._list_available_model_names())
         elif type_url == CMD_GET_DB_SCHEMAS:
-            table = build_db_schemas_table()
+            table = build_db_schemas_table(self._list_available_model_names())
         elif type_url == CMD_GET_TABLES:
             table = self._build_tables_from_model(context, table_filter=table_filter)
         elif type_url == CMD_GET_COLUMNS:

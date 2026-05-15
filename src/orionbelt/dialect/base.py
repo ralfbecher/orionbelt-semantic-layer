@@ -44,6 +44,20 @@ class UnsupportedAggregationError(Exception):
         super().__init__(f"Dialect '{dialect}' does not support {aggregation.upper()} aggregation")
 
 
+class UnsupportedGroupingError(Exception):
+    """Raised when a dialect does not support a specific grouping modifier
+    (``CUBE`` / ``ROLLUP`` / ``GROUPING SETS``). Routers translate this to
+    a 422 with the dialect + grouping in the response body; without this
+    domain error the underlying ``NotImplementedError`` would surface as a
+    500.
+    """
+
+    def __init__(self, dialect: str, grouping: str) -> None:
+        self.dialect = dialect
+        self.grouping = grouping
+        super().__init__(f"Dialect '{dialect}' does not support GROUP BY {grouping.upper()}")
+
+
 @dataclass
 class DialectCapabilities:
     """Flags indicating what SQL features a dialect supports."""

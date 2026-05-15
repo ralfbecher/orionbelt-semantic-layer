@@ -54,7 +54,7 @@ from orionbelt.api.warnings_adapter import error_info_to_detail, semantic_error_
 from orionbelt.compiler.fanout import FanoutError
 from orionbelt.compiler.resolution import ResolutionError
 from orionbelt.compiler.validator import format_sql
-from orionbelt.dialect.base import UnsupportedAggregationError
+from orionbelt.dialect.base import UnsupportedAggregationError, UnsupportedGroupingError
 from orionbelt.dialect.registry import UnsupportedDialectError
 from orionbelt.models.query import QueryObject
 from orionbelt.models.semantic import SemanticModel
@@ -437,6 +437,16 @@ async def shortcut_compile_query(
                 "aggregation": exc.aggregation,
             },
         ) from None
+    except UnsupportedGroupingError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "error": "Unsupported grouping",
+                "message": str(exc),
+                "dialect": exc.dialect,
+                "grouping": exc.grouping,
+            },
+        ) from None
 
     explain_resp = None
     if result.explain:
@@ -571,6 +581,16 @@ async def shortcut_execute_query(
                 "message": str(exc),
                 "dialect": exc.dialect,
                 "aggregation": exc.aggregation,
+            },
+        ) from None
+    except UnsupportedGroupingError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "error": "Unsupported grouping",
+                "message": str(exc),
+                "dialect": exc.dialect,
+                "grouping": exc.grouping,
             },
         ) from None
 

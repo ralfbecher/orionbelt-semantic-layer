@@ -371,6 +371,24 @@ class TestMySQLDialect:
         assert dialect.quote_identifier("col") == "`col`"
         assert dialect.quote_identifier("has`tick") == "`has``tick`"
 
+    def test_group_by_cube_raises_domain_error(self, dialect: MySQLDialect) -> None:
+        """Regression: MySQL CUBE used to surface as bare NotImplementedError
+        and become a 500 through the API. Must raise the structured
+        ``UnsupportedGroupingError`` so routers map it to a 422 with
+        dialect + grouping fields.
+        """
+        from orionbelt.dialect.base import UnsupportedGroupingError
+
+        with pytest.raises(UnsupportedGroupingError) as exc:
+            dialect.compile_group_by([ColumnRef(name="x")], "cube")
+        assert exc.value.dialect == "mysql"
+        assert exc.value.grouping == "cube"
+
+    def test_group_by_rollup_unchanged(self, dialect: MySQLDialect) -> None:
+        """ROLLUP path is unaffected by the CUBE error refactor."""
+        sql = dialect.compile_group_by([ColumnRef(name="x")], "rollup")
+        assert sql == "GROUP BY `x` WITH ROLLUP"
+
     def test_format_table_ref(self, dialect: MySQLDialect) -> None:
         ref = dialect.format_table_ref("ignored_db", "myschema", "orders")
         assert ref == "`myschema`.`orders`"

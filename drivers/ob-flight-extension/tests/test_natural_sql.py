@@ -171,6 +171,24 @@ class TestBuildTablesTable:
             if name in {"dimensions", "measures", "metrics"}:
                 assert type_ == "VIEW"
 
+    def test_catalog_name_follows_stamped_model_id(self, model) -> None:
+        """Regression: catalog_name was hard-coded to ``orionbelt`` so
+        every model's tables collapsed under one catalog in BI clients.
+        It must now reflect the per-model ``_ob_model_id`` stamped by
+        the server's ``_stamp_model``.
+        """
+        model.__dict__["_ob_model_id"] = "commerce"
+        t = build_tables_table(model)
+        catalogs = set(t.column("catalog_name").to_pylist())
+        assert catalogs == {"commerce"}, catalogs
+
+    def test_catalog_name_falls_back_when_unstamped(self, model) -> None:
+        """Models without ``_ob_model_id`` retain the legacy placeholder."""
+        model.__dict__.pop("_ob_model_id", None)
+        t = build_tables_table(model)
+        catalogs = set(t.column("catalog_name").to_pylist())
+        assert catalogs == {"orionbelt"}, catalogs
+
 
 class TestBuildColumnsTable:
     def test_includes_dim_and_measure(self, model) -> None:

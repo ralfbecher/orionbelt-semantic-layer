@@ -190,7 +190,12 @@ def translate_sql_to_query(sql: str, model: SemanticModel) -> QueryObject:
         )
     if isinstance(raw_fields, list):
         return _build_raw_mode_query(
-            raw_fields, ast, model, errors, distinct_flag=bool(ast.args.get("distinct"))
+            raw_fields,
+            ast,
+            model,
+            errors,
+            distinct_flag=bool(ast.args.get("distinct")),
+            forced_grouping=forced_grouping,
         )
 
     # --- SELECT (aggregate mode) ---
@@ -695,6 +700,7 @@ def _build_raw_mode_query(
     errors: list[SemanticError],
     *,
     distinct_flag: bool,
+    forced_grouping: Grouping | None = None,
 ) -> QueryObject:
     """Translate a raw-mode SELECT (qualified columns) to a QueryObject.
 
@@ -824,6 +830,22 @@ def _build_raw_mode_query(
                 message=(
                     "GROUP BY is not allowed in raw-mode OBSQL — raw mode returns "
                     "detail rows, not aggregates."
+                ),
+            )
+        )
+    # Trailing ``WITH ROLLUP`` / ``WITH CUBE`` is stripped pre-parse by
+    # ``_strip_trailing_grouping``, so ``ast.args.get("group")`` is None
+    # even when the user wrote one. Without this explicit check the
+    # grouping clause was silently dropped — the user asked for super-
+    # aggregate rows over a detail-row query, which is meaningless. Be
+    # symmetric with the GROUP BY rejection above.
+    if forced_grouping is not None:
+        errors.append(
+            SemanticError(
+                code="UNSUPPORTED_SQL_FEATURE",
+                message=(
+                    f"WITH {forced_grouping.value.upper()} is not allowed in raw-mode "
+                    f"OBSQL — raw mode returns detail rows, not aggregates."
                 ),
             )
         )

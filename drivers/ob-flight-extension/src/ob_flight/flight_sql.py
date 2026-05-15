@@ -347,10 +347,20 @@ def build_catalogs_table(catalog_names: list[str] | None = None) -> pa.Table:
     return pa.table({"catalog_name": list(catalog_names)}, schema=CATALOG_SCHEMA)
 
 
-def build_db_schemas_table() -> pa.Table:
-    """Build response for CommandGetDbSchemas."""
+def build_db_schemas_table(catalog_names: list[str] | None = None) -> pa.Table:
+    """Build response for CommandGetDbSchemas.
+
+    In multi-model mode each loaded model is its own catalog with a single
+    ``model`` schema. Pass the resolved catalog/model names list to emit
+    one row per catalog. When empty/None, falls back to the legacy single
+    ``orionbelt`` row.
+    """
+    catalogs = list(catalog_names) if catalog_names else ["orionbelt"]
     return pa.table(
-        {"catalog_name": ["orionbelt"], "db_schema_name": ["model"]},
+        {
+            "catalog_name": catalogs,
+            "db_schema_name": ["model"] * len(catalogs),
+        },
         schema=DB_SCHEMA_SCHEMA,
     )
 
@@ -386,12 +396,18 @@ def build_tables_table(
     table_schemas: list[bytes] = []
 
     has_objects = hasattr(model, "data_objects") and model.data_objects
+    # Each loaded model is exposed as its own catalog (see
+    # ``build_catalogs_table``). The model carries the catalog name on
+    # ``_ob_model_id`` (stamped by ``_stamp_model``); fall back to the
+    # legacy ``orionbelt`` placeholder when unstamped so BI clients still
+    # see *something*.
+    catalog_name = getattr(model, "_ob_model_id", None) or "orionbelt"
 
     def _emit(name: str, kind: str, schema: pa.Schema) -> None:
         if not matches_filter(name, table_filter):
             return
         names.append(name)
-        catalogs.append("orionbelt")
+        catalogs.append(catalog_name)
         schemas.append("model")
         types.append(kind)
         table_schemas.append(schema.serialize().to_pybytes())
@@ -482,6 +498,7 @@ def build_columns_table(
     )
 
     rows: list[tuple[str, str, str, str, str, str, int, str, int]] = []
+    catalog_name = getattr(model, "_ob_model_id", None) or "orionbelt"
 
     def _emit_schema(table_name: str, schema: pa.Schema) -> None:
         if not matches_filter(table_name, table_filter):
@@ -490,7 +507,7 @@ def build_columns_table(
             jdbc_name = _arrow_type_to_jdbc_name(field_.type)
             rows.append(
                 (
-                    "orionbelt",
+                    catalog_name,
                     "model",
                     table_name,
                     field_.name,

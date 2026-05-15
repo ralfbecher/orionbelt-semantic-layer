@@ -76,13 +76,13 @@ class MySQLDialect(Dialect):
         ANSI ``GROUP BY ROLLUP(...)`` function form, and does not support
         CUBE at all.
         """
+        from orionbelt.dialect.base import UnsupportedGroupingError
+
         groups = ", ".join(self.compile_expr(e) for e in group_by)
         if grouping == "rollup":
             return f"GROUP BY {groups} WITH ROLLUP"
         if grouping == "cube":
-            raise NotImplementedError(
-                "MySQL does not support GROUP BY CUBE. Use ROLLUP or split into multiple queries."
-            )
+            raise UnsupportedGroupingError(dialect="mysql", grouping="cube")
         return f"GROUP BY {groups}"
 
     def compile_order_by(self, node: OrderByItem) -> str:

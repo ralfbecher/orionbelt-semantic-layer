@@ -226,6 +226,32 @@ def test_raw_mode_group_by_rejected(model: SemanticModel) -> None:
     assert any("GROUP BY" in m for m in msgs)
 
 
+def test_raw_mode_with_rollup_rejected(model: SemanticModel) -> None:
+    """Regression: trailing ``WITH ROLLUP`` is stripped pre-parse but must
+    still be rejected in raw mode. Previously silently dropped.
+    """
+    with pytest.raises(SQLTranslationError) as exc:
+        translate_sql_to_query(
+            'SELECT "Customers"."Country" FROM m WITH ROLLUP',
+            model,
+        )
+    codes = [e.code for e in exc.value.errors]
+    msgs = [e.message for e in exc.value.errors]
+    assert "UNSUPPORTED_SQL_FEATURE" in codes
+    assert any("ROLLUP" in m for m in msgs)
+
+
+def test_raw_mode_with_cube_rejected(model: SemanticModel) -> None:
+    """Symmetric to ROLLUP — trailing ``WITH CUBE`` rejected in raw mode."""
+    with pytest.raises(SQLTranslationError) as exc:
+        translate_sql_to_query(
+            'SELECT "Customers"."Country" FROM m WITH CUBE',
+            model,
+        )
+    msgs = [e.message for e in exc.value.errors]
+    assert any("CUBE" in m for m in msgs)
+
+
 def test_mixed_raw_and_aggregate_rejected(model: SemanticModel) -> None:
     """Qualified column + bare dim/measure → MIXED_RAW_AND_AGGREGATE_MODE."""
     with pytest.raises(SQLTranslationError) as exc:

@@ -65,7 +65,7 @@ from orionbelt.compiler.fanout import FanoutError
 from orionbelt.compiler.resolution import ResolutionError
 from orionbelt.compiler.sql_translator import SQLTranslationError, translate_sql_to_query
 from orionbelt.compiler.validator import format_sql
-from orionbelt.dialect.base import UnsupportedAggregationError
+from orionbelt.dialect.base import UnsupportedAggregationError, UnsupportedGroupingError
 from orionbelt.dialect.registry import UnsupportedDialectError
 from orionbelt.service.db_executor import (
     ExecutionError,
@@ -378,6 +378,16 @@ async def compile_query(
                 "message": str(exc),
                 "dialect": exc.dialect,
                 "aggregation": exc.aggregation,
+            },
+        ) from None
+    except UnsupportedGroupingError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "error": "Unsupported grouping",
+                "message": str(exc),
+                "dialect": exc.dialect,
+                "grouping": exc.grouping,
             },
         ) from None
     logger.info("Compiled SQL:\n%s", result.sql)
@@ -857,6 +867,16 @@ async def execute_query(
                 "aggregation": exc.aggregation,
             },
         ) from None
+    except UnsupportedGroupingError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "error": "Unsupported grouping",
+                "message": str(exc),
+                "dialect": exc.dialect,
+                "grouping": exc.grouping,
+            },
+        ) from None
 
     logger.info("Compiled SQL:\n%s", result.sql)
 
@@ -952,6 +972,16 @@ async def compile_semantic_ql(
                 "message": str(exc),
                 "dialect": exc.dialect,
                 "aggregation": exc.aggregation,
+            },
+        ) from None
+    except UnsupportedGroupingError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "error": "Unsupported grouping",
+                "message": str(exc),
+                "dialect": exc.dialect,
+                "grouping": exc.grouping,
             },
         ) from None
 
@@ -1051,6 +1081,16 @@ async def execute_semantic_ql(
                 "message": str(exc),
                 "dialect": exc.dialect,
                 "aggregation": exc.aggregation,
+            },
+        ) from None
+    except UnsupportedGroupingError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "error": "Unsupported grouping",
+                "message": str(exc),
+                "dialect": exc.dialect,
+                "grouping": exc.grouping,
             },
         ) from None
 
