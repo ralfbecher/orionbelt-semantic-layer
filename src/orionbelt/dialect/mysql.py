@@ -15,7 +15,30 @@ _MYSQL_CAST_CHAR_MAX = 255
 
 @DialectRegistry.register
 class MySQLDialect(Dialect):
-    """MySQL 8.0+ dialect — backtick quoting, DATE_FORMAT time grains, GROUP_CONCAT."""
+    """MySQL 8.0+ dialect — backtick quoting, DATE_FORMAT time grains, GROUP_CONCAT.
+
+    **Dialect deviations from the SQL standard that this class works around.**
+    Read this list before changing any compile_* method below.
+
+    1. **No CUBE.** MySQL supports ``GROUP BY ... WITH ROLLUP`` (trailing form
+       only) and does **not** support ``GROUP BY CUBE`` in any version. The
+       ANSI function form ``GROUP BY ROLLUP(a, b)`` is also unsupported.
+       See ``compile_group_by``.
+
+    2. **No ``NULLS FIRST`` / ``NULLS LAST`` keywords.** Standard SQL nulls-
+       position syntax is rejected by MySQL's parser. MySQL has its own
+       implicit rule: NULLs sort as the smallest value, so ``ASC`` puts
+       NULLs first and ``DESC`` puts them last. When the requested NULLs
+       position matches that default, we emit plain ``ASC``/``DESC``;
+       otherwise we use the ``<expr> IS NULL`` boolean-coercion workaround.
+       See ``compile_order_by``.
+
+    Both behaviours surfaced together when the auto-order rule for
+    ROLLUP/CUBE was added (v2.4.0). Tests live in
+    ``tests/unit/test_dialects.py::TestMySQLDialect`` for compile-time
+    correctness and ``tests/integration/test_mysql_execution.py`` for
+    real-MySQL execution.
+    """
 
     _MAX_DECIMAL_PRECISION: int = 65
 
@@ -65,22 +88,39 @@ class MySQLDialect(Dialect):
     def compile_order_by(self, node: OrderByItem) -> str:
         """MySQL doesn't accept ``NULLS FIRST`` / ``NULLS LAST`` keywords.
 
-        Standard SQL ``NULLS FIRST`` / ``NULLS LAST`` is rejected by MySQL's
-        parser. Workaround: prepend ``<expr> IS NULL`` with appropriate
-        direction so MySQL's boolean coercion sorts the NULL group first
-        or last, then add the actual order key.
+        MySQL treats NULLs as the smallest value, so its default ordering
+        already matches half of what callers ask for:
 
-        Examples (NULLS FIRST):
-            ORDER BY x ASC NULLS FIRST   →   ORDER BY x IS NULL DESC, x ASC
-            ORDER BY x DESC NULLS FIRST  →   ORDER BY x IS NULL DESC, x DESC
+            * ASC  → NULLs first  (matches ``NULLS FIRST``)
+            * DESC → NULLs last   (matches ``NULLS LAST``)
 
-        ``nulls_last=None`` (no preference) falls through to MySQL's
-        default ordering — NULLs sort first on ASC, last on DESC.
+        When the requested position matches the default, we emit plain
+        ``<expr> ASC/DESC`` — no workaround needed, no extra sort key.
+
+        When it disagrees (``ASC NULLS LAST`` or ``DESC NULLS FIRST``)
+        we exploit ``<expr> IS NULL``'s boolean coercion (1 for NULL,
+        0 otherwise) as a primary sort key:
+
+            ASC NULLS LAST   → ``<expr> IS NULL ASC, <expr> ASC``
+                              (0s first = non-NULL first, then ascending)
+            DESC NULLS FIRST → ``<expr> IS NULL DESC, <expr> DESC``
+                              (1s first = NULL first, then descending)
+
+        ``nulls_last=None`` (caller has no preference) falls through to
+        MySQL's default ordering.
         """
         expr_sql = self.compile_expr(node.expr)
         direction = "DESC" if node.desc else "ASC"
+        # No preference, or request matches MySQL default → plain sort.
         if node.nulls_last is None:
             return f"{expr_sql} {direction}"
+        nulls_first_requested = not node.nulls_last
+        matches_default = (nulls_first_requested and not node.desc) or (
+            node.nulls_last and node.desc
+        )
+        if matches_default:
+            return f"{expr_sql} {direction}"
+        # Disagreement: use the IS NULL workaround.
         # nulls_last=True  → IS NULL ASC (0s first = non-NULL first, NULLS LAST)
         # nulls_last=False → IS NULL DESC (1s first = NULL first, NULLS FIRST)
         null_dir = "ASC" if node.nulls_last else "DESC"
