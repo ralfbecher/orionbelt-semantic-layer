@@ -19,6 +19,13 @@ from orionbelt.pgwire.router import references_catalog
         "SELECT pg_catalog.set_config('search_path', 'public', false)",
         # Mixed-case variants — Postgres clients sometimes emit caps.
         "SELECT * FROM PG_CATALOG.PG_CLASS",
+        # Bare ``pg_*`` references — DBeaver / pgAdmin emit these without
+        # the schema qualifier.
+        "SELECT count(*) FROM pg_description",
+        (
+            "SELECT count(*) FROM pg_description d, pg_namespace n "
+            "WHERE d.objoid=n.oid AND d.classoid='pg_namespace'::regclass"
+        ),
     ],
 )
 def test_references_catalog_positive(sql: str) -> None:

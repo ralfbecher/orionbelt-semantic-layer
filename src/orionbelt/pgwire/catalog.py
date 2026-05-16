@@ -346,7 +346,20 @@ _REWRITES: tuple[tuple[re.Pattern[str], str], ...] = (
     # loose coercion is fine for catalog probes.
     (
         re.compile(
-            r"::\s*pg_catalog\.(text|name|regtype|regclass|regprocedure|oid|char)\b",
+            r"::\s*pg_catalog\.(text|name|regtype|regclass|regprocedure|regproc|regnamespace|oid|char)\b",
+            re.IGNORECASE,
+        ),
+        "::VARCHAR",
+    ),
+    # Bare ``::regclass`` / ``::regtype`` / ``::name`` etc. without the
+    # ``pg_catalog.`` qualifier. DBeaver and pgAdmin emit these in
+    # introspection probes — e.g. ``classoid='pg_namespace'::regclass``.
+    # Rewriting to VARCHAR keeps the surrounding comparison parseable;
+    # the rows it filters on are usually empty stubs (pg_description)
+    # so the loose coercion is harmless.
+    (
+        re.compile(
+            r"::\s*(regclass|regtype|regprocedure|regproc|regnamespace|name)\b",
             re.IGNORECASE,
         ),
         "::VARCHAR",

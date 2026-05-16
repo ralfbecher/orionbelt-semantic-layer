@@ -279,11 +279,16 @@ _CATALOG_SCHEMAS: frozenset[str] = frozenset({"pg_catalog", "information_schema"
 def references_catalog(sql: str) -> bool:
     """Return ``True`` when the query needs the catalog emulator.
 
-    Detects two shapes:
+    Detects three shapes:
 
     * a ``FROM`` / ``JOIN`` target whose schema or database is
-      ``pg_catalog`` or ``information_schema``; and
-    * a function reference like ``pg_catalog.set_config(...)``.
+      ``pg_catalog`` or ``information_schema``;
+    * a function reference like ``pg_catalog.set_config(...)``;
+    * a bare table reference to a well-known Postgres system table
+      (``pg_class``, ``pg_namespace``, ``pg_description``, …). DBeaver
+      and pgAdmin frequently omit the ``pg_catalog.`` qualifier; the
+      ``pg_`` prefix is reserved for Postgres system catalogs so OBSL
+      models never collide.
 
     Falls back to a cheap substring test if sqlglot can't parse the
     query — Postgres clients sometimes emit dialect-specific snippets
@@ -302,6 +307,11 @@ def references_catalog(sql: str) -> bool:
         if (table.text("db") or "").lower() in _CATALOG_SCHEMAS:
             return True
         if (table.text("catalog") or "").lower() in _CATALOG_SCHEMAS:
+            return True
+        # Bare ``pg_*`` table reference (e.g. ``FROM pg_description d``).
+        # Postgres reserves the ``pg_`` prefix for system catalogs, so
+        # this is unambiguously a catalog probe.
+        if (table.name or "").lower().startswith("pg_"):
             return True
     for column in parsed.find_all(exp.Column):
         if (column.text("table") or "").lower() in _CATALOG_SCHEMAS:

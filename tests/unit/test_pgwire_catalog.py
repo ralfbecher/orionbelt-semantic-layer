@@ -157,6 +157,27 @@ def test_refresh_preserves_pg_class_oid_across_calls(
     assert oid_before == oid_after
 
 
+def test_dbeaver_regclass_cast_does_not_error(
+    manager_with_model: SessionManager,
+) -> None:
+    """Bare ``::regclass`` casts (DBeaver's pg_description probe) round-trip.
+
+    DuckDB has no ``regclass`` type; the rewriter collapses the cast to
+    ``::VARCHAR``. The surrounding probe runs against an empty
+    pg_description stub so the integer-vs-string comparison filters out
+    everything without erroring.
+    """
+
+    emu = CatalogEmulator()
+    emu.refresh(manager_with_model)
+    result = emu.execute(
+        "SELECT count(*) FROM pg_description d, pg_namespace n "
+        "WHERE d.objoid = n.oid AND d.objsubid = 0 "
+        "AND d.classoid = 'pg_namespace'::regclass"
+    )
+    assert result.row_count == 1
+
+
 def test_unhandled_probe_logs_warning(
     manager_with_model: SessionManager, caplog: pytest.LogCaptureFixture
 ) -> None:
