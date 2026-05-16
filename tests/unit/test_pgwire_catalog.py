@@ -92,3 +92,83 @@ def test_empty_session_manager_yields_no_tables() -> None:
     emu.refresh(SessionManager())
     result = emu.execute("SELECT relname FROM pg_catalog.pg_class WHERE relkind='r'")
     assert result.rows == []
+
+
+# ---------------------------------------------------------------------------
+# Step 5 — obsl_meta views fixing the psql 16 \d gap
+# ---------------------------------------------------------------------------
+
+
+def test_obsl_meta_pg_class_has_psql16_columns(
+    manager_with_model: SessionManager,
+) -> None:
+    """pg_class probe receives the columns psql 16's \\d expects."""
+
+    emu = CatalogEmulator()
+    emu.refresh(manager_with_model)
+    result = emu.execute(
+        "SELECT relname, relforcerowsecurity, relrowsecurity, relhasoids, "
+        "relispartition, relreplident, relpersistence "
+        "FROM pg_catalog.pg_class WHERE relname='commerce'"
+    )
+    assert result.row_count == 1
+    row = result.rows[0]
+    assert row[0] == "commerce"
+    # All Boolean defaults are false; replident / persistence are
+    # one-character strings; no NULLs anywhere.
+    assert row[1] is False
+    assert row[6] == "p"
+
+
+def test_obsl_meta_pg_attribute_returns_real_postgres_oids(
+    manager_with_model: SessionManager,
+) -> None:
+    """atttypid now matches real Postgres OIDs (was DuckDB-internal in Step 3)."""
+
+    emu = CatalogEmulator()
+    emu.refresh(manager_with_model)
+    result = emu.execute(
+        "SELECT a.attname, a.atttypid "
+        "FROM pg_catalog.pg_attribute a "
+        "JOIN pg_catalog.pg_class c ON c.oid = a.attrelid "
+        "WHERE c.relname='commerce' ORDER BY a.attnum"
+    )
+    types = {row[0]: row[1] for row in result.rows}
+    # SAMPLE_MODEL_YAML's "Customer Country" is a string dimension → OID 1043 (varchar).
+    assert types.get("Customer Country") == 1043
+    # "Total Revenue" / "Order Count" are floats → OID 701 (float8).
+    assert types.get("Total Revenue") == 701
+
+
+def test_refresh_preserves_pg_class_oid_across_calls(
+    manager_with_model: SessionManager,
+) -> None:
+    """Stable refresh: same model → same oid (psql \\d's two-step probe)."""
+
+    emu = CatalogEmulator()
+    emu.refresh(manager_with_model)
+    oid_before = emu.execute("SELECT oid FROM pg_catalog.pg_class WHERE relname='commerce'").rows[
+        0
+    ][0]
+    emu.refresh(manager_with_model)
+    oid_after = emu.execute("SELECT oid FROM pg_catalog.pg_class WHERE relname='commerce'").rows[0][
+        0
+    ]
+    assert oid_before == oid_after
+
+
+def test_unhandled_probe_logs_warning(
+    manager_with_model: SessionManager, caplog: pytest.LogCaptureFixture
+) -> None:
+    """A catalog query that throws emits PGWIRE_CATALOG_PROBE_UNHANDLED."""
+
+    import logging
+
+    import duckdb
+
+    emu = CatalogEmulator()
+    emu.refresh(manager_with_model)
+    caplog.set_level(logging.WARNING, logger="orionbelt.pgwire.catalog")
+    with pytest.raises(duckdb.Error):
+        emu.execute("SELECT * FROM pg_catalog.does_not_exist")
+    assert any("PGWIRE_CATALOG_PROBE_UNHANDLED" in record.message for record in caplog.records)

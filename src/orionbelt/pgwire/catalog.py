@@ -77,11 +77,255 @@ _STUB_MACROS: tuple[str, ...] = (
     "CREATE OR REPLACE MACRO pg_get_indexdef(oid) AS NULL",
     "CREATE OR REPLACE MACRO pg_get_constraintdef(oid) AS NULL",
     "CREATE OR REPLACE MACRO pg_get_expr(expr, oid) AS NULL",
+    # psql 16 calls pg_get_expr/3 for default-expr lookups; DuckDB
+    # macros are arity-distinguished so we register both overloads.
+    "CREATE OR REPLACE MACRO pg_get_expr(expr, oid, pretty) AS NULL",
     "CREATE OR REPLACE MACRO pg_relation_is_publishable(oid) AS false",
     "CREATE OR REPLACE MACRO obj_description(oid, catalog) AS NULL",
     "CREATE OR REPLACE MACRO col_description(oid, col) AS NULL",
     "CREATE OR REPLACE MACRO format_type(oid, typemod) AS 'unknown'",
     "CREATE OR REPLACE MACRO pg_encoding_to_char(enc) AS 'UTF8'",
+)
+
+
+# Augmented catalog views in our own ``obsl_meta`` schema. DuckDB's
+# native ``pg_catalog.pg_class`` / ``pg_attribute`` are missing columns
+# psql 16 expects (relforcerowsecurity, relhasoids, …) and the
+# atttypid values are DuckDB-internal type ids, not real Postgres OIDs.
+# We can't write to the system catalog (``Cannot create entry in
+# system catalog``) so we mirror those tables here and swap references
+# with ``_REWRITES`` below.
+_OBSL_META_DDL: tuple[str, ...] = (
+    "CREATE SCHEMA IF NOT EXISTS obsl_meta",
+    # pg_class: pass-through + missing columns as constants. psql 16's
+    # \\d reads ~30 columns from pg_class; supplying sensible defaults
+    # keeps the introspection query well-typed without changing
+    # behaviour for the columns DuckDB already exposes correctly.
+    """
+    CREATE OR REPLACE VIEW obsl_meta.pg_class AS
+    SELECT
+        c.*,
+        CAST(false AS BOOLEAN) AS relforcerowsecurity,
+        CAST(false AS BOOLEAN) AS relrowsecurity,
+        CAST(false AS BOOLEAN) AS relhasoids,
+        CAST(false AS BOOLEAN) AS relispartition,
+        CAST(false AS BOOLEAN) AS relhastriggers,
+        CAST(false AS BOOLEAN) AS relhasindex,
+        CAST(false AS BOOLEAN) AS relhasrules,
+        CAST(false AS BOOLEAN) AS relhassubclass,
+        CAST(false AS BOOLEAN) AS relispopulated,
+        CAST('d' AS VARCHAR) AS relreplident,
+        CAST('p' AS VARCHAR) AS relpersistence,
+        CAST(0 AS INTEGER) AS reloftype,
+        CAST(0 AS INTEGER) AS relrewrite,
+        CAST(0 AS INTEGER) AS reltoastrelid,
+        CAST(0 AS INTEGER) AS relam,
+        CAST(0 AS INTEGER) AS reltablespace,
+        CAST(0 AS INTEGER) AS reloptions,
+        CAST(0 AS INTEGER) AS relminmxid,
+        CAST(0 AS INTEGER) AS relfrozenxid,
+        CAST(0 AS BIGINT)  AS reltuples,
+        CAST(0 AS INTEGER) AS relpages,
+        CAST(0 AS INTEGER) AS relallvisible,
+        CAST(0 AS INTEGER) AS relchecks,
+        CAST('' AS VARCHAR) AS relacl,
+        CAST('' AS VARCHAR) AS relpartbound
+    FROM pg_catalog.pg_class c
+    """,
+    # Empty stub views for psql 16's "advanced relation" probes. These
+    # tables don't exist in DuckDB and the underlying features (RLS,
+    # publications, inheritance) don't apply to OBSL's virtual models
+    # — empty rows are the semantically correct answer.
+    """
+    CREATE OR REPLACE VIEW obsl_meta.pg_policy AS
+    SELECT
+        CAST(NULL AS INTEGER) AS oid,
+        CAST(NULL AS VARCHAR) AS polname,
+        CAST(NULL AS INTEGER) AS polrelid,
+        CAST(NULL AS VARCHAR) AS polcmd,
+        CAST(NULL AS BOOLEAN) AS polpermissive,
+        CAST(NULL AS VARCHAR) AS polroles,
+        CAST(NULL AS VARCHAR) AS polqual,
+        CAST(NULL AS VARCHAR) AS polwithcheck
+    WHERE FALSE
+    """,
+    """
+    CREATE OR REPLACE VIEW obsl_meta.pg_inherits AS
+    SELECT
+        CAST(NULL AS INTEGER) AS inhrelid,
+        CAST(NULL AS INTEGER) AS inhparent,
+        CAST(NULL AS INTEGER) AS inhseqno,
+        CAST(NULL AS BOOLEAN) AS inhdetachpending
+    WHERE FALSE
+    """,
+    """
+    CREATE OR REPLACE VIEW obsl_meta.pg_partitioned_table AS
+    SELECT
+        CAST(NULL AS INTEGER) AS partrelid,
+        CAST(NULL AS VARCHAR) AS partstrat,
+        CAST(NULL AS SMALLINT) AS partnatts,
+        CAST(NULL AS INTEGER) AS partdefid,
+        CAST(NULL AS VARCHAR) AS partattrs,
+        CAST(NULL AS VARCHAR) AS partclass,
+        CAST(NULL AS VARCHAR) AS partcollation,
+        CAST(NULL AS VARCHAR) AS partexprs
+    WHERE FALSE
+    """,
+    """
+    CREATE OR REPLACE VIEW obsl_meta.pg_publication AS
+    SELECT
+        CAST(NULL AS INTEGER) AS oid,
+        CAST(NULL AS VARCHAR) AS pubname,
+        CAST(NULL AS INTEGER) AS pubowner,
+        CAST(NULL AS BOOLEAN) AS puballtables,
+        CAST(NULL AS BOOLEAN) AS pubinsert,
+        CAST(NULL AS BOOLEAN) AS pubupdate,
+        CAST(NULL AS BOOLEAN) AS pubdelete,
+        CAST(NULL AS BOOLEAN) AS pubtruncate,
+        CAST(NULL AS BOOLEAN) AS pubviaroot
+    WHERE FALSE
+    """,
+    """
+    CREATE OR REPLACE VIEW obsl_meta.pg_publication_rel AS
+    SELECT
+        CAST(NULL AS INTEGER) AS oid,
+        CAST(NULL AS INTEGER) AS prpubid,
+        CAST(NULL AS INTEGER) AS prrelid
+    WHERE FALSE
+    """,
+    """
+    CREATE OR REPLACE VIEW obsl_meta.pg_publication_namespace AS
+    SELECT
+        CAST(NULL AS INTEGER) AS oid,
+        CAST(NULL AS INTEGER) AS pnpubid,
+        CAST(NULL AS INTEGER) AS pnnspid
+    WHERE FALSE
+    """,
+    """
+    CREATE OR REPLACE VIEW obsl_meta.pg_roles AS
+    SELECT
+        CAST(10 AS INTEGER) AS oid,
+        CAST('obsl' AS VARCHAR) AS rolname,
+        CAST(true AS BOOLEAN) AS rolsuper,
+        CAST(true AS BOOLEAN) AS rolinherit,
+        CAST(true AS BOOLEAN) AS rolcreaterole,
+        CAST(true AS BOOLEAN) AS rolcreatedb,
+        CAST(true AS BOOLEAN) AS rolcanlogin,
+        CAST(false AS BOOLEAN) AS rolreplication,
+        CAST(false AS BOOLEAN) AS rolbypassrls,
+        CAST(-1 AS INTEGER) AS rolconnlimit
+    """,
+    # pg_collation: DuckDB's pg_catalog is missing this table entirely.
+    # We expose an empty view; clients that LEFT JOIN it get NULLs which
+    # is what they expect when collation isn't relevant.
+    """
+    CREATE OR REPLACE VIEW obsl_meta.pg_collation AS
+    SELECT
+        CAST(NULL AS INTEGER) AS oid,
+        CAST(NULL AS VARCHAR) AS collname,
+        CAST(NULL AS INTEGER) AS collnamespace,
+        CAST(NULL AS INTEGER) AS collowner,
+        CAST(NULL AS VARCHAR) AS collprovider,
+        CAST(NULL AS BOOLEAN) AS collisdeterministic,
+        CAST(NULL AS INTEGER) AS collencoding,
+        CAST(NULL AS VARCHAR) AS collcollate,
+        CAST(NULL AS VARCHAR) AS collctype,
+        CAST(NULL AS VARCHAR) AS collversion
+    WHERE FALSE
+    """,
+    # pg_attribute: rebuild from information_schema.columns so atttypid
+    # uses real Postgres OIDs. Without this, JDBC type lookups via
+    # ``JOIN pg_type`` resolve to wrong type names (Step 3 caveat).
+    """
+    CREATE OR REPLACE VIEW obsl_meta.pg_attribute AS
+    SELECT
+        c2.oid AS attrelid,
+        isc.column_name AS attname,
+        CAST(
+            CASE LOWER(SPLIT_PART(isc.data_type, '(', 1))
+                WHEN 'varchar' THEN 1043
+                WHEN 'character varying' THEN 1043
+                WHEN 'text' THEN 25
+                WHEN 'bigint' THEN 20
+                WHEN 'integer' THEN 23
+                WHEN 'smallint' THEN 21
+                WHEN 'tinyint' THEN 21
+                WHEN 'hugeint' THEN 1700
+                WHEN 'double' THEN 701
+                WHEN 'double precision' THEN 701
+                WHEN 'real' THEN 700
+                WHEN 'boolean' THEN 16
+                WHEN 'date' THEN 1082
+                WHEN 'timestamp' THEN 1114
+                WHEN 'timestamp without time zone' THEN 1114
+                WHEN 'timestamp with time zone' THEN 1184
+                WHEN 'time' THEN 1083
+                WHEN 'time without time zone' THEN 1083
+                WHEN 'time with time zone' THEN 1266
+                WHEN 'blob' THEN 17
+                WHEN 'bytea' THEN 17
+                WHEN 'decimal' THEN 1700
+                WHEN 'numeric' THEN 1700
+                WHEN 'json' THEN 114
+                WHEN 'uuid' THEN 2950
+                ELSE 25
+            END
+        AS INTEGER) AS atttypid,
+        CAST(isc.ordinal_position AS SMALLINT) AS attnum,
+        CAST((isc.is_nullable = 'NO') AS BOOLEAN) AS attnotnull,
+        CAST(false AS BOOLEAN) AS attisdropped,
+        CAST(-1 AS SMALLINT) AS attlen,
+        CAST(-1 AS INTEGER) AS atttypmod,
+        CAST(false AS BOOLEAN) AS atthasdef,
+        CAST(false AS BOOLEAN) AS attidentity,
+        CAST(false AS BOOLEAN) AS attgenerated,
+        CAST('' AS VARCHAR) AS attoptions,
+        CAST('' AS VARCHAR) AS attfdwoptions,
+        CAST('' AS VARCHAR) AS attmissingval,
+        CAST(0 AS INTEGER) AS attinhcount,
+        CAST(0 AS INTEGER) AS attstattarget,
+        CAST(0 AS INTEGER) AS attndims,
+        CAST('p' AS VARCHAR) AS attstorage,
+        CAST(0 AS INTEGER) AS attcollation
+    FROM information_schema.columns isc
+    JOIN pg_catalog.pg_class c2 ON c2.relname = isc.table_name
+    """,
+)
+
+
+# Catalog-table substitutions applied to incoming SQL: when a client
+# references ``pg_catalog.pg_class`` we transparently swap it to
+# ``obsl_meta.pg_class`` so the missing-column / mistyped-attribute
+# problems documented in Step 3 disappear.
+_TABLE_SUBSTITUTIONS: tuple[tuple[re.Pattern[str], str], ...] = (
+    (
+        re.compile(r"\bpg_catalog\.pg_class\b", re.IGNORECASE),
+        "obsl_meta.pg_class",
+    ),
+    (
+        re.compile(r"\bpg_catalog\.pg_attribute\b", re.IGNORECASE),
+        "obsl_meta.pg_attribute",
+    ),
+    (
+        re.compile(r"\bpg_catalog\.pg_collation\b", re.IGNORECASE),
+        "obsl_meta.pg_collation",
+    ),
+    (re.compile(r"\bpg_catalog\.pg_policy\b", re.IGNORECASE), "obsl_meta.pg_policy"),
+    (re.compile(r"\bpg_catalog\.pg_inherits\b", re.IGNORECASE), "obsl_meta.pg_inherits"),
+    (
+        re.compile(r"\bpg_catalog\.pg_partitioned_table\b", re.IGNORECASE),
+        "obsl_meta.pg_partitioned_table",
+    ),
+    (re.compile(r"\bpg_catalog\.pg_publication\b", re.IGNORECASE), "obsl_meta.pg_publication"),
+    (
+        re.compile(r"\bpg_catalog\.pg_publication_rel\b", re.IGNORECASE),
+        "obsl_meta.pg_publication_rel",
+    ),
+    (
+        re.compile(r"\bpg_catalog\.pg_publication_namespace\b", re.IGNORECASE),
+        "obsl_meta.pg_publication_namespace",
+    ),
+    (re.compile(r"\bpg_catalog\.pg_roles\b", re.IGNORECASE), "obsl_meta.pg_roles"),
 )
 
 
@@ -109,11 +353,12 @@ _REWRITES: tuple[tuple[re.Pattern[str], str], ...] = (
     ),
     # Function / operator references prefixed with pg_catalog. — strip
     # the prefix so DuckDB resolves against the unqualified built-in or
-    # our stub macros.  We deliberately don't touch table references
-    # like ``pg_catalog.pg_class`` because DuckDB handles those itself.
+    # our stub macros. We match any identifier immediately followed by
+    # ``(`` to keep this rule disjoint from table references (which
+    # never have parens after the table name).
     (
         re.compile(
-            r"pg_catalog\.(pg_[a-z_]+|format_type|obj_description|col_description)\s*\(",
+            r"pg_catalog\.([a-z_][a-z0-9_]*)\s*\(",
             re.IGNORECASE,
         ),
         r"\1(",
@@ -124,14 +369,18 @@ _REWRITES: tuple[tuple[re.Pattern[str], str], ...] = (
 def _rewrite_for_duckdb(sql: str) -> str:
     """Best-effort SQL rewrite so psql introspection runs on DuckDB.
 
-    Touches only the patterns documented in ``_REWRITES``.  Unrecognised
-    constructs are left alone — the catalog branch is best-effort by
-    design, and the caller's error response will surface anything we
-    miss so we can extend the rule list incrementally.
+    Touches only the patterns documented in ``_REWRITES`` plus the
+    ``_TABLE_SUBSTITUTIONS`` that redirect ``pg_catalog.pg_class`` and
+    ``pg_catalog.pg_attribute`` to our augmented ``obsl_meta`` views.
+    Unrecognised constructs are left alone — the catalog branch is
+    best-effort by design, and the caller's error response will surface
+    anything we miss so we can extend the rules incrementally.
     """
 
     out = sql
     for pattern, replacement in _REWRITES:
+        out = pattern.sub(replacement, out)
+    for pattern, replacement in _TABLE_SUBSTITUTIONS:
         out = pattern.sub(replacement, out)
     return out
 
@@ -150,8 +399,16 @@ class CatalogEmulator:
     def __init__(self) -> None:
         self._lock = threading.Lock()
         self._con: duckdb.DuckDBPyConnection = duckdb.connect(database=":memory:")
-        self._registered_tables: list[str] = []
+        # Map of table_name → stable signature so refresh can diff
+        # against the SessionManager and only churn tables that
+        # actually changed.  Recreating a table reassigns its
+        # ``pg_class.oid``; ``psql \\d`` issues two probes back-to-back
+        # and a stale oid between them is what we're guarding against.
+        self._registered_signatures: dict[str, str] = {}
         for ddl in _STUB_MACROS:
+            with contextlib.suppress(Exception):
+                self._con.execute(ddl)
+        for ddl in _OBSL_META_DDL:
             with contextlib.suppress(Exception):
                 self._con.execute(ddl)
 
@@ -168,26 +425,38 @@ class CatalogEmulator:
         protocol.
         """
 
-        with self._lock:
-            # Drop everything we registered last time first.
-            for table in self._registered_tables:
-                with contextlib.suppress(Exception):
-                    self._con.execute(f'DROP TABLE IF EXISTS "{table}"')
-            self._registered_tables = []
+        desired: dict[str, str] = {}
+        ddls: dict[str, str] = {}
+        for store_target, model in _iter_loaded_models(session_manager):
+            table_name = _safe_model_table_name(store_target)
+            ddl = _build_table_ddl(table_name, model)
+            if ddl is None:
+                continue
+            desired[table_name] = ddl
+            ddls[table_name] = ddl
 
-            for store_target, model in _iter_loaded_models(session_manager):
-                table_name = _safe_model_table_name(store_target)
-                ddl = _build_table_ddl(table_name, model)
-                if ddl is None:
+        with self._lock:
+            # Drop tables that no longer have a backing model.
+            for table in list(self._registered_signatures):
+                if table not in desired:
+                    with contextlib.suppress(Exception):
+                        self._con.execute(f'DROP TABLE IF EXISTS "{table}"')
+                    self._registered_signatures.pop(table, None)
+
+            # Create or recreate only tables whose DDL signature changed.
+            # Stable tables keep their pg_class.oid across catalog probes
+            # — critical for psql ``\\d``'s two-step lookup pattern.
+            for table_name, signature in desired.items():
+                if self._registered_signatures.get(table_name) == signature:
                     continue
+                with contextlib.suppress(Exception):
+                    self._con.execute(f'DROP TABLE IF EXISTS "{table_name}"')
                 try:
-                    self._con.execute(ddl)
+                    self._con.execute(ddls[table_name])
                 except duckdb.Error:  # pragma: no cover — defensive guard
-                    logger.exception(
-                        "Failed to register catalog table for model '%s'", store_target
-                    )
+                    logger.exception("Failed to register catalog table for model '%s'", table_name)
                     continue
-                self._registered_tables.append(table_name)
+                self._registered_signatures[table_name] = signature
 
     # ------------------------------------------------------------------
     # Execute — run a catalog/info-schema query through DuckDB.
@@ -199,15 +468,26 @@ class CatalogEmulator:
         DuckDB's pg_catalog and information_schema are auto-populated
         from the schema we registered in :meth:`refresh`, so the
         caller doesn't need to special-case which table is being
-        queried.  Errors bubble as ``duckdb.Error``.
+        queried.  Errors bubble as ``duckdb.Error`` but are tagged as
+        ``PGWIRE_CATALOG_PROBE_UNHANDLED`` warnings first so BI-tool
+        introspection failures surface in logs without breaking the
+        session (plan §7).
         """
 
         t0 = time.monotonic()
         rewritten = _rewrite_for_duckdb(sql)
-        with self._lock:
-            cursor = self._con.execute(rewritten)
-            rows_raw = cursor.fetchall()
-            description = cursor.description or []
+        try:
+            with self._lock:
+                cursor = self._con.execute(rewritten)
+                rows_raw = cursor.fetchall()
+                description = cursor.description or []
+        except duckdb.Error as exc:
+            logger.warning(
+                "PGWIRE_CATALOG_PROBE_UNHANDLED dialect=duckdb error=%s sql=%s",
+                exc,
+                _truncate_for_log(rewritten),
+            )
+            raise
         elapsed_ms = (time.monotonic() - t0) * 1000.0
         columns = [
             ColumnMeta(name=str(d[0]), type_hint=_duckdb_desc_to_hint(d)) for d in description
@@ -230,6 +510,15 @@ class CatalogEmulator:
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+
+def _truncate_for_log(sql: str, limit: int = 400) -> str:
+    """Clamp a SQL string so a noisy probe doesn't dominate the log line."""
+
+    one_line = " ".join(sql.split())
+    if len(one_line) <= limit:
+        return one_line
+    return one_line[:limit] + "…"
 
 
 def _iter_loaded_models(session_manager: SessionManager) -> Iterator[tuple[str, SemanticModel]]:
