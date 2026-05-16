@@ -714,7 +714,7 @@ def _pg_database_view_ddl(model_names: list[str]) -> str:
         CAST(0 AS BIGINT) AS datfrozenxid,
         CAST(0 AS BIGINT) AS datminmxid,
         CAST(1663 AS INTEGER) AS dattablespace,
-        CAST('{}' AS VARCHAR) AS datacl,
+        CAST('{{}}' AS VARCHAR) AS datacl,
         CAST('c' AS VARCHAR) AS datlocprovider,
         CAST(NULL AS VARCHAR) AS daticulocale,
         CAST(NULL AS VARCHAR) AS daticurules,
