@@ -919,100 +919,118 @@ def _simple_metrics_view_ddl(schema: str, model: SemanticModel) -> str:
     )
 
 
-def _dimensions_view_ddl(schema: str, model: SemanticModel) -> str:
-    rows = []
-    for label, dim in model.dimensions.items():
-        rows.append(
-            "("
-            + ", ".join(
-                [
-                    _sql_literal(label),
-                    _sql_literal(str(dim.result_type)),
-                    _sql_literal(dim.view),
-                    _sql_literal(dim.column),
-                    _sql_literal(dim.description),
-                ]
-            )
-            + ")"
-        )
+def _value_literal(value: Any, sql_type: str) -> str:
+    """Render any Python value as a SQL literal for VALUES.
+
+    Strings flow through ``_sql_literal`` (quoted + escaped); integers
+    are emitted unquoted so DuckDB types them as numeric; ``None`` and
+    empty strings become ``CAST(NULL AS T)`` — the explicit cast keeps
+    DuckDB from inferring a NULL column type when every row in a
+    column is unset.
+    """
+
+    if value is None or value == "":
+        return f"CAST(NULL AS {sql_type})"
+    if isinstance(value, bool):
+        return "TRUE" if value else "FALSE"
+    if isinstance(value, (int, float)):
+        return f"CAST({value} AS {sql_type})"
+    return f"CAST({_sql_literal(str(value))} AS {sql_type})"
+
+
+def _build_metadata_view_ddl(
+    schema: str,
+    view_name: str,
+    columns: tuple[tuple[str, str], ...],
+    rows: list[tuple[Any, ...]],
+) -> str:
+    """Generic CREATE VIEW … AS VALUES (...) builder.
+
+    ``columns`` is an ordered list of ``(name, sql_type)`` pairs;
+    ``rows`` matches that ordering. Empty ``rows`` emits a typed
+    ``WHERE FALSE`` projection so the view shape is still inspectable.
+    """
+
+    target = _qualified(schema, view_name)
     if not rows:
-        body = (
-            "SELECT CAST(NULL AS VARCHAR) AS name, CAST(NULL AS VARCHAR) AS data_type, "
-            "CAST(NULL AS VARCHAR) AS data_object, CAST(NULL AS VARCHAR) AS column_name, "
-            "CAST(NULL AS VARCHAR) AS description WHERE FALSE"
-        )
-    else:
-        body = (
-            "SELECT * FROM (VALUES "
-            + ", ".join(rows)
-            + ") AS t(name, data_type, data_object, column_name, description)"
-        )
-    return f"CREATE OR REPLACE VIEW {_qualified(schema, '_dimensions_metadata')} AS {body}"
+        casts = ", ".join(f'CAST(NULL AS {sql_type}) AS "{name}"' for name, sql_type in columns)
+        return f"CREATE OR REPLACE VIEW {target} AS SELECT {casts} WHERE FALSE"
+    row_sql = []
+    for row in rows:
+        cells = [
+            _value_literal(value, sql_type)
+            for value, (_, sql_type) in zip(row, columns, strict=True)
+        ]
+        row_sql.append("(" + ", ".join(cells) + ")")
+    col_list = ", ".join(f'"{name}"' for name, _ in columns)
+    return (
+        f"CREATE OR REPLACE VIEW {target} AS "
+        f"SELECT * FROM (VALUES {', '.join(row_sql)}) AS t({col_list})"
+    )
+
+
+_DIMENSIONS_METADATA_COLUMNS: tuple[tuple[str, str], ...] = (
+    ("name", "VARCHAR"),
+    ("data_object", "VARCHAR"),
+    ("column", "VARCHAR"),
+    ("type", "VARCHAR"),
+    ("time_grain", "VARCHAR"),
+    ("description", "VARCHAR"),
+)
+
+_MEASURES_METADATA_COLUMNS: tuple[tuple[str, str], ...] = (
+    ("name", "VARCHAR"),
+    ("aggregation", "VARCHAR"),
+    ("expression", "VARCHAR"),
+    ("type", "VARCHAR"),
+    ("columns", "VARCHAR"),
+    ("description", "VARCHAR"),
+)
+
+_METRICS_METADATA_COLUMNS: tuple[tuple[str, str], ...] = (
+    ("name", "VARCHAR"),
+    ("metric_type", "VARCHAR"),
+    ("expression", "VARCHAR"),
+    ("measure", "VARCHAR"),
+    ("time_dimension", "VARCHAR"),
+    ("time_grain", "VARCHAR"),
+    ("window", "BIGINT"),
+    ("grain_to_date", "VARCHAR"),
+    ("description", "VARCHAR"),
+)
+
+
+def _dimensions_view_ddl(schema: str, model: SemanticModel) -> str:
+    from orionbelt.obsl.metadata_rows import build_dimension_rows
+
+    return _build_metadata_view_ddl(
+        schema,
+        "_dimensions_metadata",
+        _DIMENSIONS_METADATA_COLUMNS,
+        list(build_dimension_rows(model)),
+    )
 
 
 def _measures_view_ddl(schema: str, model: SemanticModel) -> str:
-    rows = []
-    for label, measure in model.measures.items():
-        source_objects = ", ".join(sorted({ref.view for ref in measure.columns if ref.view}))
-        rows.append(
-            "("
-            + ", ".join(
-                [
-                    _sql_literal(label),
-                    _sql_literal(str(measure.result_type)),
-                    _sql_literal(str(measure.aggregation)),
-                    _sql_literal(measure.expression),
-                    _sql_literal(source_objects),
-                    _sql_literal(measure.description),
-                ]
-            )
-            + ")"
-        )
-    if not rows:
-        body = (
-            "SELECT CAST(NULL AS VARCHAR) AS name, CAST(NULL AS VARCHAR) AS data_type, "
-            "CAST(NULL AS VARCHAR) AS aggregation, CAST(NULL AS VARCHAR) AS expression, "
-            "CAST(NULL AS VARCHAR) AS source_data_objects, "
-            "CAST(NULL AS VARCHAR) AS description WHERE FALSE"
-        )
-    else:
-        body = (
-            "SELECT * FROM (VALUES "
-            + ", ".join(rows)
-            + ") AS t(name, data_type, aggregation, expression, "
-            "source_data_objects, description)"
-        )
-    return f"CREATE OR REPLACE VIEW {_qualified(schema, '_measures_metadata')} AS {body}"
+    from orionbelt.obsl.metadata_rows import build_measure_rows
+
+    return _build_metadata_view_ddl(
+        schema,
+        "_measures_metadata",
+        _MEASURES_METADATA_COLUMNS,
+        list(build_measure_rows(model)),
+    )
 
 
 def _metrics_view_ddl(schema: str, model: SemanticModel) -> str:
-    rows = []
-    for label, metric in model.metrics.items():
-        rows.append(
-            "("
-            + ", ".join(
-                [
-                    _sql_literal(label),
-                    _sql_literal(str(metric.type)),
-                    _sql_literal(metric.expression),
-                    _sql_literal(metric.description),
-                ]
-            )
-            + ")"
-        )
-    if not rows:
-        body = (
-            "SELECT CAST(NULL AS VARCHAR) AS name, CAST(NULL AS VARCHAR) AS type, "
-            "CAST(NULL AS VARCHAR) AS expression, CAST(NULL AS VARCHAR) AS description "
-            "WHERE FALSE"
-        )
-    else:
-        body = (
-            "SELECT * FROM (VALUES "
-            + ", ".join(rows)
-            + ") AS t(name, type, expression, description)"
-        )
-    return f"CREATE OR REPLACE VIEW {_qualified(schema, '_metrics_metadata')} AS {body}"
+    from orionbelt.obsl.metadata_rows import build_metric_rows
+
+    return _build_metadata_view_ddl(
+        schema,
+        "_metrics_metadata",
+        _METRICS_METADATA_COLUMNS,
+        list(build_metric_rows(model)),
+    )
 
 
 def _dim_sql_type(dim: Dimension) -> str:
