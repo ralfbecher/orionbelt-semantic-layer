@@ -76,10 +76,11 @@ _STUB_MACROS: tuple[str, ...] = (
     "CREATE OR REPLACE MACRO pg_get_partkeydef(oid) AS NULL",
     "CREATE OR REPLACE MACRO pg_get_indexdef(oid) AS NULL",
     "CREATE OR REPLACE MACRO pg_get_constraintdef(oid) AS NULL",
-    "CREATE OR REPLACE MACRO pg_get_expr(expr, oid) AS NULL",
-    # psql 16 calls pg_get_expr/3 for default-expr lookups; DuckDB
-    # macros are arity-distinguished so we register both overloads.
-    "CREATE OR REPLACE MACRO pg_get_expr(expr, oid, pretty) AS NULL",
+    # pg_get_expr is called with 2 or 3 args by different clients
+    # (psql 16's \\d uses 3-arg, DBeaver uses 2-arg). DuckDB macros
+    # don't overload by arity — ``CREATE OR REPLACE`` replaces — so we
+    # use a default-arg form that accepts both call shapes.
+    "CREATE OR REPLACE MACRO pg_get_expr(expr, oid, pretty := false) AS NULL",
     "CREATE OR REPLACE MACRO pg_relation_is_publishable(oid) AS false",
     "CREATE OR REPLACE MACRO obj_description(oid, catalog) AS NULL",
     "CREATE OR REPLACE MACRO col_description(oid, col) AS NULL",
