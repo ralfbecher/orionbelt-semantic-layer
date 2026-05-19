@@ -92,3 +92,85 @@ def test_empty_session_manager_yields_no_tables() -> None:
     emu.refresh(SessionManager())
     result = emu.execute("SELECT relname FROM pg_catalog.pg_class WHERE relkind='r'")
     assert result.rows == []
+
+
+def test_shadow_views_hidden_from_get_tables(
+    manager_with_model: SessionManager,
+) -> None:
+    """Tableau's getTables query lists every visible table/view in the
+    schema browser. The shadow views (_obsl_pg_attribute / _obsl_pg_type)
+    are implementation details and must not show up there.
+
+    They're created as ``TEMP VIEW`` — DuckDB puts temp objects in a
+    catalog where ``pg_class.relnamespace`` is NULL, so the
+    ``WHERE nspname NOT IN ('pg_catalog', 'information_schema')`` filter
+    in pgjdbc's getTables excludes them (``NULL NOT IN (…)`` is NULL,
+    which the WHERE drops).
+    """
+
+    emu = CatalogEmulator()
+    emu.refresh(manager_with_model)
+    result = emu.execute(
+        "SELECT n.nspname, c.relname, c.relkind "
+        "FROM pg_catalog.pg_namespace n "
+        "JOIN pg_catalog.pg_class c ON (c.relnamespace = n.oid) "
+        "WHERE n.nspname NOT IN ('pg_catalog', 'information_schema') "
+        "AND c.relkind IN ('r', 'v') "
+        "ORDER BY 1, 2"
+    )
+    visible_names = {row[1] for row in result.rows}
+    assert "_obsl_pg_attribute" not in visible_names
+    assert "_obsl_pg_type" not in visible_names
+    # The user-facing model table is still listed.
+    assert "commerce" in visible_names
+
+
+def test_pg_attribute_atttypid_returns_real_postgres_oids(
+    manager_with_model: SessionManager,
+) -> None:
+    """Tableau's pgjdbc reads pg_attribute.atttypid to learn each column's
+    Postgres OID. DuckDB's native pg_attribute stores DuckDB internal
+    type ids (DOUBLE → 23, BIGINT → 14, DATE → 15), which collide with
+    different Postgres OIDs (Postgres 23 = INT4). The shadow view +
+    rewrite translate to real Postgres OIDs so a JOIN with pg_type works
+    and pgjdbc allocates the right-width column reader. Without this
+    fix Tableau measures arrive as NULL / 0 because the 8-byte FLOAT8
+    wire bytes get parsed as an INT4.
+    """
+
+    emu = CatalogEmulator()
+    emu.refresh(manager_with_model)
+    result = emu.execute(
+        "SELECT a.attname, a.atttypid, t.typname "
+        "FROM pg_attribute a "
+        "JOIN pg_class c ON a.attrelid = c.oid "
+        "JOIN pg_type t ON a.atttypid = t.oid "
+        "WHERE c.relname = 'commerce' AND a.attnum > 0 "
+        "ORDER BY a.attnum"
+    )
+    by_name = {row[0]: (row[1], row[2]) for row in result.rows}
+    # Total Revenue is a measure with DOUBLE backing — must surface as
+    # FLOAT8 (OID 701) so pgjdbc allocates an 8-byte Double reader.
+    assert by_name["Total Revenue"][0] == 701  # FLOAT8
+    assert by_name["Total Revenue"][1] == "float8"
+    assert by_name["Order Count"][0] == 20  # INT8 (BIGINT)
+    assert by_name["Customer Country"][0] == 25  # TEXT
+
+
+def test_pg_expandarray_resolves_for_jdbc_get_primary_keys(
+    manager_with_model: SessionManager,
+) -> None:
+    """JDBC's getPrimaryKeys query references ``information_schema._pg_expandarray``.
+
+    DuckDB doesn't ship that helper. We add a stub macro + a SQL
+    rewrite that strips the ``information_schema.`` prefix so the
+    function resolves. Tableau hit this during connect-check.
+    """
+
+    emu = CatalogEmulator()
+    emu.refresh(manager_with_model)
+    # The shape pgjdbc actually emits — works on a literal array
+    # because our virtual tables have no indexes for the FROM side.
+    result = emu.execute("SELECT (information_schema._pg_expandarray(ARRAY[1,2,3])).n AS key_seq")
+    # Stub returns a STRUCT with NULL fields — only needs to resolve.
+    assert list(result.rows[0]) == [None]

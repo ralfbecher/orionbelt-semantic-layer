@@ -151,6 +151,95 @@ def test_semantic_query_round_trips_to_data_rows(monkeypatch: pytest.MonkeyPatch
     assert cmd.startswith(b"SELECT 2")
 
 
+def test_handle_honours_bind_result_formats_binary(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Bind.result_formats=[0, 1] → col 1 sent as 8-byte binary FLOAT8.
+
+    pgjdbc uses Bind.result_formats to decode each column. If we send
+    text when binary was requested, pgjdbc throws
+    ``ArrayIndexOutOfBoundsException`` — see ``_encode_result``.
+    """
+    import struct as _struct
+
+    mgr, _ = _make_manager_with_model()
+    router = SemanticRouter(session_manager=mgr, default_dialect="duckdb")
+    monkeypatch.setattr(
+        "orionbelt.pgwire.router.execute_sql",
+        lambda sql, **_: _stub_execute_two_rows(),
+    )
+
+    reply = asyncio.run(
+        router.handle(
+            'SELECT "Customer Country", "Total Revenue" FROM commerce',
+            database="commerce",
+            result_formats=(0, 1),
+        )
+    )
+    frames = _parse_frames(reply)
+    _, desc = frames[0]
+    offset = 2
+    formats: list[int] = []
+    for _ in range(2):
+        end = desc.index(b"\x00", offset)
+        name_len = end - offset + 1
+        fmt_offset = offset + name_len + 16
+        (fmt_code,) = _struct.unpack("!h", desc[fmt_offset : fmt_offset + 2])
+        formats.append(fmt_code)
+        offset = fmt_offset + 2
+    assert formats == [0, 1]
+    # First DataRow: col 1 must be exactly 8 bytes (binary FLOAT8).
+    _, body = frames[1]
+    n_offset = 2  # past n_vals
+    (val0_len,) = _struct.unpack("!i", body[n_offset : n_offset + 4])
+    val0_end = n_offset + 4 + val0_len
+    (val1_len,) = _struct.unpack("!i", body[val0_end : val0_end + 4])
+    assert val1_len == 8
+
+
+def test_handle_preserves_tableau_user_aliases(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Tableau wraps measures as ``SUM(... ) AS "sum:Total Revenue:ok"``.
+
+    The semantic translator strips the wrap (correctly — the measure
+    is already aggregated) but loses the user alias. The compiler then
+    emits ``AS "Total Revenue"`` and Tableau, looking up its alias by
+    name in the ResultSet, sees no matching column and renders NULL.
+    The router re-parses the user SQL and rewrites the result column
+    names back to the user's aliases.
+    """
+    import struct as _struct
+
+    mgr, _ = _make_manager_with_model()
+    router = SemanticRouter(session_manager=mgr, default_dialect="duckdb")
+    monkeypatch.setattr(
+        "orionbelt.pgwire.router.execute_sql",
+        lambda sql, **_: _stub_execute_two_rows(),
+    )
+
+    user_sql = (
+        'SELECT CAST("Customer Country" AS TEXT) AS "Customer Country", '
+        'SUM("Total Revenue") AS "sum:Total Revenue:ok" '
+        "FROM commerce GROUP BY 1"
+    )
+    reply = asyncio.run(router.handle(user_sql, database="commerce"))
+    frames = _parse_frames(reply)
+    _, desc = frames[0]
+    # Pull out the two column names from the RowDescription body.
+    names: list[str] = []
+    offset = 2  # past n_cols
+    for _ in range(2):
+        end = desc.index(b"\x00", offset)
+        names.append(desc[offset:end].decode("utf-8"))
+        offset = end + 1 + 18  # name + NUL + 18-byte per-col header
+    assert names == ["Customer Country", "sum:Total Revenue:ok"]
+    # Sanity-check there's a DataRow with two values.
+    assert frames[1][0] == b"D"
+    (n_vals,) = _struct.unpack("!H", frames[1][1][:2])
+    assert n_vals == 2
+
+
 def test_translator_error_surfaces_as_error_response(monkeypatch: pytest.MonkeyPatch) -> None:
     mgr, _ = _make_manager_with_model()
     router = SemanticRouter(session_manager=mgr, default_dialect="duckdb")

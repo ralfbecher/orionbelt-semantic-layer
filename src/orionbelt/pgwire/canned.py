@@ -45,7 +45,7 @@ _SHOW_VALUES: dict[str, str] = {
     "application_name": "",
     "is_superuser": "off",
     "session_authorization": "obsl",
-    "search_path": '"$user", public',
+    "search_path": '"$user", orionbelt',
     "transaction_isolation": "read committed",
     "transaction_read_only": "off",
     "default_transaction_isolation": "read committed",
@@ -54,13 +54,23 @@ _SHOW_VALUES: dict[str, str] = {
     "max_index_keys": "32",
     "max_identifier_length": "63",
     "block_size": "8192",
+    # Locale parameters — Tableau and other BI tools probe these during
+    # connect to detect collation behaviour. UTF-8 / en_US matches the
+    # values reported by a default Postgres install on Linux.
+    "lc_collate": "en_US.UTF-8",
+    "lc_ctype": "en_US.UTF-8",
+    "lc_messages": "en_US.UTF-8",
+    "lc_monetary": "en_US.UTF-8",
+    "lc_numeric": "en_US.UTF-8",
+    "lc_time": "en_US.UTF-8",
+    "server_version_num": "150000",
 }
 
 
 _VERSION_LITERAL = "PostgreSQL 15.0 on x86_64-pc-linux-gnu (OrionBelt pgwire 0.3)"
 
 
-_RE_SHOW = re.compile(r"^show\s+([a-z_][a-z0-9_]*)\s*$", re.IGNORECASE)
+_RE_SHOW = re.compile(r'^show\s+"?([a-z_][a-z0-9_]*)"?\s*$', re.IGNORECASE)
 _RE_SET = re.compile(r"^set\s+", re.IGNORECASE)
 _RE_RESET = re.compile(r"^reset\s+", re.IGNORECASE)
 _RE_DISCARD = re.compile(r"^discard\s+", re.IGNORECASE)
@@ -70,13 +80,17 @@ _RE_ROLLBACK = re.compile(r"^rollback\b", re.IGNORECASE)
 _RE_SAVEPOINT = re.compile(r"^(savepoint|release\s+savepoint)\b", re.IGNORECASE)
 
 
-def match_canned(sql: str) -> bytes | None:
+def match_canned(sql: str, database: str = "") -> bytes | None:
     """Return wire bytes for a recognised protocol probe, else ``None``.
 
     The caller appends ``ReadyForQuery``; we only emit the per-statement
     reply (RowDescription + DataRow + CommandComplete or a bare
     CommandComplete).  Returns ``None`` so the router falls through to
     catalog / semantic dispatch.
+
+    ``database`` is the value the client passed in StartupMessage; used
+    by ``current_database`` / ``current_catalog`` probes so BI tools see
+    the database they actually connected to (not the session user).
     """
 
     normalised = _strip_terminator(sql).lower()
@@ -108,13 +122,36 @@ def match_canned(sql: str) -> bytes | None:
         "select current_schema()",
         "select current_schema",
     }:
-        return _single_text_row("current_schema", "public")
+        return _single_text_row("current_schema", "orionbelt")
 
-    if normalised in {"select current_database()", "select current_database"}:
-        return _single_text_row("current_database", _SHOW_VALUES["session_authorization"])
+    if normalised in {
+        "select current_database()",
+        "select current_database",
+        "select current_catalog",
+        "select current_catalog()",
+    }:
+        # current_catalog is the SQL-standard alias for current_database;
+        # Tableau and other BI tools probe with it during connect to
+        # confirm which database/model they're scoped to.
+        column = "current_catalog" if "catalog" in normalised else "current_database"
+        value = database or _SHOW_VALUES["session_authorization"]
+        return _single_text_row(column, value)
 
-    if normalised in {"select current_user", "select current_user()", "select user"}:
-        return _single_text_row("current_user", _SHOW_VALUES["session_authorization"])
+    if normalised in {
+        "select current_user",
+        "select current_user()",
+        "select user",
+        "select current_role",
+        "select session_user",
+    }:
+        column = (
+            "current_role"
+            if "current_role" in normalised
+            else "session_user"
+            if "session_user" in normalised
+            else "current_user"
+        )
+        return _single_text_row(column, _SHOW_VALUES["session_authorization"])
 
     show_match = _RE_SHOW.match(normalised)
     if show_match is not None:
@@ -137,6 +174,12 @@ def match_canned(sql: str) -> bytes | None:
         return protocol.build_command_complete("ROLLBACK")
     if _RE_SAVEPOINT.match(normalised) is not None:
         return protocol.build_command_complete("SAVEPOINT")
+
+    # Tableau connect-check temp-table dance is NOT handled here — the
+    # router routes those to the catalog DuckDB so CREATE / INSERT /
+    # SELECT / DROP actually execute. See ``references_temp_table`` in
+    # router.py. Stubbing the SELECT with zero rows broke Tableau,
+    # which inserts one row and expects to read it back.
 
     return None
 

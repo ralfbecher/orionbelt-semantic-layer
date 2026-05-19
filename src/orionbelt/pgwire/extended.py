@@ -47,16 +47,29 @@ SQLSTATE_INVALID_PARAM = "22023"
 
 
 # Type alias matching :class:`PgWireServer`'s handler signature.
-QueryHandler = Callable[[str, str], Awaitable[bytes]]
+QueryHandler = Callable[..., Awaitable[bytes]]
 
 
 @dataclass
 class PreparedStatement:
-    """A Parsed statement awaiting Bind."""
+    """A Parsed statement awaiting Bind.
+
+    ``preexec_reply`` caches the result of running the statement at Parse
+    time when the SQL has no parameter placeholders. The cached reply is
+    used by ``Describe('S')`` so the JDBC driver gets a real
+    ``RowDescription`` instead of ``NoData`` — without it, pgjdbc throws
+    "Received resultset tuples, but no field structure for them" the
+    moment ``Execute`` returns rows.
+    """
 
     name: str
     sql: str
     param_oids: tuple[int, ...]
+    preexec_reply: PortalReply | None = None
+    # True once ``Describe('S')`` has shipped a RowDescription to the
+    # client; propagates to portals so Execute doesn't send the schema
+    # twice — pgjdbc errors on a second RowDescription frame.
+    described_via_statement: bool = False
 
 
 @dataclass
@@ -100,6 +113,7 @@ class Portal:
     name: str
     statement: PreparedStatement
     reply: PortalReply = field(default_factory=PortalReply)
+    described: bool = False  # Tracks whether Describe('P') was issued for this portal.
 
 
 class ExtendedSession:
@@ -115,20 +129,49 @@ class ExtendedSession:
     # Phase 1: Parse
     # ------------------------------------------------------------------
 
-    def parse(self, msg: protocol.ParseMessage) -> bytes:
+    async def parse(self, msg: protocol.ParseMessage) -> bytes:
         """Register a prepared statement, return ``ParseComplete``.
 
         Empty SQL is allowed — Postgres permits ``Parse("", "", [])``;
         a later ``Execute`` on the resulting portal returns
         ``EmptyQueryResponse``.
+
+        For statements with no parameters we eagerly execute here so
+        ``Describe('S')`` can return a real ``RowDescription`` — the
+        JDBC driver locks in "no rows expected" the moment it sees
+        ``NoData``, and any later ``DataRow`` then surfaces as
+        "Received resultset tuples, but no field structure for them".
         """
 
-        self._statements[msg.statement_name] = PreparedStatement(
+        stmt = PreparedStatement(
             name=msg.statement_name,
             sql=msg.query,
             param_oids=msg.param_oids,
         )
+        self._statements[msg.statement_name] = stmt
+        await self._ensure_preexec(stmt)
         return protocol.build_parse_complete()
+
+    async def _ensure_preexec(self, stmt: PreparedStatement) -> None:
+        """Eagerly run the query at Parse time when there are no params.
+
+        Required so ``Describe('S')`` can return a real ``RowDescription``
+        for canned probes (SHOW, SELECT current_*, …). Without this, JDBC
+        is told ``NoData`` and then rejects the later ``DataRow`` frames
+        with "Received resultset tuples, but no field structure for them".
+        """
+
+        if stmt.preexec_reply is not None:
+            return
+        if stmt.param_oids and any(stmt.param_oids):
+            # Parameterised — actual values arrive at Bind; we can't
+            # pre-execute meaningfully here.
+            return
+        if "$" in stmt.sql:
+            # Placeholder syntax even though param_oids is empty.
+            return
+        raw = await self._handler(stmt.sql, self._database)
+        stmt.preexec_reply = _split_simple_reply(raw)
 
     # ------------------------------------------------------------------
     # Phase 2: Bind  (eagerly runs the query — see module docstring)
@@ -143,9 +186,23 @@ class ExtendedSession:
                 message=f"prepared statement {msg.statement_name!r} does not exist",
             )
 
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug(
+                "pgwire Bind portal=%r stmt=%r n_params=%d "
+                "param_formats=%s result_formats=%s sql=%r",
+                msg.portal_name,
+                msg.statement_name,
+                len(msg.param_values),
+                list(msg.param_formats),
+                list(msg.result_formats),
+                stmt.sql[:200],
+            )
+
         formats = _expand_param_formats(msg.param_formats, len(msg.param_values))
         try:
-            substituted = substitute_parameters(stmt.sql, msg.param_values, formats)
+            substituted = substitute_parameters(
+                stmt.sql, msg.param_values, formats, stmt.param_oids
+            )
         except _BinaryParameterError as exc:
             return protocol.build_error_response(
                 severity="ERROR",
@@ -159,9 +216,30 @@ class ExtendedSession:
                 message=str(exc),
             )
 
-        raw = await self._handler(substituted, self._database)
-        reply = _split_simple_reply(raw)
-        self._portals[msg.portal_name] = Portal(name=msg.portal_name, statement=stmt, reply=reply)
+        # Reuse the Parse-time pre-execution when the SQL has no
+        # parameters, the substituted SQL matches, AND the client
+        # didn't request a non-default format code in Bind.
+        # ``result_formats`` is empty (=all text) or ``(0,…)`` is the
+        # server default we used in preexec; anything else means we
+        # have to re-encode, which the simplest way means re-running.
+        wants_default_formats = not msg.result_formats or all(f == 0 for f in msg.result_formats)
+        if stmt.preexec_reply is not None and substituted == stmt.sql and wants_default_formats:
+            reply = stmt.preexec_reply
+        else:
+            raw = await self._handler(
+                substituted, self._database, result_formats=msg.result_formats
+            )
+            reply = _split_simple_reply(raw)
+        portal = Portal(name=msg.portal_name, statement=stmt, reply=reply)
+        # If Describe('S') already sent the RowDescription, the client
+        # has the schema. Per the Postgres protocol Bind.result_formats
+        # overrides the format_code in RowDescription per column —
+        # pgjdbc applies that override when parsing DataRows. We do
+        # NOT re-send RowDescription at Execute; sending it twice trips
+        # pgjdbc's "Bad Connection" state.
+        if stmt.described_via_statement:
+            portal.described = True
+        self._portals[msg.portal_name] = portal
         return protocol.build_bind_complete()
 
     # ------------------------------------------------------------------
@@ -177,10 +255,22 @@ class ExtendedSession:
                     code=SQLSTATE_PROTOCOL_VIOLATION,
                     message=f"prepared statement {msg.name!r} does not exist",
                 )
-            # We don't try to infer column types pre-Bind; the standard
-            # NoData reply tells the client to call Describe('P') after
-            # Bind once the row shape is known.
-            param_oids = list(stmt.param_oids) if stmt.param_oids else [protocol.OID_TEXT]
+            # Faithfully report the param count — falsely advertising
+            # 1 TEXT parameter for a 0-param statement makes the JDBC
+            # driver reject the later 0-value Bind.
+            param_oids = list(stmt.param_oids) if stmt.param_oids else []
+            # Use the pre-executed reply (if any) to give the JDBC driver
+            # a real RowDescription. NoData would otherwise put pgjdbc
+            # into "no rows" state and the later DataRow / RowDescription
+            # at Execute trips "Received resultset tuples, but no field
+            # structure for them".
+            if stmt.preexec_reply is not None:
+                reply = stmt.preexec_reply
+                if reply.is_error:
+                    return protocol.build_parameter_description(param_oids) + reply.error
+                if reply.row_description:
+                    stmt.described_via_statement = True
+                    return protocol.build_parameter_description(param_oids) + reply.row_description
             return protocol.build_parameter_description(param_oids) + protocol.build_no_data()
 
         portal = self._portals.get(msg.name)
@@ -190,6 +280,7 @@ class ExtendedSession:
                 code=SQLSTATE_PROTOCOL_VIOLATION,
                 message=f"portal {msg.name!r} does not exist",
             )
+        portal.described = True
         if portal.reply.is_error:
             return portal.reply.error
         if portal.reply.is_empty_query:
@@ -215,7 +306,15 @@ class ExtendedSession:
         if portal.reply.is_empty_query:
             return protocol.build_empty_query_response()
 
-        body = b"".join(portal.reply.data_rows)
+        # When the client skipped Describe('P') (the JDBC fast path used
+        # by Tableau and some other drivers does this), prepend the
+        # cached RowDescription so the driver isn't surprised by a
+        # DataRow without a preceding metadata frame ("Received resultset
+        # tuples, but no field structure for them").
+        body = b""
+        if not portal.described and portal.reply.row_description:
+            body += portal.reply.row_description
+        body += b"".join(portal.reply.data_rows)
         body += portal.reply.command_complete
         return body
 
@@ -262,36 +361,115 @@ def _expand_param_formats(formats: tuple[int, ...], n_params: int) -> list[int]:
     return list(formats)
 
 
-def substitute_parameters(sql: str, values: tuple[bytes | None, ...], formats: list[int]) -> str:
+def substitute_parameters(
+    sql: str,
+    values: tuple[bytes | None, ...],
+    formats: list[int],
+    param_oids: tuple[int, ...] = (),
+) -> str:
     """Inline ``$1`` / ``$2`` … placeholders with safely-quoted values.
 
-    Step 4 only supports text-format (format code 0) parameters. Binary
-    raises :class:`_BinaryParameterError` so the caller surfaces a
-    ``feature_not_supported`` ErrorResponse.
+    Supports text (format=0) for any OID, plus a small set of
+    binary-format OIDs the JDBC connect-check actually emits — INT2,
+    INT4, INT8, BOOL, FLOAT4, FLOAT8, TEXT/VARCHAR/NAME, BYTEA. Binary
+    parameters whose OID we don't recognise raise
+    :class:`_BinaryParameterError` so the caller can surface
+    ``feature_not_supported``.
 
     Quoting follows the Postgres standard-conforming-strings rule: wrap
-    the value in single quotes and double any embedded single quote.
-    Backslashes are left alone because the server advertises
-    ``standard_conforming_strings = on`` in ParameterStatus.
+    string values in single quotes and double any embedded single
+    quote. Numerics / booleans render unquoted.
     """
 
     rendered: list[str] = []
-    for raw, fmt in zip(values, formats, strict=True):
+    for idx, (raw, fmt) in enumerate(zip(values, formats, strict=True)):
         if raw is None:
             rendered.append("NULL")
             continue
+        oid = param_oids[idx] if idx < len(param_oids) else 0
         if fmt == 1:
-            raise _BinaryParameterError(
-                "Binary-format Bind parameters are not yet supported "
-                "(Step 7 of design/PLAN_postgres_wire.md)"
-            )
+            rendered.append(_decode_binary_param(raw, oid))
+            continue
         try:
             text = raw.decode("utf-8")
         except UnicodeDecodeError as exc:
             raise _BadParameterError(f"Text-format parameter is not valid UTF-8: {exc}") from None
-        escaped = text.replace("'", "''")
-        rendered.append(f"'{escaped}'")
+        if oid in _NUMERIC_TEXT_OIDS:
+            rendered.append(text)
+        elif oid in _BOOL_TEXT_OIDS:
+            rendered.append("TRUE" if text.lower() in {"t", "true", "1", "y", "yes"} else "FALSE")
+        else:
+            escaped = text.replace("'", "''")
+            rendered.append(f"'{escaped}'")
     return _replace_placeholders(sql, rendered)
+
+
+# Postgres binary parameter OIDs we know how to decode. Anything else
+# in binary format trips _BinaryParameterError so we surface a clean
+# error rather than mangling unknown bytes.
+_OID_BOOL = 16
+_OID_BYTEA = 17
+_OID_INT8 = 20
+_OID_INT2 = 21
+_OID_INT4 = 23
+_OID_TEXT = 25
+_OID_FLOAT4 = 700
+_OID_FLOAT8 = 701
+_OID_VARCHAR = 1043
+_OID_NAME = 19
+_OID_BPCHAR = 1042
+
+_NUMERIC_TEXT_OIDS: frozenset[int] = frozenset(
+    {_OID_INT2, _OID_INT4, _OID_INT8, _OID_FLOAT4, _OID_FLOAT8, 1700}
+)
+_BOOL_TEXT_OIDS: frozenset[int] = frozenset({_OID_BOOL})
+
+
+def _decode_binary_param(raw: bytes, oid: int) -> str:
+    """Decode a Postgres binary-format value into a SQL literal.
+
+    The wire formats here match PostgreSQL's ``send`` functions: all
+    multi-byte integers / floats are network byte order (big-endian).
+    """
+
+    if oid in {_OID_INT2}:
+        if len(raw) != 2:
+            raise _BadParameterError(f"INT2 binary param must be 2 bytes, got {len(raw)}")
+        return str(struct.unpack("!h", raw)[0])
+    if oid == _OID_INT4:
+        if len(raw) != 4:
+            raise _BadParameterError(f"INT4 binary param must be 4 bytes, got {len(raw)}")
+        return str(struct.unpack("!i", raw)[0])
+    if oid == _OID_INT8:
+        if len(raw) != 8:
+            raise _BadParameterError(f"INT8 binary param must be 8 bytes, got {len(raw)}")
+        return str(struct.unpack("!q", raw)[0])
+    if oid == _OID_BOOL:
+        if len(raw) != 1:
+            raise _BadParameterError(f"BOOL binary param must be 1 byte, got {len(raw)}")
+        return "TRUE" if raw[0] else "FALSE"
+    if oid == _OID_FLOAT4:
+        if len(raw) != 4:
+            raise _BadParameterError(f"FLOAT4 binary param must be 4 bytes, got {len(raw)}")
+        return repr(struct.unpack("!f", raw)[0])
+    if oid == _OID_FLOAT8:
+        if len(raw) != 8:
+            raise _BadParameterError(f"FLOAT8 binary param must be 8 bytes, got {len(raw)}")
+        return repr(struct.unpack("!d", raw)[0])
+    if oid in {_OID_TEXT, _OID_VARCHAR, _OID_NAME, _OID_BPCHAR}:
+        try:
+            text = raw.decode("utf-8")
+        except UnicodeDecodeError as exc:
+            raise _BadParameterError(
+                f"Binary text-typed parameter is not valid UTF-8: {exc}"
+            ) from None
+        return "'" + text.replace("'", "''") + "'"
+    if oid == _OID_BYTEA:
+        return "'\\x" + raw.hex() + "'::bytea"
+    raise _BinaryParameterError(
+        f"Binary-format parameter for OID {oid} not supported "
+        "(supported: INT2/INT4/INT8/BOOL/FLOAT4/FLOAT8/TEXT/VARCHAR/NAME/BPCHAR/BYTEA)"
+    )
 
 
 def _replace_placeholders(sql: str, rendered: list[str]) -> str:

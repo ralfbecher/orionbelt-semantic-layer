@@ -556,14 +556,19 @@ def _reject_unsupported_structure(ast: exp.Select, errors: list[SemanticError]) 
     # Aggregate function calls outside the SELECT list (e.g. in WHERE / ORDER BY)
     # remain rejected — the SELECT loop has dedicated handling that matches
     # the wrapping aggregate against each measure's declared aggregation.
+    # Tableau-style ``HAVING (COUNT(1) > 0)`` / ``HAVING COUNT(*) > 0``
+    # tautologies are skipped — they're a BI-tool idiom for "return zero
+    # rows when the table is empty" and we drop them at filter-routing
+    # time, see :func:`_atom_to_query_filter`.
     select_aggs = {id(a) for a in ast.expressions if isinstance(a, exp.AggFunc)}
     select_aggs.update(
         id(a.this)
         for a in ast.expressions
         if isinstance(a, exp.Alias) and isinstance(a.this, exp.AggFunc)
     )
+    having_aggs = {id(a) for a in _collect_count_tautology_aggs(ast.args.get("having"))}
     for agg in ast.find_all(exp.AggFunc):
-        if id(agg) in select_aggs:
+        if id(agg) in select_aggs or id(agg) in having_aggs:
             continue
         errors.append(
             SemanticError(
@@ -574,6 +579,62 @@ def _reject_unsupported_structure(ast: exp.Select, errors: list[SemanticError]) 
                 ),
             )
         )
+
+
+def _collect_count_tautology_aggs(having_node: exp.Expression | None) -> list[exp.AggFunc]:
+    """Return ``COUNT(*) / COUNT(1)`` aggregates inside a HAVING tautology.
+
+    Tableau decorates aggregation queries with ``HAVING (COUNT(1) > 0)``
+    to drop the synthetic row Postgres returns for an empty source —
+    when there *is* data the predicate is always true, so we silently
+    skip it. Returns the aggregate nodes so the caller can exclude them
+    from the "aggregate outside SELECT list" rejection.
+    """
+
+    if having_node is None:
+        return []
+    expr = having_node.this if hasattr(having_node, "this") else having_node
+    found: list[exp.AggFunc] = []
+    for atom in _flatten_and(expr):
+        agg = _match_count_tautology(atom)
+        if agg is not None:
+            found.append(agg)
+    return found
+
+
+def _flatten_and(expr: exp.Expression) -> list[exp.Expression]:
+    """Like ``_walk_and`` but doesn't record errors — read-only."""
+
+    if isinstance(expr, exp.And):
+        return [*_flatten_and(expr.left), *_flatten_and(expr.right)]
+    if isinstance(expr, exp.Paren):
+        return _flatten_and(expr.this)
+    return [expr]
+
+
+def _match_count_tautology(atom: exp.Expression) -> exp.AggFunc | None:
+    """If ``atom`` is ``COUNT(*) op N`` or ``COUNT(1) op N``, return the
+    COUNT aggregate node. Otherwise return None.
+    """
+
+    if not isinstance(atom, exp.Binary):
+        return None
+    left, right = atom.left, atom.right
+    # Either side can be the COUNT; the other must be a literal.
+    if isinstance(left, exp.Count) and isinstance(right, exp.Literal):
+        return left if _is_count_star_or_one(left) else None
+    if isinstance(right, exp.Count) and isinstance(left, exp.Literal):
+        return right if _is_count_star_or_one(right) else None
+    return None
+
+
+def _is_count_star_or_one(count: exp.Count) -> bool:
+    """``COUNT(*)`` and ``COUNT(1)`` count every row; treat them the same."""
+
+    inner = count.this
+    if isinstance(inner, exp.Star):
+        return True
+    return isinstance(inner, exp.Literal) and str(inner.this) in {"1", "*"}
 
 
 def _column_name(node: exp.Expression) -> str | None:
@@ -594,6 +655,13 @@ def _column_name(node: exp.Expression) -> str | None:
         return str(node.name)
     if isinstance(node, exp.Identifier):
         return str(node.this)
+    if isinstance(node, exp.Cast | exp.TryCast):
+        # CAST(<col> AS <type>) is a type coercion the BI tool added —
+        # Tableau wraps every dimension in CAST(... AS TEXT). The
+        # underlying column is what we resolve; the cast itself is a
+        # no-op in the semantic layer because dimensions already have
+        # their declared dataType.
+        return _column_name(node.this)
     if (
         isinstance(node, exp.Anonymous)
         and str(node.name).upper() == "MEASURE"
@@ -1004,6 +1072,10 @@ def _split_predicates(
     can lift this restriction by emitting :class:`QueryFilterGroup`.
     """
     for atom in _walk_and(expr, errors):
+        if force_having and _match_count_tautology(atom) is not None:
+            # ``HAVING COUNT(*) > 0`` / ``COUNT(1) > 0`` — Tableau idiom,
+            # silently drop. See :func:`_match_count_tautology`.
+            continue
         target = _atom_to_query_filter(atom, classify, canonical, errors)
         if target is None:
             continue

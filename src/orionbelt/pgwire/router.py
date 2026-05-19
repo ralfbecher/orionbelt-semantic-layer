@@ -19,7 +19,9 @@ Step 4 adds the extended query protocol on top.
 from __future__ import annotations
 
 import logging
+import re
 from dataclasses import dataclass
+from typing import Any
 
 import sqlglot
 import sqlglot.expressions as exp
@@ -33,7 +35,10 @@ from orionbelt.models.semantic import SemanticModel
 from orionbelt.pgwire import protocol
 from orionbelt.pgwire.canned import match_canned
 from orionbelt.pgwire.catalog import CatalogEmulator
-from orionbelt.pgwire.types import encode_text_value, oid_for_type_hint
+from orionbelt.pgwire.types import (
+    encode_value,
+    oid_for_type_hint,
+)
 from orionbelt.service.db_executor import (
     ExecutionError,
     ExecutionResult,
@@ -89,24 +94,47 @@ class SemanticRouter:
         self._default_dialect = default_dialect
         self._catalog = catalog if catalog is not None else CatalogEmulator()
 
-    async def handle(self, sql: str, database: str) -> bytes:
+    async def handle(
+        self,
+        sql: str,
+        database: str,
+        *,
+        result_formats: tuple[int, ...] = (),
+    ) -> bytes:
         """Top-level entry point used by the pgwire server loop.
 
         Returns the raw bytes that go on the wire **before** the trailing
         ``ReadyForQuery`` — i.e., a sequence of RowDescription + DataRow
         + CommandComplete frames, or a single ErrorResponse.
+
+        ``result_formats`` mirrors the same field in ``Bind`` — an empty
+        tuple means "all text", one entry means "apply to every column",
+        N entries means "one per column". When the client asks for
+        binary on a numeric column (typical for pgjdbc with FLOAT8 in
+        its binaryTransferEnable set) we honour it, otherwise we send
+        text. Mismatched formats — server sends binary when the driver
+        expected text — make pgjdbc throw ``ArrayIndexOutOfBoundsException``
+        (`Index 7 out of bounds for length 7`) trying to read 8-byte
+        FLOAT8 from a 7-char text literal.
         """
 
         # 1. Canned protocol probes (SELECT 1, SHOW, SET, BEGIN, …).
-        canned = match_canned(sql)
+        canned = match_canned(sql, database)
         if canned is not None:
             return canned
 
-        # 2. Catalog probes (pg_catalog.*, information_schema.*).
-        if references_catalog(sql):
+        # 2. Catalog probes (pg_catalog.*, information_schema.*) AND
+        #    BI-tool connect-check temp-table operations AND zero-row
+        #    column-discovery probes. All run against the embedded
+        #    DuckDB; the latter gives Tableau a real CREATE / INSERT /
+        #    SELECT / DROP cycle so its round-trip check doesn't see
+        #    zero rows, and ``SELECT * FROM t WHERE 1=0`` answers from
+        #    the catalog's column shape rather than bouncing off the
+        #    semantic translator.
+        if references_catalog(sql) or references_temp_table(sql) or is_metadata_probe(sql):
             try:
                 self._catalog.refresh(self._sessions)
-                result = self._catalog.execute(sql)
+                result = self._catalog.execute(sql, database)
             except Exception as exc:  # noqa: BLE001 — protocol boundary
                 logger.info("pgwire catalog probe failed: %s", exc)
                 return protocol.build_error_response(
@@ -114,7 +142,7 @@ class SemanticRouter:
                     code=SQLSTATE_SYNTAX_ERROR,
                     message=f"catalog query failed: {exc}",
                 )
-            return _encode_result(result)
+            return _encode_result(result, result_formats)
 
         try:
             target = self._resolve_target(database)
@@ -200,7 +228,17 @@ class SemanticRouter:
                 message=f"executor error: {exc}",
             )
 
-        return _encode_result(result)
+        # Tableau (and other BI tools) wrap measures in expressions like
+        # ``SUM("Total Sales") AS "sum:Total Sales:ok"``. The translator
+        # collapses the SUM onto the measure but loses the user alias —
+        # the compiled SQL emits the measure label as the column name
+        # ("Total Sales"), not "sum:Total Sales:ok". Tableau then looks
+        # up its alias in the ResultSet, doesn't find it, and renders
+        # the cell as NULL. Recover the aliases by re-parsing the
+        # original SQL and rewriting ``result.columns[i].name``.
+        result = _apply_user_aliases(sql, result)
+
+        return _encode_result(result, result_formats)
 
     # ------------------------------------------------------------------
     # Resolution
@@ -276,6 +314,65 @@ class SemanticRouter:
 _CATALOG_SCHEMAS: frozenset[str] = frozenset({"pg_catalog", "information_schema"})
 
 
+# Tableau and other BI tools run a connect-check that creates a temp
+# table, inserts a row, reads it back, and drops it. Detection here is
+# a cheap textual match — every operation against a ``"#..."``-quoted
+# table or any CREATE [LOCAL|GLOBAL] TEMP[ORARY] TABLE gets routed to
+# the catalog DuckDB so the full cycle actually executes.
+_RE_TEMP_TABLE_DDL = re.compile(
+    r"^\s*create\s+(?:local\s+|global\s+)?temp(?:orary)?\s+table\b",
+    re.IGNORECASE,
+)
+
+
+def references_temp_table(sql: str) -> bool:
+    """Return ``True`` when the query touches a BI-tool temp table.
+
+    Recognises:
+
+    * ``CREATE [LOCAL|GLOBAL] TEMP[ORARY] TABLE …`` — Postgres syntax;
+    * any reference to a ``"#…"``-quoted table — the Tableau convention.
+
+    Both shapes are routed to the catalog DuckDB so the temp-table
+    round-trip actually executes; stubbing it with zero rows breaks
+    Tableau's connect check.
+    """
+
+    if _RE_TEMP_TABLE_DDL.match(sql) is not None:
+        return True
+    return '"#' in sql
+
+
+# Tableau (and other Postgres clients) probe column metadata with
+# ``SELECT * FROM "schema"."table" WHERE 1=0``. The catalog DuckDB
+# already knows every model's column shape, so it answers correctly
+# with zero rows; routing this to the semantic translator would
+# (incorrectly) reject ``SELECT *`` and the ``1=0`` predicate.
+_RE_ZERO_ROW_METADATA_PROBE = re.compile(
+    r"\bwhere\s+(?:1\s*=\s*0|0\s*=\s*1|false)\b",
+    re.IGNORECASE,
+)
+_RE_LIMIT_ZERO_PROBE = re.compile(r"\blimit\s+0\b", re.IGNORECASE)
+
+
+def is_metadata_probe(sql: str) -> bool:
+    """Return ``True`` for SELECT shapes that mean "describe, don't run".
+
+    Used to route ``SELECT * FROM x WHERE 1=0`` (and ``LIMIT 0``)
+    column-discovery probes to the catalog DuckDB instead of the
+    semantic translator, which doesn't accept star projections or the
+    ``1=0`` literal predicate.
+    """
+
+    lowered = sql.lstrip().lower()
+    if not lowered.startswith("select"):
+        return False
+    return (
+        _RE_ZERO_ROW_METADATA_PROBE.search(sql) is not None
+        or _RE_LIMIT_ZERO_PROBE.search(sql) is not None
+    )
+
+
 def references_catalog(sql: str) -> bool:
     """Return ``True`` when the query needs the catalog emulator.
 
@@ -349,15 +446,147 @@ def _translation_code_to_sqlstate(code: str) -> str:
     return SQLSTATE_SYNTAX_ERROR
 
 
-def _encode_result(result: ExecutionResult) -> bytes:
-    """Encode an ``ExecutionResult`` as RowDescription + DataRow* + CommandComplete."""
+def _apply_user_aliases(original_sql: str, result: ExecutionResult) -> ExecutionResult:
+    """Rewrite ``result.columns[i].name`` to the alias from ``original_sql``.
 
-    columns_for_desc = [(col.name, oid_for_type_hint(col.type_hint)) for col in result.columns]
+    Tableau emits queries like::
+
+        SELECT CAST("dim" AS TEXT) AS "Dim",
+               SUM("Total Sales") AS "sum:Total Sales:ok"
+        FROM ... GROUP BY 1
+
+    The translator collapses the SUM wrapping onto the measure but loses
+    the user alias. The compiled SQL then emits the *measure label*
+    (``Total Sales``) as the column name. Tableau, which looks up
+    columns by the alias it requested (``sum:Total Sales:ok``), sees
+    no matching column and renders the cell as NULL.
+
+    Re-parse the original SQL, walk its top-level SELECT expressions
+    in order, and override the column names that came back from the
+    compiler. Falls back to a no-op on parse errors or column-count
+    mismatches so the surrounding pipeline keeps working.
+    """
+
+    try:
+        ast = sqlglot.parse_one(original_sql, read="postgres", error_level=None)
+    except Exception:  # noqa: BLE001 — we silently fall back on any parse issue
+        return result
+    if not isinstance(ast, exp.Select):
+        return result
+    select_aliases: list[str | None] = []
+    for item in ast.expressions:
+        if isinstance(item, exp.Alias):
+            select_aliases.append(item.alias_or_name)
+        else:
+            # Bare reference — keep the executor's column name.
+            select_aliases.append(None)
+    if len(select_aliases) != len(result.columns):
+        return result
+    for i, alias in enumerate(select_aliases):
+        if alias and result.columns[i].name != alias:
+            result.columns[i].name = alias
+    return result
+
+
+def _encode_result(
+    result: ExecutionResult,
+    result_formats: tuple[int, ...] = (),
+) -> bytes:
+    """Encode an ``ExecutionResult`` as RowDescription + DataRow* + CommandComplete.
+
+    Per-column ``format_code`` is taken from ``Bind.result_formats``
+    (empty → all text; single-entry → broadcast; N-entry → per column).
+    pgjdbc uses the values it requested in Bind to decode each column,
+    NOT the format_code in RowDescription — sending text bytes when
+    Bind asked for binary FLOAT8 makes pgjdbc throw
+    ``ArrayIndexOutOfBoundsException`` indexing byte 7 of a 7-char
+    ``"1329.87"`` text payload as the 8th byte of an IEEE 754 double.
+    """
+
+    n_cols = len(result.columns)
+    per_col_formats = _expand_result_formats(result_formats, n_cols)
+    columns_for_desc = [
+        (col.name, oid_for_type_hint(col.type_hint), per_col_formats[i])
+        for i, col in enumerate(result.columns)
+    ]
     out = protocol.build_row_description(columns_for_desc)
-    for row in result.rows:
-        encoded: list[str | None] = []
-        for value, col in zip(row, result.columns, strict=True):
-            encoded.append(encode_text_value(value, col.type_hint))
+    debug_enabled = logger.isEnabledFor(logging.DEBUG)
+    if debug_enabled:
+        logger.debug(
+            "pgwire RowDescription cols=%s",
+            [
+                {
+                    "name": c.name,
+                    "type_hint": c.type_hint,
+                    "oid": oid_for_type_hint(c.type_hint),
+                    "fmt": per_col_formats[i],
+                }
+                for i, c in enumerate(result.columns)
+            ],
+        )
+    for row_idx, row in enumerate(result.rows):
+        encoded: list[str | bytes | None] = []
+        for i, (value, col) in enumerate(zip(row, result.columns, strict=True)):
+            encoded.append(encode_value(value, col.type_hint, per_col_formats[i]))
+        if debug_enabled:
+            _log_data_row(row_idx, row, encoded, result.columns)
         out += protocol.build_data_row(encoded)
     out += protocol.build_command_complete(f"SELECT {len(result.rows)}")
     return out
+
+
+def _expand_result_formats(result_formats: tuple[int, ...], n_cols: int) -> list[int]:
+    """Expand ``Bind.result_formats`` to one entry per column.
+
+    Per the Postgres wire protocol: empty → all text (0), single entry
+    → apply to every column, N entries → one per column. Anything else
+    is a protocol violation we surface as "all text" to stay safe.
+    """
+
+    if not result_formats:
+        return [0] * n_cols
+    if len(result_formats) == 1:
+        return [result_formats[0]] * n_cols
+    if len(result_formats) == n_cols:
+        return list(result_formats)
+    return [0] * n_cols
+
+
+def _log_data_row(
+    row_idx: int,
+    raw_row: Any,
+    encoded_row: list[str | bytes | None],
+    columns: Any,
+) -> None:
+    """Dump per-column raw value + wire bytes + pgjdbc-style decode.
+
+    Logged at DEBUG. For binary FLOAT8 columns we also unpack the bytes
+    with ``struct.unpack("!d", ...)`` so the log shows the round-trip
+    value pgjdbc should see — if that round-trip is non-zero but
+    Tableau still renders 0, the bug is downstream of our encoder.
+    """
+
+    import struct as _struct
+
+    parts: list[str] = []
+    for raw_value, enc, col in zip(raw_row, encoded_row, columns, strict=True):
+        if enc is None:
+            parts.append(f"{col.name}=NULL(hint={col.type_hint})")
+            continue
+        if isinstance(enc, bytes):
+            hex_repr = enc.hex()
+            decoded: object
+            if col.type_hint == "number" and len(enc) == 8:
+                try:
+                    decoded = _struct.unpack("!d", enc)[0]
+                except _struct.error as exc:
+                    decoded = f"<unpack error: {exc}>"
+            else:
+                decoded = f"<{len(enc)} bytes>"
+            parts.append(
+                f"{col.name}={raw_value!r}(hint={col.type_hint}) "
+                f"-> bytes(len={len(enc)}, hex={hex_repr}, decoded={decoded!r})"
+            )
+        else:
+            parts.append(f"{col.name}={raw_value!r}(hint={col.type_hint}) -> text({enc!r})")
+    logger.debug("pgwire DataRow[%d]: %s", row_idx, " | ".join(parts))
