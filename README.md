@@ -167,7 +167,7 @@ Open [http://localhost:8080/docs](http://localhost:8080/docs) to explore the API
 # docker-compose.yml
 services:
   api:
-    image: ralforion/orionbelt-api:2.4.0
+    image: ralforion/orionbelt-api:2.5.0
     ports: ["8080:8080"]
     env_file: .env
     volumes:
@@ -176,7 +176,7 @@ services:
       MODEL_FILE: /app/models/my-model.obml.yml
 
   ui:
-    image: ralforion/orionbelt-ui:2.4.0
+    image: ralforion/orionbelt-ui:2.5.0
     ports: ["7860:7860"]
     environment:
       API_BASE_URL: http://api:8080
@@ -192,7 +192,7 @@ See [`.env.template`](.env.template) for the full environment variable reference
 > - `API_SERVER_HOST` is already `0.0.0.0` inside the container — no override needed.
 > - MCP via stdio does not work in Docker. Use the [MCP HTTP client](https://github.com/ralfbecher/orionbelt-semantic-layer-mcp) for containerized deployments.
 > - Mount models to `/app/models` (or any path) and set `MODEL_FILE` to pre-load on startup.
-> - For production, pin a version tag (`:2.4.0`) rather than `:latest`.
+> - For production, pin a version tag (`:2.5.0`) rather than `:latest`.
 
 ### Claude Desktop / MCP
 
