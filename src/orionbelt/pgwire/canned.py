@@ -46,7 +46,7 @@ _SHOW_VALUES: dict[str, str] = {
     "application_name": "",
     "is_superuser": "off",
     "session_authorization": "obsl",
-    "search_path": '"$user", public',
+    "search_path": '"$user", orionbelt',
     "transaction_isolation": "read committed",
     "transaction_read_only": "off",
     "default_transaction_isolation": "read committed",
@@ -55,13 +55,23 @@ _SHOW_VALUES: dict[str, str] = {
     "max_index_keys": "32",
     "max_identifier_length": "63",
     "block_size": "8192",
+    # Locale parameters — Tableau and other BI tools probe these during
+    # connect to detect collation behaviour. UTF-8 / en_US matches the
+    # values reported by a default Postgres install on Linux.
+    "lc_collate": "en_US.UTF-8",
+    "lc_ctype": "en_US.UTF-8",
+    "lc_messages": "en_US.UTF-8",
+    "lc_monetary": "en_US.UTF-8",
+    "lc_numeric": "en_US.UTF-8",
+    "lc_time": "en_US.UTF-8",
+    "server_version_num": "150000",
 }
 
 
 _VERSION_LITERAL = "PostgreSQL 15.0 on x86_64-pc-linux-gnu (OrionBelt pgwire 0.3)"
 
 
-_RE_SHOW = re.compile(r"^show\s+([a-z_][a-z0-9_]*)\s*$", re.IGNORECASE)
+_RE_SHOW = re.compile(r'^show\s+"?([a-z_][a-z0-9_]*)"?\s*$', re.IGNORECASE)
 _RE_SET = re.compile(r"^set\s+", re.IGNORECASE)
 _RE_RESET = re.compile(r"^reset\s+", re.IGNORECASE)
 _RE_DISCARD = re.compile(r"^discard\s+", re.IGNORECASE)
@@ -80,8 +90,10 @@ def match_canned(sql: str, database: str = "") -> bytes | None:
     catalog / semantic dispatch.
 
     ``database`` is the value the client sent in StartupMessage —
-    used to answer ``SELECT current_database()`` honestly so BI tools
-    can highlight the connected node in their schema trees.
+    used for routing to the right model. Catalog probes
+    (``current_database`` / ``current_catalog``) return the fixed
+    ``orionbelt`` logical database name so BI-tool schema trees stay
+    consistent with the one-row ``pg_database`` view.
     """
 
     normalised = _strip_terminator(sql).lower()
@@ -113,18 +125,39 @@ def match_canned(sql: str, database: str = "") -> bytes | None:
         "select current_schema()",
         "select current_schema",
     }:
-        return _single_text_row("current_schema", "public")
+        return _single_text_row("current_schema", "orionbelt")
 
-    if normalised in {"select current_database()", "select current_database"}:
+    if normalised in {
+        "select current_database()",
+        "select current_database",
+        "select current_catalog",
+        "select current_catalog()",
+    }:
         # OBSL surfaces every loaded model under a single "orionbelt"
-        # logical database (mirrors pg_database). Returning the brand
-        # name here keeps BI-tool schema trees consistent with the
-        # one-row pg_database view.
+        # logical database — each model is a schema (per pg_namespace).
+        # current_catalog is the SQL-standard alias for current_database;
+        # both return the brand name so BI-tool schema trees stay
+        # consistent with the one-row pg_database view, regardless of
+        # which model the client selected via StartupMessage `database=`.
         del database  # routing uses it; the catalog name does not
-        return _single_text_row("current_database", _OBSL_DATABASE_NAME)
+        column = "current_catalog" if "catalog" in normalised else "current_database"
+        return _single_text_row(column, _OBSL_DATABASE_NAME)
 
-    if normalised in {"select current_user", "select current_user()", "select user"}:
-        return _single_text_row("current_user", _SHOW_VALUES["session_authorization"])
+    if normalised in {
+        "select current_user",
+        "select current_user()",
+        "select user",
+        "select current_role",
+        "select session_user",
+    }:
+        column = (
+            "current_role"
+            if "current_role" in normalised
+            else "session_user"
+            if "session_user" in normalised
+            else "current_user"
+        )
+        return _single_text_row(column, _SHOW_VALUES["session_authorization"])
 
     show_match = _RE_SHOW.match(normalised)
     if show_match is not None:
@@ -147,6 +180,12 @@ def match_canned(sql: str, database: str = "") -> bytes | None:
         return protocol.build_command_complete("ROLLBACK")
     if _RE_SAVEPOINT.match(normalised) is not None:
         return protocol.build_command_complete("SAVEPOINT")
+
+    # Tableau connect-check temp-table dance is NOT handled here — the
+    # router routes those to the catalog DuckDB so CREATE / INSERT /
+    # SELECT / DROP actually execute. See ``references_temp_table`` in
+    # router.py. Stubbing the SELECT with zero rows broke Tableau,
+    # which inserts one row and expects to read it back.
 
     return None
 

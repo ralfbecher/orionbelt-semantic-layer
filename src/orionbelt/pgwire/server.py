@@ -34,10 +34,15 @@ logger = logging.getLogger(__name__)
 # sequence of one or more protocol frames terminated by the per-statement
 # reply (CommandComplete or ErrorResponse). The caller appends
 # ReadyForQuery. Steps 3+ extend this signature (parameters, portals).
-QueryHandler = Callable[[str, str], Awaitable[bytes]]
+QueryHandler = Callable[..., Awaitable[bytes]]
 
 
-async def _hello_world_handler(sql: str, database: str) -> bytes:
+async def _hello_world_handler(
+    sql: str,
+    database: str,
+    *,
+    result_formats: tuple[int, ...] = (),
+) -> bytes:
     """Fallback responder used when no router is wired in.
 
     Recognises ``SELECT 1`` so connectivity probes still work in
@@ -46,7 +51,7 @@ async def _hello_world_handler(sql: str, database: str) -> bytes:
     handler so misuse is loud rather than silent.
     """
 
-    del database  # unused — see SemanticRouter for the real path
+    del database, result_formats  # unused — see SemanticRouter for the real path
     normalised = sql.strip().rstrip(";").strip().lower()
     if normalised == "select 1":
         return (
@@ -127,6 +132,25 @@ class PgWireServer:
     # Connection lifecycle
     # ------------------------------------------------------------------
 
+    # Maximum time we'll wait for the OS / client to drain a write
+    # before declaring the connection dead. A client that stopped
+    # reading (Tableau JDBC crashes / aborts mid-response) pins the
+    # event loop indefinitely without this — and the process becomes
+    # unresponsive to Ctrl+C until the socket OS-timeouts.
+    _WRITE_DRAIN_TIMEOUT_SECONDS: float = 10.0
+
+    async def _drain(self, writer: asyncio.StreamWriter) -> None:
+        """``writer.drain()`` with a hard timeout so a dead client
+        can't hang the server."""
+
+        try:
+            await asyncio.wait_for(
+                writer.drain(),
+                timeout=self._WRITE_DRAIN_TIMEOUT_SECONDS,
+            )
+        except TimeoutError as exc:
+            raise ConnectionError("pgwire write drain timed out") from exc
+
     async def _handle_connection(
         self,
         reader: asyncio.StreamReader,
@@ -175,7 +199,7 @@ class PgWireServer:
             # SSLRequest — reject (Step 1 has no TLS in-process), then
             # read the real StartupMessage on the same socket.
             writer.write(b"N")
-            await writer.drain()
+            await self._drain(writer)
             startup = await protocol.read_startup_message(reader.readexactly)
             if startup is None:
                 raise protocol.ProtocolError("Repeated SSLRequest on same socket")
@@ -189,7 +213,7 @@ class PgWireServer:
                     message=auth.error_message or "authentication failed",
                 )
             )
-            await writer.drain()
+            await self._drain(writer)
             return
 
         # Handshake complete: AuthOk + a small set of ParameterStatus
@@ -201,7 +225,7 @@ class PgWireServer:
             protocol.build_backend_key_data(pid=_fake_backend_pid(), secret=secrets.randbits(31))
         )
         writer.write(protocol.build_ready_for_query())
-        await writer.drain()
+        await self._drain(writer)
 
         logger.info(
             "pgwire session opened peer=%s user=%s database=%s",
@@ -241,14 +265,14 @@ class PgWireServer:
                         )
                     )
                 writer.write(protocol.build_ready_for_query())
-                await writer.drain()
+                await self._drain(writer)
                 continue
 
             # ---- Extended query protocol --------------------------------
             if tag == b"S":  # Sync — emit ReadyForQuery, clear skip flag
                 skip_until_sync = False
                 writer.write(protocol.build_ready_for_query())
-                await writer.drain()
+                await self._drain(writer)
                 continue
 
             if skip_until_sync:
@@ -258,7 +282,7 @@ class PgWireServer:
                 continue
 
             if tag == b"H":  # Flush — no-op; we already drain after each reply
-                await writer.drain()
+                await self._drain(writer)
                 continue
 
             try:
@@ -271,7 +295,7 @@ class PgWireServer:
                 )
 
             writer.write(reply_bytes)
-            await writer.drain()
+            await self._drain(writer)
 
             # Any ErrorResponse in extended-query mode triggers the
             # skip-until-Sync state described above.
@@ -285,7 +309,10 @@ class PgWireServer:
         extended: ExtendedSession,
     ) -> bytes:
         if tag == b"P":
-            return extended.parse(protocol.parse_parse(body))
+            return await asyncio.wait_for(
+                extended.parse(protocol.parse_parse(body)),
+                timeout=self.query_timeout,
+            )
         if tag == b"B":
             return await asyncio.wait_for(
                 extended.bind(protocol.parse_bind(body)),
@@ -314,7 +341,7 @@ class PgWireServer:
             writer.write(
                 protocol.build_error_response(severity="FATAL", code=code, message=message)
             )
-            await writer.drain()
+            await self._drain(writer)
         except Exception:
             pass
 
