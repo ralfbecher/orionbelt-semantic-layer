@@ -35,7 +35,7 @@ _CONNECTIVITY_PATTERNS: dict[str, tuple[str, str, str]] = {
 # frames the server sends after AuthenticationOk so clients see a
 # consistent view of session state.
 _SHOW_VALUES: dict[str, str] = {
-    "server_version": "15.0 (orionbelt-pgwire 0.3)",
+    "server_version": "15.0 (orionbelt-pgwire 2.5.0)",
     "server_encoding": "UTF8",
     "client_encoding": "UTF8",
     "datestyle": "ISO, MDY",
@@ -67,7 +67,7 @@ _SHOW_VALUES: dict[str, str] = {
 }
 
 
-_VERSION_LITERAL = "PostgreSQL 15.0 on x86_64-pc-linux-gnu (OrionBelt pgwire 0.3)"
+_VERSION_LITERAL = "PostgreSQL 15.0 on x86_64-pc-linux-gnu (OrionBelt pgwire 2.5.0)"
 
 
 _RE_SHOW = re.compile(r'^show\s+"?([a-z_][a-z0-9_]*)"?\s*$', re.IGNORECASE)
