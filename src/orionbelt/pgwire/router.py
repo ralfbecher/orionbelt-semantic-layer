@@ -599,19 +599,27 @@ def _apply_user_aliases(original_sql: str, result: ExecutionResult) -> Execution
     Tableau emits queries like::
 
         SELECT CAST("dim" AS TEXT) AS "Dim",
-               SUM("Total Sales") AS "sum:Total Sales:ok"
+               SUM("Total Sales") AS "sum:Total Sales:ok",
+               SUM("Total Returns") AS "sum:Total Returns:ok"
         FROM ... GROUP BY 1
 
-    The translator collapses the SUM wrapping onto the measure but loses
-    the user alias. The compiled SQL then emits the *measure label*
-    (``Total Sales``) as the column name. Tableau, which looks up
-    columns by the alias it requested (``sum:Total Sales:ok``), sees
-    no matching column and renders the cell as NULL.
+    The translator collapses the aggregate wrapping onto the measure
+    but loses the user alias. The compiled SQL then emits the *measure
+    label* (``Total Sales``) as the column name. Tableau, which looks
+    up columns by the alias it requested, sees no matching column and
+    renders the cell as NULL.
 
-    Re-parse the original SQL, walk its top-level SELECT expressions
-    in order, and override the column names that came back from the
-    compiler. Falls back to a no-op on parse errors or column-count
-    mismatches so the surrounding pipeline keeps working.
+    Renaming by **position** is wrong: the CFL planner groups measures
+    by their source fact object so the compiler's column order can
+    differ from the user's SELECT order — by-position renaming then
+    puts Tableau's alias for ``Total Sales`` onto the Total Returns
+    column. Match by the **original measure name** instead: extract
+    each Alias's inner column reference from the user SQL, build a
+    ``{inner_name: user_alias}`` map, and apply it by name lookup on
+    the executor's columns. Order-independent.
+
+    Falls back to a no-op on parse errors so the surrounding pipeline
+    keeps working.
     """
 
     try:
@@ -620,19 +628,45 @@ def _apply_user_aliases(original_sql: str, result: ExecutionResult) -> Execution
         return result
     if not isinstance(ast, exp.Select):
         return result
-    select_aliases: list[str | None] = []
+    alias_for_name: dict[str, str] = {}
     for item in ast.expressions:
-        if isinstance(item, exp.Alias):
-            select_aliases.append(item.alias_or_name)
-        else:
-            # Bare reference — keep the executor's column name.
-            select_aliases.append(None)
-    if len(select_aliases) != len(result.columns):
+        if not isinstance(item, exp.Alias):
+            continue
+        inner_name = _alias_inner_column_name(item.this)
+        user_alias = item.alias_or_name
+        if inner_name and inner_name != user_alias:
+            alias_for_name[inner_name] = user_alias
+    if not alias_for_name:
         return result
-    for i, alias in enumerate(select_aliases):
-        if alias and result.columns[i].name != alias:
-            result.columns[i].name = alias
+    for col in result.columns:
+        new_name = alias_for_name.get(col.name)
+        if new_name is not None:
+            col.name = new_name
     return result
+
+
+def _alias_inner_column_name(node: exp.Expression) -> str | None:
+    """Find the column name an Alias's inner expression resolves to.
+
+    Tableau wraps measures in aggregates and dimensions in CAST. We
+    unwrap both so the user alias maps back to the underlying
+    dim/measure/metric label:
+
+    * ``SUM("Total Sales")`` → ``"Total Sales"``
+    * ``CAST("Client Name" AS TEXT)`` → ``"Client Name"``
+    * bare ``Column("X")`` → ``"X"``
+
+    Returns ``None`` when the expression doesn't unwrap to a single
+    column reference (literals, arithmetic, multi-arg functions).
+    """
+
+    if isinstance(node, exp.Column):
+        return node.name
+    if isinstance(node, exp.Cast | exp.TryCast):
+        return _alias_inner_column_name(node.this)
+    if isinstance(node, exp.AggFunc):
+        return _alias_inner_column_name(node.this)
+    return None
 
 
 def _encode_result(

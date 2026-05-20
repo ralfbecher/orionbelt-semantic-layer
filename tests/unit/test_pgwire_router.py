@@ -240,6 +240,63 @@ def test_handle_preserves_tableau_user_aliases(
     assert n_vals == 2
 
 
+def test_alias_rewrite_matches_by_inner_column_name_not_position(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Alias rewrite must match by inner column name, not SELECT position.
+
+    The CFL planner groups measures by their source fact object so the
+    compiled column order can differ from the user's SELECT order.
+    Renaming by position would put Tableau's alias for ``Total Sales``
+    onto the column that actually contains ``Total Returns`` data —
+    surfacing as the swapped-column bug Tableau showed in v2.5.0
+    pre-release testing. Match by name so the rename is
+    order-independent.
+    """
+
+    # User SELECT order: Dim, Revenue, Order Count.
+    # Compiler returns: Dim, Order Count, Revenue (simulates CFL re-ordering).
+    def fake_execute(_sql: str, **_: Any) -> ExecutionResult:
+        return ExecutionResult(
+            columns=[
+                ColumnMeta(name="Customer Country", type_hint="string"),
+                ColumnMeta(name="Order Count", type_hint="number"),
+                ColumnMeta(name="Total Revenue", type_hint="number"),
+            ],
+            raw_rows=[["DE", 10, 100], ["US", 20, 200]],
+            row_count=2,
+        )
+
+    mgr, _ = _make_manager_with_model()
+    router = SemanticRouter(session_manager=mgr, default_dialect="duckdb")
+    monkeypatch.setattr("orionbelt.pgwire.router.execute_sql", fake_execute)
+
+    user_sql = (
+        'SELECT CAST("Customer Country" AS TEXT) AS "Customer Country", '
+        'SUM("Total Revenue") AS "sum:Total Revenue:ok", '
+        'COUNT("Order Count") AS "cnt:Order Count:ok" '
+        "FROM commerce GROUP BY 1"
+    )
+    reply = asyncio.run(router.handle(user_sql, database="commerce"))
+    frames = _parse_frames(reply)
+    _, desc = frames[0]
+    names: list[str] = []
+    offset = 2
+    for _ in range(3):
+        end = desc.index(b"\x00", offset)
+        names.append(desc[offset:end].decode("utf-8"))
+        offset = end + 1 + 18
+    # Column order matches the executor's output. Names match by inner
+    # column name — the Order Count column gets the Order Count alias
+    # even though it came before Revenue in the executor's output,
+    # opposite to the user's SELECT order.
+    assert names == [
+        "Customer Country",
+        "cnt:Order Count:ok",
+        "sum:Total Revenue:ok",
+    ]
+
+
 def test_translator_error_surfaces_as_error_response(monkeypatch: pytest.MonkeyPatch) -> None:
     mgr, _ = _make_manager_with_model()
     router = SemanticRouter(session_manager=mgr, default_dialect="duckdb")
