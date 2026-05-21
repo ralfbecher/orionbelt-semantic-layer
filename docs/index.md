@@ -36,6 +36,7 @@ OrionBelt Semantic Layer is an **API-first** semantic engine and query planner f
 | Custom Extensions   | Vendor-specific metadata at all model levels (model, data object, column, dimension, measure, metric)           |
 | DB-API 2.0 Drivers  | PEP 249 drivers for all 8 databases with transparent OBML compilation                                          |
 | Arrow Flight SQL    | Embedded gRPC server for DBeaver, Tableau, Power BI — single container, two ports                               |
+| PostgreSQL Wire     | Native Postgres-protocol surface (v2.5.0+) — connect Tableau, DBeaver, Superset, Power BI, `psql`, or **Dremio as a federated Postgres source** without any extra driver |
 | OBSL Graph & SPARQL | Every loaded model is exported as an OBSL-Core 0.1 RDF graph (Turtle) with a read-only SPARQL (SELECT/ASK) endpoint |
 | Plugin Architecture | Extensible dialect system with capability flags                                                                 |
 | Source Tracking     | Error messages with YAML line/column positions                                                                  |
