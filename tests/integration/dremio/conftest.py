@@ -32,6 +32,9 @@ DREMIO_REST_URL = os.environ.get("DREMIO_REST_URL", "http://localhost:19047")
 OBSL_PGWIRE_HOST = os.environ.get("OBSL_PGWIRE_HOST", "obsl")  # docker network alias
 OBSL_PGWIRE_PORT = int(os.environ.get("OBSL_PGWIRE_PORT", "5432"))
 OBSL_MODEL_NAME = os.environ.get("OBSL_MODEL_NAME", "orionbelt_1_commerce")
+# Stage-2: Dremio-backed model. OBSL compiles to Dremio SQL and executes
+# back against the same Dremio container via the ob-dremio Flight driver.
+OBSL_STAGE2_MODEL_NAME = os.environ.get("OBSL_STAGE2_MODEL_NAME", "dremio_info_schema")
 
 # Dremio first-user bootstrap. The container has no preexisting admin
 # until the very first PUT /apiv2/bootstrap/firstuser succeeds.
