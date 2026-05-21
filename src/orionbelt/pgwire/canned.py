@@ -23,7 +23,6 @@ from __future__ import annotations
 import re
 
 from orionbelt.pgwire import protocol
-from orionbelt.pgwire.catalog import OBSL_DATABASE_NAME as _OBSL_DATABASE_NAME
 
 # Connectivity probes that don't need a model loaded.
 _CONNECTIVITY_PATTERNS: dict[str, tuple[str, str, str]] = {
@@ -89,11 +88,9 @@ def match_canned(sql: str, database: str = "") -> bytes | None:
     CommandComplete).  Returns ``None`` so the router falls through to
     catalog / semantic dispatch.
 
-    ``database`` is the value the client sent in StartupMessage —
-    used for routing to the right model. Catalog probes
-    (``current_database`` / ``current_catalog``) return the fixed
-    ``orionbelt`` logical database name so BI-tool schema trees stay
-    consistent with the one-row ``pg_database`` view.
+    ``database`` is the value the client passed in StartupMessage; used
+    by ``current_database`` / ``current_catalog`` probes so BI tools see
+    the database they actually connected to (not the session user).
     """
 
     normalised = _strip_terminator(sql).lower()
@@ -133,15 +130,12 @@ def match_canned(sql: str, database: str = "") -> bytes | None:
         "select current_catalog",
         "select current_catalog()",
     }:
-        # OBSL surfaces every loaded model under a single "orionbelt"
-        # logical database — each model is a schema (per pg_namespace).
         # current_catalog is the SQL-standard alias for current_database;
-        # both return the brand name so BI-tool schema trees stay
-        # consistent with the one-row pg_database view, regardless of
-        # which model the client selected via StartupMessage `database=`.
-        del database  # routing uses it; the catalog name does not
+        # Tableau and other BI tools probe with it during connect to
+        # confirm which database/model they're scoped to.
         column = "current_catalog" if "catalog" in normalised else "current_database"
-        return _single_text_row(column, _OBSL_DATABASE_NAME)
+        value = database or _SHOW_VALUES["session_authorization"]
+        return _single_text_row(column, value)
 
     if normalised in {
         "select current_user",

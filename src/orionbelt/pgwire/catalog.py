@@ -69,13 +69,6 @@ _SAFE_TABLE_NAME = re.compile(r"^[A-Za-z_][A-Za-z0-9_]{0,62}$")
 # replies and the catalog DDL stay in lockstep.
 CATALOG_SCHEMA = "orionbelt"
 
-# Alias kept for compatibility with canned.py / router.py imports that
-# were introduced during the Step 5 era (which used a per-model schema
-# layout under a single "orionbelt" logical database). v2.5.0's catalog
-# folds the same brand name into ``CATALOG_SCHEMA``; both names refer
-# to the same string and the same concept.
-OBSL_DATABASE_NAME = CATALOG_SCHEMA
-
 
 # Stub Postgres catalog functions referenced by psql ``\\dt`` / ``\\d``.
 # DuckDB exposes ``pg_class`` / ``pg_namespace`` / ``pg_attribute`` as
