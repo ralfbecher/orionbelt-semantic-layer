@@ -217,13 +217,21 @@ class ExtendedSession:
             )
 
         # Reuse the Parse-time pre-execution when the SQL has no
-        # parameters, the substituted SQL matches, AND the client
-        # didn't request a non-default format code in Bind.
-        # ``result_formats`` is empty (=all text) or ``(0,…)`` is the
-        # server default we used in preexec; anything else means we
-        # have to re-encode, which the simplest way means re-running.
+        # parameters AND the substituted SQL matches. The Bind's
+        # ``result_formats`` only matter for re-encoding ``DataRow``
+        # bytes, so when the cached reply has no data rows (DDL like
+        # CREATE / DROP, empty query, error response) we always reuse —
+        # re-running a non-idempotent CREATE TABLE on every Bind would
+        # double-execute Tableau's temp-table connect-check and trip
+        # ``Catalog Error: ... already exists!``. For replies that DO
+        # have data rows we only short-circuit on default format codes.
+        cache_safe = stmt.preexec_reply is not None and substituted == stmt.sql
+        no_rows_to_recode = cache_safe and not (
+            stmt.preexec_reply.data_rows if stmt.preexec_reply is not None else False
+        )
         wants_default_formats = not msg.result_formats or all(f == 0 for f in msg.result_formats)
-        if stmt.preexec_reply is not None and substituted == stmt.sql and wants_default_formats:
+        if cache_safe and (no_rows_to_recode or wants_default_formats):
+            assert stmt.preexec_reply is not None  # noqa: S101 — narrowed by cache_safe
             reply = stmt.preexec_reply
         else:
             raw = await self._handler(
