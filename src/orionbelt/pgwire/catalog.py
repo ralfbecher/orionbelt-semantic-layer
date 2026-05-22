@@ -686,10 +686,13 @@ def _build_metadata_views(db_name: str, model: SemanticModel) -> Iterator[str]:
     (expression / formula / data object refs) for callers that want it
     without making the user-facing tables wider than necessary.
 
-    DDL is rendered as ``CREATE OR REPLACE TABLE`` (not VIEW) because
-    DuckDB temp-view scoping makes them invisible to ``pg_class`` /
-    ``information_schema.tables`` queries BI tools issue against the
-    attached database. Tables show up; temp views don't.
+    Rendered as ``CREATE OR REPLACE VIEW`` (not TABLE) so BI tool
+    browsers show them under the **Views** node — matching where the
+    same per-model metadata appears on the Arrow Flight SQL surface
+    and keeping the "Tables" node reserved for the user-facing model
+    table itself. Plain (non-temp) views ARE visible via
+    ``pg_class.relkind = 'v'`` and ``information_schema.views``; the
+    TEMP-view invisibility caveat only applies to TEMP scope.
     """
 
     qdb = db_name.replace('"', '""')
@@ -711,8 +714,8 @@ def _build_dimension_metadata_views(qdb: str, schema: str, model: SemanticModel)
         safe_label = label.replace("'", "''")
         rows_basic.append(f"('{safe_label}', '{result_type}')")
         rows_full.append(f"('{safe_label}', '{result_type}', '{data_object}', '{column}')")
-    yield _values_table_ddl(qdb, schema, "dimensions", ("name", "data_type"), rows_basic)
-    yield _values_table_ddl(
+    yield _values_view_ddl(qdb, schema, "dimensions", ("name", "data_type"), rows_basic)
+    yield _values_view_ddl(
         qdb,
         schema,
         "_dimensions_metadata",
@@ -733,10 +736,10 @@ def _build_measure_metadata_views(qdb: str, schema: str, model: SemanticModel) -
         safe_label = label.replace("'", "''")
         rows_basic.append(f"('{safe_label}', '{agg}', '{data_type}')")
         rows_full.append(f"('{safe_label}', '{agg}', '{data_type}', '{expression}')")
-    yield _values_table_ddl(
+    yield _values_view_ddl(
         qdb, schema, "measures", ("name", "aggregation", "data_type"), rows_basic
     )
-    yield _values_table_ddl(
+    yield _values_view_ddl(
         qdb,
         schema,
         "_measures_metadata",
@@ -756,8 +759,8 @@ def _build_metric_metadata_views(qdb: str, schema: str, model: SemanticModel) ->
         safe_label = label.replace("'", "''")
         rows_basic.append(f"('{safe_label}', '{metric_type}')")
         rows_full.append(f"('{safe_label}', '{metric_type}', '{formula}')")
-    yield _values_table_ddl(qdb, schema, "metrics", ("name", "metric_type"), rows_basic)
-    yield _values_table_ddl(
+    yield _values_view_ddl(qdb, schema, "metrics", ("name", "metric_type"), rows_basic)
+    yield _values_view_ddl(
         qdb,
         schema,
         "_metrics_metadata",
@@ -766,16 +769,16 @@ def _build_metric_metadata_views(qdb: str, schema: str, model: SemanticModel) ->
     )
 
 
-def _values_table_ddl(
+def _values_view_ddl(
     qdb: str,
     schema: str,
-    table: str,
+    view: str,
     columns: tuple[str, ...],
     rows: list[str],
 ) -> str:
-    """Render ``CREATE OR REPLACE TABLE qdb.schema.table AS SELECT * FROM VALUES …``.
+    """Render ``CREATE OR REPLACE VIEW qdb.schema.view AS SELECT … FROM VALUES …``.
 
-    Empty ``rows`` produces an empty table by way of a SELECT-WHERE-false
+    Empty ``rows`` produces an empty view by way of a SELECT-WHERE-false
     on a single dummy row, so the columns still appear in
     ``information_schema.columns``.
     """
@@ -785,12 +788,12 @@ def _values_table_ddl(
         values_sql = ", ".join(rows)
         select_clause = f"SELECT * FROM (VALUES {values_sql}) AS v({col_list})"
     else:
-        # One-row stub filtered out so the table has the right column
+        # One-row stub filtered out so the view has the right column
         # shape but zero rows. Each placeholder is an empty string so
         # the inferred types are VARCHAR.
         placeholders = ", ".join("''" for _ in columns)
         select_clause = f"SELECT * FROM (VALUES ({placeholders})) AS v({col_list}) WHERE false"
-    return f'CREATE OR REPLACE TABLE "{qdb}".{schema}."{table}" AS {select_clause}'
+    return f'CREATE OR REPLACE VIEW "{qdb}".{schema}."{view}" AS {select_clause}'
 
 
 def _dim_sql_type(dim: Dimension) -> str:
