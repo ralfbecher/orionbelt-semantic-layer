@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://ralforion.com/orionbelt-semantic-layer/guide/correctness-and-drift-tests/">
+        <link rel="canonical" href="https://ralforion.com/orionbelt-semantic-layer/guide/postgres-wire-bi-tools/">
       
       
-        <link rel="prev" href="../compilation/">
+        <link rel="prev" href="../integrations/">
       
       
-        <link rel="next" href="../obsl/">
+        <link rel="next" href="../osi/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>Correctness & Drift Tests - OrionBelt Semantic Layer</title>
+        <title>Postgres Wire (BI Tools) - OrionBelt Semantic Layer</title>
       
     
     
@@ -92,7 +92,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#correctness-drift-tests" class="md-skip">
+        <a href="#connecting-bi-tools-via-the-postgres-wire-surface" class="md-skip">
           Skip to content
         </a>
       
@@ -144,7 +144,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Correctness & Drift Tests
+              Postgres Wire (BI Tools)
             
           </span>
         </div>
@@ -930,37 +930,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Correctness & Drift Tests
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../correctness-and-drift-tests/" class="md-nav__link">
         
   
   
@@ -976,174 +949,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#tldr" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        TL;DR
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#when-does-it-run-automatically" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        When does it run automatically?
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#why-two-tiers" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Why two tiers
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#tier-1-correctness-checks" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Tier 1 — correctness checks
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Tier 1 — correctness checks">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#adding-a-new-correctness-test" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Adding a new correctness test
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#tier-2-drift-snapshots" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Tier 2 — drift snapshots
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Tier 2 — drift snapshots">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#when-drift-fails" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        When drift fails
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#re-snapping-safely" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Re-snapping safely
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#corpus-structure" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Corpus structure
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#adding-a-new-corpus-query" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Adding a new corpus query
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#vendor-execution-sweep-phase-a" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Vendor-execution sweep (Phase A)
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#limitations" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Limitations
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-<div class="obml-version-badge">
-  OBML v1.0<br>
-  OrionBelt v2.5.0
-</div>
-      
     </li>
   
 
@@ -1293,10 +1098,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../postgres-wire-bi-tools/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Postgres Wire (BI Tools)
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -1312,6 +1144,118 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#the-semantic-loop-dremio-orionbelt" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The Semantic Loop — Dremio + OrionBelt
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1-common-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Common configuration
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-dbeaver" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. DBeaver
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-tableau-desktop" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Tableau Desktop
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-power-bi-desktop-windows-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Power BI Desktop (Windows only)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-metabase" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Metabase
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#known-limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Known limitations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reporting-a-tool-that-fails" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reporting a tool that fails
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+<div class="obml-version-badge">
+  OBML v1.0<br>
+  OrionBelt v2.5.0
+</div>
+      
     </li>
   
 
@@ -2098,10 +2042,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#tldr" class="md-nav__link">
+  <a href="#the-semantic-loop-dremio-orionbelt" class="md-nav__link">
     <span class="md-ellipsis">
       
-        TL;DR
+        The Semantic Loop — Dremio + OrionBelt
       
     </span>
   </a>
@@ -2109,10 +2053,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#when-does-it-run-automatically" class="md-nav__link">
+  <a href="#1-common-configuration" class="md-nav__link">
     <span class="md-ellipsis">
       
-        When does it run automatically?
+        1. Common configuration
       
     </span>
   </a>
@@ -2120,10 +2064,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#why-two-tiers" class="md-nav__link">
+  <a href="#2-dbeaver" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Why two tiers
+        2. DBeaver
       
     </span>
   </a>
@@ -2131,77 +2075,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#tier-1-correctness-checks" class="md-nav__link">
+  <a href="#3-tableau-desktop" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Tier 1 — correctness checks
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Tier 1 — correctness checks">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#adding-a-new-correctness-test" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Adding a new correctness test
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#tier-2-drift-snapshots" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Tier 2 — drift snapshots
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Tier 2 — drift snapshots">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#when-drift-fails" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        When drift fails
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#re-snapping-safely" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Re-snapping safely
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#corpus-structure" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Corpus structure
+        3. Tableau Desktop
       
     </span>
   </a>
@@ -2209,10 +2086,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#adding-a-new-corpus-query" class="md-nav__link">
+  <a href="#4-power-bi-desktop-windows-only" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Adding a new corpus query
+        4. Power BI Desktop (Windows only)
       
     </span>
   </a>
@@ -2220,10 +2097,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#vendor-execution-sweep-phase-a" class="md-nav__link">
+  <a href="#5-metabase" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Vendor-execution sweep (Phase A)
+        5. Metabase
       
     </span>
   </a>
@@ -2231,10 +2108,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#limitations" class="md-nav__link">
+  <a href="#known-limitations" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Limitations
+        Known limitations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reporting-a-tool-that-fails" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reporting a tool that fails
       
     </span>
   </a>
@@ -2265,303 +2153,254 @@
   
 
 
-<h1 id="correctness-drift-tests">Correctness &amp; Drift Tests<a class="headerlink" href="#correctness-drift-tests" title="Permanent link">&para;</a></h1>
-<p>OBSL ships a two-tier integration suite for the compiler. <strong>Tier 1 —
-correctness</strong> answers <em>"is this query producing the right answer?"</em>
-<strong>Tier 2 — drift</strong> answers <em>"is this query producing the same answer it
-did yesterday?"</em> Each tier catches the bugs the other can't, and they
-are designed to run together so the cheap regression check (drift) only
-locks in values that have been independently ratified (correctness).</p>
-<p>The full design rationale lives in <code>design/PLAN_correctness_and_drift_tests.md</code>
-(an internal-only working note — <code>design/</code> is gitignored). This page is
-the operator's manual.</p>
-<h2 id="tldr">TL;DR<a class="headerlink" href="#tldr" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>Goal</th>
-<th>Command</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Fast PR check</td>
-<td><code>uv run pytest tests/integration/drift/</code></td>
-</tr>
-<tr>
-<td>Full correctness ratification</td>
-<td><code>uv run pytest tests/integration/correctness/</code></td>
-</tr>
-<tr>
-<td>Both at once</td>
-<td><code>uv run pytest tests/integration/correctness/ tests/integration/drift/</code></td>
-</tr>
-<tr>
-<td>Re-snap after intentional SQL change</td>
-<td><code>UPDATE_SNAPSHOTS=1 uv run pytest tests/integration/drift/</code></td>
-</tr>
-<tr>
-<td>Cross-vendor exec (Postgres / MySQL / ClickHouse via testcontainers)</td>
-<td><code>uv run pytest -m docker tests/integration/drift/vendor_exec/</code></td>
-</tr>
-</tbody>
-</table>
-<p>The first four run in well under a second against the bundled DuckDB
-seed (<code>examples/orionbelt_1_commerce.duckdb</code>). The vendor-exec sweep
-takes ~20 s including container startup.</p>
-<h2 id="when-does-it-run-automatically">When does it run automatically?<a class="headerlink" href="#when-does-it-run-automatically" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>Tier</th>
-<th>CI</th>
-<th>Why</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Tier 1 — correctness</td>
-<td>✅ every push + PR to <code>main</code></td>
-<td>Plain pytest, fast (~1 s)</td>
-</tr>
-<tr>
-<td>Tier 2 — drift (DuckDB exec + 8-dialect compile-only + metadata gate)</td>
-<td>✅ every push + PR</td>
-<td>Plain pytest, fast (~1.5 s)</td>
-</tr>
-<tr>
-<td>Phase A — vendor execution sweep</td>
-<td>❌ skipped in CI</td>
-<td>Marked <code>pytest.mark.docker</code>; needs Postgres / MySQL / ClickHouse containers</td>
-</tr>
-</tbody>
-</table>
-<p>CI runs both tiers in a <strong>single pytest invocation</strong>, so a green
-workflow implies every drift snapshot is anchored to a green Tier 1
-check by construction. The vendor-exec sweep is opt-in — run locally,
-or wire a separate workflow job that boots service containers if you
-want it on CI.</p>
-<h2 id="why-two-tiers">Why two tiers<a class="headerlink" href="#why-two-tiers" title="Permanent link">&para;</a></h2>
-<p>A snapshot test (golden test, recorded test, approval test) only ever
-asserts <em>"same as last time"</em>. If the snapshot was captured while the
-query was already wrong, it locks the wrong answer in. Every future run
-reports green and the bug is invisible until production catches it.</p>
-<p>OBSL avoids this by capturing snapshots <em>only after</em> a separate,
-independent verification that the value is correct. A snapshot is the
-<em>cache</em> of a correctness proof, never the proof itself.</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>Tier 1 — correctness (independent verification)
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>  │
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>  │   for each query, compute the answer two independent ways
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>  │   and assert numerical equality
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>  │
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>  ▼
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>Tier 2 — drift (snapshot regression)
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>  │
-</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>  │   capture the SQL + sorted rows of every ratified query
-</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>  │   diff future runs against the captured value
+<h1 id="connecting-bi-tools-via-the-postgres-wire-surface">Connecting BI tools via the Postgres wire surface<a class="headerlink" href="#connecting-bi-tools-via-the-postgres-wire-surface" title="Permanent link">&para;</a></h1>
+<p>OrionBelt's Postgres wire surface (<code>PGWIRE_ENABLED=true</code>) lets any
+Postgres-compatible client query a loaded OBSL model — without
+installing a custom JDBC driver, ODBC bridge, or Arrow Flight client.
+Most BI tools ship a built-in Postgres connector that "just works".</p>
+<p>This page is a step-by-step manual checklist for the four tools
+covered by Step 5 of the
+<a href="https://github.com/ralfbecher/orionbelt-semantic-layer/blob/main/design/PLAN_postgres_wire.md">Postgres wire plan</a>:
+DBeaver, Tableau Desktop, Power BI Desktop, and Metabase.</p>
+<h2 id="the-semantic-loop-dremio-orionbelt">The Semantic Loop — Dremio + OrionBelt<a class="headerlink" href="#the-semantic-loop-dremio-orionbelt" title="Permanent link">&para;</a></h2>
+<p><img alt="Dremio + OrionBelt Semantic Layer — the Full Circle: Dremio (Query Engine) → Postgres wire → OBSL → Dremio (Execution Engine)" src="../../assets/dremio-orionbelt-full-circle.png" /></p>
+<p>Dremio is the flagship pgwire consumer in v2.5: register OBSL as a
+Postgres source, and Dremio's federation engine pushes queries down
+over the wire. With a Dremio-backed OBSL model (OBML
+<code>settings.defaultDialect: dremio</code>) the loop closes — Dremio
+queries OBSL via Postgres, OBSL compiles to Dremio's SQL dialect,
+ob-dremio's Arrow Flight driver streams the result back through
+Dremio's own execution engine. Governed semantics, no extra hop.</p>
+<h2 id="1-common-configuration">1. Common configuration<a class="headerlink" href="#1-common-configuration" title="Permanent link">&para;</a></h2>
+<p>Start the OBSL server with the wire surface enabled:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nv">DB_VENDOR</span><span class="o">=</span>duckdb<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nv">DUCKDB_DATABASE</span><span class="o">=</span>examples/orionbelt_1_commerce.duckdb<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="nv">QUERY_EXECUTE</span><span class="o">=</span><span class="nb">true</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="nv">PGWIRE_ENABLED</span><span class="o">=</span><span class="nb">true</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="nv">PGWIRE_PORT</span><span class="o">=</span><span class="m">5432</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="nv">MODEL_FILES</span><span class="o">=</span>examples/orionbelt_1_commerce.yaml<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>uv<span class="w"> </span>run<span class="w"> </span>orionbelt-api
 </span></code></pre></div>
-<h2 id="tier-1-correctness-checks">Tier 1 — correctness checks<a class="headerlink" href="#tier-1-correctness-checks" title="Permanent link">&para;</a></h2>
-<p>Every correctness test computes a query result two ways: once via the
-OBSL compiler and once via an <em>independent</em> method that does not
-exercise the same compiler code path. The methods used in the v0 corpus:</p>
+<p>Every client uses the same connection details:</p>
 <table>
 <thead>
 <tr>
-<th>Method</th>
-<th>What it catches</th>
-<th>Test file</th>
+<th>Setting</th>
+<th>Value</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><strong>Aggregation invariance</strong> — ungrouped == sum of grouped</td>
-<td>grain-leak, dim joining wrong fact</td>
-<td><code>test_aggregation_invariance.py</code></td>
+<td>Host</td>
+<td>the machine running <code>orionbelt-api</code> (<code>localhost</code> for local dev)</td>
 </tr>
 <tr>
-<td><strong>Hierarchical rollup</strong> — coarse grain == sum of fine grain</td>
-<td>time-grain composition bugs</td>
-<td><code>test_hierarchical_rollup.py</code></td>
+<td>Port</td>
+<td><code>PGWIRE_PORT</code> (default <code>5432</code>)</td>
 </tr>
 <tr>
-<td><strong>Hand-authored reference SQL</strong> — SQL written by reading the schema directly</td>
-<td>join-path, role-playing dim, fan-trap</td>
-<td><code>test_hand_sql_reference.py</code></td>
+<td>Database</td>
+<td>the model addressing name — the OBML <code>name:</code> field or, lacking that, the file stem (e.g. <code>orionbelt_1_commerce</code>)</td>
 </tr>
 <tr>
-<td><strong>Pandas baseline</strong> — same algorithm rebuilt in pandas</td>
-<td>window-frame, cumulative, rolling, period-over-period</td>
-<td><code>test_pandas_baseline.py</code></td>
+<td>Username</td>
+<td>any non-empty string (<code>obsl</code>, the tool's default — ignored in <code>trust</code> mode)</td>
 </tr>
 <tr>
-<td><strong>Metric algebra</strong> — recompute the formula from base measures</td>
-<td>expression-evaluation drift, NULLIF, decimal cast</td>
-<td><code>test_metric_algebra.py</code></td>
+<td>Password</td>
+<td>leave empty in <code>trust</code> mode (auth lands in Step 6)</td>
 </tr>
 <tr>
-<td><strong>CFL split</strong> — combined cross-fact == per-fact queries combined</td>
-<td>CFL leg corruption, NULL-padding mistakes</td>
-<td><code>test_cfl_split.py</code></td>
-</tr>
-<tr>
-<td><strong>Filter additivity</strong> — <code>IN (a,b)</code> == <code>=a</code> + <code>=b</code></td>
-<td>WHERE-clause routing in CFL legs</td>
-<td><code>test_filter_additivity.py</code></td>
+<td>TLS / SSL</td>
+<td>disable; the server has no built-in TLS today</td>
 </tr>
 </tbody>
 </table>
-<p>All tests live under <code>tests/integration/correctness/</code>. The bundled
-DuckDB seed and the matching OBML model
-(<code>examples/orionbelt_1_commerce.yaml</code>) are the source of truth for every
-correctness ratification.</p>
-<h3 id="adding-a-new-correctness-test">Adding a new correctness test<a class="headerlink" href="#adding-a-new-correctness-test" title="Permanent link">&para;</a></h3>
+<p>To list available model names, query the REST <code>GET /v1/models</code>
+endpoint or check the server startup log.</p>
+<h2 id="2-dbeaver">2. DBeaver<a class="headerlink" href="#2-dbeaver" title="Permanent link">&para;</a></h2>
+<p>DBeaver Community speaks pgwire natively via its bundled PostgreSQL
+JDBC driver.</p>
 <ol>
-<li>Pick at least two methods from the table above. Document the choice
-   in the test docstring so future readers can audit the cross-check.</li>
-<li>Use the <code>run_query</code> fixture (<code>tests/integration/correctness/conftest.py</code>)
-   — it compiles a <code>QueryObject</code> through the full pipeline, executes
-   against the seed, and returns rows as <code>list[dict]</code> with <code>Decimal</code>
-   values preserved.</li>
-<li>Use <code>assert_decimal_equal</code> (or <code>pytest.approx</code> for ratios/averages
-   only) to compare. Sums must use exact equality per plan §10.1.</li>
+<li><strong>New Connection → PostgreSQL.</strong> Fill in host, port, database
+   (the model name), username <code>obsl</code>, no password.</li>
+<li><strong>Driver properties → <code>sslmode = disable</code>.</strong> OBSL doesn't ship TLS;
+   the default <code>sslmode=prefer</code> will silently fall back.</li>
+<li><strong>Test connection.</strong> DBeaver issues a flurry of pg_catalog probes
+   immediately. Expect success.</li>
+<li><strong>Schema browser → "main" schema → Tables.</strong> You should see one
+   entry per loaded model. Right-click → "View data" returns rows.</li>
+<li>
+<p><strong>SQL editor.</strong> Try:</p>
+<div class="language-sql highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="k">SELECT</span><span class="w"> </span><span class="ss">&quot;Sales Year&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">&quot;Total Sales&quot;</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="k">FROM</span><span class="w"> </span><span class="n">orionbelt_1_commerce</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="k">LIMIT</span><span class="w"> </span><span class="mi">10</span><span class="p">;</span>
+</span></code></pre></div>
+</li>
 </ol>
-<h2 id="tier-2-drift-snapshots">Tier 2 — drift snapshots<a class="headerlink" href="#tier-2-drift-snapshots" title="Permanent link">&para;</a></h2>
-<p>Once a query passes its Tier 1 check, the harness captures:</p>
-<ul>
-<li>the compiled SQL string, plus</li>
-<li>the canonical-sorted result rows,</li>
-</ul>
-<p>into a YAML file under <code>tests/integration/drift/duckdb/&lt;query_id&gt;.yaml</code>.
-A pointer to the ratifying Tier 1 test is recorded as
-<code>last_verified_by:</code>; the metadata gate
-(<code>tests/integration/drift/test_snapshot_metadata.py</code>) verifies every
-pointer resolves to a real, collectable pytest test.</p>
-<p>Per-dialect SQL strings (no execution, just compile-and-store) live
-under <code>tests/integration/drift/compile_only/&lt;dialect&gt;/&lt;query_id&gt;.sql</code>.
-These catch dialect-specific emit drift — <code>DECIMAL</code> → <code>NUMBER</code> for
-Snowflake, <code>BOOLEAN</code> representation differences, <code>LISTAGG</code> vs
-<code>STRING_AGG</code> — without needing a live database for any vendor other
-than DuckDB.</p>
-<h3 id="when-drift-fails">When drift fails<a class="headerlink" href="#when-drift-fails" title="Permanent link">&para;</a></h3>
-<p>The failure message looks like:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>FAILED tests/integration/drift/test_drift_duckdb.py::test_drift_duckdb_exec[02_total_sales_by_country]
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>Snapshot drift detected (tests/integration/drift/duckdb/02_total_sales_by_country.yaml).
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>Last verified by tier-1: tests/integration/correctness/test_hand_sql_reference.py::test_obsl_matches_hand_sql[total_sales_by_country].
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>Diverged fields: sql.
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>If this change is intentional, re-snap with:
-</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>  UPDATE_SNAPSHOTS=1 uv run pytest tests/integration/drift/duckdb/02_total_sales_by_country.yaml
-</span></code></pre></div>
-<p>The <code>last verified by</code> line is the trust signal: as long as that Tier 1
-test still passes in the same workflow, the underlying correctness still
-holds and you are looking at a downstream change in SQL emission. If the
-Tier 1 test <em>also</em> fails, do not re-snap — fix the compiler.</p>
-<h3 id="re-snapping-safely">Re-snapping safely<a class="headerlink" href="#re-snapping-safely" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># 1. confirm Tier 1 still passes for the affected query</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/integration/correctness/
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="c1"># 2. re-snap drift artefacts (only the failing ones, ideally)</span>
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="nv">UPDATE_SNAPSHOTS</span><span class="o">=</span><span class="m">1</span><span class="w"> </span>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">    </span>tests/integration/drift/test_drift_duckdb.py::test_drift_duckdb_exec<span class="o">[</span>02_total_sales_by_country<span class="o">]</span>
-</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>
-</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="c1"># 3. verify the new snapshot is green</span>
-</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/integration/drift/
-</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>
-</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="c1"># 4. inspect the diff before committing</span>
-</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>git<span class="w"> </span>diff<span class="w"> </span>tests/integration/drift/
-</span></code></pre></div>
-<p>CI runs Tier 1 + Tier 2 in a single pytest invocation, so a green
-workflow implies every snapshot is anchored to a green Tier 1 check by
-construction.</p>
-<h2 id="corpus-structure">Corpus structure<a class="headerlink" href="#corpus-structure" title="Permanent link">&para;</a></h2>
-<p>The v0 corpus is split across two locations under
-<code>tests/integration/correctness/</code> to keep query files faithful to the
-OBML schema:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>correctness/
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>├── corpus.yaml              ← test-rig manifest (id, description,
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>│                              lastVerifiedBy, optional handSql block)
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>├── queries/                 ← pure-OBML query files
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>│   ├── 01_total_sales.yaml
-</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>│   ├── 02_total_sales_by_country.yaml
-</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>│   └── ...                  ← each file is exactly the body you would
-</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>│                              POST to /v1/query/sql
-</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>└── reference_sql/           ← hand-written SQL ratifiers (§3.3)
-</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>    └── *.sql
-</span></code></pre></div>
-<p>Each entry in <code>corpus.yaml</code> references a query file under <code>queries/&lt;id&gt;.yaml</code>
-by ID convention. The manifest carries everything that doesn't belong in
-the OBML schema (the ratification pointer, sort keys for hand-SQL row
-comparison, etc.).</p>
-<h2 id="adding-a-new-corpus-query">Adding a new corpus query<a class="headerlink" href="#adding-a-new-corpus-query" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Behaviour</th>
+<th>Expected</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Schema tree populates</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>Column types displayed correctly</td>
+<td>✅ (via <code>information_schema.columns</code>)</td>
+</tr>
+<tr>
+<td>Bind-parameterised query (DBeaver "Generate SELECT * LIMIT 100")</td>
+<td>✅ (extended-query protocol, Step 4)</td>
+</tr>
+<tr>
+<td><code>\d</code>-style metadata dialog</td>
+<td>⚠ partial — DBeaver may fall back to information_schema (works)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="3-tableau-desktop">3. Tableau Desktop<a class="headerlink" href="#3-tableau-desktop" title="Permanent link">&para;</a></h2>
+<p>Tableau's PostgreSQL connector lives under <strong>Connect → To a Server →
+PostgreSQL</strong>.</p>
 <ol>
-<li>Drop a pure-OBML YAML file under <code>tests/integration/correctness/queries/&lt;id&gt;.yaml</code>.
-   It is exactly the payload a user would POST to <code>/v1/query/sql</code> — you can
-   copy/paste between the two.</li>
-<li>Add a Tier 1 test in <code>tests/integration/correctness/</code> using one or
-   two of the methods listed above (or rely on an existing one if the
-   query is already covered by, e.g., aggregation invariance).</li>
-<li>Append a manifest entry to <code>corpus.yaml</code>:
-   <div class="language-yaml highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">&lt;id&gt;</span><span class="w">                            </span><span class="c1"># matches the queries/ filename</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">&lt;one-line summary&gt;</span>
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span><span class="nt">lastVerifiedBy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">tests/integration/correctness/...::&lt;test_node_id&gt;</span>
-</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">  </span><span class="nt">handSql</span><span class="p">:</span><span class="w">                            </span><span class="c1"># optional, only for §3.3 cases</span>
-</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">    </span><span class="nt">refFile</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">&lt;name&gt;.sql</span><span class="w">               </span><span class="c1"># under reference_sql/</span>
-</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">    </span><span class="nt">sortKeys</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">&lt;dim cols&gt;</span><span class="p p-Indicator">]</span>
-</span></code></pre></div></li>
-<li>Generate the snapshot:
-   <div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nv">UPDATE_SNAPSHOTS</span><span class="o">=</span><span class="m">1</span><span class="w"> </span>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span>tests/integration/drift/test_drift_duckdb.py<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span>tests/integration/drift/test_drift_compile_only.py<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span>-k<span class="w"> </span>&lt;id&gt;
-</span></code></pre></div></li>
-<li>Re-run without <code>UPDATE_SNAPSHOTS</code> to confirm the new snapshot is
-   green, and commit the query YAML, the manifest entry, and the
-   generated drift artefacts in the same change.</li>
+<li>Enter the connection details from §1.</li>
+<li>Tableau may probe <code>pg_catalog.pg_class</code> and <code>information_schema.tables</code>
+   at connect time — these are answered by the catalog emulator.</li>
+<li>Once connected, drag the model table from the left panel onto the
+   canvas to use it as a data source.</li>
+<li>Drag a dimension (e.g. <code>Sales Year</code>) to <em>Rows</em> and a measure
+   (e.g. <code>Total Sales</code>) to <em>Columns</em>. A bar chart renders.</li>
 </ol>
-<h2 id="vendor-execution-sweep-phase-a">Vendor-execution sweep (Phase A)<a class="headerlink" href="#vendor-execution-sweep-phase-a" title="Permanent link">&para;</a></h2>
-<p>Compile-only snapshots cover all 8 registered dialects without needing
-a database. The vendor-execution sweep adds a stronger check: every
-corpus query is <em>executed</em> against a freshly-seeded testcontainer for
-DuckDB, Postgres 16, MySQL 8, and ClickHouse, and the row set is
-compared cell-by-cell to the DuckDB golden under
-<code>drift/duckdb/&lt;id&gt;.yaml</code>.</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>tests/integration/drift/vendor_exec/
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>├── _seed.py             ← extracts the bundled commerce DuckDB once,
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>│                          loads it into each vendor (DOUBLE → DECIMAL(18,2)
-</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>│                          target type for exact arithmetic)
-</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>├── conftest.py          ← per-vendor container fixtures, all yielding the
-</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>│                          same VendorTarget(name, dialect, execute) shape
-</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>└── test_vendor_exec.py  ← 60 cases (15 corpus × 4 vendors), gated by
-</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>                           pytest.mark.docker
+<table>
+<thead>
+<tr>
+<th>Behaviour</th>
+<th>Expected</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Connect succeeds</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>Table list populates</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>Live (non-extract) data refresh</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>Custom SQL with parameters</td>
+<td>⚠ depends on the SQL — only <code>SELECT dim, measure FROM model</code> shapes round-trip</td>
+</tr>
+</tbody>
+</table>
+<h2 id="4-power-bi-desktop-windows-only">4. Power BI Desktop (Windows only)<a class="headerlink" href="#4-power-bi-desktop-windows-only" title="Permanent link">&para;</a></h2>
+<ol>
+<li><strong>Get Data → PostgreSQL database.</strong> Server: <code>host:port</code>. Database:
+   the model name.</li>
+<li>Authentication: <strong>Database</strong> tab, leave password empty.</li>
+<li>After connecting, the Navigator shows the model table. Tick it and
+   load.</li>
+<li>Build a visual — drag the dimension and measure onto a chart.</li>
+</ol>
+<p>Power BI defaults to <em>Import</em> mode. <em>DirectQuery</em> will run live
+queries through pgwire on every interaction — works, but every chart
+becomes a network round-trip.</p>
+<h2 id="5-metabase">5. Metabase<a class="headerlink" href="#5-metabase" title="Permanent link">&para;</a></h2>
+<p>Self-hosted Metabase ships a Postgres connector.</p>
+<ol>
+<li><strong>Admin → Databases → Add database → PostgreSQL.</strong></li>
+<li>Fill in the connection details from §1. Leave SSL disabled.</li>
+<li>Metabase scans <code>information_schema</code> at connect time to populate the
+   "Data Reference" panel.</li>
+<li>Build a Question via the GUI — the table appears under the
+   database; pick a dimension + measure aggregation. Metabase
+   generates <code>SELECT "Dimension", AGG("Measure") FROM table GROUP BY 1</code>,
+   which OBSL routes through OBSQL.</li>
+</ol>
+<table>
+<thead>
+<tr>
+<th>Behaviour</th>
+<th>Expected</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Database scan succeeds</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>Question builder lists columns</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>Aggregation queries return rows</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>Custom-SQL questions with raw SQL</td>
+<td>⚠ only OBSL-shaped SQL works</td>
+</tr>
+</tbody>
+</table>
+<h2 id="known-limitations">Known limitations<a class="headerlink" href="#known-limitations" title="Permanent link">&para;</a></h2>
+<p>These constraints are documented in
+<a href="https://github.com/ralfbecher/orionbelt-semantic-layer/blob/main/design/PLAN_postgres_wire.md">design/PLAN_postgres_wire.md §10</a>:</p>
+<table>
+<thead>
+<tr>
+<th>Limitation</th>
+<th>Reason</th>
+<th>Workaround</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>psql \d &lt;table&gt;</code> partially works (psql 16 RLS-policy probe hits DuckDB's correlated-UNNEST limit)</td>
+<td>DuckDB engine, not the wire protocol</td>
+<td>Use BI tools (they query <code>information_schema</code>) or <code>\dt</code></td>
+</tr>
+<tr>
+<td>Binary-format Bind parameters rejected</td>
+<td>Step 4 ships text format only</td>
+<td>Force text format if a driver supports it; binary lands in Step 7</td>
+</tr>
+<tr>
+<td>No authentication</td>
+<td><code>trust</code> mode only until Step 6 lands</td>
+<td>Run behind a network boundary or skip pgwire on public deploys</td>
+</tr>
+<tr>
+<td>No TLS</td>
+<td>Native TLS comes in a later step</td>
+<td>Front with nginx / Cloud Run TLS termination</td>
+</tr>
+<tr>
+<td>Write operations (<code>INSERT</code> / <code>UPDATE</code> / <code>DELETE</code> / DDL)</td>
+<td>Read-only semantic layer</td>
+<td>Use the REST API for model management; data writes go to the warehouse, not OBSL</td>
+</tr>
+</tbody>
+</table>
+<h2 id="reporting-a-tool-that-fails">Reporting a tool that fails<a class="headerlink" href="#reporting-a-tool-that-fails" title="Permanent link">&para;</a></h2>
+<p>Catalog probes that OBSL doesn't understand log a single warning per
+unique SQL shape:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>WARNING ... PGWIRE_CATALOG_PROBE_UNHANDLED dialect=duckdb error=...
 </span></code></pre></div>
-<p>Run it:
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># Full sweep across all four engines:</span>
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>-m<span class="w"> </span>docker<span class="w"> </span>tests/integration/drift/vendor_exec/
-</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>
-</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="c1"># One vendor:</span>
-</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>-m<span class="w"> </span>docker<span class="w"> </span>tests/integration/drift/vendor_exec/test_vendor_exec.py::test_postgres_vendor_exec
-</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>
-</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="c1"># One corpus query, one vendor:</span>
-</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>-m<span class="w"> </span>docker<span class="w"> </span>tests/integration/drift/vendor_exec/<span class="w"> </span>-k<span class="w"> </span><span class="s2">&quot;test_postgres_vendor_exec[07_&quot;</span>
-</span></code></pre></div></p>
-<p>Cross-engine result normalisation: tz-naive datetime, midnight-→-date
-collapse, and numeric values rounded to 12 significant digits via
-<code>float()</code> to absorb cross-engine division drift on ratios while
-preserving money sums up to ~$1 T at 2-dp precision.</p>
-<p>Phases B (Dremio OSS, Spark SQL, BigQuery emulator) and C (Snowflake /
-real BigQuery / Databricks via env-var-gated cloud creds) are
-follow-up work — see plan §5.2.</p>
-<h2 id="limitations">Limitations<a class="headerlink" href="#limitations" title="Permanent link">&para;</a></h2>
-<ul>
-<li>Vendor-side row execution against the four cloud-only engines
-  (Snowflake, BigQuery, Databricks, Dremio cloud) is not in v0. Phase
-  C is gated by demo-account credentials and a separate config knob;
-  follow-up PR.</li>
-<li>The half-boundary cases on rolling AVG / division-precision ratios
-  are intrinsic to each engine's float / decimal arithmetic and are
-  marked <code>xfail</code> in the vendor-exec sweep, not "fixed" by tightening
-  the comparison.</li>
-</ul>
+<p>If a BI tool fails to connect, scrape that line out of the server log
+and open an issue against
+<a href="https://github.com/ralfbecher/orionbelt-semantic-layer/issues">orionbelt-semantic-layer</a>
+with the captured SQL. We extend the catalog rewriter (see
+<code>src/orionbelt/pgwire/catalog.py</code>) per-tool until it lights up.</p>
 
 
 
