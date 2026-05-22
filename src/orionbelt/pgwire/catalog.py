@@ -90,7 +90,14 @@ _STUB_MACROS: tuple[str, ...] = (
     # replaces the first. The default-value syntax (``pretty := …``)
     # is what makes one macro accept both call shapes.
     "CREATE OR REPLACE MACRO pg_get_expr(expr, oid, pretty := false) AS NULL",
-    "CREATE OR REPLACE MACRO pg_get_keywords() AS 'keyword'",
+    # pg_get_keywords is a set-returning function in real Postgres.
+    # DBeaver calls it as ``FROM pg_get_keywords()`` (table form), so a
+    # scalar macro fails with "Table Function with name pg_get_keywords
+    # does not exist". DuckDB ``MACRO … AS TABLE …`` declares a
+    # table-returning macro. The single dummy row is enough to satisfy
+    # the ``SELECT string_agg(word, ',')`` shape DBeaver uses to build
+    # its SQL editor's reserved-word list.
+    "CREATE OR REPLACE MACRO pg_get_keywords() AS TABLE SELECT 'select' AS word",
     "CREATE OR REPLACE MACRO pg_get_function_arguments(oid) AS ''",
     "CREATE OR REPLACE MACRO pg_get_function_identity_arguments(oid) AS ''",
     "CREATE OR REPLACE MACRO pg_get_function_result(oid) AS ''",
