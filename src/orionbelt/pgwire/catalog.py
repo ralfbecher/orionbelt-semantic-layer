@@ -202,31 +202,39 @@ _SHADOW_VIEWS: tuple[str, ...] = (
     # Postgres sentinel for "no type modifier", 0 is the sentinel for
     # "not a domain over another type" — both are correct for every base
     # type we expose here.
+    # ``typelem`` is the array-element type OID (0 = "not an array");
+    # ``typrelid`` is the relation OID for composite types (0 = scalar).
+    # DBeaver's pgwire connect-check self-joins pg_type via
+    # ``LEFT JOIN pg_type et ON et.oid = t.typelem`` to resolve array
+    # element types and fails the bind without ``typelem``. Both are
+    # 0 for every base scalar we expose here.
     """CREATE OR REPLACE TEMP VIEW _obsl_pg_type AS
         SELECT * FROM (VALUES
-            -- (oid, typname, typcategory, typlen, typtype, typnotnull, typtypmod, typbasetype)
-            (16,   'bool',        'B', 1,   'b', false, -1, 0),
-            (17,   'bytea',       'U', -1,  'b', false, -1, 0),
-            (18,   'char',        'S', 1,   'b', false, -1, 0),
-            (19,   'name',        'S', 64,  'b', false, -1, 0),
-            (20,   'int8',        'N', 8,   'b', false, -1, 0),
-            (21,   'int2',        'N', 2,   'b', false, -1, 0),
-            (23,   'int4',        'N', 4,   'b', false, -1, 0),
-            (25,   'text',        'S', -1,  'b', false, -1, 0),
-            (26,   'oid',         'N', 4,   'b', false, -1, 0),
-            (700,  'float4',      'N', 4,   'b', false, -1, 0),
-            (701,  'float8',      'N', 8,   'b', false, -1, 0),
-            (1042, 'bpchar',      'S', -1,  'b', false, -1, 0),
-            (1043, 'varchar',     'S', -1,  'b', false, -1, 0),
-            (1082, 'date',        'D', 4,   'b', false, -1, 0),
-            (1083, 'time',        'D', 8,   'b', false, -1, 0),
-            (1114, 'timestamp',   'D', 8,   'b', false, -1, 0),
-            (1184, 'timestamptz', 'D', 8,   'b', false, -1, 0),
-            (1186, 'interval',    'T', 16,  'b', false, -1, 0),
-            (1266, 'timetz',      'D', 12,  'b', false, -1, 0),
-            (1700, 'numeric',     'N', -1,  'b', false, -1, 0),
-            (2950, 'uuid',        'U', 16,  'b', false, -1, 0)
-        ) AS t(oid, typname, typcategory, typlen, typtype, typnotnull, typtypmod, typbasetype)""",
+            -- columns: oid, typname, typcategory, typlen, typtype,
+            --          typnotnull, typtypmod, typbasetype, typelem, typrelid
+            (16,   'bool',        'B', 1,   'b', false, -1, 0, 0, 0),
+            (17,   'bytea',       'U', -1,  'b', false, -1, 0, 0, 0),
+            (18,   'char',        'S', 1,   'b', false, -1, 0, 0, 0),
+            (19,   'name',        'S', 64,  'b', false, -1, 0, 0, 0),
+            (20,   'int8',        'N', 8,   'b', false, -1, 0, 0, 0),
+            (21,   'int2',        'N', 2,   'b', false, -1, 0, 0, 0),
+            (23,   'int4',        'N', 4,   'b', false, -1, 0, 0, 0),
+            (25,   'text',        'S', -1,  'b', false, -1, 0, 0, 0),
+            (26,   'oid',         'N', 4,   'b', false, -1, 0, 0, 0),
+            (700,  'float4',      'N', 4,   'b', false, -1, 0, 0, 0),
+            (701,  'float8',      'N', 8,   'b', false, -1, 0, 0, 0),
+            (1042, 'bpchar',      'S', -1,  'b', false, -1, 0, 0, 0),
+            (1043, 'varchar',     'S', -1,  'b', false, -1, 0, 0, 0),
+            (1082, 'date',        'D', 4,   'b', false, -1, 0, 0, 0),
+            (1083, 'time',        'D', 8,   'b', false, -1, 0, 0, 0),
+            (1114, 'timestamp',   'D', 8,   'b', false, -1, 0, 0, 0),
+            (1184, 'timestamptz', 'D', 8,   'b', false, -1, 0, 0, 0),
+            (1186, 'interval',    'T', 16,  'b', false, -1, 0, 0, 0),
+            (1266, 'timetz',      'D', 12,  'b', false, -1, 0, 0, 0),
+            (1700, 'numeric',     'N', -1,  'b', false, -1, 0, 0, 0),
+            (2950, 'uuid',        'U', 16,  'b', false, -1, 0, 0, 0)
+        ) AS t(oid, typname, typcategory, typlen, typtype, typnotnull,
+               typtypmod, typbasetype, typelem, typrelid)""",
     # Shadow pg_database. DBeaver / pgAdmin connect-check filters on
     # ``WHERE datallowconn AND NOT datistemplate`` (and reads
     # encoding / datcollate / datctype / datacl in the same probe);
