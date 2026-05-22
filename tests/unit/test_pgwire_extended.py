@@ -189,7 +189,9 @@ def test_split_simple_reply_empty_query() -> None:
 def _make_session(reply_bytes: bytes) -> ExtendedSession:
     """ExtendedSession with a stub handler that always returns ``reply_bytes``."""
 
-    async def handler(_sql: str, _db: str) -> bytes:
+    async def handler(_sql: str, _db: str, **_kwargs: object) -> bytes:
+        # Accept any kwargs (e.g. ``result_formats``) the Bind path
+        # passes through; this stub ignores them.
         return reply_bytes
 
     return ExtendedSession(handler=handler, database="")

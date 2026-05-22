@@ -613,8 +613,17 @@ def _flatten_and(expr: exp.Expression) -> list[exp.Expression]:
 
 
 def _match_count_tautology(atom: exp.Expression) -> exp.AggFunc | None:
-    """If ``atom`` is ``COUNT(*) op N`` or ``COUNT(1) op N``, return the
-    COUNT aggregate node. Otherwise return None.
+    """Return the COUNT aggregate iff ``atom`` is a tautology like
+    ``COUNT(*) > 0`` / ``COUNT(*) >= 1`` / ``COUNT(*) != 0`` — i.e.
+    a comparison that's trivially true for every non-empty group.
+
+    Tableau's connect-check emits ``HAVING COUNT(*) > 0`` on every
+    aggregate viz; quietly dropping it lets the query reach the
+    translator unchanged. Comparisons that are *not* tautological
+    (``COUNT(*) < 5``, ``COUNT(*) = 0``, ``COUNT(*) > 10``) are real
+    filters and must be preserved — silently dropping them would
+    widen the result set with no error, which is exactly the kind of
+    silently-wrong-number a semantic layer exists to prevent.
     """
 
     if not isinstance(atom, exp.Binary):
@@ -622,10 +631,65 @@ def _match_count_tautology(atom: exp.Expression) -> exp.AggFunc | None:
     left, right = atom.left, atom.right
     # Either side can be the COUNT; the other must be a literal.
     if isinstance(left, exp.Count) and isinstance(right, exp.Literal):
-        return left if _is_count_star_or_one(left) else None
+        if not _is_count_star_or_one(left):
+            return None
+        return left if _is_nonempty_group_tautology(atom, right, count_on="left") else None
     if isinstance(right, exp.Count) and isinstance(left, exp.Literal):
-        return right if _is_count_star_or_one(right) else None
+        if not _is_count_star_or_one(right):
+            return None
+        return right if _is_nonempty_group_tautology(atom, left, count_on="right") else None
     return None
+
+
+def _is_nonempty_group_tautology(
+    atom: exp.Binary,
+    literal: exp.Literal,
+    *,
+    count_on: str,
+) -> bool:
+    """True when the comparison is trivially satisfied on any non-empty group.
+
+    For COUNT(*) on the left: ``COUNT(*) > 0``, ``COUNT(*) >= 1``,
+    ``COUNT(*) != 0``, ``COUNT(*) <> 0`` are tautologies.
+    For COUNT(*) on the right the operands flip:
+    ``0 < COUNT(*)``, ``1 <= COUNT(*)``, ``0 != COUNT(*)``,
+    ``0 <> COUNT(*)``.
+    Anything else (``COUNT(*) < 5``, ``COUNT(*) = 0``, ``COUNT(*) > 10``)
+    is a real filter and must be preserved.
+    """
+
+    try:
+        n = int(str(literal.this))
+    except (TypeError, ValueError):
+        return False
+
+    # Normalize so we always reason as "COUNT(*) op n".
+    if count_on == "right":
+        # left = literal, right = COUNT; swap operator to its mirror.
+        op_node_for_count_left = _MIRROR_OPS.get(type(atom))
+        if op_node_for_count_left is None:
+            return False
+        op_type = op_node_for_count_left
+    else:
+        op_type = type(atom)
+
+    if op_type is exp.GT and n == 0:
+        return True
+    if op_type is exp.GTE and n in (0, 1):
+        return True
+    return bool(op_type is exp.NEQ and n == 0)
+
+
+# sqlglot expression types for comparison operators; used to mirror an
+# operator when the COUNT(*) appears on the right of the comparison.
+_MIRROR_OPS: dict[type[exp.Expression], type[exp.Expression]] = {
+    exp.GT: exp.LT,
+    exp.GTE: exp.LTE,
+    exp.LT: exp.GT,
+    exp.LTE: exp.GTE,
+    exp.EQ: exp.EQ,
+    exp.NEQ: exp.NEQ,
+}
 
 
 def _is_count_star_or_one(count: exp.Count) -> bool:

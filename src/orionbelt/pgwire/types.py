@@ -64,6 +64,24 @@ def format_code_for_type_hint(type_hint: str) -> int:
     return 0
 
 
+def can_encode_binary(type_hint: str) -> bool:
+    """True when ``encode_value`` actually produces a binary payload.
+
+    Today only ``"number"`` (8-byte big-endian IEEE 754 FLOAT8) has
+    a binary encoder. Everything else falls through to text.
+
+    Used by the router to compute the *effective* per-column format
+    code: a Bind asking for binary on a column we can only emit as
+    text must be advertised as text in RowDescription, otherwise
+    binary-capable clients misdecode the text bytes per the OID. The
+    set is intentionally restricted; widening it requires both an
+    encoder (here) and a matching test that round-trips through a real
+    Postgres client.
+    """
+
+    return type_hint == "number"
+
+
 def encode_value(
     value: object,
     type_hint: str,

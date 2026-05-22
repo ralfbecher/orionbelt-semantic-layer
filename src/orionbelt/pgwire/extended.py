@@ -32,6 +32,7 @@ the trade space we revisit in Step 7:
 from __future__ import annotations
 
 import logging
+import re
 import struct
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
@@ -44,6 +45,35 @@ logger = logging.getLogger(__name__)
 SQLSTATE_FEATURE_NOT_SUPPORTED = "0A000"
 SQLSTATE_PROTOCOL_VIOLATION = "08P01"
 SQLSTATE_INVALID_PARAM = "22023"
+
+
+# Statement verbs we'll execute at Parse time (read-only / side-effect
+# free). Everything else — DDL, DML, transaction control, SET, etc. —
+# defers to Bind/Execute, even when it would otherwise qualify for the
+# Describe('S')-needs-a-real-RowDescription preexec shortcut. The list
+# is intentionally narrow; widening it requires a "this verb cannot
+# mutate anything observable from another session" justification.
+_RE_PREEXEC_SAFE_VERB = re.compile(
+    r"^\s*(?:--[^\n]*\n|/\*.*?\*/|\s)*(select|show|values|with|table|explain)\b",
+    re.IGNORECASE | re.DOTALL,
+)
+
+
+def _is_preexec_safe(sql: str) -> bool:
+    """True when ``sql`` starts with a verb we'll execute at Parse time.
+
+    Skips leading SQL comments (line and block) before checking the
+    verb. Anything not matching — CREATE, DROP, INSERT, UPDATE,
+    DELETE, ALTER, TRUNCATE, MERGE, GRANT, REVOKE, SET, RESET,
+    BEGIN, COMMIT, ROLLBACK, SAVEPOINT, COPY, … — returns False and
+    defers execution to Bind. Tableau's connect-check fires CREATE
+    LOCAL TEMPORARY TABLE … via the extended protocol and a leftover
+    table from a Parse-without-Bind cycle has caused real
+    ``already exists`` regressions; skipping preexec for DDL is the
+    fix.
+    """
+
+    return _RE_PREEXEC_SAFE_VERB.match(sql) is not None
 
 
 # Type alias matching :class:`PgWireServer`'s handler signature.
@@ -153,12 +183,20 @@ class ExtendedSession:
         return protocol.build_parse_complete()
 
     async def _ensure_preexec(self, stmt: PreparedStatement) -> None:
-        """Eagerly run the query at Parse time when there are no params.
+        """Eagerly run the query at Parse time when it's safe to.
 
         Required so ``Describe('S')`` can return a real ``RowDescription``
         for canned probes (SHOW, SELECT current_*, …). Without this, JDBC
         is told ``NoData`` and then rejects the later ``DataRow`` frames
         with "Received resultset tuples, but no field structure for them".
+
+        Strict Postgres semantics defer execution until Bind/Execute, so
+        eager preexec is technically a protocol bend. We only do it for
+        statements that are obviously side-effect free: SELECT, SHOW,
+        VALUES, WITH/CTE. DDL and DML (CREATE, DROP, INSERT, UPDATE,
+        etc.) skip preexec entirely — running them at Parse can mutate
+        catalog or warehouse state before the client even gets to Bind,
+        and Parse followed by Close (no Bind) would still have run them.
         """
 
         if stmt.preexec_reply is not None:
@@ -169,6 +207,8 @@ class ExtendedSession:
             return
         if "$" in stmt.sql:
             # Placeholder syntax even though param_oids is empty.
+            return
+        if not _is_preexec_safe(stmt.sql):
             return
         raw = await self._handler(stmt.sql, self._database)
         stmt.preexec_reply = _split_simple_reply(raw)

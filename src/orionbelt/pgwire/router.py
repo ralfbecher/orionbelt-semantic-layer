@@ -36,6 +36,7 @@ from orionbelt.pgwire import protocol
 from orionbelt.pgwire.canned import match_canned
 from orionbelt.pgwire.catalog import CatalogEmulator
 from orionbelt.pgwire.types import (
+    can_encode_binary,
     encode_value,
     oid_for_type_hint,
 )
@@ -412,17 +413,29 @@ def _normalize_for_obsql(sql: str) -> str:
     return _rewrite_fetch_to_limit(_strip_collate_annotations(sql))
 
 
-def is_metadata_probe(sql: str) -> bool:
-    """Return ``True`` for SELECT shapes that mean "describe, don't run".
+_RE_SELECT_STAR = re.compile(r"^\s*select\s+\*", re.IGNORECASE)
 
-    Used to route ``SELECT * FROM x WHERE 1=0`` (and ``LIMIT 0``)
-    column-discovery probes to the catalog DuckDB instead of the
-    semantic translator, which doesn't accept star projections or the
-    ``1=0`` literal predicate.
+
+def is_metadata_probe(sql: str) -> bool:
+    """Return ``True`` for ``SELECT *`` column-discovery probes.
+
+    BI tools (Tableau, Power BI, DBeaver, …) ask "what columns does
+    this table have" with ``SELECT * FROM x WHERE 1=0`` or
+    ``SELECT * FROM x LIMIT 0``. We route those to the catalog DuckDB
+    so the column shape comes back from the registered virtual table
+    instead of bouncing off the semantic translator (which rejects
+    ``SELECT *``).
+
+    Crucially, the gate is BOTH ``SELECT *`` AND the zero-row clause.
+    A normal semantic query like
+    ``SELECT "Customer Country" FROM commerce LIMIT 0`` has explicit
+    columns the BI tool already knows about — it belongs in the
+    translator path, not the catalog. Without the ``SELECT *`` gate,
+    every legitimate ``LIMIT 0`` / ``WHERE 1=0`` query gets misrouted
+    and returns ``Table not found`` from DuckDB.
     """
 
-    lowered = sql.lstrip().lower()
-    if not lowered.startswith("select"):
+    if _RE_SELECT_STAR.match(sql) is None:
         return False
     return (
         _RE_ZERO_ROW_METADATA_PROBE.search(sql) is not None
@@ -433,11 +446,16 @@ def is_metadata_probe(sql: str) -> bool:
 def references_catalog(sql: str) -> bool:
     """Return ``True`` when the query needs the catalog emulator.
 
-    Detects two shapes:
+    Detects three shapes:
 
     * a ``FROM`` / ``JOIN`` target whose schema or database is
-      ``pg_catalog`` or ``information_schema``; and
-    * a function reference like ``pg_catalog.set_config(...)``.
+      ``pg_catalog`` or ``information_schema``;
+    * a function reference like ``pg_catalog.set_config(...)``;
+    * a bare ``pg_*`` function call or relation (``pg_get_keywords()``,
+      ``pg_total_relation_size(...)``, ``FROM pg_description``, …) —
+      Postgres clients routinely drop the schema qualifier on
+      well-known catalog objects, and the catalog stubs / DuckDB's
+      own pg_catalog views can answer those.
 
     Falls back to a cheap substring test if sqlglot can't parse the
     query — Postgres clients sometimes emit dialect-specific snippets
@@ -448,7 +466,11 @@ def references_catalog(sql: str) -> bool:
         parsed = sqlglot.parse_one(sql, read="postgres")
     except Exception:
         lowered = sql.lower()
-        return "pg_catalog" in lowered or "information_schema" in lowered
+        return (
+            "pg_catalog" in lowered
+            or "information_schema" in lowered
+            or _RE_BARE_PG_OBJECT.search(sql) is not None
+        )
 
     for table in parsed.find_all(exp.Table):
         if (table.db or "").lower() in _CATALOG_SCHEMAS:
@@ -457,13 +479,24 @@ def references_catalog(sql: str) -> bool:
             return True
         if (table.text("catalog") or "").lower() in _CATALOG_SCHEMAS:
             return True
+        # Bare ``FROM pg_description`` — Postgres clients drop the
+        # ``pg_catalog.`` prefix on well-known objects. Route to the
+        # catalog DuckDB; DuckDB's own pg_catalog views answer those.
+        if (table.name or "").lower().startswith("pg_"):
+            return True
     for column in parsed.find_all(exp.Column):
         if (column.text("table") or "").lower() in _CATALOG_SCHEMAS:
             return True
         if (column.text("db") or "").lower() in _CATALOG_SCHEMAS:
             return True
     for func in parsed.find_all(exp.Anonymous):
-        if (func.text("this") or "").lower() in _CATALOG_SCHEMAS:
+        func_name = (func.text("this") or "").lower()
+        if func_name in _CATALOG_SCHEMAS:
+            return True
+        # Bare ``pg_*`` function calls — pg_get_keywords(),
+        # pg_total_relation_size(oid), pg_size_pretty(bytes), … —
+        # answered by _STUB_MACROS in catalog.py.
+        if func_name.startswith("pg_"):
             return True
     # Some catalog functions parse as Dot expressions (schema.func()).
     for dot in parsed.find_all(exp.Dot):
@@ -471,6 +504,15 @@ def references_catalog(sql: str) -> bool:
         if isinstance(left, exp.Identifier) and (left.name or "").lower() in _CATALOG_SCHEMAS:
             return True
     return False
+
+
+# Fallback regex for the ``except`` branch above: matches a bare
+# ``pg_<name>`` token that sits in a SQL position where it would
+# resolve to a catalog object (FROM/JOIN target or function call).
+_RE_BARE_PG_OBJECT = re.compile(
+    r"\b(?:from|join)\s+pg_[a-z_]+\b|\bpg_[a-z_]+\s*\(",
+    re.IGNORECASE,
+)
 
 
 def _encode_translation_error(exc: SQLTranslationError) -> bytes:
@@ -595,7 +637,15 @@ def _encode_result(
     """
 
     n_cols = len(result.columns)
-    per_col_formats = _expand_result_formats(result_formats, n_cols)
+    requested_formats = _expand_result_formats(result_formats, n_cols)
+    # Effective per-column format: client gets binary only on columns
+    # where ``encode_value`` actually emits binary bytes. Advertising
+    # binary on a column we can only encode as text makes pgjdbc /
+    # asyncpg / psycopg misdecode the payload using the column's OID.
+    per_col_formats = [
+        1 if requested_formats[i] == 1 and can_encode_binary(col.type_hint) else 0
+        for i, col in enumerate(result.columns)
+    ]
     columns_for_desc = [
         (col.name, oid_for_type_hint(col.type_hint), per_col_formats[i])
         for i, col in enumerate(result.columns)

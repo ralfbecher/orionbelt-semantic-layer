@@ -84,6 +84,21 @@ _STUB_MACROS: tuple[str, ...] = (
     "CREATE OR REPLACE MACRO pg_get_indexdef(oid) AS NULL",
     "CREATE OR REPLACE MACRO pg_get_constraintdef(oid) AS NULL",
     "CREATE OR REPLACE MACRO pg_get_expr(expr, oid) AS NULL",
+    # 3-arg form psql / DBeaver emit for ``pg_get_expr(adbin, adrelid, true)``
+    # — DuckDB needs an explicit overload because its macro dispatch
+    # is arity-strict.
+    "CREATE OR REPLACE MACRO pg_get_expr(expr, oid, pretty) AS NULL",
+    "CREATE OR REPLACE MACRO pg_get_keywords() AS 'keyword'",
+    "CREATE OR REPLACE MACRO pg_get_function_arguments(oid) AS ''",
+    "CREATE OR REPLACE MACRO pg_get_function_identity_arguments(oid) AS ''",
+    "CREATE OR REPLACE MACRO pg_get_function_result(oid) AS ''",
+    "CREATE OR REPLACE MACRO pg_get_serial_sequence(table_name, column_name) AS NULL",
+    "CREATE OR REPLACE MACRO pg_size_pretty(bytes) AS '0 bytes'",
+    "CREATE OR REPLACE MACRO pg_relation_size(oid) AS 0",
+    "CREATE OR REPLACE MACRO pg_total_relation_size(oid) AS 0",
+    "CREATE OR REPLACE MACRO pg_database_size(oid) AS 0",
+    "CREATE OR REPLACE MACRO pg_indexes_size(oid) AS 0",
+    "CREATE OR REPLACE MACRO pg_table_size(oid) AS 0",
     "CREATE OR REPLACE MACRO pg_relation_is_publishable(oid) AS false",
     "CREATE OR REPLACE MACRO obj_description(oid, catalog) AS NULL",
     "CREATE OR REPLACE MACRO col_description(oid, col) AS NULL",

@@ -19,6 +19,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import secrets
+import struct
 from collections.abc import Awaitable, Callable
 
 from orionbelt.pgwire import protocol
@@ -347,14 +348,33 @@ class PgWireServer:
 
 
 def _contains_error_response(reply: bytes) -> bool:
-    """Quick scan: does this reply contain an ErrorResponse (``E``) frame?
+    """Return ``True`` when any frame in ``reply`` is an ErrorResponse (``E``).
 
     Extended-query mode requires the server to enter skip-until-Sync
-    after any error; the router emits errors as a single ``E`` frame so
-    a one-byte check is enough.
+    after any error. A bare ``startswith(b"E")`` check is not enough —
+    ``Describe('S')`` returns ``ParameterDescription`` (``t``) followed
+    by ``ErrorResponse`` (``E``) when the prepared statement is
+    invalid, and other compound replies follow the same shape. Walk
+    the frame boundaries by length prefix so the ``E`` is found
+    wherever it lands.
+
+    Postgres frame layout: 1-byte tag + 4-byte big-endian length (the
+    length field includes the four length bytes themselves).
     """
 
-    return reply.startswith(b"E")
+    offset = 0
+    end = len(reply)
+    while offset + 5 <= end:
+        if reply[offset : offset + 1] == b"E":
+            return True
+        (length,) = struct.unpack("!I", reply[offset + 1 : offset + 5])
+        if length < 4:
+            # Malformed / truncated frame — stop scanning rather than
+            # spin forever; the caller will see whatever frames we did
+            # parse.
+            return False
+        offset += 1 + length
+    return False
 
 
 def _startup_parameters() -> dict[str, str]:
