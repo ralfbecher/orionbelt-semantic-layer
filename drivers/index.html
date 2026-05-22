@@ -2706,14 +2706,14 @@
 </table>
 <p><code>ob-driver-core</code> is the shared foundation — PEP 249 exceptions, type codes, OBML detection, and the REST compilation bridge. All vendor drivers depend on it.</p>
 <h2 id="how-drivers-work">How Drivers Work<a class="headerlink" href="#how-drivers-work" title="Permanent link">&para;</a></h2>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>Your Python App              OrionBelt API           Database
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>+--------------+   HTTP      +---------------+
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>| import ob_*  | ---------&gt;  | /v1/query/sql |  OBML -&gt; SQL
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>|              | &lt;---------  | (MODEL_FILES) |
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>| cursor       |             +---------------+
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>|  .execute()  |   native protocol
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>|  .fetchall() | ----------------------------&gt; Snowflake / PG / ...
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>+--------------+
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>Your Python App               OrionBelt API           Database
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>┌───────────────┐   HTTP      ┌───────────────┐
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>│ import ob_*   │ ─────────►  │ /v1/query/sql │  OBML → SQL
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>│               │ ◄─────────  │ (MODEL_FILES) │
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>│ cursor        │             └───────────────┘
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>│  .execute()   │   native protocol
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>│  .fetchall()  │ ─────────────────────────────► Snowflake / PG / ...
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>└───────────────┘
 </span></code></pre></div>
 <ol>
 <li><code>cur.execute(query)</code> checks if the query is OBML (starts with <code>select:</code> + has <code>dimensions</code>/<code>measures</code>)</li>
@@ -2905,18 +2905,18 @@
 <p>The <code>ob-flight-extension</code> package adds an Arrow Flight SQL endpoint to the OrionBelt API. This enables BI tools that support the Arrow Flight protocol — DBeaver, Tableau (via JDBC), Power BI (via ODBC bridge) — to run OBML queries directly.</p>
 <h3 id="architecture">Architecture<a class="headerlink" href="#architecture" title="Permanent link">&para;</a></h3>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>DBeaver / Tableau / Power BI
-</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>        | Arrow Flight (gRPC, port 8815)
-</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>        v
-</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>+--------------------------------+
-</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>|  OrionBelt API                 |
-</span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>|  +-- REST API  (:8080)         |  FastAPI endpoints
-</span><span id="__span-10-7"><a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>|  +-- Flight SQL (:8815)        |  Arrow Flight server (daemon thread)
-</span><span id="__span-10-8"><a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a>|        +-- OBML detection      |
-</span><span id="__span-10-9"><a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a>|        +-- CompilationPipeline |  (direct, no HTTP hop)
-</span><span id="__span-10-10"><a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a>|        +-- Vendor driver       |  executes compiled SQL
-</span><span id="__span-10-11"><a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a>+--------------+-----------------+
-</span><span id="__span-10-12"><a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a>               | outbound TCP/HTTPS
-</span><span id="__span-10-13"><a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a>               v
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>        │ Arrow Flight (gRPC, port 8815)
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>        ▼
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>┌────────────────────────────────┐
+</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>│  OrionBelt API                 │
+</span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>│  ├── REST API  (:8080)         │  FastAPI endpoints
+</span><span id="__span-10-7"><a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>│  └── Flight SQL (:8815)        │  Arrow Flight server (daemon thread)
+</span><span id="__span-10-8"><a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a>│        ├── OBML detection      │
+</span><span id="__span-10-9"><a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a>│        ├── CompilationPipeline │  (direct, no HTTP hop)
+</span><span id="__span-10-10"><a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a>│        └── Vendor driver       │  executes compiled SQL
+</span><span id="__span-10-11"><a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a>└────────────┬───────────────────┘
+</span><span id="__span-10-12"><a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a>             │ outbound TCP/HTTPS
+</span><span id="__span-10-13"><a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a>             ▼
 </span><span id="__span-10-14"><a id="__codelineno-10-14" name="__codelineno-10-14" href="#__codelineno-10-14"></a>   Snowflake / PostgreSQL / ClickHouse / Databricks / Dremio / DuckDB
 </span><span id="__span-10-15"><a id="__codelineno-10-15" name="__codelineno-10-15" href="#__codelineno-10-15"></a>   (cloud or on-premise, wherever the database is)
 </span></code></pre></div>
@@ -3132,11 +3132,15 @@
 </span><span id="__span-18-15"><a id="__codelineno-18-15" name="__codelineno-18-15" href="#__codelineno-18-15"></a><span class="k">FROM</span><span class="w">   </span><span class="n">sales</span>
 </span><span id="__span-18-16"><a id="__codelineno-18-16" name="__codelineno-18-16" href="#__codelineno-18-16"></a><span class="k">LIMIT</span><span class="w">  </span><span class="mi">100</span>
 </span></code></pre></div>
-<p>The schema browser shows the model's virtual table (one row per loaded
-model) plus the <code>_dimensions</code> / <code>_measures</code> / <code>_metrics</code> introspection
-views. <code>SHOW TABLES</code>, <code>DESCRIBE</code>, and <code>information_schema.tables</code> work
-out of the box and are answered from the model — they never touch the
-warehouse.</p>
+<p>Each loaded model appears in the schema browser as its own schema
+(<code>orionbelt.&lt;model_name&gt;</code>) containing a virtual table named <code>model</code>
+(columns = all dimensions + measures + metrics) and six introspection
+views: <code>dimensions</code> / <code>measures</code> / <code>metrics</code> for BI-tool picker side
+panels (one column per label) and <code>_dimensions_metadata</code> /
+<code>_measures_metadata</code> / <code>_metrics_metadata</code> for full attribute rows
+(name, data object, type, time grain, description, …). <code>SHOW TABLES</code>,
+<code>DESCRIBE</code>, <code>information_schema.*</code>, and <code>pg_catalog.*</code> queries are
+answered from the model and never touch the warehouse.</p>
 <p align="center">
   <img src="../assets/arrow_flight_dbeaver.png" alt="Arrow Flight DBeaver" width="900">
 </p>
