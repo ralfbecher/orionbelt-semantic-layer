@@ -227,6 +227,38 @@ _SHADOW_VIEWS: tuple[str, ...] = (
             (1700, 'numeric',     'N', -1,  'b', false, -1, 0),
             (2950, 'uuid',        'U', 16,  'b', false, -1, 0)
         ) AS t(oid, typname, typcategory, typlen, typtype, typnotnull, typtypmod, typbasetype)""",
+    # Shadow pg_database. DBeaver / pgAdmin connect-check filters on
+    # ``WHERE datallowconn AND NOT datistemplate`` (and reads
+    # encoding / datcollate / datctype / datacl in the same probe);
+    # DuckDB's native pg_database view is missing those columns and
+    # the binder fails with ``Referenced column "datallowconn" not
+    # found``. Single-row view named after the OBSL brand keeps the
+    # one-database illusion the rest of the catalog presents.
+    f"""CREATE OR REPLACE TEMP VIEW _obsl_pg_database AS
+        SELECT * FROM (VALUES (
+            16384::INTEGER,                         -- oid
+            '{CATALOG_SCHEMA}'::VARCHAR,            -- datname
+            10::INTEGER,                            -- datdba
+            6::INTEGER,                             -- encoding (UTF8 = 6)
+            'en_US.UTF-8'::VARCHAR,                 -- datcollate
+            'en_US.UTF-8'::VARCHAR,                 -- datctype
+            false::BOOLEAN,                         -- datistemplate
+            true::BOOLEAN,                          -- datallowconn
+            -1::INTEGER,                            -- datconnlimit
+            0::BIGINT,                              -- datfrozenxid
+            0::BIGINT,                              -- datminmxid
+            1663::INTEGER,                          -- dattablespace (pg_default)
+            '{{}}'::VARCHAR,                        -- datacl (NOT NULL string for DBeaver)
+            'c'::VARCHAR,                           -- datlocprovider
+            NULL::VARCHAR,                          -- daticulocale
+            NULL::VARCHAR,                          -- daticurules
+            NULL::VARCHAR                           -- datcollversion
+        )) AS t(
+            oid, datname, datdba, encoding, datcollate, datctype,
+            datistemplate, datallowconn, datconnlimit, datfrozenxid,
+            datminmxid, dattablespace, datacl, datlocprovider,
+            daticulocale, daticurules, datcollversion
+        )""",
 )
 
 
@@ -322,6 +354,18 @@ _REWRITES: tuple[tuple[re.Pattern[str], str], ...] = (
     (
         re.compile(r"(?<![.\w])pg_type\b", re.IGNORECASE),
         "_obsl_pg_type",
+    ),
+    # pg_database — DBeaver / pgAdmin connect-check filters on
+    # ``datallowconn AND NOT datistemplate``, columns DuckDB's native
+    # pg_database lacks. Route to the single-row shadow that carries
+    # the full standard column set (see _SHADOW_VIEWS).
+    (
+        re.compile(r"\bpg_catalog\s*\.\s*pg_database\b", re.IGNORECASE),
+        "_obsl_pg_database",
+    ),
+    (
+        re.compile(r"(?<![.\w])pg_database\b(?!\s*\()", re.IGNORECASE),
+        "_obsl_pg_database",
     ),
     # Function / operator references prefixed with pg_catalog. — strip
     # the prefix so DuckDB resolves against the unqualified built-in or
