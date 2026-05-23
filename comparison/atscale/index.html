@@ -902,6 +902,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../guide/trend-analysis/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Trend Analysis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../guide/compilation/" class="md-nav__link">
         
   
@@ -2022,7 +2050,7 @@
 </nav>
 <div class="obml-version-badge">
   OBML v1.0<br>
-  OrionBelt v2.5.0
+  OrionBelt v2.6.0
 </div>
       
     </li>
@@ -2522,7 +2550,7 @@
 </nav>
 <div class="obml-version-badge">
   OBML v1.0<br>
-  OrionBelt v2.5.0
+  OrionBelt v2.6.0
 </div>
                   </div>
                 </div>
@@ -2542,12 +2570,12 @@
 
 
 <h1 id="obsl-vs-atscale">OBSL vs AtScale<a class="headerlink" href="#obsl-vs-atscale" title="Permanent link">&para;</a></h1>
-<p>A feature comparison between <strong>OrionBelt Semantic Layer (OBSL)</strong> and <strong>AtScale</strong> — the enterprise "universal semantic layer" with deep OLAP heritage and native MDX/DAX support. Captured 2026-05-01.</p>
+<p>A feature comparison between <strong>OrionBelt Semantic Layer (OBSL)</strong> and <strong>AtScale</strong> — the enterprise "universal semantic layer" with deep OLAP heritage and native MDX/DAX support. Captured 2026-05-23.</p>
 <hr />
 <h2 id="tldr">TL;DR<a class="headerlink" href="#tldr" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>AtScale wins on</strong>: enterprise OLAP capabilities (true hierarchies, parent-child, ragged, time-intelligence), <strong>native MDX support</strong> for Excel pivot tables and SSAS-protocol clients (no other peer in this comparison set has this), <strong>DAX support</strong> for Power BI live connections, <strong>autonomous aggregates</strong> (machine-learned auto-rollups similar to Cube pre-aggregations but more automated), enterprise governance (RLS, perspectives, lineage), and broad legacy/cloud warehouse coverage.</li>
-<li><strong>OBSL wins on</strong>: being <strong>open-source and self-hostable for production with no licensing tier</strong> (AtScale offers a free Developer Community Edition for evaluation, but production multi-user deployments require an enterprise license), a <strong>simple JSON Query API</strong> consumable by any client, <strong>first-class declarative cumulative and period-over-period metric types</strong>, an <strong>RDF/SPARQL graph view</strong> of the model, <strong>named secondary join paths</strong>, <strong>multi-rooted DAG topology with the CFL planner</strong>, an <strong>interactive ontology-graph playground</strong>, OSI ↔ OBML format conversion, and a much smaller operational footprint.</li>
+<li><strong>OBSL wins on</strong>: being <strong>open-source and self-hostable for production with no licensing tier</strong> (AtScale offers a free Developer Community Edition for evaluation, but production multi-user deployments require an enterprise license), a <strong>simple JSON Query API</strong> consumable by any client, <strong>first-class declarative metric types</strong> for cumulative (with <code>partitionBy</code> v2.6+), period-over-period, and <strong>window</strong> (rank / lag / lead / ntile / first_value / last_value, v2.6+), <strong>9 statistical aggregates</strong> (CORR / COVAR_<em> / REGR_</em> / STDDEV_<em> / VAR_</em>, v2.6+), an <strong>RDF/SPARQL graph view</strong> of the model, <strong>named secondary join paths</strong>, <strong>multi-rooted DAG topology with the CFL planner</strong>, an <strong>interactive ontology-graph playground</strong>, <strong>OSI v0.2 ↔ OBML format conversion</strong> (v2.6+), and a much smaller operational footprint.</li>
 <li><strong>Different niches</strong>: AtScale is "the enterprise OLAP semantic layer for Excel/PowerBI/Tableau shops that need MDX." OBSL is "the open-source, embeddable semantic compiler for apps, agents, and modern BI tools that speak Arrow Flight SQL or REST."</li>
 </ul>
 <p>AtScale is the only peer in this comparison set that natively speaks <strong>MDX</strong>, the OLAP wire protocol that Excel and SSAS clients use. That's a real moat for organizations standardized on Microsoft BI tooling. OBSL doesn't compete on that axis.</p>

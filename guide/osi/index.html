@@ -905,6 +905,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../trend-analysis/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Trend Analysis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../compilation/" class="md-nav__link">
         
   
@@ -1189,6 +1217,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#spec-version-obsl-v26" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Spec version (OBSL v2.6+)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#rest-api" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1226,7 +1265,7 @@
 </nav>
 <div class="obml-version-badge">
   OBML v1.0<br>
-  OrionBelt v2.5.0
+  OrionBelt v2.6.0
 </div>
       
     </li>
@@ -1987,6 +2026,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#spec-version-obsl-v26" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Spec version (OBSL v2.6+)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#rest-api" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2024,7 +2074,7 @@
 </nav>
 <div class="obml-version-badge">
   OBML v1.0<br>
-  OrionBelt v2.5.0
+  OrionBelt v2.6.0
 </div>
                   </div>
                 </div>
@@ -2046,6 +2096,46 @@
 <h1 id="osi-interoperability">OSI Interoperability<a class="headerlink" href="#osi-interoperability" title="Permanent link">&para;</a></h1>
 <p><strong>OSI (Open Semantic Interchange)</strong> is an open standard for portable semantic models, founded with the goal of letting metric and dimension definitions move between BI tools, semantic layers, and data platforms without rewriting. See <a href="https://open-semantic-interchange.org/">open-semantic-interchange.org</a> for the specification and contributor list.</p>
 <p>OrionBelt includes a bidirectional converter between OBML and the <a href="https://github.com/open-semantic-interchange/OSI">OSI specification</a> format. The converter handles structural differences between the two formats — including metric decomposition, relationship restructuring, and lossless <code>ai_context</code> preservation via <code>customExtensions</code> — with built-in validation for both directions.</p>
+<h2 id="spec-version-obsl-v26">Spec version (OBSL v2.6+)<a class="headerlink" href="#spec-version-obsl-v26" title="Permanent link">&para;</a></h2>
+<p>OBSL v2.6 emits <strong>OSI v0.2.0.dev0</strong> (the latest draft in the upstream <code>core-spec/</code> at release time). The vendored schema lives at <code>osi-obml/osi-schema.json</code>; refresh it with <code>scripts/refresh-osi-schema.sh</code> when upstream advances.</p>
+<p><strong>Breaking change vs. OBSL v2.5</strong> — the previous release emitted OSI v0.1.1. Downstream consumers pinning to v0.1 will reject v2.6 output. The converter still <strong>reads</strong> v0.1.x inputs via the legacy shim <code>_normalize_legacy_v01()</code>, which promotes pre-v0.2 <code>custom_extensions</code> payloads (<code>obml_primary_key</code>, <code>obml_unique_keys</code>) into the v0.2 first-class fields before parsing.</p>
+<p>What's new in v0.2 that OBSL now round-trips:</p>
+<table>
+<thead>
+<tr>
+<th>Surface</th>
+<th>OBML side</th>
+<th>OSI side</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>primary_key</code></td>
+<td>Per-column <code>primaryKey: true</code> flag</td>
+<td>First-class <code>primary_key: [col, ...]</code> array (composite supported, declaration order preserved)</td>
+</tr>
+<tr>
+<td><code>unique_keys</code></td>
+<td>OBSL custom extension <code>obml_unique_keys: [[col], [col1, col2], ...]</code></td>
+<td>First-class <code>unique_keys: [[...], ...]</code> array</td>
+</tr>
+<tr>
+<td>Field <code>label</code></td>
+<td>OBSL custom extension <code>obml_field_label</code></td>
+<td>First-class <code>field.label</code> string</td>
+</tr>
+<tr>
+<td><code>MAQL</code> dialect</td>
+<td>n/a (we don't generate MAQL)</td>
+<td>Accepted on read, surfaced via warning if it's the only available dialect</td>
+</tr>
+<tr>
+<td>Top-level informational arrays</td>
+<td>n/a</td>
+<td><code>dialects: ["ANSI_SQL"]</code> + <code>vendors: [...]</code></td>
+</tr>
+</tbody>
+</table>
 <h2 id="rest-api">REST API<a class="headerlink" href="#rest-api" title="Permanent link">&para;</a></h2>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Convert OSI -&gt; OBML</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>http://127.0.0.1:8000/v1/convert/osi-to-obml<span class="w"> </span><span class="se">\</span>

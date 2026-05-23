@@ -902,6 +902,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../guide/trend-analysis/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Trend Analysis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../guide/compilation/" class="md-nav__link">
         
   
@@ -1977,7 +2005,7 @@
 </nav>
 <div class="obml-version-badge">
   OBML v1.0<br>
-  OrionBelt v2.5.0
+  OrionBelt v2.6.0
 </div>
       
     </li>
@@ -3292,7 +3320,7 @@
 </nav>
 <div class="obml-version-badge">
   OBML v1.0<br>
-  OrionBelt v2.5.0
+  OrionBelt v2.6.0
 </div>
                   </div>
                 </div>
@@ -4061,10 +4089,10 @@
 <h2 id="osi-obml-conversion">OSI ↔ OBML Conversion<a class="headerlink" href="#osi-obml-conversion" title="Permanent link">&para;</a></h2>
 <p>Stateless endpoints for converting between <a href="https://github.com/open-semantic-interchange/OSI">OSI (Open Semantic Interchange)</a> and OBML formats. No session required.</p>
 <h3 id="post-v1convertosi-to-obml"><code>POST /v1/convert/osi-to-obml</code><a class="headerlink" href="#post-v1convertosi-to-obml" title="Permanent link">&para;</a></h3>
-<p>Convert an OSI YAML model to OBML format.</p>
+<p>Convert an OSI YAML model to OBML format. OBSL v2.6+ emits and validates against <a href="https://github.com/open-semantic-interchange/OSI/blob/main/core-spec/osi-schema.json">OSI v0.2.0.dev0</a>; v0.1.x inputs still load via a legacy reader shim.</p>
 <p><strong>Request:</strong></p>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="p">{</span>
-</span><span id="__span-23-2"><a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a><span class="w">  </span><span class="nt">&quot;input_yaml&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;version: \&quot;0.1.1\&quot;\nsemantic_model:\n  - name: my_model\n    ...&quot;</span>
+</span><span id="__span-23-2"><a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a><span class="w">  </span><span class="nt">&quot;input_yaml&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;version: \&quot;0.2.0.dev0\&quot;\nsemantic_model:\n  - name: my_model\n    ...&quot;</span>
 </span><span id="__span-23-3"><a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a><span class="p">}</span>
 </span></code></pre></div>
 <p><strong>Response (200):</strong></p>
@@ -4079,13 +4107,22 @@
 </span><span id="__span-24-9"><a id="__codelineno-24-9" name="__codelineno-24-9" href="#__codelineno-24-9"></a><span class="w">    </span><span class="nt">&quot;schema_errors&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span>
 </span><span id="__span-24-10"><a id="__codelineno-24-10" name="__codelineno-24-10" href="#__codelineno-24-10"></a><span class="w">    </span><span class="nt">&quot;semantic_errors&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span>
 </span><span id="__span-24-11"><a id="__codelineno-24-11" name="__codelineno-24-11" href="#__codelineno-24-11"></a><span class="w">    </span><span class="nt">&quot;semantic_warnings&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span>
-</span><span id="__span-24-12"><a id="__codelineno-24-12" name="__codelineno-24-12" href="#__codelineno-24-12"></a><span class="w">  </span><span class="p">}</span>
-</span><span id="__span-24-13"><a id="__codelineno-24-13" name="__codelineno-24-13" href="#__codelineno-24-13"></a><span class="p">}</span>
+</span><span id="__span-24-12"><a id="__codelineno-24-12" name="__codelineno-24-12" href="#__codelineno-24-12"></a><span class="w">  </span><span class="p">},</span>
+</span><span id="__span-24-13"><a id="__codelineno-24-13" name="__codelineno-24-13" href="#__codelineno-24-13"></a><span class="w">  </span><span class="nt">&quot;input_validation&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-24-14"><a id="__codelineno-24-14" name="__codelineno-24-14" href="#__codelineno-24-14"></a><span class="w">    </span><span class="nt">&quot;schema_valid&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+</span><span id="__span-24-15"><a id="__codelineno-24-15" name="__codelineno-24-15" href="#__codelineno-24-15"></a><span class="w">    </span><span class="nt">&quot;semantic_valid&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+</span><span id="__span-24-16"><a id="__codelineno-24-16" name="__codelineno-24-16" href="#__codelineno-24-16"></a><span class="w">    </span><span class="nt">&quot;schema_errors&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span>
+</span><span id="__span-24-17"><a id="__codelineno-24-17" name="__codelineno-24-17" href="#__codelineno-24-17"></a><span class="w">    </span><span class="nt">&quot;semantic_errors&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span>
+</span><span id="__span-24-18"><a id="__codelineno-24-18" name="__codelineno-24-18" href="#__codelineno-24-18"></a><span class="w">    </span><span class="nt">&quot;semantic_warnings&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span>
+</span><span id="__span-24-19"><a id="__codelineno-24-19" name="__codelineno-24-19" href="#__codelineno-24-19"></a><span class="w">  </span><span class="p">}</span>
+</span><span id="__span-24-20"><a id="__codelineno-24-20" name="__codelineno-24-20" href="#__codelineno-24-20"></a><span class="p">}</span>
 </span></code></pre></div>
+<p><strong>v2.6+</strong> — the new <code>input_validation</code> field carries the result of running the <strong>OSI input</strong> against the vendored OSI v0.2 schema (Draft 2020-12). Advisory by default: the endpoint still returns 200 with the converted output when input fails strict v0.2 validation, because the legacy reader shim still produces correct OBML for v0.1.x documents. Inspect <code>input_validation.schema_errors</code> if you need a hard gate on the source format.</p>
+<p>The <code>validation</code> field (unchanged from v2.5) reports the OBML <strong>output</strong>.</p>
 <p><strong>Error (400):</strong> Invalid YAML input.</p>
 <p><strong>Error (422):</strong> Conversion failed (e.g. unsupported OSI structure).</p>
 <h3 id="post-v1convertobml-to-osi"><code>POST /v1/convert/obml-to-osi</code><a class="headerlink" href="#post-v1convertobml-to-osi" title="Permanent link">&para;</a></h3>
-<p>Convert an OBML YAML model to OSI format.</p>
+<p>Convert an OBML YAML model to OSI format. OBSL v2.6+ emits OSI v0.2.0.dev0 (<code>version: "0.2.0.dev0"</code> at the top level, <code>primary_key</code> / <code>unique_keys</code> first-class, informational <code>dialects</code> / <code>vendors</code> arrays).</p>
 <p><strong>Request:</strong></p>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a><span class="p">{</span>
 </span><span id="__span-25-2"><a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a><span class="w">  </span><span class="nt">&quot;input_yaml&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;version: 1.0\ndataObjects:\n  ...&quot;</span><span class="p">,</span>
@@ -4095,7 +4132,7 @@
 </span><span id="__span-25-6"><a id="__codelineno-25-6" name="__codelineno-25-6" href="#__codelineno-25-6"></a><span class="p">}</span>
 </span></code></pre></div>
 <p>The <code>model_name</code>, <code>model_description</code>, and <code>ai_instructions</code> fields are optional (defaults: <code>"semantic_model"</code>, <code>""</code>, <code>""</code>).</p>
-<p><strong>Response (200):</strong> Same structure as <code>POST /v1/convert/osi-to-obml</code>.</p>
+<p><strong>Response (200):</strong> Same structure as <code>POST /v1/convert/osi-to-obml</code>. The <code>input_validation</code> field is always <code>null</code> here — input-side OBML validation isn't wired on this endpoint yet (output-side <code>validation</code> still runs against the OSI v0.2 schema).</p>
 <p><strong>Error (400):</strong> Invalid YAML input.</p>
 <p><strong>Error (422):</strong> Conversion failed.</p>
 <hr />

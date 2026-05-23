@@ -902,6 +902,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../guide/trend-analysis/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Trend Analysis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../guide/compilation/" class="md-nav__link">
         
   
@@ -1944,7 +1972,7 @@
 </nav>
 <div class="obml-version-badge">
   OBML v1.0<br>
-  OrionBelt v2.5.0
+  OrionBelt v2.6.0
 </div>
       
     </li>
@@ -2534,7 +2562,7 @@
 </nav>
 <div class="obml-version-badge">
   OBML v1.0<br>
-  OrionBelt v2.5.0
+  OrionBelt v2.6.0
 </div>
                   </div>
                 </div>
@@ -2554,12 +2582,12 @@
 
 
 <h1 id="obsl-vs-malloy">OBSL vs Malloy<a class="headerlink" href="#obsl-vs-malloy" title="Permanent link">&para;</a></h1>
-<p>A feature comparison between <strong>OrionBelt Semantic Layer (OBSL)</strong> and <strong>Malloy</strong> (the open-source data language and semantic modeling tool from the Malloy Data project). Captured 2026-05-01.</p>
+<p>A feature comparison between <strong>OrionBelt Semantic Layer (OBSL)</strong> and <strong>Malloy</strong> (the open-source data language and semantic modeling tool from the Malloy Data project). Captured 2026-05-23.</p>
 <hr />
 <h2 id="tldr">TL;DR<a class="headerlink" href="#tldr" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>Malloy wins on</strong>: expressive query language (pipeline operator <code>-&gt;</code>, refinements, nesting), <strong>symmetric aggregates</strong> that handle fanout automatically, hierarchical query results via <code>nest:</code>, and a polished VS Code extension with autocomplete and inline visualizations (OBSL has a different VS Code path via its Jupyter notebook, but it's a Python-driven loop rather than a language-aware editor).</li>
-<li><strong>OBSL wins on</strong>: more dialects (8 vs. ~6, with ClickHouse/Databricks/Dremio unique to OBSL), <strong>richer modeling topologies</strong> (multi-rooted DAG with first-class named secondary join paths) where Malloy assumes a single-rooted source tree, <strong>first-class metric types</strong> for cumulative and period-over-period (Malloy expresses these ad-hoc per query), an RDF/SPARQL graph view of the model, an explicit CFL planner, and a stable JSON Query API that's trivial for non-Malloy clients to call.</li>
+<li><strong>OBSL wins on</strong>: more dialects (8 vs. ~6, with ClickHouse/Databricks/Dremio unique to OBSL), <strong>richer modeling topologies</strong> (multi-rooted DAG with first-class named secondary join paths) where Malloy assumes a single-rooted source tree, <strong>first-class metric types</strong> for cumulative (with <code>partitionBy</code> v2.6+), period-over-period, and <strong>window</strong> (rank / lag / lead / ntile / first_value / last_value, v2.6+) where Malloy expresses these ad-hoc per query, <strong>9 statistical aggregates</strong> (CORR / COVAR_<em> / REGR_</em> / STDDEV_<em> / VAR_</em>, v2.6+), an RDF/SPARQL graph view of the model, an explicit CFL planner, and a stable JSON Query API that's trivial for non-Malloy clients to call.</li>
 <li><strong>Different niches</strong>: Malloy is "a new query language with semantic modeling baked in" — best for analyst-driven exploration and BI development. OBSL is "an API-first semantic compiler" — best for embedding into SaaS products and exposing metrics to LLMs/agents/external apps without teaching them a DSL.</li>
 </ul>
 <hr />

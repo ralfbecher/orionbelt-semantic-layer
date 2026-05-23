@@ -902,6 +902,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../guide/trend-analysis/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Trend Analysis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../guide/compilation/" class="md-nav__link">
         
   
@@ -1994,7 +2022,7 @@
 </nav>
 <div class="obml-version-badge">
   OBML v1.0<br>
-  OrionBelt v2.5.0
+  OrionBelt v2.6.0
 </div>
       
     </li>
@@ -2522,7 +2550,7 @@
 </nav>
 <div class="obml-version-badge">
   OBML v1.0<br>
-  OrionBelt v2.5.0
+  OrionBelt v2.6.0
 </div>
                   </div>
                 </div>
@@ -2542,12 +2570,12 @@
 
 
 <h1 id="obsl-vs-cube">OBSL vs Cube<a class="headerlink" href="#obsl-vs-cube" title="Permanent link">&para;</a></h1>
-<p>A feature comparison between <strong>OrionBelt Semantic Layer (OBSL)</strong> and <strong>Cube</strong> (formerly Cube.js — the open-source semantic layer from Cube Dev). Captured 2026-05-01.</p>
+<p>A feature comparison between <strong>OrionBelt Semantic Layer (OBSL)</strong> and <strong>Cube</strong> (formerly Cube.js — the open-source semantic layer from Cube Dev). Captured 2026-05-23.</p>
 <hr />
 <h2 id="tldr">TL;DR<a class="headerlink" href="#tldr" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>Cube wins on</strong>: <strong>pre-aggregations</strong> (its flagship feature — materialized rollups with refresh, partitioning, and lambda strategies), GraphQL alongside REST, first-class multi-tenancy and row-level security via <code>query_rewrite</code> + JWT security contexts, Twig templating for dynamic models, and the broadest data-source portfolio of the OSS semantic layers.</li>
-<li><strong>OBSL wins on</strong>: <strong>richer modeling topologies</strong> (multi-rooted DAG with named secondary join paths) where Cube assumes single-rooted cubes plus combining <code>views</code>; <strong>first-class declarative metric types</strong> for cumulative and period-over-period (Cube has <code>rolling_window</code> and <code>time_shift</code> but they're query/measure patterns, not metric <em>types</em>); an <strong>RDF/SPARQL graph view</strong> of the model and a matching <strong>interactive ontology-graph playground</strong>; <strong>two SQL wire protocols</strong> — PostgreSQL wire AND Arrow Flight SQL (v2.5.0+) — where Cube ships Postgres wire only; 8 first-class <strong>DB-API 2.0 drivers</strong>; an explicit <strong>CFL multi-fact planner</strong>; OSI ↔ OBML format conversion; and a simpler operational footprint (no Redis, no scheduler, no separate query orchestrator).</li>
+<li><strong>OBSL wins on</strong>: <strong>richer modeling topologies</strong> (multi-rooted DAG with named secondary join paths) where Cube assumes single-rooted cubes plus combining <code>views</code>; <strong>first-class declarative metric types</strong> for cumulative (with <code>partitionBy</code> v2.6+), period-over-period, and <strong>window</strong> (rank / lag / lead / ntile / first_value / last_value, v2.6+) where Cube has <code>rolling_window</code> and <code>time_shift</code> but they're query/measure patterns, not metric <em>types</em>, and no native rank/lag surface; <strong>9 statistical aggregates</strong> (CORR / COVAR_<em> / REGR_</em> / STDDEV_<em> / VAR_</em>, v2.6+); an <strong>RDF/SPARQL graph view</strong> of the model and a matching <strong>interactive ontology-graph playground</strong>; <strong>two SQL wire protocols</strong> — PostgreSQL wire AND Arrow Flight SQL (v2.5.0+) — where Cube ships Postgres wire only; 8 first-class <strong>DB-API 2.0 drivers</strong>; an explicit <strong>CFL multi-fact planner</strong>; <strong>OSI v0.2 ↔ OBML format conversion</strong> (v2.6+); and a simpler operational footprint (no Redis, no scheduler, no separate query orchestrator).</li>
 <li><strong>Different niches</strong>: Cube is "the production semantic-layer + caching + API gateway" — built to serve high-volume embedded analytics with millisecond response times. OBSL is "an embeddable semantic compiler with a clean REST surface and rich modeling primitives" — best when you don't need pre-aggregation infrastructure and want a smaller dependency footprint.</li>
 </ul>
 <p>Cube is the closest peer to OBSL in the OSS space — both are self-hostable, both target embedded analytics, both expose REST/MCP. The interesting differences are in modeling topology, metric expressivity, and the caching/pre-aggregation layer.</p>

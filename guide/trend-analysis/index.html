@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://ralforion.com/orionbelt-semantic-layer/guide/correctness-and-drift-tests/">
+        <link rel="canonical" href="https://ralforion.com/orionbelt-semantic-layer/guide/trend-analysis/">
       
       
-        <link rel="prev" href="../compilation/">
+        <link rel="prev" href="../period-over-period/">
       
       
-        <link rel="next" href="../obsl/">
+        <link rel="next" href="../compilation/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>Correctness & Drift Tests - OrionBelt Semantic Layer</title>
+        <title>Trend Analysis - OrionBelt Semantic Layer</title>
       
     
     
@@ -92,7 +92,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#correctness-drift-tests" class="md-skip">
+        <a href="#trend-analysis" class="md-skip">
           Skip to content
         </a>
       
@@ -144,7 +144,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Correctness & Drift Tests
+              Trend Analysis
             
           </span>
         </div>
@@ -902,10 +902,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../trend-analysis/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Trend Analysis
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -921,6 +948,163 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-partitioned-rolling-windows" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Partitioned rolling windows
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-window-metrics-rank-lag-lead-ntile-firstlast-value" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Window metrics — RANK, LAG, LEAD, NTILE, FIRST/LAST VALUE
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Window metrics — RANK, LAG, LEAD, NTILE, FIRST/LAST VALUE">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#rank-within-a-partition" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rank within a partition
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#lag-prior-period-value-side-by-side" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Lag — prior-period value, side by side
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ntile-bucket-into-quartiles-deciles" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        NTILE — bucket into quartiles / deciles
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#composition-moving-average-crossover" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Composition — moving-average crossover
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#validation-rules-window" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Validation rules (window)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-statistical-aggregates-on-measure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Statistical aggregates on Measure
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Statistical aggregates on Measure">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#dialect-coverage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dialect coverage
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-worked-example-multi-region-trend-dashboard" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Worked example — multi-region trend dashboard
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#out-of-scope-deliberate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Out of scope (deliberate)
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+<div class="obml-version-badge">
+  OBML v1.0<br>
+  OrionBelt v2.6.0
+</div>
+      
     </li>
   
 
@@ -958,37 +1142,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Correctness & Drift Tests
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../correctness-and-drift-tests/" class="md-nav__link">
         
   
   
@@ -1004,174 +1161,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#tldr" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        TL;DR
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#when-does-it-run-automatically" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        When does it run automatically?
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#why-two-tiers" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Why two tiers
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#tier-1-correctness-checks" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Tier 1 — correctness checks
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Tier 1 — correctness checks">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#adding-a-new-correctness-test" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Adding a new correctness test
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#tier-2-drift-snapshots" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Tier 2 — drift snapshots
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Tier 2 — drift snapshots">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#when-drift-fails" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        When drift fails
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#re-snapping-safely" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Re-snapping safely
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#corpus-structure" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Corpus structure
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#adding-a-new-corpus-query" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Adding a new corpus query
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#vendor-execution-sweep-phase-a" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Vendor-execution sweep (Phase A)
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#limitations" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Limitations
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-<div class="obml-version-badge">
-  OBML v1.0<br>
-  OrionBelt v2.6.0
-</div>
-      
     </li>
   
 
@@ -2126,10 +2115,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#tldr" class="md-nav__link">
+  <a href="#1-partitioned-rolling-windows" class="md-nav__link">
     <span class="md-ellipsis">
       
-        TL;DR
+        1. Partitioned rolling windows
       
     </span>
   </a>
@@ -2137,44 +2126,66 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#when-does-it-run-automatically" class="md-nav__link">
+  <a href="#2-window-metrics-rank-lag-lead-ntile-firstlast-value" class="md-nav__link">
     <span class="md-ellipsis">
       
-        When does it run automatically?
+        2. Window metrics — RANK, LAG, LEAD, NTILE, FIRST/LAST VALUE
       
     </span>
   </a>
   
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#why-two-tiers" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Why two tiers
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#tier-1-correctness-checks" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Tier 1 — correctness checks
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Tier 1 — correctness checks">
+    <nav class="md-nav" aria-label="2. Window metrics — RANK, LAG, LEAD, NTILE, FIRST/LAST VALUE">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#adding-a-new-correctness-test" class="md-nav__link">
+  <a href="#rank-within-a-partition" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Adding a new correctness test
+        Rank within a partition
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#lag-prior-period-value-side-by-side" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Lag — prior-period value, side by side
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ntile-bucket-into-quartiles-deciles" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        NTILE — bucket into quartiles / deciles
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#composition-moving-average-crossover" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Composition — moving-average crossover
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#validation-rules-window" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Validation rules (window)
       
     </span>
   </a>
@@ -2187,33 +2198,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#tier-2-drift-snapshots" class="md-nav__link">
+  <a href="#3-statistical-aggregates-on-measure" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Tier 2 — drift snapshots
+        3. Statistical aggregates on Measure
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Tier 2 — drift snapshots">
+    <nav class="md-nav" aria-label="3. Statistical aggregates on Measure">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#when-drift-fails" class="md-nav__link">
+  <a href="#dialect-coverage" class="md-nav__link">
     <span class="md-ellipsis">
       
-        When drift fails
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#re-snapping-safely" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Re-snapping safely
+        Dialect coverage
       
     </span>
   </a>
@@ -2226,10 +2226,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#corpus-structure" class="md-nav__link">
+  <a href="#4-worked-example-multi-region-trend-dashboard" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Corpus structure
+        4. Worked example — multi-region trend dashboard
       
     </span>
   </a>
@@ -2237,32 +2237,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#adding-a-new-corpus-query" class="md-nav__link">
+  <a href="#out-of-scope-deliberate" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Adding a new corpus query
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#vendor-execution-sweep-phase-a" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Vendor-execution sweep (Phase A)
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#limitations" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Limitations
+        Out of scope (deliberate)
       
     </span>
   </a>
@@ -2293,302 +2271,325 @@
   
 
 
-<h1 id="correctness-drift-tests">Correctness &amp; Drift Tests<a class="headerlink" href="#correctness-drift-tests" title="Permanent link">&para;</a></h1>
-<p>OBSL ships a two-tier integration suite for the compiler. <strong>Tier 1 —
-correctness</strong> answers <em>"is this query producing the right answer?"</em>
-<strong>Tier 2 — drift</strong> answers <em>"is this query producing the same answer it
-did yesterday?"</em> Each tier catches the bugs the other can't, and they
-are designed to run together so the cheap regression check (drift) only
-locks in values that have been independently ratified (correctness).</p>
-<p>The full design rationale lives in <code>design/PLAN_correctness_and_drift_tests.md</code>
-(an internal-only working note — <code>design/</code> is gitignored). This page is
-the operator's manual.</p>
-<h2 id="tldr">TL;DR<a class="headerlink" href="#tldr" title="Permanent link">&para;</a></h2>
+<h1 id="trend-analysis">Trend Analysis<a class="headerlink" href="#trend-analysis" title="Permanent link">&para;</a></h1>
+<p>OBML v2.6 ships four trend-analysis primitives. Two extend existing surfaces;
+two are new metric types or aggregations. All are deliberately additive: a
+v2.5 model continues to compile the same SQL.</p>
 <table>
 <thead>
 <tr>
-<th>Goal</th>
-<th>Command</th>
+<th>Primitive</th>
+<th>Where it lives</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Fast PR check</td>
-<td><code>uv run pytest tests/integration/drift/</code></td>
+<td>Per-dimension partitioning on rolling windows</td>
+<td><code>MetricType.CUMULATIVE</code> + <code>partitionBy:</code></td>
 </tr>
 <tr>
-<td>Full correctness ratification</td>
-<td><code>uv run pytest tests/integration/correctness/</code></td>
+<td>Rank, lag, lead, ntile, first/last value</td>
+<td>New <code>MetricType.WINDOW</code></td>
 </tr>
 <tr>
-<td>Both at once</td>
-<td><code>uv run pytest tests/integration/correctness/ tests/integration/drift/</code></td>
+<td>Two-column &amp; spread statistical aggregates</td>
+<td>New <code>aggregation:</code> values on <code>Measure</code></td>
 </tr>
 <tr>
-<td>Re-snap after intentional SQL change</td>
-<td><code>UPDATE_SNAPSHOTS=1 uv run pytest tests/integration/drift/</code></td>
-</tr>
-<tr>
-<td>Cross-vendor exec (Postgres / MySQL / ClickHouse via testcontainers)</td>
-<td><code>uv run pytest -m docker tests/integration/drift/vendor_exec/</code></td>
+<td>Composition of any of the above</td>
+<td>Existing <code>MetricType.DERIVED</code> — unchanged</td>
 </tr>
 </tbody>
 </table>
-<p>The first four run in well under a second against the bundled DuckDB
-seed (<code>examples/orionbelt_1_commerce.duckdb</code>). The vendor-exec sweep
-takes ~20 s including container startup.</p>
-<h2 id="when-does-it-run-automatically">When does it run automatically?<a class="headerlink" href="#when-does-it-run-automatically" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>Tier</th>
-<th>CI</th>
-<th>Why</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Tier 1 — correctness</td>
-<td>✅ every push + PR to <code>main</code></td>
-<td>Plain pytest, fast (~1 s)</td>
-</tr>
-<tr>
-<td>Tier 2 — drift (DuckDB exec + 8-dialect compile-only + metadata gate)</td>
-<td>✅ every push + PR</td>
-<td>Plain pytest, fast (~1.5 s)</td>
-</tr>
-<tr>
-<td>Phase A — vendor execution sweep</td>
-<td>❌ skipped in CI</td>
-<td>Marked <code>pytest.mark.docker</code>; needs Postgres / MySQL / ClickHouse containers</td>
-</tr>
-</tbody>
-</table>
-<p>CI runs both tiers in a <strong>single pytest invocation</strong>, so a green
-workflow implies every drift snapshot is anchored to a green Tier 1
-check by construction. The vendor-exec sweep is opt-in — run locally,
-or wire a separate workflow job that boots service containers if you
-want it on CI.</p>
-<h2 id="why-two-tiers">Why two tiers<a class="headerlink" href="#why-two-tiers" title="Permanent link">&para;</a></h2>
-<p>A snapshot test (golden test, recorded test, approval test) only ever
-asserts <em>"same as last time"</em>. If the snapshot was captured while the
-query was already wrong, it locks the wrong answer in. Every future run
-reports green and the bug is invisible until production catches it.</p>
-<p>OBSL avoids this by capturing snapshots <em>only after</em> a separate,
-independent verification that the value is correct. A snapshot is the
-<em>cache</em> of a correctness proof, never the proof itself.</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>Tier 1 — correctness (independent verification)
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>  │
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>  │   for each query, compute the answer two independent ways
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>  │   and assert numerical equality
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>  │
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>  ▼
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>Tier 2 — drift (snapshot regression)
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>  │
-</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>  │   capture the SQL + sorted rows of every ratified query
-</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>  │   diff future runs against the captured value
+<p>Each primitive is independently shippable; combining them across derived
+metrics is the multiplier.</p>
+<h2 id="1-partitioned-rolling-windows">1. Partitioned rolling windows<a class="headerlink" href="#1-partitioned-rolling-windows" title="Permanent link">&para;</a></h2>
+<p>A cumulative metric already supports running totals (unbounded), rolling
+windows (<code>window: N</code>), and grain-to-date resets (<code>grainToDate: month</code>).
+v2.6 adds <code>partitionBy:</code> — every entry is a dimension defined in the
+model and present in the query's SELECT.</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">metrics</span><span class="p">:</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nt">Revenue MA12 by Country</span><span class="p">:</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">cumulative</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">    </span><span class="nt">measure</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Revenue</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">    </span><span class="nt">timeDimension</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">order_month</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">    </span><span class="nt">cumulativeType</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">avg</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">    </span><span class="nt">window</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">12</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">    </span><span class="nt">partitionBy</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">Country</span><span class="p p-Indicator">]</span>
 </span></code></pre></div>
-<h2 id="tier-1-correctness-checks">Tier 1 — correctness checks<a class="headerlink" href="#tier-1-correctness-checks" title="Permanent link">&para;</a></h2>
-<p>Every correctness test computes a query result two ways: once via the
-OBSL compiler and once via an <em>independent</em> method that does not
-exercise the same compiler code path. The methods used in the v0 corpus:</p>
+<p>Compiles to:</p>
+<div class="language-sql highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="k">AVG</span><span class="p">(</span><span class="ss">&quot;Revenue&quot;</span><span class="p">)</span><span class="w"> </span><span class="n">OVER</span><span class="w"> </span><span class="p">(</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="ss">&quot;Country&quot;</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="ss">&quot;order_month&quot;</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">  </span><span class="k">ROWS</span><span class="w"> </span><span class="k">BETWEEN</span><span class="w"> </span><span class="mi">11</span><span class="w"> </span><span class="n">PRECEDING</span><span class="w"> </span><span class="k">AND</span><span class="w"> </span><span class="k">CURRENT</span><span class="w"> </span><span class="k">ROW</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="ss">&quot;Revenue MA12 by Country&quot;</span>
+</span></code></pre></div>
+<p>Default is <code>[]</code> (no partition) — existing cumulative metrics produce
+identical SQL.</p>
+<h2 id="2-window-metrics-rank-lag-lead-ntile-firstlast-value">2. Window metrics — RANK, LAG, LEAD, NTILE, FIRST/LAST VALUE<a class="headerlink" href="#2-window-metrics-rank-lag-lead-ntile-firstlast-value" title="Permanent link">&para;</a></h2>
+<p>A new <code>MetricType.WINDOW</code> covers the single-row-output window functions
+(ranking, offsetting, positional). The <code>windowFunction:</code> field
+discriminates.</p>
+<h3 id="rank-within-a-partition">Rank within a partition<a class="headerlink" href="#rank-within-a-partition" title="Permanent link">&para;</a></h3>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">metrics</span><span class="p">:</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nt">Revenue Rank by Quarter</span><span class="p">:</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">window</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">    </span><span class="nt">windowFunction</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">dense_rank</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">    </span><span class="nt">measure</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Revenue</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">    </span><span class="nt">orderDirection</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">desc</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">    </span><span class="nt">partitionBy</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">Quarter</span><span class="p p-Indicator">]</span>
+</span></code></pre></div>
+<div class="language-sql highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">DENSE_RANK</span><span class="p">()</span><span class="w"> </span><span class="n">OVER</span><span class="w"> </span><span class="p">(</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="ss">&quot;Quarter&quot;</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="ss">&quot;Revenue&quot;</span><span class="w"> </span><span class="k">DESC</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="ss">&quot;Revenue Rank by Quarter&quot;</span>
+</span></code></pre></div>
+<h3 id="lag-prior-period-value-side-by-side">Lag — prior-period value, side by side<a class="headerlink" href="#lag-prior-period-value-side-by-side" title="Permanent link">&para;</a></h3>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">metrics</span><span class="p">:</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">Revenue Prior Month</span><span class="p">:</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">window</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">    </span><span class="nt">windowFunction</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">lag</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">    </span><span class="nt">measure</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Revenue</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">    </span><span class="nt">offset</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">    </span><span class="nt">timeDimension</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">order_month</span>
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">    </span><span class="nt">partitionBy</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">Country</span><span class="p p-Indicator">]</span>
+</span></code></pre></div>
+<div class="language-sql highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">LAG</span><span class="p">(</span><span class="ss">&quot;Revenue&quot;</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">)</span><span class="w"> </span><span class="n">OVER</span><span class="w"> </span><span class="p">(</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="ss">&quot;Country&quot;</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="ss">&quot;order_month&quot;</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="ss">&quot;Revenue Prior Month&quot;</span>
+</span></code></pre></div>
+<p>LAG and LEAD accept an optional <code>defaultValue:</code> field — emits the
+three-argument form when set.</p>
+<h3 id="ntile-bucket-into-quartiles-deciles">NTILE — bucket into quartiles / deciles<a class="headerlink" href="#ntile-bucket-into-quartiles-deciles" title="Permanent link">&para;</a></h3>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nt">metrics</span><span class="p">:</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span><span class="nt">Revenue Quartile</span><span class="p">:</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">    </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">window</span>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">    </span><span class="nt">windowFunction</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ntile</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">    </span><span class="nt">measure</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Revenue</span>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">    </span><span class="nt">buckets</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">4</span>
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">    </span><span class="nt">partitionBy</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">Year</span><span class="p p-Indicator">]</span>
+</span></code></pre></div>
+<h3 id="composition-moving-average-crossover">Composition — moving-average crossover<a class="headerlink" href="#composition-moving-average-crossover" title="Permanent link">&para;</a></h3>
+<p>The killer feature is composing window metrics through <code>DERIVED</code>:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nt">metrics</span><span class="p">:</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> label</span><span class="p">:</span><span class="w"> </span><span class="nv">Revenue MA3</span><span class="p p-Indicator">,</span><span class="nt">  type</span><span class="p">:</span><span class="w"> </span><span class="nv">cumulative</span><span class="p p-Indicator">,</span><span class="nt"> measure</span><span class="p">:</span><span class="w"> </span><span class="nv">Revenue</span><span class="p p-Indicator">,</span><span class="nt"> timeDimension</span><span class="p">:</span><span class="w"> </span><span class="nv">order_month</span><span class="p p-Indicator">,</span><span class="nt"> cumulativeType</span><span class="p">:</span><span class="w"> </span><span class="nv">avg</span><span class="p p-Indicator">,</span><span class="nt"> window</span><span class="p">:</span><span class="w"> </span><span class="nv">3</span><span class="p p-Indicator">,</span><span class="nt">  partitionBy</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">Country</span><span class="p p-Indicator">]</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> label</span><span class="p">:</span><span class="w"> </span><span class="nv">Revenue MA12</span><span class="p p-Indicator">,</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">cumulative</span><span class="p p-Indicator">,</span><span class="nt"> measure</span><span class="p">:</span><span class="w"> </span><span class="nv">Revenue</span><span class="p p-Indicator">,</span><span class="nt"> timeDimension</span><span class="p">:</span><span class="w"> </span><span class="nv">order_month</span><span class="p p-Indicator">,</span><span class="nt"> cumulativeType</span><span class="p">:</span><span class="w"> </span><span class="nv">avg</span><span class="p p-Indicator">,</span><span class="nt"> window</span><span class="p">:</span><span class="w"> </span><span class="nv">12</span><span class="p p-Indicator">,</span><span class="nt"> partitionBy</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">Country</span><span class="p p-Indicator">]</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">label</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">MA Crossover Signal</span>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">    </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">derived</span>
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">    </span><span class="nt">expression</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;CASE</span><span class="nv"> </span><span class="s">WHEN</span><span class="nv"> </span><span class="s">{[Revenue</span><span class="nv"> </span><span class="s">MA3]}</span><span class="nv"> </span><span class="s">&gt;</span><span class="nv"> </span><span class="s">{[Revenue</span><span class="nv"> </span><span class="s">MA12]}</span><span class="nv"> </span><span class="s">THEN</span><span class="nv"> </span><span class="s">1</span><span class="nv"> </span><span class="s">ELSE</span><span class="nv"> </span><span class="s">-1</span><span class="nv"> </span><span class="s">END&quot;</span>
+</span></code></pre></div>
+<p>No new compiler logic — <code>DERIVED</code> already composes any metric by name.</p>
+<h3 id="validation-rules-window">Validation rules (window)<a class="headerlink" href="#validation-rules-window" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
 <tr>
-<th>Method</th>
-<th>What it catches</th>
-<th>Test file</th>
+<th>Rule</th>
+<th>Error code</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><strong>Aggregation invariance</strong> — ungrouped == sum of grouped</td>
-<td>grain-leak, dim joining wrong fact</td>
-<td><code>test_aggregation_invariance.py</code></td>
+<td><code>windowFunction:</code> required</td>
+<td><code>INVALID_METRIC</code></td>
 </tr>
 <tr>
-<td><strong>Hierarchical rollup</strong> — coarse grain == sum of fine grain</td>
-<td>time-grain composition bugs</td>
-<td><code>test_hierarchical_rollup.py</code></td>
+<td><code>partitionBy:</code> entry must resolve to a model dimension in SELECT</td>
+<td><code>UNKNOWN_PARTITION_DIMENSION</code></td>
 </tr>
 <tr>
-<td><strong>Hand-authored reference SQL</strong> — SQL written by reading the schema directly</td>
-<td>join-path, role-playing dim, fan-trap</td>
-<td><code>test_hand_sql_reference.py</code></td>
+<td><code>lag</code> / <code>lead</code> require <code>offset &gt;= 1</code> and <code>timeDimension:</code></td>
+<td><code>INVALID_LAG_LEAD</code></td>
 </tr>
 <tr>
-<td><strong>Pandas baseline</strong> — same algorithm rebuilt in pandas</td>
-<td>window-frame, cumulative, rolling, period-over-period</td>
-<td><code>test_pandas_baseline.py</code></td>
-</tr>
-<tr>
-<td><strong>Metric algebra</strong> — recompute the formula from base measures</td>
-<td>expression-evaluation drift, NULLIF, decimal cast</td>
-<td><code>test_metric_algebra.py</code></td>
-</tr>
-<tr>
-<td><strong>CFL split</strong> — combined cross-fact == per-fact queries combined</td>
-<td>CFL leg corruption, NULL-padding mistakes</td>
-<td><code>test_cfl_split.py</code></td>
-</tr>
-<tr>
-<td><strong>Filter additivity</strong> — <code>IN (a,b)</code> == <code>=a</code> + <code>=b</code></td>
-<td>WHERE-clause routing in CFL legs</td>
-<td><code>test_filter_additivity.py</code></td>
+<td><code>ntile</code> requires <code>buckets &gt;= 2</code></td>
+<td><code>INVALID_NTILE_BUCKETS</code></td>
 </tr>
 </tbody>
 </table>
-<p>All tests live under <code>tests/integration/correctness/</code>. The bundled
-DuckDB seed and the matching OBML model
-(<code>examples/orionbelt_1_commerce.yaml</code>) are the source of truth for every
-correctness ratification.</p>
-<h3 id="adding-a-new-correctness-test">Adding a new correctness test<a class="headerlink" href="#adding-a-new-correctness-test" title="Permanent link">&para;</a></h3>
-<ol>
-<li>Pick at least two methods from the table above. Document the choice
-   in the test docstring so future readers can audit the cross-check.</li>
-<li>Use the <code>run_query</code> fixture (<code>tests/integration/correctness/conftest.py</code>)
-   — it compiles a <code>QueryObject</code> through the full pipeline, executes
-   against the seed, and returns rows as <code>list[dict]</code> with <code>Decimal</code>
-   values preserved.</li>
-<li>Use <code>assert_decimal_equal</code> (or <code>pytest.approx</code> for ratios/averages
-   only) to compare. Sums must use exact equality per plan §10.1.</li>
-</ol>
-<h2 id="tier-2-drift-snapshots">Tier 2 — drift snapshots<a class="headerlink" href="#tier-2-drift-snapshots" title="Permanent link">&para;</a></h2>
-<p>Once a query passes its Tier 1 check, the harness captures:</p>
+<h2 id="3-statistical-aggregates-on-measure">3. Statistical aggregates on Measure<a class="headerlink" href="#3-statistical-aggregates-on-measure" title="Permanent link">&para;</a></h2>
+<p>Nine new values for <code>Measure.aggregation</code>: four single-column and five
+two-column. No new metric type.</p>
+<table>
+<thead>
+<tr>
+<th>Aggregation</th>
+<th>SQL</th>
+<th style="text-align: center;">Columns</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>stddev</code>, <code>stddev_samp</code></td>
+<td><code>STDDEV_SAMP(x)</code></td>
+<td style="text-align: center;">1</td>
+</tr>
+<tr>
+<td><code>stddev_pop</code></td>
+<td><code>STDDEV_POP(x)</code></td>
+<td style="text-align: center;">1</td>
+</tr>
+<tr>
+<td><code>variance</code>, <code>var_samp</code></td>
+<td><code>VAR_SAMP(x)</code></td>
+<td style="text-align: center;">1</td>
+</tr>
+<tr>
+<td><code>var_pop</code></td>
+<td><code>VAR_POP(x)</code></td>
+<td style="text-align: center;">1</td>
+</tr>
+<tr>
+<td><code>corr</code></td>
+<td><code>CORR(x, y)</code></td>
+<td style="text-align: center;">2</td>
+</tr>
+<tr>
+<td><code>covar_pop</code></td>
+<td><code>COVAR_POP(x, y)</code></td>
+<td style="text-align: center;">2</td>
+</tr>
+<tr>
+<td><code>covar_samp</code></td>
+<td><code>COVAR_SAMP(x, y)</code></td>
+<td style="text-align: center;">2</td>
+</tr>
+<tr>
+<td><code>regr_slope</code></td>
+<td><code>REGR_SLOPE(y, x)</code></td>
+<td style="text-align: center;">2</td>
+</tr>
+<tr>
+<td><code>regr_intercept</code></td>
+<td><code>REGR_INTERCEPT(y, x)</code></td>
+<td style="text-align: center;">2</td>
+</tr>
+</tbody>
+</table>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nt">measures</span><span class="p">:</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span><span class="nt">Daily Revenue StdDev</span><span class="p">:</span>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">    </span><span class="nt">aggregation</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">stddev</span>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">    </span><span class="nt">columns</span><span class="p">:</span>
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> dataObject</span><span class="p">:</span><span class="w"> </span><span class="nv">Orders</span><span class="p p-Indicator">,</span><span class="nt"> column</span><span class="p">:</span><span class="w"> </span><span class="nv">revenue</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>
+</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="w">  </span><span class="nt">Revenue Spend Correlation</span><span class="p">:</span>
+</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="w">    </span><span class="nt">aggregation</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">corr</span>
+</span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a><span class="w">    </span><span class="nt">columns</span><span class="p">:</span>
+</span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> dataObject</span><span class="p">:</span><span class="w"> </span><span class="nv">Orders</span><span class="p p-Indicator">,</span><span class="nt">    column</span><span class="p">:</span><span class="w"> </span><span class="nv">revenue</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</span><span id="__span-8-11"><a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> dataObject</span><span class="p">:</span><span class="w"> </span><span class="nv">Marketing</span><span class="p p-Indicator">,</span><span class="nt"> column</span><span class="p">:</span><span class="w"> </span><span class="nv">spend</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</span></code></pre></div>
+<p>Arity is enforced at model-load time — single-column aggregates with two
+columns (or vice-versa) raise <code>INVALID_AGGREGATION_INPUTS</code>.</p>
+<h3 id="dialect-coverage">Dialect coverage<a class="headerlink" href="#dialect-coverage" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Aggregation</th>
+<th style="text-align: center;">Postgres</th>
+<th style="text-align: center;">Snowflake</th>
+<th style="text-align: center;">BigQuery</th>
+<th style="text-align: center;">Databricks</th>
+<th style="text-align: center;">DuckDB</th>
+<th style="text-align: center;">ClickHouse</th>
+<th style="text-align: center;">MySQL</th>
+<th style="text-align: center;">Dremio</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>stddev / variance family</td>
+<td style="text-align: center;">yes</td>
+<td style="text-align: center;">yes</td>
+<td style="text-align: center;">yes</td>
+<td style="text-align: center;">yes</td>
+<td style="text-align: center;">yes</td>
+<td style="text-align: center;">yes</td>
+<td style="text-align: center;">yes</td>
+<td style="text-align: center;">yes</td>
+</tr>
+<tr>
+<td>corr / covariance</td>
+<td style="text-align: center;">yes</td>
+<td style="text-align: center;">yes</td>
+<td style="text-align: center;">yes</td>
+<td style="text-align: center;">yes</td>
+<td style="text-align: center;">yes</td>
+<td style="text-align: center;">yes</td>
+<td style="text-align: center;">no</td>
+<td style="text-align: center;">yes</td>
+</tr>
+<tr>
+<td>regr_slope / regr_intercept</td>
+<td style="text-align: center;">yes</td>
+<td style="text-align: center;">yes</td>
+<td style="text-align: center;">no</td>
+<td style="text-align: center;">yes</td>
+<td style="text-align: center;">yes</td>
+<td style="text-align: center;">no</td>
+<td style="text-align: center;">no</td>
+<td style="text-align: center;">yes</td>
+</tr>
+</tbody>
+</table>
+<p>ClickHouse uses camelCase function names internally (<code>stddevPop</code>,
+<code>covarSamp</code>, etc.) — OBSL maps automatically.</p>
+<p>Unsupported combinations raise <code>UNSUPPORTED_AGGREGATION_FOR_DIALECT</code> at
+compile time. There is no silent fallback. If you need regression on
+BigQuery / ClickHouse / MySQL, write a <code>DERIVED</code> metric with the
+two-aggregate identity:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nt">metrics</span><span class="p">:</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span><span class="nt">Revenue Slope vs Spend</span><span class="p">:</span>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">    </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">derived</span>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">    </span><span class="nt">expression</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{[Covariance]}</span><span class="nv"> </span><span class="s">/</span><span class="nv"> </span><span class="s">{[Variance</span><span class="nv"> </span><span class="s">Spend]}&quot;</span>
+</span></code></pre></div>
+<h2 id="4-worked-example-multi-region-trend-dashboard">4. Worked example — multi-region trend dashboard<a class="headerlink" href="#4-worked-example-multi-region-trend-dashboard" title="Permanent link">&para;</a></h2>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="nt">dimensions</span><span class="p">:</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">  </span><span class="nt">Country</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> dataObject</span><span class="p">:</span><span class="w"> </span><span class="nv">Orders</span><span class="p p-Indicator">,</span><span class="nt"> column</span><span class="p">:</span><span class="w"> </span><span class="nv">country</span><span class="p p-Indicator">,</span><span class="nt"> resultType</span><span class="p">:</span><span class="w"> </span><span class="nv">string</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">  </span><span class="nt">Quarter</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> dataObject</span><span class="p">:</span><span class="w"> </span><span class="nv">Orders</span><span class="p p-Indicator">,</span><span class="nt"> column</span><span class="p">:</span><span class="w"> </span><span class="nv">order_date</span><span class="p p-Indicator">,</span><span class="nt"> resultType</span><span class="p">:</span><span class="w"> </span><span class="nv">date</span><span class="p p-Indicator">,</span><span class="nt"> timeGrain</span><span class="p">:</span><span class="w"> </span><span class="nv">quarter</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>
+</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="nt">measures</span><span class="p">:</span>
+</span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="w">  </span><span class="nt">Revenue</span><span class="p">:</span>
+</span><span id="__span-10-7"><a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="w">    </span><span class="nt">aggregation</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">sum</span>
+</span><span id="__span-10-8"><a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="w">    </span><span class="nt">columns</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[{</span><span class="nt"> dataObject</span><span class="p">:</span><span class="w"> </span><span class="nv">Orders</span><span class="p p-Indicator">,</span><span class="nt"> column</span><span class="p">:</span><span class="w"> </span><span class="nv">revenue</span><span class="w"> </span><span class="p p-Indicator">}]</span>
+</span><span id="__span-10-9"><a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a>
+</span><span id="__span-10-10"><a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a><span class="nt">metrics</span><span class="p">:</span>
+</span><span id="__span-10-11"><a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a><span class="w">  </span><span class="nt">Revenue MA4 by Country</span><span class="p">:</span>
+</span><span id="__span-10-12"><a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a><span class="w">    </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">cumulative</span>
+</span><span id="__span-10-13"><a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a><span class="w">    </span><span class="nt">measure</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Revenue</span>
+</span><span id="__span-10-14"><a id="__codelineno-10-14" name="__codelineno-10-14" href="#__codelineno-10-14"></a><span class="w">    </span><span class="nt">timeDimension</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Quarter</span>
+</span><span id="__span-10-15"><a id="__codelineno-10-15" name="__codelineno-10-15" href="#__codelineno-10-15"></a><span class="w">    </span><span class="nt">cumulativeType</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">avg</span>
+</span><span id="__span-10-16"><a id="__codelineno-10-16" name="__codelineno-10-16" href="#__codelineno-10-16"></a><span class="w">    </span><span class="nt">window</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">4</span>
+</span><span id="__span-10-17"><a id="__codelineno-10-17" name="__codelineno-10-17" href="#__codelineno-10-17"></a><span class="w">    </span><span class="nt">partitionBy</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">Country</span><span class="p p-Indicator">]</span>
+</span><span id="__span-10-18"><a id="__codelineno-10-18" name="__codelineno-10-18" href="#__codelineno-10-18"></a>
+</span><span id="__span-10-19"><a id="__codelineno-10-19" name="__codelineno-10-19" href="#__codelineno-10-19"></a><span class="w">  </span><span class="nt">Revenue Rank by Quarter</span><span class="p">:</span>
+</span><span id="__span-10-20"><a id="__codelineno-10-20" name="__codelineno-10-20" href="#__codelineno-10-20"></a><span class="w">    </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">window</span>
+</span><span id="__span-10-21"><a id="__codelineno-10-21" name="__codelineno-10-21" href="#__codelineno-10-21"></a><span class="w">    </span><span class="nt">windowFunction</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">dense_rank</span>
+</span><span id="__span-10-22"><a id="__codelineno-10-22" name="__codelineno-10-22" href="#__codelineno-10-22"></a><span class="w">    </span><span class="nt">measure</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Revenue</span>
+</span><span id="__span-10-23"><a id="__codelineno-10-23" name="__codelineno-10-23" href="#__codelineno-10-23"></a><span class="w">    </span><span class="nt">orderDirection</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">desc</span>
+</span><span id="__span-10-24"><a id="__codelineno-10-24" name="__codelineno-10-24" href="#__codelineno-10-24"></a><span class="w">    </span><span class="nt">partitionBy</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">Quarter</span><span class="p p-Indicator">]</span>
+</span><span id="__span-10-25"><a id="__codelineno-10-25" name="__codelineno-10-25" href="#__codelineno-10-25"></a>
+</span><span id="__span-10-26"><a id="__codelineno-10-26" name="__codelineno-10-26" href="#__codelineno-10-26"></a><span class="w">  </span><span class="nt">Revenue Prior Quarter</span><span class="p">:</span>
+</span><span id="__span-10-27"><a id="__codelineno-10-27" name="__codelineno-10-27" href="#__codelineno-10-27"></a><span class="w">    </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">window</span>
+</span><span id="__span-10-28"><a id="__codelineno-10-28" name="__codelineno-10-28" href="#__codelineno-10-28"></a><span class="w">    </span><span class="nt">windowFunction</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">lag</span>
+</span><span id="__span-10-29"><a id="__codelineno-10-29" name="__codelineno-10-29" href="#__codelineno-10-29"></a><span class="w">    </span><span class="nt">measure</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Revenue</span>
+</span><span id="__span-10-30"><a id="__codelineno-10-30" name="__codelineno-10-30" href="#__codelineno-10-30"></a><span class="w">    </span><span class="nt">offset</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
+</span><span id="__span-10-31"><a id="__codelineno-10-31" name="__codelineno-10-31" href="#__codelineno-10-31"></a><span class="w">    </span><span class="nt">timeDimension</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Quarter</span>
+</span><span id="__span-10-32"><a id="__codelineno-10-32" name="__codelineno-10-32" href="#__codelineno-10-32"></a><span class="w">    </span><span class="nt">partitionBy</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">Country</span><span class="p p-Indicator">]</span>
+</span><span id="__span-10-33"><a id="__codelineno-10-33" name="__codelineno-10-33" href="#__codelineno-10-33"></a>
+</span><span id="__span-10-34"><a id="__codelineno-10-34" name="__codelineno-10-34" href="#__codelineno-10-34"></a><span class="w">  </span><span class="nt">QoQ Delta</span><span class="p">:</span>
+</span><span id="__span-10-35"><a id="__codelineno-10-35" name="__codelineno-10-35" href="#__codelineno-10-35"></a><span class="w">    </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">derived</span>
+</span><span id="__span-10-36"><a id="__codelineno-10-36" name="__codelineno-10-36" href="#__codelineno-10-36"></a><span class="w">    </span><span class="nt">expression</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{[Revenue]}</span><span class="nv"> </span><span class="s">-</span><span class="nv"> </span><span class="s">{[Revenue</span><span class="nv"> </span><span class="s">Prior</span><span class="nv"> </span><span class="s">Quarter]}&quot;</span>
+</span></code></pre></div>
+<p>One model, four trend primitives, every dialect — no SQL hand-written.</p>
+<h2 id="out-of-scope-deliberate">Out of scope (deliberate)<a class="headerlink" href="#out-of-scope-deliberate" title="Permanent link">&para;</a></h2>
 <ul>
-<li>the compiled SQL string, plus</li>
-<li>the canonical-sorted result rows,</li>
-</ul>
-<p>into a YAML file under <code>tests/integration/drift/duckdb/&lt;query_id&gt;.yaml</code>.
-A pointer to the ratifying Tier 1 test is recorded as
-<code>last_verified_by:</code>; the metadata gate
-(<code>tests/integration/drift/test_snapshot_metadata.py</code>) verifies every
-pointer resolves to a real, collectable pytest test.</p>
-<p>Per-dialect SQL strings (no execution, just compile-and-store) live
-under <code>tests/integration/drift/compile_only/&lt;dialect&gt;/&lt;query_id&gt;.sql</code>.
-These catch dialect-specific emit drift — <code>DECIMAL</code> → <code>NUMBER</code> for
-Snowflake, <code>BOOLEAN</code> representation differences, <code>LISTAGG</code> vs
-<code>STRING_AGG</code> — without needing a live database for any vendor other
-than DuckDB.</p>
-<h3 id="when-drift-fails">When drift fails<a class="headerlink" href="#when-drift-fails" title="Permanent link">&para;</a></h3>
-<p>The failure message looks like:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>FAILED tests/integration/drift/test_drift_duckdb.py::test_drift_duckdb_exec[02_total_sales_by_country]
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>Snapshot drift detected (tests/integration/drift/duckdb/02_total_sales_by_country.yaml).
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>Last verified by tier-1: tests/integration/correctness/test_hand_sql_reference.py::test_obsl_matches_hand_sql[total_sales_by_country].
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>Diverged fields: sql.
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>If this change is intentional, re-snap with:
-</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>  UPDATE_SNAPSHOTS=1 uv run pytest tests/integration/drift/duckdb/02_total_sales_by_country.yaml
-</span></code></pre></div>
-<p>The <code>last verified by</code> line is the trust signal: as long as that Tier 1
-test still passes in the same workflow, the underlying correctness still
-holds and you are looking at a downstream change in SQL emission. If the
-Tier 1 test <em>also</em> fails, do not re-snap — fix the compiler.</p>
-<h3 id="re-snapping-safely">Re-snapping safely<a class="headerlink" href="#re-snapping-safely" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># 1. confirm Tier 1 still passes for the affected query</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/integration/correctness/
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="c1"># 2. re-snap drift artefacts (only the failing ones, ideally)</span>
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="nv">UPDATE_SNAPSHOTS</span><span class="o">=</span><span class="m">1</span><span class="w"> </span>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">    </span>tests/integration/drift/test_drift_duckdb.py::test_drift_duckdb_exec<span class="o">[</span>02_total_sales_by_country<span class="o">]</span>
-</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>
-</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="c1"># 3. verify the new snapshot is green</span>
-</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/integration/drift/
-</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>
-</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="c1"># 4. inspect the diff before committing</span>
-</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>git<span class="w"> </span>diff<span class="w"> </span>tests/integration/drift/
-</span></code></pre></div>
-<p>CI runs Tier 1 + Tier 2 in a single pytest invocation, so a green
-workflow implies every snapshot is anchored to a green Tier 1 check by
-construction.</p>
-<h2 id="corpus-structure">Corpus structure<a class="headerlink" href="#corpus-structure" title="Permanent link">&para;</a></h2>
-<p>The v0 corpus is split across two locations under
-<code>tests/integration/correctness/</code> to keep query files faithful to the
-OBML schema:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>correctness/
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>├── corpus.yaml              ← test-rig manifest (id, description,
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>│                              lastVerifiedBy, optional handSql block)
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>├── queries/                 ← pure-OBML query files
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>│   ├── 01_total_sales.yaml
-</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>│   ├── 02_total_sales_by_country.yaml
-</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>│   └── ...                  ← each file is exactly the body you would
-</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>│                              POST to /v1/query/sql
-</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>└── reference_sql/           ← hand-written SQL ratifiers (§3.3)
-</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>    └── *.sql
-</span></code></pre></div>
-<p>Each entry in <code>corpus.yaml</code> references a query file under <code>queries/&lt;id&gt;.yaml</code>
-by ID convention. The manifest carries everything that doesn't belong in
-the OBML schema (the ratification pointer, sort keys for hand-SQL row
-comparison, etc.).</p>
-<h2 id="adding-a-new-corpus-query">Adding a new corpus query<a class="headerlink" href="#adding-a-new-corpus-query" title="Permanent link">&para;</a></h2>
-<ol>
-<li>Drop a pure-OBML YAML file under <code>tests/integration/correctness/queries/&lt;id&gt;.yaml</code>.
-   It is exactly the payload a user would POST to <code>/v1/query/sql</code> — you can
-   copy/paste between the two.</li>
-<li>Add a Tier 1 test in <code>tests/integration/correctness/</code> using one or
-   two of the methods listed above (or rely on an existing one if the
-   query is already covered by, e.g., aggregation invariance).</li>
-<li>Append a manifest entry to <code>corpus.yaml</code>:
-   <div class="language-yaml highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">&lt;id&gt;</span><span class="w">                            </span><span class="c1"># matches the queries/ filename</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">&lt;one-line summary&gt;</span>
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span><span class="nt">lastVerifiedBy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">tests/integration/correctness/...::&lt;test_node_id&gt;</span>
-</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">  </span><span class="nt">handSql</span><span class="p">:</span><span class="w">                            </span><span class="c1"># optional, only for §3.3 cases</span>
-</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">    </span><span class="nt">refFile</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">&lt;name&gt;.sql</span><span class="w">               </span><span class="c1"># under reference_sql/</span>
-</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">    </span><span class="nt">sortKeys</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">&lt;dim cols&gt;</span><span class="p p-Indicator">]</span>
-</span></code></pre></div></li>
-<li>Generate the snapshot:
-   <div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nv">UPDATE_SNAPSHOTS</span><span class="o">=</span><span class="m">1</span><span class="w"> </span>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span>tests/integration/drift/test_drift_duckdb.py<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span>tests/integration/drift/test_drift_compile_only.py<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span>-k<span class="w"> </span>&lt;id&gt;
-</span></code></pre></div></li>
-<li>Re-run without <code>UPDATE_SNAPSHOTS</code> to confirm the new snapshot is
-   green, and commit the query YAML, the manifest entry, and the
-   generated drift artefacts in the same change.</li>
-</ol>
-<h2 id="vendor-execution-sweep-phase-a">Vendor-execution sweep (Phase A)<a class="headerlink" href="#vendor-execution-sweep-phase-a" title="Permanent link">&para;</a></h2>
-<p>Compile-only snapshots cover all 8 registered dialects without needing
-a database. The vendor-execution sweep adds a stronger check: every
-corpus query is <em>executed</em> against a freshly-seeded testcontainer for
-DuckDB, Postgres 16, MySQL 8, and ClickHouse, and the row set is
-compared cell-by-cell to the DuckDB golden under
-<code>drift/duckdb/&lt;id&gt;.yaml</code>.</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>tests/integration/drift/vendor_exec/
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>├── _seed.py             ← extracts the bundled commerce DuckDB once,
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>│                          loads it into each vendor (DOUBLE → DECIMAL(18,2)
-</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>│                          target type for exact arithmetic)
-</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>├── conftest.py          ← per-vendor container fixtures, all yielding the
-</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>│                          same VendorTarget(name, dialect, execute) shape
-</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>└── test_vendor_exec.py  ← 60 cases (15 corpus × 4 vendors), gated by
-</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>                           pytest.mark.docker
-</span></code></pre></div>
-<p>Run it:
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># Full sweep across all four engines:</span>
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>-m<span class="w"> </span>docker<span class="w"> </span>tests/integration/drift/vendor_exec/
-</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>
-</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="c1"># One vendor:</span>
-</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>-m<span class="w"> </span>docker<span class="w"> </span>tests/integration/drift/vendor_exec/test_vendor_exec.py::test_postgres_vendor_exec
-</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>
-</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="c1"># One corpus query, one vendor:</span>
-</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>-m<span class="w"> </span>docker<span class="w"> </span>tests/integration/drift/vendor_exec/<span class="w"> </span>-k<span class="w"> </span><span class="s2">&quot;test_postgres_vendor_exec[07_&quot;</span>
-</span></code></pre></div></p>
-<p>Cross-engine result normalisation: tz-naive datetime, midnight-→-date
-collapse, and numeric values rounded to 12 significant digits via
-<code>float()</code> to absorb cross-engine division drift on ratios while
-preserving money sums up to ~$1 T at 2-dp precision.</p>
-<p>Phases B (Dremio OSS, Spark SQL, BigQuery emulator) and C (Snowflake /
-real BigQuery / Databricks via env-var-gated cloud creds) are
-follow-up work — see plan §5.2.</p>
-<h2 id="limitations">Limitations<a class="headerlink" href="#limitations" title="Permanent link">&para;</a></h2>
-<ul>
-<li>Vendor-side row execution against the four cloud-only engines
-  (Snowflake, BigQuery, Databricks, Dremio cloud) is not in v0. Phase
-  C is gated by demo-account credentials and a separate config knob;
-  follow-up PR.</li>
-<li>The half-boundary cases on rolling AVG / division-precision ratios
-  are intrinsic to each engine's float / decimal arithmetic and are
-  marked <code>xfail</code> in the vendor-exec sweep, not "fixed" by tightening
-  the comparison.</li>
+<li><strong>Fiscal calendars</strong> (4-4-5, custom year start) — tracked separately;
+  touches PoP, cumulative, and date dimension grain everywhere.</li>
+<li><strong>Forecasting / extrapolation</strong> (linear regression beyond the
+  <code>regr_*</code> aggregates, ARIMA, exponential smoothing) — belongs in the
+  BI tool or downstream analytics layer.</li>
+<li><strong>Semi-additive measures</strong> (period-end balances, period-average) —
+  separate primitive; planned independently.</li>
 </ul>
 
 
