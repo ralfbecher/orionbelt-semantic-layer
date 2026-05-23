@@ -220,9 +220,11 @@ This is the most consequential difference and worth calling out separately.
 
 | | OBSL | LookML |
 |---|---|---|
-| License | Open source | Proprietary (Google Cloud / Looker) |
+| License | Source-available (BSL) | Proprietary (Google Cloud / Looker) |
 | Self-hostable | Yes — runs anywhere Python runs | Limited: Looker is a hosted SaaS; "Looker (original)" had a self-hosted option but is being deprecated |
-| Cost | Free | Per-user licensing on the Looker platform |
+| Cost | OSS is free for self-hosted production; commercial tiers available for embedded analytics, managed cloud, and enterprise features | Per-user licensing on the Looker platform |
+| Commercial offering | Embedded analytics license · commercial cloud offering · enterprise features · consulting + support | Looker platform — per-user licensing, hosted by Google Cloud |
+| Self-host parity | OSS has full parity on the shipped v2.6 surface; enterprise tier adds enterprise-specific capabilities on top | n/a — Looker is not self-hostable in the modern offering |
 | Vendor lock-in | None | LookML files only run inside Looker |
 | Air-gapped deploy | Possible | Not supported |
 | Format portability | OBML is plain YAML, can be read by any tool | LookML is a Looker-specific DSL with no widely-adopted external parser other than `pylookml` |

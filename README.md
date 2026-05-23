@@ -46,6 +46,7 @@ OrionBelt Semantic Layer is an **API-first** semantic engine and query planner f
 - [Gradio UI](#gradio-ui)
 - [Documentation](#documentation)
 - [Status & Roadmap](#status--roadmap)
+- [Commercial Offerings](#commercial-offerings)
 - [Companion Project](#companion-project)
 - [Development](#development)
 
@@ -488,6 +489,19 @@ API_BASE_URL=http://remote-api:8080 orionbelt-ui           # point UI to a remot
 | Shipped | 8 SQL dialects, REST API, MCP server, Gradio UI, DB-API drivers, Flight SQL, **PostgreSQL wire protocol (v2.5.0+)** — Tableau / DBeaver / Superset / Power BI / `psql` / **Dremio as a federated Postgres source**, OBSL/SPARQL, **OSI v0.2 interop (v2.6.0+)** with bidirectional schema validation, AI integrations (LangChain, CrewAI, ADK, etc.), model inheritance & extends, data types & numerical precision, timezone settings, grain & filter context overrides, **Trend Analysis (v2.6.0+)** — partitioned rolling windows, `MetricType.WINDOW` for rank/lag/lead/ntile, 9 statistical aggregates (CORR, COVAR_*, REGR_*, STDDEV_*, VAR_*) |
 | In progress | Additional dialects, CLI tool, pgwire SCRAM/password auth (unified auth subsystem) |
 | Planned | Authentication & API tokens, CLI for automation & CI/CD, DDL view generation (CREATE VIEW from queries), additional BI tool integrations, pre-aggregation / materialization layer |
+
+---
+
+## Commercial Offerings
+
+OrionBelt Semantic Layer is open by default — the OSS distribution has full parity on the shipped v2.6 surface and is production-grade for self-hosted use. For teams that want production support, a managed runtime, or embedded analytics terms, RALFORION offers:
+
+- **Embedded analytics license** — relicensing terms for shipping OBSL inside a commercial product
+- **Commercial cloud offering** — managed OrionBelt runtime with SLAs
+- **Enterprise features** — capabilities tailored for enterprise deployments
+- **Consulting + support** — implementation, modeling, and production support
+
+Contact [RALFORION d.o.o.](https://ralforion.com) for details.
 
 ---
 

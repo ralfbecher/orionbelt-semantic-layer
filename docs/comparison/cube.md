@@ -249,9 +249,9 @@ Both projects ship a free OSS core and offer commercial extensions, but the spli
 |---|---|---|
 | Core license | Source-available (BSL 1.1) | Apache 2.0 |
 | Self-hostable | ✅ (one Python service) | ✅ (Cube Core: Node.js + optional Cube Store + optional Redis) |
-| Commercial offering | Hosted instance (the public demo on Cloud Run) | Cube Cloud — managed runtime, multi-cluster, advanced security, Studio IDE, paid |
+| Commercial offering | Embedded analytics license · commercial cloud offering · enterprise features · consulting + support | Cube Cloud — managed runtime, multi-cluster, advanced security, Studio IDE, paid |
 | Operational footprint | Light: one process, in-memory sessions, optional file-backed result cache (DuckDB metadata + Parquet) on local disk | Heavier: API server + Cube Store + Redis (optional) + scheduler + refresh workers in production |
-| Self-host parity | Full feature parity in OSS | Many advanced features (Studio, advanced workspaces, AI features) are Cube Cloud-only |
+| Self-host parity | OSS has full parity on the shipped v2.6 surface; enterprise tier adds enterprise-specific capabilities on top | Many advanced features (Studio, advanced workspaces, AI features) are Cube Cloud-only |
 
 For a small embedded-analytics use case OBSL is operationally simpler. For high-throughput multi-tenant production with heavy caching across replicas, Cube's architecture is purpose-built and Cube Cloud provides the managed experience. OBSL's freshness-driven file cache (v2.2.0) covers single-replica result-caching workloads — agents, dev/staging, modest production — without standing up Redis or a rollup store.
 

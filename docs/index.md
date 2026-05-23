@@ -157,6 +157,17 @@ GROUP BY "Customers"."COUNTRY"
 
 Ready to dive in? Start with [Installation](getting-started/installation.md) and then follow the [Quick Start](getting-started/quickstart.md) tutorial.
 
+## Commercial Offerings
+
+OrionBelt Semantic Layer is open by default — the OSS distribution has full parity on the shipped v2.6 surface and is production-grade for self-hosted use. For teams that want production support, a managed runtime, or embedded analytics terms, RALFORION offers:
+
+- **Embedded analytics license** — relicensing terms for shipping OBSL inside a commercial product
+- **Commercial cloud offering** — managed OrionBelt runtime with SLAs
+- **Enterprise features** — capabilities tailored for enterprise deployments
+- **Consulting + support** — implementation, modeling, and production support
+
+Contact [RALFORION d.o.o.](https://ralforion.com) for details.
+
 ---
 
 <p align="center">
