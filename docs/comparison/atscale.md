@@ -200,12 +200,13 @@ AtScale's MDX/DAX support is unique and a genuine advantage for Microsoft-stack 
 |---|---|---|
 | License | Source-available (BSL) | Proprietary; **free Developer Community Edition** for non-production / individual use |
 | Self-hostable | ✅ (one Python service) | ✅ — Developer Edition is free to install; production deployment requires enterprise license |
-| Pricing | Free (OSS) | **Developer Edition: free** (with feature/scale limits). Enterprise: typical six-figure annual licensing for production |
+| Pricing | OSS is free for self-hosted production; commercial tiers available for embedded analytics, managed cloud, and enterprise features | **Developer Edition: free** (with feature/scale limits). Enterprise: typical six-figure annual licensing for production |
+| Commercial offering | Embedded analytics license · commercial cloud offering · enterprise features · consulting + support | Enterprise license — production deployments, autonomous aggregates at scale, enterprise governance, vendor support |
 | Vendor lock-in | None (plain YAML, OSI-portable) | High — model lives in AtScale's proprietary format (mitigated for OSI-aware exports) |
 | Air-gapped deploy | ✅ supported | ✅ supported (enterprise) |
-| Self-host parity | Full feature parity in OSS | Full features in licensed enterprise tier; Developer Edition has feature/scale restrictions |
+| Self-host parity | OSS has full parity on the shipped v2.6 surface; enterprise tier adds enterprise-specific capabilities on top | Full features in licensed enterprise tier; Developer Edition has feature/scale restrictions |
 
-The free **Developer Community Edition** lowers the barrier for evaluation, prototyping, and individual learning — you can model, run MDX queries from Excel, and explore AtScale without a contract. For production multi-user deployments, autonomous aggregates at scale, or enterprise governance/support, the licensed tier is required. For OBSL the free OSS tier *is* the production tier — no upgrade path needed.
+The free **Developer Community Edition** lowers AtScale's barrier for evaluation, prototyping, and individual learning — you can model, run MDX queries from Excel, and explore AtScale without a contract. For production multi-user deployments, autonomous aggregates at scale, or enterprise governance/support, the licensed AtScale tier is required. For OBSL the OSS tier is fully production-grade for self-hosted use; commercial offerings (embedded analytics license, managed cloud, enterprise features, consulting + support) are available alongside if you want them, not as an upgrade gate for OSS capabilities.
 
 ---
 
