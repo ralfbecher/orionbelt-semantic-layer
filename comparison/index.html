@@ -2234,9 +2234,9 @@
 <td><strong>MDX + DAX</strong> + JDBC/ODBC + REST</td>
 </tr>
 <tr>
-<td>First-class cumulative metric</td>
+<td>First-class cumulative metric (running / rolling / grain-to-date, <code>partitionBy</code> v2.6+)</td>
 <td>✅</td>
-<td>✅</td>
+<td>✅ (no <code>partitionBy</code>)</td>
 <td>Per-query</td>
 <td>Partial</td>
 <td>Partial (<code>rolling_window</code>)</td>
@@ -2250,6 +2250,24 @@
 <td>Via table calc</td>
 <td>Query-time <code>time_shift</code></td>
 <td>Via MDX</td>
+</tr>
+<tr>
+<td>First-class window metric (rank / lag / lead / ntile / first_value / last_value, v2.6+)</td>
+<td>✅</td>
+<td>❌</td>
+<td>Per-query calculations</td>
+<td>Table calcs (UI-side)</td>
+<td>❌</td>
+<td>Via MDX calculated members</td>
+</tr>
+<tr>
+<td>Statistical / regression aggregates (<code>stddev</code>, <code>variance</code>, <code>corr</code>, <code>covar_*</code>, <code>regr_*</code>, v2.6+)</td>
+<td>✅ 9 functions</td>
+<td>Partial (basic <code>stddev</code> only)</td>
+<td>Partial (basic <code>stddev</code> only)</td>
+<td>Partial (via raw <code>sql:</code>)</td>
+<td>❌</td>
+<td>Limited</td>
 </tr>
 <tr>
 <td>Conversion / funnel metrics</td>

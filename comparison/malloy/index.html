@@ -2723,9 +2723,9 @@
 </thead>
 <tbody>
 <tr>
-<td><code>Measure</code> (sum/avg/count/min/max, <code>total: bool</code> for grand totals)</td>
-<td><code>measure:</code> declarations inside <code>source</code></td>
-<td>Both first-class</td>
+<td><code>Measure</code> — 10 standard aggregations (<code>sum</code>, <code>count</code>, <code>count_distinct</code>, <code>avg</code>, <code>min</code>, <code>max</code>, <code>any_value</code>, <code>median</code>, <code>mode</code>, <code>listagg</code>) <strong>+ 9 statistical aggregations (v2.6+)</strong> (<code>stddev</code>, <code>stddev_pop</code>, <code>variance</code>, <code>var_pop</code>, <code>corr</code>, <code>covar_pop</code>, <code>covar_samp</code>, <code>regr_slope</code>, <code>regr_intercept</code>) + <code>total: bool</code> for grand totals</td>
+<td><code>measure:</code> declarations inside <code>source</code> (<code>sum</code>, <code>count</code>, <code>count_distinct</code>, <code>avg</code>, <code>min</code>, <code>max</code>, <code>stddev</code>, etc.)</td>
+<td>Both first-class. OBSL has a wider statistical / regression surface (<code>corr</code>, <code>covar_pop</code>, <code>covar_samp</code>, <code>regr_slope</code>, <code>regr_intercept</code>) as declarative measure aggregations</td>
 </tr>
 <tr>
 <td><code>Metric</code> <code>type: derived</code> (<code>{[Measure A]}/{[Measure B]}</code>)</td>
@@ -2733,7 +2733,7 @@
 <td>Both first-class</td>
 </tr>
 <tr>
-<td><code>Metric</code> <code>type: cumulative</code> (running, rolling, grain-to-date)</td>
+<td><code>Metric</code> <code>type: cumulative</code> (running, rolling, grain-to-date, <strong>per-dimension <code>partitionBy</code> v2.6+</strong>)</td>
 <td>Express via <strong>calculations</strong> (window functions) inside queries</td>
 <td>OBSL is declarative; Malloy is per-query</td>
 </tr>
@@ -2742,9 +2742,14 @@
 <td>Pattern via <code>prior_period</code> style queries; renderer has a <code>big_value { comparison_field=... }</code> for visual deltas</td>
 <td>OBSL has a dedicated metric type; Malloy treats it as "just write the query"</td>
 </tr>
+<tr>
+<td><code>Metric</code> <code>type: window</code> (v2.6+) — <code>rank</code>, <code>dense_rank</code>, <code>row_number</code>, <code>ntile</code>, <code>lag</code>, <code>lead</code>, <code>first_value</code>, <code>last_value</code></td>
+<td>Calculations (<code>rank()</code>, <code>lag()</code>, <code>first_value()</code>) inside queries</td>
+<td>OBSL exposes these as declarative reusable metric types; Malloy keeps them per-query (matches the "expressive queries" philosophy)</td>
+</tr>
 </tbody>
 </table>
-<p><strong>Different philosophies</strong>: OBSL prefers reusable metric definitions (write once, every query gets PoP). Malloy prefers expressive ad-hoc queries (write the comparison in the query itself). Either fits depending on whether you're publishing a metrics catalog or empowering analysts.</p>
+<p><strong>Different philosophies</strong>: OBSL prefers reusable metric definitions (write once, every query gets PoP / window / cumulative). Malloy prefers expressive ad-hoc queries (write the comparison in the query itself). Either fits depending on whether you're publishing a metrics catalog or empowering analysts. See <a href="../../guide/trend-analysis/">Trend Analysis</a> for the full v2.6 metric / aggregation surface.</p>
 <hr />
 <h2 id="5-joins">5. Joins<a class="headerlink" href="#5-joins" title="Permanent link">&para;</a></h2>
 <table>
@@ -3046,8 +3051,18 @@
 </tr>
 <tr>
 <td>First-class cumulative metric type</td>
-<td>✅</td>
+<td>✅ (running, rolling, grain-to-date, <code>partitionBy</code> v2.6+)</td>
 <td>❌ (calculations)</td>
+</tr>
+<tr>
+<td>First-class window metric type (rank / lag / lead / ntile / first_value / last_value)</td>
+<td>✅ (v2.6+)</td>
+<td>❌ (calculations per-query)</td>
+</tr>
+<tr>
+<td>Statistical aggregates (<code>corr</code>, <code>covar_*</code>, <code>regr_*</code> in addition to <code>stddev</code> / <code>variance</code>)</td>
+<td>✅ 9 functions (v2.6+)</td>
+<td>Partial — Malloy ships basic <code>stddev</code> / <code>variance</code> but no <code>corr</code> / <code>covar_*</code> / <code>regr_*</code> as first-class measure types</td>
 </tr>
 <tr>
 <td>Dialect breadth (ClickHouse/Databricks/Dremio)</td>

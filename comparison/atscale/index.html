@@ -2730,9 +2730,9 @@
 </thead>
 <tbody>
 <tr>
-<td><code>Measure</code> (sum/avg/count/min/max, <code>total: bool</code>)</td>
+<td><code>Measure</code> — 10 standard aggregations (<code>sum</code>, <code>count</code>, <code>count_distinct</code>, <code>avg</code>, <code>min</code>, <code>max</code>, <code>any_value</code>, <code>median</code>, <code>mode</code>, <code>listagg</code>) <strong>+ 9 statistical aggregations (v2.6+)</strong> (<code>stddev</code>, <code>stddev_pop</code>, <code>variance</code>, <code>var_pop</code>, <code>corr</code>, <code>covar_pop</code>, <code>covar_samp</code>, <code>regr_slope</code>, <code>regr_intercept</code>) + <code>total: bool</code> for grand totals</td>
 <td>Measures with rich aggregation types (sum, count, distinct count, min, max, average, semi-additive measures)</td>
-<td>Both first-class; AtScale has more built-in semi-additive types</td>
+<td>Both first-class. AtScale has stronger semi-additive types (last non-empty, etc.); OBSL has the wider statistical / regression surface as first-class declarative aggregates</td>
 </tr>
 <tr>
 <td><code>Metric</code> <code>type: derived</code></td>
@@ -2740,7 +2740,7 @@
 <td>Both first-class</td>
 </tr>
 <tr>
-<td><code>Metric</code> <code>type: cumulative</code> (running, rolling, grain-to-date)</td>
+<td><code>Metric</code> <code>type: cumulative</code> (running, rolling, grain-to-date, <strong>per-dimension <code>partitionBy</code> v2.6+</strong>)</td>
 <td>Time-intelligence MDX (<code>Aggregate(YTD([Date].CurrentMember), [Sales])</code>) — idiomatic OLAP</td>
 <td>Both expressive; OBSL is YAML-declarative, AtScale is MDX-declarative</td>
 </tr>
@@ -2748,6 +2748,11 @@
 <td><code>Metric</code> <code>type: period_over_period</code> (4 comparison modes)</td>
 <td>Calculated members using <code>ParallelPeriod</code> / <code>Lag</code> MDX functions</td>
 <td>Both expressive; AtScale is more flexible (full MDX), OBSL is more turnkey</td>
+</tr>
+<tr>
+<td><code>Metric</code> <code>type: window</code> (v2.6+) — <code>rank</code>, <code>dense_rank</code>, <code>row_number</code>, <code>ntile</code>, <code>lag</code>, <code>lead</code>, <code>first_value</code>, <code>last_value</code></td>
+<td>MDX <code>Rank()</code>, <code>Lag()</code>, <code>Lead()</code> in calculated members</td>
+<td>OBSL exposes these as declarative metric types; AtScale expresses them via MDX</td>
 </tr>
 <tr>
 <td>Reusable filter context / filtered measures</td>
@@ -2761,7 +2766,7 @@
 </tr>
 </tbody>
 </table>
-<p>For complex OLAP-style metrics (MDX is genuinely more expressive than any YAML format), AtScale wins on flexibility. For straightforward cumulative/PoP that you want declared once and reused everywhere, OBSL is more turnkey.</p>
+<p>For complex OLAP-style metrics (MDX is genuinely more expressive than any YAML format), AtScale wins on flexibility. For straightforward cumulative/PoP/window/statistical metrics that you want declared once and reused everywhere, OBSL is more turnkey. See <a href="../../guide/trend-analysis/">Trend Analysis</a> for the full v2.6 metric / aggregation surface (dialect coverage matrix included).</p>
 <hr />
 <h2 id="5-joins-relationships">5. Joins / relationships<a class="headerlink" href="#5-joins-relationships" title="Permanent link">&para;</a></h2>
 <table>
@@ -3102,8 +3107,18 @@
 </tr>
 <tr>
 <td>First-class declarative cumulative metric type</td>
-<td>✅</td>
+<td>✅ (running, rolling, grain-to-date, <code>partitionBy</code> v2.6+)</td>
 <td>Via MDX time intelligence</td>
+</tr>
+<tr>
+<td>First-class declarative window metric type (rank / lag / lead / ntile / first_value / last_value)</td>
+<td>✅ (v2.6+)</td>
+<td>Via MDX calculated members</td>
+</tr>
+<tr>
+<td>Statistical aggregates (<code>stddev</code>, <code>variance</code>, <code>corr</code>, <code>covar_*</code>, <code>regr_*</code>)</td>
+<td>✅ 9 functions (v2.6+)</td>
+<td>Limited; not first-class as measure types</td>
 </tr>
 <tr>
 <td>Apache Arrow Flight SQL</td>

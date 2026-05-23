@@ -2786,9 +2786,9 @@
 </thead>
 <tbody>
 <tr>
-<td><code>Measure</code> (sum/avg/count/min/max, <code>total: bool</code>)</td>
-<td><code>measure: { type: sum/avg/count/count_distinct/... }</code></td>
-<td>LookML has more aggregate types out of the box (<code>sum_distinct</code>, <code>percentile</code>, <code>median</code>, etc.)</td>
+<td><code>Measure</code> — 10 standard aggregations (<code>sum</code>, <code>count</code>, <code>count_distinct</code>, <code>avg</code>, <code>min</code>, <code>max</code>, <code>any_value</code>, <code>median</code>, <code>mode</code>, <code>listagg</code>) <strong>+ 9 statistical aggregations (v2.6+)</strong> (<code>stddev</code>, <code>stddev_pop</code>, <code>variance</code>, <code>var_pop</code>, <code>corr</code>, <code>covar_pop</code>, <code>covar_samp</code>, <code>regr_slope</code>, <code>regr_intercept</code>) + <code>total: bool</code> for grand totals</td>
+<td><code>measure: { type: sum/avg/count/count_distinct/sum_distinct/percentile/median/... }</code></td>
+<td>LookML has more "shape" aggregate variants (<code>sum_distinct</code>, <code>percentile_*</code>), OBSL has the wider statistical / regression surface (CORR / COVAR_<em> / REGR_</em> / STDDEV_<em> / VAR_</em>) as first-class declarative aggregates</td>
 </tr>
 <tr>
 <td><code>Metric</code> <code>type: derived</code></td>
@@ -2796,7 +2796,7 @@
 <td>Both first-class</td>
 </tr>
 <tr>
-<td><code>Metric</code> <code>type: cumulative</code> (running, rolling, grain-to-date)</td>
+<td><code>Metric</code> <code>type: cumulative</code> (running, rolling, grain-to-date, <strong>per-dimension <code>partitionBy</code> v2.6+</strong>)</td>
 <td><code>type: running_total</code> (basic), or table calculations in UI for richer cases</td>
 <td>OBSL has richer <strong>declarative</strong> cumulative</td>
 </tr>
@@ -2806,13 +2806,18 @@
 <td>OBSL has a dedicated metric type</td>
 </tr>
 <tr>
+<td><code>Metric</code> <code>type: window</code> (v2.6+) — <code>rank</code>, <code>dense_rank</code>, <code>row_number</code>, <code>ntile</code>, <code>lag</code>, <code>lead</code>, <code>first_value</code>, <code>last_value</code></td>
+<td>Looker table calculations (<code>rank()</code>, <code>offset()</code>, <code>pivot_offset()</code>) — UI-side, not LookML model</td>
+<td>OBSL ships these as declarative metric types reusable across every consumer; Looker's equivalents live in the dashboard layer</td>
+</tr>
+<tr>
 <td><code>Measure.filterContext</code> / <code>filteredMeasures</code></td>
 <td>Filtered measure pattern: <code>measure: { type: sum; filters: [is_paid: "yes"] }</code></td>
 <td>Comparable</td>
 </tr>
 </tbody>
 </table>
-<p>Bottom line: LookML's <strong>breadth of aggregate types</strong> is wider; OBSL's <strong>time-aware metric types</strong> (cumulative/PoP) are more declarative and reusable. Looker-style PoP usually ends up as a <em>table calculation</em> in the UI — not portable to other consumers.</p>
+<p>Bottom line: LookML wins on aggregate-variant <em>shape</em> (sum_distinct, percentile families) and on UI-side table-calc breadth; OBSL wins on <strong>statistical/regression aggregates</strong> and on <strong>time/window/PoP/cumulative as declarative metric types</strong> that survive across every consumer (BI tool, agent, JSON API) without re-implementing the table calc. See <a href="../../guide/trend-analysis/">Trend Analysis</a> for the full v2.6 metric / aggregation surface.</p>
 <hr />
 <h2 id="5-joins">5. Joins<a class="headerlink" href="#5-joins" title="Permanent link">&para;</a></h2>
 <table>
@@ -3142,8 +3147,18 @@
 </tr>
 <tr>
 <td>First-class cumulative metric type</td>
-<td>✅</td>
+<td>✅ (running, rolling, grain-to-date, <code>partitionBy</code> v2.6+)</td>
 <td>Partial (<code>running_total</code> only)</td>
+</tr>
+<tr>
+<td>First-class window metric type (rank / lag / lead / ntile / first_value / last_value)</td>
+<td>✅ (v2.6+)</td>
+<td>❌ (table calculations only — dashboard-side)</td>
+</tr>
+<tr>
+<td>Statistical aggregates (<code>stddev</code>, <code>variance</code>, <code>corr</code>, <code>covar_*</code>, <code>regr_*</code>)</td>
+<td>✅ 9 functions (v2.6+)</td>
+<td>Partial — some via raw <code>sql:</code>, none as first-class measure types</td>
 </tr>
 <tr>
 <td>RDF/SPARQL graph view</td>
