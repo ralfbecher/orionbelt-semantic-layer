@@ -1289,10 +1289,21 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#wrap-every-measure-in-sum-even-non-additive-ones" class="md-nav__link">
+  <a href="#aggregation-through-dremio-what-actually-works" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Wrap every measure in SUM(...) — even non-additive ones
+        Aggregation through Dremio: what actually works
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#working-around-the-avg-count_distinct-gap-through-dremio" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Working around the AVG / COUNT_DISTINCT gap through Dremio
       
     </span>
   </a>
@@ -2220,10 +2231,21 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#wrap-every-measure-in-sum-even-non-additive-ones" class="md-nav__link">
+  <a href="#aggregation-through-dremio-what-actually-works" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Wrap every measure in SUM(...) — even non-additive ones
+        Aggregation through Dremio: what actually works
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#working-around-the-avg-count_distinct-gap-through-dremio" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Working around the AVG / COUNT_DISTINCT gap through Dremio
       
     </span>
   </a>
@@ -2519,22 +2541,38 @@ Dremio:</p>
 </span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="k">CUBE</span><span class="p">(</span><span class="ss">&quot;Country Name&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">&quot;Sales Year&quot;</span><span class="p">)</span>
 </span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="k">GROUPING</span><span class="w"> </span><span class="k">SETS</span><span class="w"> </span><span class="p">((</span><span class="ss">&quot;Country Name&quot;</span><span class="p">),</span><span class="w"> </span><span class="p">(</span><span class="ss">&quot;Sales Year&quot;</span><span class="p">),</span><span class="w"> </span><span class="p">())</span>
 </span></code></pre></div>
-<h3 id="wrap-every-measure-in-sum-even-non-additive-ones">Wrap every measure in <code>SUM(...)</code> — even non-additive ones<a class="headerlink" href="#wrap-every-measure-in-sum-even-non-additive-ones" title="Permanent link">&para;</a></h3>
+<h3 id="aggregation-through-dremio-what-actually-works">Aggregation through Dremio: what actually works<a class="headerlink" href="#aggregation-through-dremio-what-actually-works" title="Permanent link">&para;</a></h3>
 <p>Calcite enforces "expression must be aggregated or appear in GROUP BY"
 whenever there is a <code>GROUP BY</code>. OBSL measures arrive on the wire as
-<strong>already-aggregated values</strong>, so any wrapper would double-aggregate in
-a normal warehouse — but OBSL recognizes the <code>SUM(&lt;measure-label&gt;)</code>
-pattern as a no-op shim and passes the measure through unchanged. The
-measure's own <code>aggregation:</code> field (defined in OBML) decides what
-actually runs.</p>
-<div class="language-sql highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1">-- ✅ The SUM is a syntactic shim, NOT a semantic instruction.</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="c1">-- &quot;Total Sales&quot; still resolves to its OBML-defined aggregation</span>
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="c1">-- (which may be SUM, COUNT_DISTINCT, AVG, …).</span>
-</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="k">SELECT</span><span class="w"> </span><span class="ss">&quot;Country Name&quot;</span><span class="p">,</span><span class="w"> </span><span class="k">SUM</span><span class="p">(</span><span class="ss">&quot;Total Sales&quot;</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">sales</span>
-</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">  </span><span class="k">FROM</span><span class="w"> </span><span class="n">obsl_pg</span><span class="p">.</span><span class="n">orionbelt_1_commerce</span><span class="p">.</span><span class="ss">&quot;model&quot;</span>
-</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">  </span><span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="k">ROLLUP</span><span class="p">(</span><span class="ss">&quot;Country Name&quot;</span><span class="p">);</span>
-</span></code></pre></div>
-<p><code>SUM</code> is the only wrapper OBSL recognizes. Everything else fails:</p>
+<strong>already-aggregated values</strong>, so OBSL refuses any wrapping aggregate
+that would <em>change</em> the measure's declared math. The supported shims
+are:</p>
+<table>
+<thead>
+<tr>
+<th>OBSL accepts</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Bare measure label</td>
+<td>Works <strong>only without <code>GROUP BY</code></strong> — Dremio pushes the SELECT down whole, OBSL applies the OBML <code>aggregation:</code> server-side</td>
+</tr>
+<tr>
+<td>Wrapping aggregate that <strong>matches</strong> the measure's declared agg</td>
+<td>e.g. <code>SUM("Total Sales")</code> on a <code>sum:</code>-declared measure, <code>COUNT(DISTINCT "Sales Order Count")</code> on a <code>count_distinct:</code>-declared measure</td>
+</tr>
+<tr>
+<td><code>MEASURE("&lt;label&gt;")</code></td>
+<td>The portable semantic shim — but <strong>Calcite has no <code>MEASURE()</code> operator</strong> (<a href="https://issues.apache.org/jira/browse/CALCITE-4496">CALCITE-4496</a>), so Dremio rejects it before it reaches the wire</td>
+</tr>
+</tbody>
+</table>
+<p>Calcite also <strong>rewrites</strong> several aggregates into subqueries that OBSL
+does not support — <code>AVG(x)</code> → <code>SUM(x)/COUNT(x)</code>, <code>COUNT(DISTINCT x)</code> →
+correlated subquery — so even the "matching wrapper" pattern often
+fails to pass through Dremio cleanly. In practice this means:</p>
 <table>
 <thead>
 <tr>
@@ -2544,32 +2582,64 @@ actually runs.</p>
 </thead>
 <tbody>
 <tr>
-<td><code>SUM("Total Sales")</code></td>
-<td>✅ wrapper stripped, OBML aggregation applied</td>
+<td>Bare measure, no <code>GROUP BY</code></td>
+<td>✅ works for <strong>any</strong> aggregation type</td>
 </tr>
 <tr>
-<td><code>"Total Sales"</code> (bare, in <code>GROUP BY</code> query)</td>
-<td>❌ Calcite: <code>Expression 'Total Sales' is not being grouped</code></td>
+<td><code>SUM(&lt;sum-declared measure&gt;)</code> with <code>GROUP BY</code> / <code>ROLLUP</code> / <code>CUBE</code></td>
+<td>✅ wrapper accepted; OBML aggregation applied</td>
 </tr>
 <tr>
-<td><code>AVG("Total Sales")</code></td>
-<td>❌ Dremio rewrites as <code>SUM(x)/COUNT(x)</code> in subqueries → OBSL: <code>Aggregate call SUM(...) outside the SELECT list is not supported</code></td>
+<td><code>SUM(&lt;non-sum measure&gt;)</code> with <code>GROUP BY</code></td>
+<td>❌ OBSL: <em>"Measure <code>…</code> is declared as <code>…</code> — applying <code>SUM</code> would change its math"</em></td>
+</tr>
+<tr>
+<td><code>COUNT(DISTINCT &lt;count-distinct measure&gt;)</code></td>
+<td>❌ Dremio rewrites as subquery → OBSL: <em>"Subqueries not supported"</em></td>
+</tr>
+<tr>
+<td><code>AVG(&lt;any measure&gt;)</code></td>
+<td>❌ Dremio rewrites as <code>SUM/COUNT</code> subqueries</td>
+</tr>
+<tr>
+<td><code>MEASURE(&lt;any measure&gt;)</code></td>
+<td>❌ Calcite: <em>"No match found for function signature MEASURE(…)"</em></td>
 </tr>
 <tr>
 <td><code>COUNT(*)</code></td>
-<td>❌ OBSL: <code>Aggregate COUNT(*) must wrap a single measure label</code></td>
-</tr>
-<tr>
-<td><code>MIN</code>, <code>MAX</code>, <code>COUNT(measure)</code></td>
-<td>❌ same shape as <code>AVG</code>: not the recognized shim</td>
+<td>❌ OBSL: <em>"Aggregate <code>COUNT(*)</code> must wrap a single measure label"</em></td>
 </tr>
 </tbody>
 </table>
-<p>Calcite (and Dremio) ship no support for ANSI SQL:2023's <code>MEASURE</code> /
-<code>AGG()</code> semantic-aware aggregation primitives, so the <code>SUM</code>-wrap shim
-is the only working bridge today. Clients that go direct to pgwire have
-no such constraint — bare measure labels work in <code>GROUP BY</code>,
-<code>ROLLUP</code>, and <code>HAVING</code>.</p>
+<div class="language-sql highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1">-- ✅ Bare label — works for any measure, no GROUP BY:</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="k">SELECT</span><span class="w"> </span><span class="ss">&quot;Country Name&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">&quot;Sales Order Count&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">&quot;Total Sales&quot;</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span><span class="k">FROM</span><span class="w"> </span><span class="n">obsl_pg</span><span class="p">.</span><span class="n">orionbelt_1_commerce</span><span class="p">.</span><span class="ss">&quot;model&quot;</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">  </span><span class="k">LIMIT</span><span class="w"> </span><span class="mi">10</span><span class="p">;</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="c1">-- ✅ SUM-wrap on a sum-declared measure, with grouping:</span>
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="k">SELECT</span><span class="w"> </span><span class="ss">&quot;Country Name&quot;</span><span class="p">,</span><span class="w"> </span><span class="k">SUM</span><span class="p">(</span><span class="ss">&quot;Total Sales&quot;</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">sales</span>
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">  </span><span class="k">FROM</span><span class="w"> </span><span class="n">obsl_pg</span><span class="p">.</span><span class="n">orionbelt_1_commerce</span><span class="p">.</span><span class="ss">&quot;model&quot;</span>
+</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="w">  </span><span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="k">ROLLUP</span><span class="p">(</span><span class="ss">&quot;Country Name&quot;</span><span class="p">);</span>
+</span></code></pre></div>
+<h3 id="working-around-the-avg-count_distinct-gap-through-dremio">Working around the AVG / COUNT_DISTINCT gap through Dremio<a class="headerlink" href="#working-around-the-avg-count_distinct-gap-through-dremio" title="Permanent link">&para;</a></h3>
+<p>If you need an averaged or count-distinct measure <strong>with <code>GROUP BY</code></strong> in
+Dremio, three options:</p>
+<ol>
+<li><strong>Skip Dremio for the measure query</strong> — point the BI tool directly at
+   OBSL pgwire (<code>:5432</code>). Bare measure labels work in <code>GROUP BY</code> /
+   <code>ROLLUP</code> / <code>HAVING</code> because OBSL parses the SQL itself; the
+   Calcite-imposed "wrap or group" rule never applies.</li>
+<li><strong>Express the average as a sum-decomposed derived metric in OBML.</strong>
+   <code>expression: '{[Total Sales]} / {[Sales Order Count]}'</code> — both inputs
+   are SUM/COUNT-style measures, the metric inherits the
+   <code>aggregation: sum</code> shim path, and through Dremio you wrap the metric
+   in <code>SUM(...)</code> like any other additive measure.</li>
+<li><strong>Wait for Calcite <code>MEASURE()</code> support to land in Dremio</strong> — Calcite
+   has parser tokens for SQL:2023 <code>MEASURE</code> / <code>AGG()</code> but no
+   implementation. Until <a href="https://issues.apache.org/jira/browse/CALCITE-4496">CALCITE-4496</a>
+   ships and Dremio picks it up, semantic-aware aggregation through
+   Calcite is blocked upstream.</li>
+</ol>
 <h2 id="known-limitations">Known limitations<a class="headerlink" href="#known-limitations" title="Permanent link">&para;</a></h2>
 <p>These constraints are documented in
 <a href="https://github.com/ralfbecher/orionbelt-semantic-layer/blob/main/design/PLAN_postgres_wire.md">design/PLAN_postgres_wire.md §10</a>:</p>
