@@ -2,6 +2,12 @@
 
 All notable changes to OrionBelt Semantic Layer are documented here.
 
+## [Unreleased]
+
+### Added
+
+- **`exists` / `nonexists` filter operators.** First-class primitive for "row in this data object has (or doesn't have) a matching row in a related data object" — a correlated `EXISTS (SELECT 1 FROM …)` subquery that no longer requires modelling the question as a precomputed boolean column or a raw-SQL data-object expression. Drives regulatory data-quality rules, coverage / anti-join reports, and any "parent has at least one child of kind X" check. The new `subquery:` payload names the target data object (the planner walks the model's existing `joins:` to derive the correlation predicates — join columns are not restated), with an optional `pathName:` to pin a secondary join and an optional `filter:` list of predicates restricting which target rows count. Available in query-level `where:` / `having:` filters. Portable across all 8 dialects. See [Existence Operators](docs/guide/query-language.md#existence-operators) and `design/PLAN_exists_operator.md`.
+
 ## [2.6.1] - 2026-05-24
 
 ### Fixed

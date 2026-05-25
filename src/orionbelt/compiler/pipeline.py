@@ -156,18 +156,20 @@ class CompilationPipeline:
         dialect_name: str,
     ) -> CompilationResult:
         """Compile a query to SQL for the specified dialect."""
-        # Phase 1: Resolution
-        resolved = self._resolver.resolve(query, model)
-
-        # Phase 1.5: Fanout detection (skip for CFL — each fact queried independently)
-        if not resolved.requires_cfl:
-            detect_fanout(resolved, model)
-
-        # Create dialect early so planners can use dialect-aware table formatting
+        # Create dialect first so resolution and planning share one
+        # ``qualify_table`` — the EXISTS filter operator needs it during
+        # resolution to render the correlated subquery's FROM clause.
         dialect = DialectRegistry.get(dialect_name)
         qualify_table = lambda obj: dialect.format_table_ref(  # noqa: E731
             obj.database, obj.schema_name, obj.code
         )
+
+        # Phase 1: Resolution
+        resolved = self._resolver.resolve(query, model, qualify_table=qualify_table)
+
+        # Phase 1.5: Fanout detection (skip for CFL — each fact queried independently)
+        if not resolved.requires_cfl:
+            detect_fanout(resolved, model)
 
         # Phase 2: Planning (raw / star schema / CFL)
         use_cfl = resolved.requires_cfl or resolved.dimensions_exclude
