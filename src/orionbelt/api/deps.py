@@ -22,6 +22,7 @@ class OneshotBatchConfig:
 _session_manager: SessionManager | None = None
 _disable_session_list: bool = False
 _single_model_mode: bool = False
+_preload_model_yaml: str | None = None
 _flight_info: dict[str, object] | None = None
 _query_execute_enabled: bool = False
 _db_vendor: str = "duckdb"
@@ -51,6 +52,7 @@ def init_session_manager(
     *,
     disable_session_list: bool = False,
     admin_curated: bool = False,
+    preload_model_yaml: str | None = None,
     flight_info: dict[str, object] | None = None,
     query_execute_enabled: bool = False,
     db_vendor: str = "duckdb",
@@ -60,15 +62,25 @@ def init_session_manager(
     cache: Cache | None = None,
     cache_config: CacheRuntimeConfig | None = None,
 ) -> None:
-    """Set the global SessionManager (called at app startup)."""
+    """Set the global SessionManager (called at app startup).
+
+    ``preload_model_yaml`` is the original YAML of the single protected
+    MODEL_FILES model — passed in only when admin-curated mode loaded
+    exactly one file. The string is surfaced via ``/v1/settings.model_yaml``
+    so UI clients can render the read-only model editor, and re-used by
+    ``POST /v1/sessions`` to seed each new user session with the protected
+    model (since session-scoped model upload is blocked with 403 in
+    admin-curated mode).
+    """
     global _session_manager, _disable_session_list  # noqa: PLW0603
-    global _single_model_mode, _flight_info  # noqa: PLW0603
+    global _single_model_mode, _preload_model_yaml, _flight_info  # noqa: PLW0603
     global _query_execute_enabled, _db_vendor, _query_default_limit  # noqa: PLW0603
     global _default_locale, _oneshot_batch_config  # noqa: PLW0603
     global _cache, _cache_config  # noqa: PLW0603
     _session_manager = manager
     _disable_session_list = disable_session_list
     _single_model_mode = admin_curated
+    _preload_model_yaml = preload_model_yaml
     _flight_info = flight_info
     _query_execute_enabled = query_execute_enabled
     _db_vendor = db_vendor
@@ -92,6 +104,17 @@ def get_session_manager() -> SessionManager:
 def is_session_list_disabled() -> bool:
     """Return True when the GET /sessions endpoint is suppressed."""
     return _disable_session_list
+
+
+def get_preload_model_yaml() -> str | None:
+    """Return the YAML of the single MODEL_FILES protected model, if any.
+
+    Populated at startup only when MODEL_FILES has exactly one entry — the
+    single-model-mode UX expects exactly one model to render in the
+    read-only editor. Multi-model deployments return ``None``; clients use
+    ``GET /v1/models`` for discovery instead.
+    """
+    return _preload_model_yaml
 
 
 def is_single_model_mode() -> bool:
@@ -159,13 +182,14 @@ def get_cache_config() -> CacheRuntimeConfig:
 def reset_session_manager() -> None:
     """Clear the global SessionManager (for tests)."""
     global _session_manager, _disable_session_list  # noqa: PLW0603
-    global _single_model_mode, _flight_info  # noqa: PLW0603
+    global _single_model_mode, _preload_model_yaml, _flight_info  # noqa: PLW0603
     global _query_execute_enabled, _db_vendor, _query_default_limit  # noqa: PLW0603
     global _default_locale, _oneshot_batch_config  # noqa: PLW0603
     global _cache, _cache_config  # noqa: PLW0603
     _session_manager = None
     _disable_session_list = False
     _single_model_mode = False
+    _preload_model_yaml = None
     _flight_info = None
     _query_execute_enabled = False
     _db_vendor = "duckdb"

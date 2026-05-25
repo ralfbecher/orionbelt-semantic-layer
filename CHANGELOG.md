@@ -2,6 +2,15 @@
 
 All notable changes to OrionBelt Semantic Layer are documented here.
 
+## [2.7.1] - 2026-05-25
+
+### Fixed
+
+- **Gradio UI broken in admin-curated mode under v2.7.0.** The MODEL_FILE removal in v2.7.0 also dropped the legacy "auto-preload model into every new user session" behavior and stopped returning the model YAML in `/v1/settings`. The bundled UI hadn't migrated to the new `GET /v1/models` discovery path, so its compile / execute flow tried to upload the model into a fresh user session and hit `403 Single-model mode: model upload is disabled`. v2.7.1 restores both legs of the v2.6 contract — but **only when MODEL_FILES has exactly one entry** (single-model deployments). Multi-model deployments (N > 1) are unchanged and clients still use `GET /v1/models` for discovery.
+  - `/v1/settings` re-exposes `model_yaml` (the single MODEL_FILES entry's YAML) so the UI can render the read-only editor.
+  - `POST /v1/sessions` re-loads the protected model into each newly-created user session so the session-scoped compile / execute endpoints work without re-uploading.
+- **Cloud Armor rule #106** (LLM-API recon block) inadvertently denied OBSL's legitimate `GET /v1/models` endpoint along with the OpenAI-style `/v1/chat/completions` probes it was meant to block. The regex is tightened in `orionbelt-infra` so `/v1/models` reaches the API while the OpenAI / Anthropic / Ollama recon paths remain blocked.
+
 ## [2.7.0] - 2026-05-25
 
 ### Removed
