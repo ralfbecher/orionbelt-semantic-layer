@@ -314,10 +314,20 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
         # Unknown backend selected via env — still useful to log
         logger.info("Cache enabled: backend=%s", cache.backend_name)
 
+    # When admin-curated mode loaded exactly one MODEL_FILES entry, cache
+    # the YAML so /v1/settings.model_yaml can expose it (read-only UI
+    # editor) and POST /v1/sessions can re-seed each new user session with
+    # the protected model — session-scoped model upload is blocked with
+    # 403 in admin-curated mode, so the UI cannot fall back to uploading.
+    preload_model_yaml: str | None = None
+    if len(named_preloads) == 1:
+        preload_model_yaml = named_preloads[0][1]
+
     init_session_manager(
         mgr,
         disable_session_list=settings.disable_session_list,
         admin_curated=is_admin_curated,
+        preload_model_yaml=preload_model_yaml,
         flight_info=flight_info,
         query_execute_enabled=query_execute_enabled,
         db_vendor=settings.db_vendor,

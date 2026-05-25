@@ -14,6 +14,7 @@ from orionbelt.api.deps import (
     get_db_vendor,
     get_flight_info,
     get_oneshot_batch_config,
+    get_preload_model_yaml,
     get_session_manager,
     is_query_execute_enabled,
     is_single_model_mode,
@@ -262,11 +263,18 @@ async def get_settings(
         heartbeat_endpoint_enabled=cache_runtime.heartbeat_auth_token is not None,
     )
 
+    # Restore the v2.6 contract: when admin-curated mode loaded exactly one
+    # MODEL_FILES entry, expose its YAML so UI clients can render the
+    # read-only model editor without scraping ``GET /v1/models``. Multi-
+    # model deployments (N > 1) return ``None`` and clients use
+    # ``GET /v1/models`` for discovery.
+    model_yaml_for_response = get_preload_model_yaml() if single_mode else None
+
     return SettingsResponse(
         version=__version__,
         api_version="v1",
         single_model_mode=single_mode,
-        model_yaml=None,
+        model_yaml=model_yaml_for_response,
         session_ttl_seconds=mgr.ttl,
         session_max_age_seconds=mgr.max_age,
         max_sessions=mgr.max_sessions,

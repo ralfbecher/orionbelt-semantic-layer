@@ -102,10 +102,11 @@ class TestSettingsEndpoint:
         assert response.status_code == 200
         data = response.json()
         assert data["single_model_mode"] is True
-        # ``model_yaml`` is reserved (legacy slot) — clients in admin-curated
-        # mode resolve the loaded model via /v1/models or via the named
-        # session's /models endpoint, not via this field.
-        assert data.get("model_yaml") in (None,)
+        # v2.7.1 restored the v2.6 contract: when MODEL_FILES has exactly
+        # one entry, ``model_yaml`` is populated for UI consumers. Multi-
+        # model deployments (N > 1) still return None.
+        assert data.get("model_yaml"), "single-MODEL_FILES must expose model_yaml for UI"
+        assert "dataObjects" in data["model_yaml"]
         assert data["session_ttl_seconds"] == 3600  # from fixture
         # Admin-curated mode adds the model_settings + timezone blocks.
         # SAMPLE_MODEL_YAML may not declare a `settings:` block — the
@@ -823,7 +824,7 @@ def single_model_app(tmp_path):
     )
     store = mgr.get_or_create_named(SINGLE_MODEL_PROTECTED_NAME)
     store.load_model(yaml_with_name)
-    init_session_manager(mgr, admin_curated=True)
+    init_session_manager(mgr, admin_curated=True, preload_model_yaml=yaml_with_name)
     yield app
     reset_session_manager()
 
@@ -914,6 +915,34 @@ class TestSingleModelMode:
         assert response.status_code == 200, response.text
         body = response.json()
         assert body.get("data_objects"), "schema must include at least one data object"
+
+    async def test_settings_exposes_model_yaml_for_ui(
+        self, single_model_client: AsyncClient
+    ) -> None:
+        """v2.7.1 hotfix: /v1/settings must surface the MODEL_FILES YAML so the
+        Gradio UI can render the read-only editor without scraping
+        /v1/models."""
+        r = await single_model_client.get("/v1/settings")
+        assert r.status_code == 200, r.text
+        body = r.json()
+        assert body["single_model_mode"] is True
+        assert body.get("model_yaml"), "model_yaml must be populated in single-model mode"
+        assert "dataObjects" in body["model_yaml"]
+
+    async def test_new_session_inherits_protected_model(
+        self, single_model_client: AsyncClient
+    ) -> None:
+        """v2.7.1 hotfix: POST /v1/sessions re-loads the protected model into
+        each new user session so the session-scoped compile / execute flow
+        works without uploading (which is blocked with 403)."""
+        r = await single_model_client.post("/v1/sessions")
+        assert r.status_code == 201, r.text
+        assert r.json()["model_count"] == 1, r.json()
+        sid = r.json()["session_id"]
+        # And the model is queryable via the session-scoped route.
+        listing = await single_model_client.get(f"/v1/sessions/{sid}/models")
+        assert listing.status_code == 200
+        assert len(listing.json()) == 1
 
     async def test_shortcut_query_sees_protected_session(
         self, single_model_client: AsyncClient

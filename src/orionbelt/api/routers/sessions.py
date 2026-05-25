@@ -17,6 +17,7 @@ from orionbelt.api.deps import (
     get_cache,
     get_cache_config,
     get_default_locale,
+    get_preload_model_yaml,
     get_query_default_limit,
     get_session_manager,
     is_query_execute_enabled,
@@ -116,7 +117,15 @@ async def create_session(
     body: SessionCreateRequest | None = None,
     mgr: SessionManager = Depends(get_session_manager),  # noqa: B008
 ) -> SessionResponse:
-    """Create a new session."""
+    """Create a new session.
+
+    In admin-curated mode (``MODEL_FILES``) with exactly one protected
+    session, the protected model is copied into the new user session so
+    UI / SDK callers can keep using the session-scoped query endpoints
+    without uploading the YAML themselves (which is blocked with 403).
+    This restores the v2.6 ``MODEL_FILE`` auto-preload UX on top of the
+    v2.7 named-protected-session topology.
+    """
     metadata = body.metadata if body else {}
     try:
         info = mgr.create_session(metadata=metadata)
@@ -126,6 +135,17 @@ async def create_session(
             detail="Too many active sessions. Please retry later.",
             headers={"Retry-After": "60"},
         ) from None
+
+    if is_single_model_mode():
+        preload_yaml = get_preload_model_yaml()
+        protected_ids = mgr.list_protected_session_ids()
+        if preload_yaml and len(protected_ids) == 1:
+            try:
+                user_store = mgr.get_store(info.session_id)
+                user_store.load_model(preload_yaml)
+                info = mgr.get_session(info.session_id)
+            except Exception:
+                logger.exception("Failed to preload protected model into new user session")
 
     return _session_response(info)
 
