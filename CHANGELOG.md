@@ -7,6 +7,12 @@ All notable changes to OrionBelt Semantic Layer are documented here.
 ### Fixed
 
 - **`test_ob_clickhouse_driver::test_obml_derived_metric` raised `TypeError: unsupported operand type(s) for -: 'float' and 'decimal.Decimal'`** when run against the live ClickHouse testcontainer. The ob-clickhouse driver correctly returns `Decimal` for decimal-typed metric columns (preserving precision is the driver contract), but the test asserted via `pytest.approx(<float>)`, which can't subtract a `Decimal` from a `float` operand. Stay in the Decimal domain end-to-end: `pytest.approx(Decimal(200) / Decimal(240), rel=Decimal("1e-3"))`. No production-code change.
+- **Ontology drift — six OBML fields silently missing from `ontology/obsl.ttl`.** Reported in [#82](https://github.com/ralfbecher/orionbelt-semantic-layer/issues/82). Audit against `models/semantic.py` (and follow-up via the new drift-guard test) found that `numClass`, `primaryKey`, `customExtensions`, `withinGroup`, `delimiter`, the `examples` block + `intentTags`, and `Dimension.via` were all present in OBML for releases but absent from the RDF surface — the `OBML feature → also OSI + ontology` rule was relying on author memory and had drifted for v2.2–v2.6 modeling additions.
+
+### Added
+
+- **Ontology coverage for the missing OBML fields.** New `CustomExtension`, `ModelExample`, and `WithinGroup` classes in `ontology/obsl.ttl` with full property sets (`vendor` / `extensionData`; `exampleName` / `exampleDescription` / `exampleQuery` / `intentTag`; `withinGroupOrder`). New `numClass` / `primaryKey` / `delimiter` datatype properties. New `via` object property on `Dimension`. Matching SHACL shapes (`CustomExtensionShape` / `ModelExampleShape` / `WithinGroupShape`) added to `ontology/obsl.shacl.ttl` with the same cardinality and enum constraints the Pydantic models enforce.
+- **`tests/unit/test_ontology_drift.py`** — automated drift guard that introspects every OBML modeling class in `models/semantic.py` and asserts each field maps to an `obsl:*` property in the ontology, with explicit exclusions for housekeeping fields and runtime-only config. New OBML fields now fail loudly until the author adds the corresponding RDF property — the rule no longer depends on memory.
 
 ## [2.7.4] - 2026-05-26
 
