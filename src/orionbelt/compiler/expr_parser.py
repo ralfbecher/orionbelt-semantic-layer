@@ -6,19 +6,26 @@ Handles two expression syntaxes:
 
 Both share the same grammar:
 
-    expr   → or_expr
+    expr      → or_expr
     or_expr   → and_expr ('OR' and_expr)*
     and_expr  → not_expr ('AND' not_expr)*
-    not_expr  → 'NOT' not_expr | cmp_expr
+    not_expr  → 'NOT' not_expr | predicate
+    predicate → cmp_expr (postfix)?
+    postfix   → 'IS' ['NOT'] 'NULL'
+              | ['NOT'] 'IN' '(' expr (',' expr)* ')'
+              | ['NOT'] 'BETWEEN' add_expr 'AND' add_expr
+              | ['NOT'] 'LIKE' STRING
     cmp_expr  → add_expr (('=' | '<>' | '!=' | '<' | '<=' | '>' | '>=') add_expr)?
     add_expr  → mul_expr (('+' | '-') mul_expr)*
     mul_expr  → factor (('*' | '/') factor)*
     factor → '(' expr ')'
+           | case_expr
            | NUMBER
            | STRING
            | REF
            | IDENT '(' arg_list? ')'  -- function call
            | IDENT                     -- bare keyword (TRUE/FALSE/NULL)
+    case_expr → 'CASE' ('WHEN' expr 'THEN' expr)+ ('ELSE' expr)? 'END'
     arg_list → expr (',' expr)*
 """
 
@@ -28,7 +35,18 @@ import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from orionbelt.ast.nodes import BinaryOp, ColumnRef, Expr, FunctionCall, Literal, UnaryOp
+from orionbelt.ast.nodes import (
+    Between,
+    BinaryOp,
+    CaseExpr,
+    ColumnRef,
+    Expr,
+    FunctionCall,
+    InList,
+    IsNull,
+    Literal,
+    UnaryOp,
+)
 
 if TYPE_CHECKING:
     from orionbelt.models.semantic import SemanticModel
@@ -59,6 +77,14 @@ _COMPARISON_OPS: tuple[str, ...] = ("<=", ">=", "<>", "!=", "=", "<", ">")
 # Reserved keyword tokens emitted as ``op`` with the uppercased name so
 # the parser can treat them uniformly with the symbolic operators.
 _BOOLEAN_KEYWORDS: frozenset[str] = frozenset({"AND", "OR", "NOT"})
+
+# Predicate / control-flow keywords also emitted as ``op`` tokens so the
+# parser can branch on them. Without this, ``CASE`` would tokenize as an
+# ``ident`` and ``_parse_factor`` would silently treat it as a bare
+# string literal (the #77 bug). Keep uppercase for one-lookup matching.
+_SQL_KEYWORDS: frozenset[str] = frozenset(
+    {"CASE", "WHEN", "THEN", "ELSE", "END", "IS", "IN", "BETWEEN", "LIKE"}
+)
 
 # Bare-identifier literals — emitted as their typed ``Literal`` node by
 # the parser. Keep uppercase so case-insensitive matching is one lookup.
@@ -148,12 +174,16 @@ def _tokenize_common(formula: str, tokens: list[_Token], start: int) -> int:
     if m:
         ident = m.group(0)
         upper = ident.upper()
-        if upper in _BOOLEAN_KEYWORDS:
+        if upper in _BOOLEAN_KEYWORDS or upper in _SQL_KEYWORDS:
             tokens.append(_Token(kind="op", value=upper))
         else:
             tokens.append(_Token(kind="ident", value=ident))
         return m.end()
-    return start + 1  # skip unrecognised
+    # Skip unrecognised characters so the outer tokenizers can handle
+    # ``{[...]}`` reference syntax in their own scan loops. The parser
+    # itself enforces strictness — any dangling tokens after parsing
+    # raise (see ``parse_expression``).
+    return start + 1
 
 
 def tokenize_metric_formula(formula: str) -> list[_Token]:
@@ -297,13 +327,17 @@ def parse_expression(tokens: list[_Token]) -> Expr:
     def _parse_factor() -> Expr:
         tok = _peek()
         if tok is None:
-            return Literal.number(0)
+            raise ValueError("Unexpected end of expression")
         if tok.kind == "lparen":
             _advance()
             node = _parse_or()
             if _peek() and _peek().kind == "rparen":  # type: ignore[union-attr]
                 _advance()
+            else:
+                raise ValueError("Missing closing ')' in expression")
             return node
+        if tok.kind == "op" and tok.value == "CASE":
+            return _parse_case()
         if tok.kind == "number":
             _advance()
             val = float(tok.value) if "." in tok.value else int(tok.value)
@@ -335,9 +369,40 @@ def parse_expression(tokens: list[_Token]) -> Expr:
             _advance()
             table, column = tok.value.split("\0", 1)
             return ColumnRef(name=column, table=table)
-        # Unknown leading token — skip to keep the parser robust.
-        _advance()
-        return Literal.number(0)
+        raise ValueError(f"Unexpected token {tok.value!r} ({tok.kind}) in expression")
+
+    def _parse_case() -> Expr:
+        """Parse ``CASE WHEN expr THEN expr [WHEN ...]* [ELSE expr] END``."""
+        _advance()  # consume CASE
+        when_clauses: list[tuple[Expr, Expr]] = []
+        else_clause: Expr | None = None
+        while True:
+            t = _peek()
+            if t is None:
+                raise ValueError("Unterminated CASE expression — expected WHEN / ELSE / END")
+            if t.kind == "op" and t.value == "WHEN":
+                _advance()
+                cond = _parse_or()
+                nxt = _peek()
+                if nxt is None or nxt.kind != "op" or nxt.value != "THEN":
+                    raise ValueError("CASE WHEN clause missing THEN")
+                _advance()
+                value = _parse_or()
+                when_clauses.append((cond, value))
+                continue
+            if t.kind == "op" and t.value == "ELSE":
+                _advance()
+                else_clause = _parse_or()
+                continue
+            if t.kind == "op" and t.value == "END":
+                _advance()
+                break
+            raise ValueError(
+                f"Unexpected token {t.value!r} in CASE expression — expected WHEN / ELSE / END"
+            )
+        if not when_clauses:
+            raise ValueError("CASE expression requires at least one WHEN clause")
+        return CaseExpr(when_clauses=when_clauses, else_clause=else_clause)
 
     def _parse_term() -> Expr:
         left = _parse_factor()
@@ -358,13 +423,60 @@ def parse_expression(tokens: list[_Token]) -> Expr:
     def _parse_cmp() -> Expr:
         left = _parse_add()
         t = _peek()
-        if t is not None and t.kind == "op" and t.value in _COMPARISON_OPS:
+        if t is None or t.kind != "op":
+            return left
+        # Standard comparison: =, <>, !=, <, <=, >, >=
+        if t.value in _COMPARISON_OPS:
             op_tok = _advance()
-            # Normalise ``!=`` to ``<>``.
             op = "<>" if op_tok.value == "!=" else op_tok.value
             right = _parse_add()
             return BinaryOp(left=left, op=op, right=right)
+        # SQL postfix predicates: IS [NOT] NULL, [NOT] IN (...),
+        # [NOT] BETWEEN ... AND ..., [NOT] LIKE 'pat'
+        if t.value == "IS":
+            _advance()
+            negated = False
+            nxt = _peek()
+            if nxt is not None and nxt.kind == "op" and nxt.value == "NOT":
+                _advance()
+                negated = True
+            null_tok = _peek()
+            if null_tok is None or null_tok.kind != "ident" or null_tok.value.upper() != "NULL":
+                raise ValueError("IS predicate must be followed by NULL or NOT NULL")
+            _advance()
+            return IsNull(expr=left, negated=negated)
+        if t.value == "NOT":
+            # Look ahead for IN / BETWEEN / LIKE; otherwise leave NOT
+            # for the outer logical layer to consume.
+            nxt = tokens[pos[0] + 1] if pos[0] + 1 < len(tokens) else None
+            if nxt is not None and nxt.kind == "op" and nxt.value in ("IN", "BETWEEN", "LIKE"):
+                _advance()  # consume NOT
+                return _parse_postfix_predicate(left, negated=True)
+            return left
+        if t.value in ("IN", "BETWEEN", "LIKE"):
+            return _parse_postfix_predicate(left, negated=False)
         return left
+
+    def _parse_postfix_predicate(left: Expr, *, negated: bool) -> Expr:
+        op_tok = _advance()  # IN / BETWEEN / LIKE
+        if op_tok.value == "IN":
+            if _peek() is None or _peek().kind != "lparen":  # type: ignore[union-attr]
+                raise ValueError("IN must be followed by '('")
+            _advance()  # consume (
+            values = _parse_arg_list()  # consumes the matching )
+            return InList(expr=left, values=values, negated=negated)
+        if op_tok.value == "BETWEEN":
+            low = _parse_add()
+            t = _peek()
+            if t is None or t.kind != "op" or t.value != "AND":
+                raise ValueError("BETWEEN must use the form 'BETWEEN x AND y'")
+            _advance()  # consume AND
+            high = _parse_add()
+            return Between(expr=left, low=low, high=high, negated=negated)
+        if op_tok.value == "LIKE":
+            right = _parse_add()
+            return BinaryOp(left=left, op="NOT LIKE" if negated else "LIKE", right=right)
+        raise ValueError(f"Unexpected postfix predicate {op_tok.value!r}")
 
     def _parse_not() -> Expr:
         if _is_op("NOT"):
@@ -388,4 +500,11 @@ def parse_expression(tokens: list[_Token]) -> Expr:
             left = BinaryOp(left=left, op="OR", right=right)
         return left
 
-    return _parse_or()
+    result = _parse_or()
+    # Strict parse: any unconsumed token is a malformed expression. Pre
+    # v2.7.3 the parser silently dropped the tail, so ``CASE WHEN x THEN
+    # y END`` compiled to the literal string ``'CASE'`` with no error.
+    if pos[0] < len(tokens):
+        leftover = tokens[pos[0]]
+        raise ValueError(f"Unexpected token {leftover.value!r} ({leftover.kind}) after expression")
+    return result
