@@ -2,6 +2,12 @@
 
 All notable changes to OrionBelt Semantic Layer are documented here.
 
+## [2.7.5] - 2026-05-26
+
+### Fixed
+
+- **`test_ob_clickhouse_driver::test_obml_derived_metric` raised `TypeError: unsupported operand type(s) for -: 'float' and 'decimal.Decimal'`** when run against the live ClickHouse testcontainer. The ob-clickhouse driver correctly returns `Decimal` for decimal-typed metric columns (preserving precision is the driver contract), but the test asserted via `pytest.approx(<float>)`, which can't subtract a `Decimal` from a `float` operand. Stay in the Decimal domain end-to-end: `pytest.approx(Decimal(200) / Decimal(240), rel=Decimal("1e-3"))`. No production-code change.
+
 ## [2.7.4] - 2026-05-26
 
 ### Fixed
