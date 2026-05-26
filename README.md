@@ -4,7 +4,7 @@
 
 <h1 align="center">OrionBelt Semantic Layer and Sidecar</h1>
 
-<p align="center"><strong>An Open Source Semantic Sidecar for Agentic AI, Analytics, Quality and Governance Systems.</strong></p>
+<p align="center"><strong>An Open Source <a href="https://ralforion.com/semantic-sidecar.html">Semantic Sidecar</a> for <a href="https://ralforion.com/agentic-ai-data-access.html">Agentic AI</a>, Analytics, Quality and Governance Systems.</strong></p>
 
 <p align="center"><strong>Inject governed semantics into systems that never had them.</strong></p>
 
@@ -32,7 +32,7 @@
 [![DuckDB](https://img.shields.io/badge/DuckDB-FFF000.svg?logo=duckdb&logoColor=black)](https://duckdb.org)
 [![MySQL](https://img.shields.io/badge/MySQL-4479A1.svg?logo=mysql&logoColor=white)](https://www.mysql.com)
 
-OrionBelt Semantic Layer (OBSL) is an open-source **Semantic Sidecar** for AI, analytics, and governed data systems. It injects governed business semantics into existing platforms without requiring architecture changes or dedicated semantic infrastructure.
+OrionBelt Semantic Layer (OBSL) is an open-source **[Semantic Sidecar](https://ralforion.com/semantic-sidecar.html)** for AI, analytics, and governed data systems. It injects governed business semantics into existing platforms without requiring architecture changes or dedicated semantic infrastructure.
 
 Define dimensions, measures, metrics, business rules, and semantic context in declarative YAML models. OBSL compiles and executes them as optimized, dialect-specific SQL across BigQuery, ClickHouse, Databricks, Dremio, DuckDB/MotherDuck, MySQL, PostgreSQL, and Snowflake.
 
@@ -45,6 +45,11 @@ Define analytical and business semantics in version-controlled YAML, compile the
 No BI tool in the middle. The entire path from declarative model to executable semantics and query results is programmable, reviewable, and reproducible.
 
 > **Companion Project:** [OrionBelt Analytics](https://github.com/ralfbecher/orionbelt-analytics) — an ontology-based MCP server that analyzes database schemas and generates RDF/OWL ontologies. Together they let AI assistants navigate your data landscape through ontologies and compile safe, dialect-aware analytical SQL.
+
+> **Related reading:**
+> - [What is a Semantic Sidecar?](https://ralforion.com/semantic-sidecar.html) — the pattern OBSL implements
+> - [Agentic AI Data Access](https://ralforion.com/agentic-ai-data-access.html) — governed access for AI agents via MCP
+> - [Governed Text-to-SQL](https://ralforion.com/text-to-sql.html) — fan-trap prevention via ontology, AST & MCP
 
 ## Table of Contents
 
