@@ -2,6 +2,18 @@
 
 All notable changes to OrionBelt Semantic Layer are documented here.
 
+## [2.7.3] - 2026-05-26
+
+### Fixed
+
+- **Computed-column `CASE WHEN ... END` expressions silently compiled to the string literal `'CASE'`.** Reported in [#77](https://github.com/ralfbecher/orionbelt-semantic-layer/issues/77). The recursive-descent parser in `compiler/expr_parser.py` tokenised `CASE` as a bare identifier; `_parse_factor` treated bare identifiers not followed by `(` as `Literal.string(...)`, leaving `WHEN ... THEN ... ELSE ... END` as dangling tokens that the parser silently dropped. A measure aggregating a computed column like `CASE WHEN {Default Status} NOT IN ('11', '14') THEN {Credit Exposure Amount} ELSE 0 END` ended up as `SUM('CASE')` in the generated SQL — a regulatory-quality bug for Anacredit-style risk metrics.
+
+### Added
+
+- **Full SQL expression syntax in computed-column `expression:` values**: `CASE WHEN ... THEN ... [WHEN ...]* [ELSE ...] END`, `[NOT] IN (...)`, `[NOT] BETWEEN ... AND ...`, `IS [NOT] NULL`, `[NOT] LIKE ...`. The existing AST nodes (`CaseExpr`, `InList`, `Between`, `IsNull`) already had codegen on every dialect — only the expression parser was missing the syntax. New `_SQL_KEYWORDS` set promotes the SQL keywords to `op` tokens so the parser can branch on them.
+- **Strict parsing**: `parse_expression` now rejects unconsumed trailing tokens, missing closing parens, unterminated `CASE`, `CASE WHEN` without `THEN`, `IN` without `(`, `BETWEEN` without `AND`, `IS` without `NULL`. Pre-v2.7.3 these silently produced garbage AST.
+- 28 new tests in `tests/unit/test_expr_parser_case.py` covering each new construct on all 8 dialects, plus the exact #77 repro and strictness regressions.
+
 ## [2.7.2] - 2026-05-26
 
 ### Fixed
