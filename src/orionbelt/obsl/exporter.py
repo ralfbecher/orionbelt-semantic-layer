@@ -8,6 +8,7 @@ graph for a loaded semantic model.  Expression strings are preserved as
 from __future__ import annotations
 
 import re
+from typing import Any
 
 from rdflib import BNode, Graph, Literal, Namespace, URIRef
 from rdflib.namespace import OWL, RDF, RDFS, XSD
@@ -319,6 +320,8 @@ def export_obsl(model: SemanticModel, model_id: str) -> Graph:
     g.add((m_uri, OWL.imports, URIRef("https://ralforion.com/ns/obsl#")))
     if model.description:
         g.add((m_uri, RDFS.comment, Literal(model.description)))
+    _emit_custom_extensions(g, m_uri, getattr(model, "custom_extensions", []))
+    _emit_model_examples(g, m_uri, getattr(model, "examples", []))
 
     # Pre-build column URI lookup for ALL data objects (needed for joins,
     # dimensions, measures).  This must happen before any join export so that
@@ -345,6 +348,7 @@ def export_obsl(model: SemanticModel, model_id: str) -> Graph:
             g.add((obj_uri, OBSL.owner, Literal(obj.owner)))
         for syn in obj.synonyms:
             g.add((obj_uri, OBSL.synonym, Literal(syn)))
+        _emit_custom_extensions(g, obj_uri, getattr(obj, "custom_extensions", []))
 
         # Refresh policy — PLAN_freshness_driven_cache.md §6
         if obj.refresh is not None:
@@ -372,6 +376,8 @@ def export_obsl(model: SemanticModel, model_id: str) -> Graph:
             g.add((col_uri, OBSL.resultType, Literal(col.abstract_type.value)))
             if col.primary_key:
                 g.add((col_uri, OBSL.primaryKey, Literal(True)))
+            if col.num_class is not None:
+                g.add((col_uri, OBSL.numClass, Literal(col.num_class.value)))
 
             if col.description:
                 g.add((col_uri, RDFS.comment, Literal(col.description)))
@@ -379,6 +385,7 @@ def export_obsl(model: SemanticModel, model_id: str) -> Graph:
                 g.add((col_uri, OBSL.owner, Literal(col.owner)))
             for syn in col.synonyms:
                 g.add((col_uri, OBSL.synonym, Literal(syn)))
+            _emit_custom_extensions(g, col_uri, getattr(col, "custom_extensions", []))
 
         # Joins — path_name disambiguates multiple joins to the same target
         for join in obj.joins:
@@ -436,6 +443,7 @@ def export_obsl(model: SemanticModel, model_id: str) -> Graph:
             g.add((dim_uri, OBSL["format"], Literal(dim.format)))
         for syn in dim.synonyms:
             g.add((dim_uri, OBSL.synonym, Literal(syn)))
+        _emit_custom_extensions(g, dim_uri, getattr(dim, "custom_extensions", []))
 
     # -- Measures -----------------------------------------------------------
     for meas_name, meas in model.measures.items():
@@ -497,6 +505,19 @@ def export_obsl(model: SemanticModel, model_id: str) -> Graph:
                     expr = f"{incl.field} {incl.op}"
                 g.add((meas_uri, OBSL.filterContextInclude, Literal(expr)))
 
+        # LISTAGG-style extras
+        if meas.delimiter is not None:
+            g.add((meas_uri, OBSL.delimiter, Literal(meas.delimiter)))
+        if meas.within_group is not None:
+            wg = meas.within_group
+            wg_uri = BNode()
+            g.add((meas_uri, OBSL.hasWithinGroup, wg_uri))
+            g.add((wg_uri, RDF.type, OBSL.WithinGroup))
+            wg_col = col_uris.get((wg.column.view or "", wg.column.column or ""))
+            if wg_col:
+                g.add((wg_uri, OBSL.column, wg_col))
+            g.add((wg_uri, OBSL.withinGroupOrder, Literal(wg.order)))
+
         if meas.description:
             g.add((meas_uri, RDFS.comment, Literal(meas.description)))
         if meas.owner:
@@ -507,6 +528,7 @@ def export_obsl(model: SemanticModel, model_id: str) -> Graph:
             g.add((meas_uri, OBSL["format"], Literal(meas.format)))
         for syn in meas.synonyms:
             g.add((meas_uri, OBSL.synonym, Literal(syn)))
+        _emit_custom_extensions(g, meas_uri, getattr(meas, "custom_extensions", []))
 
     # -- Metrics ------------------------------------------------------------
     for met_name, met in model.metrics.items():
@@ -579,5 +601,60 @@ def export_obsl(model: SemanticModel, model_id: str) -> Graph:
             g.add((met_uri, OBSL["format"], Literal(met.format)))
         for syn in met.synonyms:
             g.add((met_uri, OBSL.synonym, Literal(syn)))
+        _emit_custom_extensions(g, met_uri, getattr(met, "custom_extensions", []))
 
     return g
+
+
+# ---------------------------------------------------------------------------
+# Helpers — v2.7.6 bidirectional sync fixes (issue #84)
+# ---------------------------------------------------------------------------
+
+
+def _emit_custom_extensions(
+    g: Graph,
+    subject_uri: URIRef | BNode,
+    exts: list[Any],
+) -> None:
+    """Emit vendor-keyed custom extension blocks attached to any
+    modeling element (SemanticModel / DataObject / Column / Dimension /
+    Measure / Metric). Pre-v2.7.6 the exporter dropped these silently
+    even after the ontology shipped support in v2.7.5.
+    """
+    for ext in exts or []:
+        ext_uri = BNode()
+        g.add((subject_uri, OBSL.hasCustomExtension, ext_uri))
+        g.add((ext_uri, RDF.type, OBSL.CustomExtension))
+        if getattr(ext, "vendor", None):
+            g.add((ext_uri, OBSL.vendor, Literal(ext.vendor)))
+        if getattr(ext, "data", None):
+            g.add((ext_uri, OBSL.extensionData, Literal(ext.data)))
+
+
+def _emit_model_examples(
+    g: Graph,
+    model_uri: URIRef | BNode,
+    examples: list[Any],
+) -> None:
+    """Emit canonical example queries attached to the model. Pre-v2.7.6
+    the exporter ignored ``model.examples`` entirely even though the
+    ontology shipped support in v2.7.5.
+    """
+    for ex in examples or []:
+        ex_uri = BNode()
+        g.add((model_uri, OBSL.hasExample, ex_uri))
+        g.add((ex_uri, RDF.type, OBSL.ModelExample))
+        if getattr(ex, "name", None):
+            g.add((ex_uri, OBSL.exampleName, Literal(ex.name)))
+        if getattr(ex, "description", None):
+            g.add((ex_uri, OBSL.exampleDescription, Literal(ex.description)))
+        # Serialise the query payload as JSON — keeps the round-trip
+        # deterministic and lets agents replay it without re-parsing
+        # OBML semantics.
+        query_payload = getattr(ex, "query", None)
+        if query_payload is not None:
+            import json as _json
+
+            g.add((ex_uri, OBSL.exampleQuery, Literal(_json.dumps(query_payload, sort_keys=True))))
+        for tag in getattr(ex, "intent_tags", []) or []:
+            g.add((ex_uri, OBSL.intentTag, Literal(tag)))

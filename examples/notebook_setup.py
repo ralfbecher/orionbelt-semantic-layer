@@ -311,7 +311,11 @@ def show_yaml(yaml_str: str) -> str:
     class _IndentedDumper(_yaml.Dumper):
         """Indent list items under their parent key."""
 
-        def increase_indent(self, flow: bool = False, _indentless: bool = False) -> None:
+        def increase_indent(self, flow: bool = False, indentless: bool = False) -> None:
+            # Param name must be ``indentless`` (not ``_indentless``) because
+            # PyYAML's serializer calls this override with ``indentless=...``
+            # as a keyword argument. Forcing ``False`` keeps list items
+            # indented under their parent key. See issue #88.
             return super().increase_indent(flow, False)
 
     _pg.init()

@@ -31,14 +31,17 @@ OBSL-Core is not intended to represent:
 ### 3.1 OBSL-Core 0.1
 `OBSL-Core 0.1` includes:
 - semantic model container
-- data objects
-- columns
-- joins
-- dimensions
-- measures
-- metrics (derived, cumulative, period-over-period)
-- cumulative metric metadata (time dimension, window, grain-to-date)
+- data objects (with optional refresh-policy contracts)
+- columns (with optional `numClass` and `primaryKey` flags)
+- joins (with optional secondary-path naming)
+- dimensions (with optional `via` for role-playing paths)
+- measures (with optional grain override, filter context, LISTAGG `delimiter` + `withinGroup` ordering)
+- metrics — four types: derived, cumulative, period-over-period, **window** (`rank`, `dense_rank`, `row_number`, `ntile`, `lag`, `lead`, `first_value`, `last_value`)
+- cumulative metric metadata (time dimension, window, grain-to-date, optional `partitionBy`)
 - period-over-period metric metadata (time dimension, offset, comparison)
+- window metric metadata (window function, offset, buckets, order direction, default value, `partitionBy`)
+- canonical example queries (`ModelExample` with name, description, query payload, intent tags)
+- vendor-keyed `CustomExtension` blocks attached to any modeling element (model, data object, column, dimension, measure, metric)
 - expression strings
 - labels, descriptions, and synonyms
 - SHACL validation shapes

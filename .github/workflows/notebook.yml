@@ -46,13 +46,19 @@ jobs:
         run: uv python install 3.12
 
       - name: Install dependencies + notebook execution stack
-        # The default extras don't include nbclient / ipykernel — the
-        # notebook test imports them lazily via importorskip, so it
-        # silently skips in the regular suite. Install them here so
-        # the notebook marker actually runs instead of skipping.
+        # ``uv sync`` installs the PR's working tree as ``orionbelt-
+        # semantic-layer`` (editable) — the notebook's idempotent
+        # install cell (#87) will see it's already importable and
+        # skip the pip install entirely, so the test exercises the
+        # PR's code rather than whatever's currently on PyPI.
+        # Side packages (ob-driver-core, ob-duckdb, ob-flight-extension)
+        # come from PyPI since they live in separate repos — that's
+        # fine, the published versions track stable releases.
         run: |
           uv sync --all-extras --all-groups
-          uv pip install nbclient nbformat ipykernel
+          uv pip install nbclient nbformat ipykernel \
+                         ob-driver-core ob-duckdb ob-flight-extension \
+                         duckdb pyarrow pygments sqlparse
 
       - name: Execute Colab quickstart end-to-end
         # Single explicit test under the ``notebook`` marker; fails

@@ -291,6 +291,11 @@
       "type": "boolean",
       "description": "When true, returns dimension value combinations that do NOT exist in the data (anti-join via EXCEPT). Requires 2+ dimensions on independent branches and no measures.",
       "default": false
+    },
+    "grouping": {
+      "type": "string",
+      "description": "Hierarchical grouping modifier. 'rollup' emits GROUP BY ROLLUP(...) for hierarchical subtotals + grand total. 'cube' emits GROUP BY CUBE(...) for the full cross-tab. Adds one GROUPING(dim) AS _g_<dim> column per selected dimension so callers can distinguish subtotal/grand-total rows. v2.4.0+.",
+      "enum": ["rollup", "cube"]
     }
   },
   "required": ["select"],

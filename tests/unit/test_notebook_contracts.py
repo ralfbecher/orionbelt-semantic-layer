@@ -166,6 +166,30 @@ def test_notebook_setup_module_imports_cleanly() -> None:
     assert callable(getattr(mod, "api", None)), "api() helper missing"
 
 
+def test_colab_install_cell_is_idempotent() -> None:
+    """The Colab install cell must check what's already importable
+    before running pip install (issue #87). Pre-fix used
+    ``pip install -q ...`` unconditionally — that swallowed real
+    errors AND conflicted with CI's pre-installed working tree,
+    failing every PR run of the notebook smoke workflow.
+    """
+    path = _ROOT / "examples" / "quickstart_colab.ipynb"
+    if not path.exists():
+        pytest.skip(f"{path} not present")
+    text = _file_text(path)
+    assert "find_spec" in text, (
+        "Colab install cell must check ``importlib.util.find_spec`` before "
+        "running pip install — otherwise CI's pre-installed working tree "
+        "collides with the published PyPI version. See #87."
+    )
+    # ``pip install -q`` swallows real errors; banned in shipped notebooks.
+    assert 'pip", "install", "-q"' not in text, (
+        "Colab install cell must not use ``pip install -q`` — real pip "
+        "errors cascade into NameErrors on subsequent cells and waste a "
+        "user's first 10 minutes. See #87."
+    )
+
+
 def test_notebook_setup_uses_model_files_env() -> None:
     """``start_api`` must set ``MODEL_FILES`` (not the removed
     ``MODEL_FILE``) so the API enters admin-curated mode and shortcut

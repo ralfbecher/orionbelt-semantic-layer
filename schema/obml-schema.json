@@ -118,16 +118,12 @@
       "enum": ["string", "json", "int", "float", "date", "time", "time_tz", "timestamp", "timestamp_tz", "boolean"]
     },
     "timeGrain": {
-      "description": "used to trunc the a date value to aggregate along a date hierarchy",
+      "description": "Used to truncate a date value to aggregate along a date hierarchy. Must match the TimeGrain enum in models/semantic.py (#85).",
       "enum": [
         "year",
-        "year-end",
         "quarter",
-        "quarter-end",
         "month",
-        "month-end",
         "week",
-        "week-end",
         "day",
         "hour",
         "minute",
@@ -511,14 +507,6 @@
         "format": {
           "type": "string"
         },
-        "group": {
-          "type": "array",
-          "description": "used in case of a dimension group, list of fields",
-          "items": {
-            "$ref": "#/definitions/queryColumn"
-          },
-          "minItems": 2
-        },
         "via": {
           "type": "string",
           "description": "Intermediate data object name. Forces the join path through this data object to reach the dimension's dataObject. Used for role-playing dimensions (e.g., SalesEmployee vs ReturnEmployee)."
@@ -670,10 +658,6 @@
         "allowFanOut": {
           "type": "boolean",
           "description": "allow fan out for this measure, only applicable if measures can't reach dimensions but dimensions can reach measures for a specific grain"
-        },
-        "reduceToRelationDimensionality": {
-          "type": "boolean",
-          "description": "reduce to relation dimensionality, only applicable `AllowFanOut` is true and if measures can't reach dimensions but dimensions can reach measures for a specific grain"
         },
         "total": {
           "type": "boolean",
@@ -1225,9 +1209,9 @@
       "type": "array",
       "description": "Vendor-keyed extension data at model level",
       "items": { "$ref": "#/definitions/customExtension" }
-    },
-    "additionalProperties": false
+    }
   },
+  "additionalProperties": false,
   "required": ["version"],
   "allOf": [
     {
