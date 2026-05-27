@@ -2,6 +2,28 @@
 
 All notable changes to OrionBelt Semantic Layer are documented here.
 
+## [2.7.9] - 2026-05-27
+
+### Fixed
+
+- **Colab notebook still broken on v2.7.8: `/v1/query/execute` returned `HTTP 503: ob-flight-extension package is not installed`** on every query cell. v2.7.8 dropped ob-flight-extension from the notebook's `_REQUIRED` map on the assumption the quickstart only queries via REST and never opens a Flight SQL connection. That assumption was wrong: `src/orionbelt/service/db_executor.py` imports `ob_flight.db_router.get_credentials` unconditionally for credential lookup on every dialect, including DuckDB. v2.7.8 unbroke API startup but moved the failure two cells later. Restored `ob-flight-extension` to the `_REQUIRED` map; PyPI now has 2.6.1 (published during the v2.7.8 cycle) with the `cache=` kwarg the API expects, so the install resolves cleanly. v2.7.8's `except TypeError` guard in the lifespan stays as forward-compat insurance.
+
+### Tooling
+
+- **Notebook smoke workflow had been masking Colab regressions.** The existing job ran inside `uv sync --all-extras` which always installs every `drivers/*` package as a workspace member; the test environment had `ob-flight-extension==2.6.1` from local source even when PyPI was at 2.1.0. My v2.7.8 verification missed cell-level errors because the wrapper script crashed before printing PASS/FAIL and I read the bg task's exit code as success. Added a second workflow job `notebook-pypi-equivalent` that builds the OBSL wheel from PR source, installs it + side packages **strictly from PyPI** into a plain `python -m venv` (no uv, no workspace), executes the notebook end-to-end, and asserts every code cell ran cleanly (mermaid.ink transient 503s are filtered as the only allowed exception). The workflow now also triggers on `src/orionbelt/**` and `pyproject.toml` changes - both v2.7.7 and v2.7.8 shipped Colab regressions through `src/` changes that the path-pinned trigger missed.
+
+### Background (this is the 5th release touching notebook bugs)
+
+The drift was real and the root cause was incomplete test coverage:
+
+| Release | Notebook fix | What it missed |
+|---|---|---|
+| v2.7.5 | Added notebook smoke workflow with xfail | Workflow ran in uv workspace, mirrored Colab poorly |
+| v2.7.6 | #87 (install cell idempotent), #88 (show_yaml typo), #89 (UI fallback) | Workflow still in workspace; Colab still broken upstream |
+| v2.7.7 | #94 (uv-venv-no-pip), #91 / #92 / #94 bundle | Workflow finally green; Colab `pip install ob-flight-extension` resolves stale PyPI 2.1.0, TypeError on lifespan |
+| v2.7.8 | #96 (drop ob-flight from notebook + catch TypeError) | Lifespan no longer crashes, but db_executor still requires ob_flight -> HTTP 503 on every execute |
+| **v2.7.9** | Restore ob-flight (now that PyPI has 2.6.1) + add clean-venv workflow job | Real gate against the regressions above |
+
 ## [2.7.8] - 2026-05-27
 
 ### Fixed
