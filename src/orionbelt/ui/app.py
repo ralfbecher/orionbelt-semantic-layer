@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import time
 from typing import Any
 
 import gradio as gr
@@ -1384,11 +1385,16 @@ def _load_example_model() -> str:
 
 
 _cached_dialects: dict[str, list[str]] = {}
-_cached_settings: dict[str, dict[str, Any]] = {}
 
 
 def _fetch_dialects(api_url: str) -> list[str]:
-    """Fetch dialect names from the API, falling back to hardcoded list (cached)."""
+    """Fetch dialect names from the API, falling back to hardcoded list (cached).
+
+    Cached because the dialect list genuinely never changes per
+    deployment — unlike settings (which carries the loaded model_yaml,
+    where caching a failure used to lock the UI into the bundled
+    fallback — issue #89).
+    """
     url = api_url.rstrip("/")
     if url in _cached_dialects:
         return _cached_dialects[url]
@@ -1405,18 +1411,38 @@ def _fetch_dialects(api_url: str) -> list[str]:
 
 
 def _fetch_settings(api_url: str) -> dict[str, Any]:
-    """Fetch public settings from the API. Returns empty dict on failure (cached)."""
+    """Fetch public settings from the API. Retries on transient failure.
+
+    Returns ``{"_unreachable": True}`` when every retry fails — callers
+    use that flag to distinguish *"API is in self-service mode"* (empty
+    settings is legitimate) from *"API is unreachable"* (we shouldn't
+    fall back to a stale bundled starter, that's the issue #89 bug).
+
+    Not cached: pre-v2.7.6 a single transient failure (Cloud Run cold
+    start exceeding the 5-second client timeout) wrote ``{}`` to the
+    cache, sticking forever and silently swapping the deployed model
+    out for ``examples/sem-layer.obml.yml``. The session-wide model
+    fetch happens once at UI startup; the cache served no real purpose.
+    """
     url = api_url.rstrip("/")
-    if url in _cached_settings:
-        return _cached_settings[url]
-    try:
-        resp = httpx.get(f"{url}/v1/settings", timeout=5, headers=_API_HEADERS)
-        resp.raise_for_status()
-        result: dict[str, Any] = resp.json()
-    except Exception:
-        result = {}
-    _cached_settings[url] = result
-    return result
+    last_exc: Exception | None = None
+    # 3-attempt retry with simple backoff covers Cloud Run cold-start
+    # (typically 3-5s warm-up) without holding the UI hostage.
+    for delay in (0, 1.5, 3.0):
+        if delay:
+            time.sleep(delay)
+        try:
+            resp = httpx.get(f"{url}/v1/settings", timeout=5, headers=_API_HEADERS)
+            resp.raise_for_status()
+            payload: dict[str, Any] = resp.json()
+            return payload
+        except Exception as exc:
+            last_exc = exc
+            continue
+    return {
+        "_unreachable": True,
+        "_error": f"{type(last_exc).__name__}: {last_exc}" if last_exc else "unknown",
+    }
 
 
 def _ensure_session_and_model(
@@ -2216,9 +2242,29 @@ def create_blocks(
         default_dialect = "postgres"
     single_model = api_settings.get("single_model_mode", False)
     query_exec_enabled = api_settings.get("query_execute", False)
+    api_unreachable = bool(api_settings.get("_unreachable"))
+    # Pre-v2.7.6 (issue #89): an empty ``api_settings`` (from a cached
+    # transient fetch failure) collapsed into self-service mode and
+    # silently loaded the bundled ``sem-layer.obml.yml`` over whatever
+    # the API actually had. Now we distinguish three real cases:
+    #
+    # * single-model API reached → use ``model_yaml`` (the deployed model)
+    # * API unreachable          → surface "API unreachable" + placeholder;
+    #                              never swap in the bundled starter
+    # * self-service API reached → load the bundled starter as the
+    #                              authoring template (legitimate use)
     if single_model and api_settings.get("model_yaml"):
         example_model = api_settings["model_yaml"]
+    elif api_unreachable:
+        err = api_settings.get("_error", "unknown error")
+        example_model = (
+            f"# API unreachable at {api_base} ({err}).\n"
+            "# Refresh this page once the API is healthy — the model\n"
+            "# loaded into the API will appear here automatically.\n"
+        )
     else:
+        # Genuine self-service mode (API up, no MODEL_FILES set) —
+        # seed the editor with a starter template.
         example_model = _load_example_model()
 
     with gr.Blocks(
@@ -2595,7 +2641,9 @@ def create_blocks(
             ) -> tuple[object, object, object]:
                 import gradio as gr
 
-                _cached_settings.pop(api_url_val.rstrip("/"), None)
+                # _cached_settings was removed in v2.7.6 (#89); the
+                # cache-bust call here is now a no-op since every call
+                # to _fetch_settings already hits the API.
                 s = _fetch_settings(api_url_val)
                 enabled = s.get("query_execute", False)
                 effective = (s.get("dialect") or {}).get("effective")

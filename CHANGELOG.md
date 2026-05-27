@@ -2,6 +2,21 @@
 
 All notable changes to OrionBelt Semantic Layer are documented here.
 
+## [2.7.6] - 2026-05-27
+
+### Fixed
+
+- **`notebook_setup.show_yaml()` raised `TypeError` on every call** ([#88](https://github.com/ralfbecher/orionbelt-semantic-layer/issues/88)). The `_IndentedDumper.increase_indent` override misnamed its parameter `_indentless`; PyYAML calls with `indentless=`. One-character fix. Bug had been in `examples/notebook_setup.py` since April; v2.7.5's contract tests only verified the module imported cleanly. Now `tests/unit/test_notebook_setup_helpers.py` calls every public display helper against synthetic inputs.
+- **UI silently fell back to bundled YAML on transient `/v1/settings` failure** ([#89](https://github.com/ralfbecher/orionbelt-semantic-layer/issues/89)). A single Cloud Run cold-start timeout cached an empty settings dict (`_cached_settings[url] = {}`), then silently loaded `examples/sem-layer.obml.yml` instead of the deployed model. Users saw a different YAML than what `/v1/settings` returned. Fix: kill the cache, retry with backoff, distinguish *"API unreachable"* from *"API in self-service mode"* via a `_unreachable` flag so the startup branch shows a placeholder instead of swapping models. 5 new tests.
+- **Colab notebook smoke workflow failed on every PR** ([#87](https://github.com/ralfbecher/orionbelt-semantic-layer/issues/87)). Notebook's `pip install -q` masked a conflict between CI's `uv sync` pre-installed working tree and the PyPI install. Fix: install cell is now idempotent (`importlib.util.find_spec` check), never `-q`; CI workflow pre-installs working tree so the check sees `orionbelt` already importable and skips pip.
+- **JSON Schemas drifted from the Pydantic models** ([#85](https://github.com/ralfbecher/orionbelt-semantic-layer/issues/85)). Four bugs: root `additionalProperties: false` nested inside `properties` (no-op); `timeGrain` enum advertised `year-end`/`month-end` that Python rejects; removed `dimension.group` and `measure.reduceToRelationDimensionality` still listed; `query-schema.json` missing the `grouping` property. All fixed. 8 contract tests round-trip valid / invalid payloads through both validators.
+- **RDF exporter silently dropped v2.7.5 fields** ([#84](https://github.com/ralfbecher/orionbelt-semantic-layer/issues/84)). `CustomExtension` / `ModelExample` / `WithinGroup` classes plus `numClass` / `delimiter` / `hasWithinGroup` / `hasCustomExtension` / `hasExample` and related properties shipped in the ontology in v2.7.5 but the exporter never emitted them. Authors who put `customExtensions:` or `examples:` in their model saw them vanish on export. Fix: exporter emits every new field; new bidirectional drift guard (`tests/unit/test_exporter_drift.py`) asserts every authored field shows up in the exported graph.
+
+### Added
+
+- **4 new test files** covering the bugs above, written in the spirit of the v2.7.5 review: `test_notebook_setup_helpers.py` (runtime smoke for display helpers), `test_ui_settings_fetch.py` (retry + no-cache + unreachable-marker), `test_json_schema_contract.py` (bidirectional Pydantic ↔ JSON Schema), `test_exporter_drift.py` (model → exported RDF).
+- **`ontology/spec.md` refresh** — spec now lists window metrics, `partitionBy`, refresh policies, role-playing `via`, LISTAGG `delimiter`/`withinGroup`, `ModelExample`, `CustomExtension`, `numClass`, `primaryKey`. Brought back in sync with the actual ontology surface.
+
 ## [2.7.5] - 2026-05-26
 
 ### Fixed
