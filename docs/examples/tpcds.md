@@ -1,3 +1,7 @@
+---
+description: "TPC-DS benchmark example: OBML models of store sales and store returns demonstrate star schema and CFL multi-fact planning, executed on DuckDB."
+---
+
 # TPC-DS Benchmark
 
 This example shows how to model a subset of the [TPC-DS](https://www.tpc.org/tpcds/) benchmark — an industry-standard decision support benchmark — using OrionBelt's OBML format.

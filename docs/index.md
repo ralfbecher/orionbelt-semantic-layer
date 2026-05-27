@@ -1,3 +1,7 @@
+---
+description: OrionBelt Semantic Layer is an open-source Semantic Sidecar for agentic AI, analytics, data quality, and governance. YAML models compile to SQL across 8 dialects, exposed via REST, MCP, Arrow Flight SQL, and Postgres wire.
+---
+
 <p align="center">
   <img src="assets/ORIONBELT_Logo.png" alt="OrionBelt Logo" width="400">
 </p>

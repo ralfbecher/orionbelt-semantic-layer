@@ -1,3 +1,7 @@
+---
+description: "REST API overview for OrionBelt Semantic Layer: FastAPI endpoints for sessions, model management, validation, query compilation, and query execution across 8 SQL dialects."
+---
+
 # API Overview
 
 OrionBelt exposes a REST API — FastAPI-powered HTTP endpoints for session-based model management, validation, query compilation, and query execution.

@@ -1,3 +1,7 @@
+---
+description: "OBSQL is OrionBelt's BI-style SQL surface: SELECT dimensions and measures from per-model virtual tables, translated to a QueryObject and compiled through the standard pipeline."
+---
+
 # OrionBelt Semantic QL (OBSQL)
 
 **Semantic QL** is OrionBelt's natural SQL surface — BI-style SQL written

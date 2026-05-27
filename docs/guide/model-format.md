@@ -1,3 +1,7 @@
+---
+description: "OBML reference for OrionBelt Semantic Layer: YAML format for defining data objects, dimensions, measures, metrics, joins, and filters that compile to analytical SQL."
+---
+
 # OrionBelt ML (OBML) Model Format
 
 OrionBelt ML (OBML) is the YAML-based format for defining semantic models in OrionBelt. A model describes your data warehouse tables (data objects), business dimensions, aggregate measures, and composite metrics.

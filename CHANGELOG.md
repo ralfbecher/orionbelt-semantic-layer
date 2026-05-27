@@ -2,6 +2,25 @@
 
 All notable changes to OrionBelt Semantic Layer are documented here.
 
+## [2.7.7] - 2026-05-27
+
+### Added
+
+- **`GROUP BY ALL` on supporting dialects** ([#91](https://github.com/ralfbecher/orionbelt-semantic-layer/issues/91)). New `DialectCapabilities.supports_group_by_all` flag, advertised via `GET /v1/dialects`. Snowflake (2022+), Databricks/Spark (3.4+), DuckDB (0.7+), BigQuery, and ClickHouse (22.6+) now emit `GROUP BY ALL` instead of the explicit column list when no `ROLLUP` / `CUBE` modifier is requested. Functionally equivalent, much shorter on queries with computed dimensions where the explicit form repeats the full expression (e.g. `GROUP BY date_trunc('year', "Sales"."salesdate"), date_trunc('month', "Sales"."salesdate")` collapses to `GROUP BY ALL`). Postgres, MySQL, and Dremio unchanged. ClickHouse retains its trailing `WITH ROLLUP` / `WITH CUBE` form for modifier paths; delegates plain GROUP BY to the base implementation so the capability flag applies uniformly. 27 new tests in `tests/unit/test_group_by_all.py` (per-dialect emission, ROLLUP / CUBE fallback, measure-only no-GROUP-BY guard); 35 drift snapshots regenerated; `docs/guide/dialects.md` capability matrix updated; live-verified against Snowflake, BigQuery, Databricks, ClickHouse.
+- **`aggregation: measure` for engine-delegated resolution** ([#92](https://github.com/ralfbecher/orionbelt-semantic-layer/issues/92)). New `AggregationType.MEASURE` enum value (with `agg` / `aggregate` accepted as aliases via the normalizing validator). When set, the compiler emits `MEASURE("<measure_label>")` literally and skips column-reference resolution; the engine resolves the aggregation by name via its metric-view machinery. Only Databricks Metric Views accept this. The other 7 dialects (including Snowflake, which uses the separate `SEMANTIC_VIEW(view DIMENSIONS d METRICS m)` table function instead of bare `MEASURE()`) raise `UnsupportedAggregationError` → HTTP 422 with the `aggregation` and `dialect` echoed in the response. Model validator forbids `columns:`, `expression:`, `filters:`, `total: true` on a delegated measure (no source column to read). 22 codegen + validation tests in `tests/unit/test_aggregation_measure.py`; 5 OSI roundtrip tests. OBML signal propagated to `obml_reference.py` aggregation list + dialect matrix, `schema/obml-schema.json` enum, `ontology/obsl.ttl` + `obsl.shacl.ttl`, and the `osi_obml_converter.py` roundtrip (via `obml_aggregation: measure` under the COMMON custom_extension).
+
+### Fixed
+
+- **Colab notebook smoke workflow failed inside uv-managed venv** ([#94](https://github.com/ralfbecher/orionbelt-semantic-layer/issues/94)). Two compounding bugs surfaced by the v2.7.6 notebook workflow run. (1) The install cell's `_REQUIRED` map mapped `ob_flight_extension` as the import name, but the actual module shipped by the distribution is `ob_flight`; `find_spec` always returned `None` on CI, forcing the pip fallback path. (2) uv-managed venvs do not include pip by default, so the fallback died with `No module named pip` and cascaded into `NameError` on every subsequent cell. Fixed the `_REQUIRED` map (`"ob_flight": "ob-flight-extension"`) and added `uv pip install pip` to `.github/workflows/notebook.yml` as a backstop. 2 new contract tests in `tests/unit/test_notebook_contracts.py` lock both fixes in place.
+
+### Docs
+
+- **SEO `description:` frontmatter** added to top-level MkDocs pages (`docs/index.md`, `docs/api/overview.md`, `docs/comparison/index.md`, `docs/getting-started/installation.md`, `docs/getting-started/quickstart.md`, `docs/guide/model-format.md`, `docs/guide/query-language.md`, `docs/guide/semantic-ql.md`, `docs/examples/sales-model.md`, `docs/examples/tpcds.md`). Improves Google snippet quality on the published site.
+
+### Tooling
+
+- **Live-DB sweep on PR #95**: Snowflake (12/12, 17s), BigQuery (12/12, 64s), Databricks (12/12, 103s), ClickHouse via testcontainer (12/12, 8s). `GROUP BY ALL` accepted natively by every supporting dialect — no SQL rewriting needed.
+
 ## [2.7.6] - 2026-05-27
 
 ### Fixed

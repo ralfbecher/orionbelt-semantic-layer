@@ -1,3 +1,7 @@
+---
+description: End-to-end OBML example for a sales analytics model with customers, products, and orders. Walks through dimensions, measures, metrics, joins, and compiled SQL.
+---
+
 # Sales Model Walkthrough
 
 This example walks through a complete semantic model for a sales analytics use case with customers, products, and orders.
