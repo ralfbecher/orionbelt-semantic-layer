@@ -1,3 +1,7 @@
+---
+description: Install OrionBelt Semantic Layer with uv or pip. Covers Python 3.12+ prerequisites, optional database driver extras, and verifying the REST API and UI.
+---
+
 # Installation
 
 ## Prerequisites

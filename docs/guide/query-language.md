@@ -1,3 +1,7 @@
+---
+description: "OrionBelt's structured QueryObject: select dimensions and measures by business name, apply WHERE and HAVING filters, sort, limit, and override join paths."
+---
+
 # Query Language
 
 OrionBelt uses a structured query object to express analytical queries against a semantic model. The query language selects dimensions and measures, applies filters, sorts results, and limits output — all using business names rather than raw SQL.

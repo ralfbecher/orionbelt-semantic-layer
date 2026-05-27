@@ -1,3 +1,7 @@
+---
+description: Honest, two-sided comparisons of OrionBelt Semantic Layer (OBSL) against dbt Semantic Layer, Malloy, LookML, Cube, and AtScale, including gap analyses in both directions.
+---
+
 # Comparison with Other Semantic Layers
 
 How OrionBelt Semantic Layer (OBSL) stacks up against the leading semantic layer / metrics tools. These pages are honest, two-sided comparisons including gap analyses in both directions — useful when evaluating which tool fits your stack.
