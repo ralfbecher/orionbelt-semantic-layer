@@ -8,6 +8,26 @@ name: Colab notebook smoke
 # tests/unit/test_notebook_contracts.py run in the default CI suite for
 # every PR; this workflow adds the heavier execution-level check only
 # when the notebook is actually touched (keeps default CI fast).
+#
+# Two jobs run in parallel:
+#
+#   1. notebook-workspace: the original gate. Uses ``uv sync --all-extras
+#      --all-groups`` which installs every drivers/* package from the
+#      local workspace. This tests the PR's code against the local
+#      ob-flight-extension etc. Validates that the notebook works with
+#      the dev source tree.
+#
+#   2. notebook-pypi-equivalent: the colab-equivalent gate. Builds the
+#      OBSL wheel from the PR's source, then installs it + the side
+#      packages STRICTLY FROM PYPI into a plain ``python -m venv`` (no
+#      uv workspace, no editable workspace members). Then executes the
+#      published notebook end-to-end and asserts every code cell ran
+#      cleanly. This is what a real Colab user sees, and it is the only
+#      gate that would have caught the v2.7.7 / v2.7.8 regressions:
+#      v2.7.7 shipped a kwarg mismatch (call site v2.4.0+, PyPI 2.1.0),
+#      v2.7.8 shipped without ob-flight in _REQUIRED but the execute
+#      path depended on it anyway. Both regressions hid behind the
+#      workspace job because uv re-installed the local 2.6.1 there.
 
 on:
   pull_request:
@@ -16,9 +36,16 @@ on:
       - "examples/quickstart_colab.ipynb"
       - "examples/notebook_setup.py"
       - "examples/tpch.obml.yml"
-      # If the workflow itself changes, also re-run so the change can
-      # be verified in the PR that introduces it.
+      # Re-run when the workflow itself changes so the change can be
+      # verified in the PR that introduces it.
       - ".github/workflows/notebook.yml"
+      # The PyPI-equivalent job validates that any change to src/ that
+      # would break a Colab user is caught here. Pinning to API-startup
+      # paths only would miss issues like the v2.7.8 execute regression
+      # where /v1/query/execute (in src/orionbelt/service/) silently
+      # required a package the notebook had stopped installing.
+      - "src/orionbelt/**"
+      - "pyproject.toml"
   push:
     branches: [main]
     paths:
@@ -30,8 +57,9 @@ permissions:
   contents: read
 
 jobs:
-  notebook-exec:
-    name: Execute Colab notebook headlessly
+
+  notebook-workspace:
+    name: Notebook smoke (uv workspace - dev source)
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -46,27 +74,139 @@ jobs:
         run: uv python install 3.12
 
       - name: Install dependencies + notebook execution stack
-        # ``uv sync`` installs the PR's working tree as ``orionbelt-
-        # semantic-layer`` (editable) — the notebook's idempotent
-        # install cell (#87) will see it's already importable and
-        # skip the pip install entirely, so the test exercises the
-        # PR's code rather than whatever's currently on PyPI.
-        # Side packages (ob-driver-core, ob-duckdb, ob-flight-extension)
-        # come from PyPI since they live in separate repos — that's
-        # fine, the published versions track stable releases.
+        # ``uv sync`` installs every workspace member from drivers/*,
+        # so ob-flight-extension etc. come from the local 2.6.1 source.
+        # This job tests the notebook against the PR's full source tree.
         run: |
           uv sync --all-extras --all-groups
-          # uv-managed venvs do not include pip by default. The Colab
-          # notebook's install cell falls back to ``sys.executable -m
-          # pip install`` if any required module is missing — install
-          # pip here so that fallback path runs cleanly on CI instead
-          # of dying with ``No module named pip`` (issue #94).
+          # uv-managed venvs do not include pip by default (issue #94).
           uv pip install pip
           uv pip install nbclient nbformat ipykernel \
                          ob-driver-core ob-duckdb ob-flight-extension \
                          duckdb pyarrow pygments sqlparse
 
-      - name: Execute Colab quickstart end-to-end
-        # Single explicit test under the ``notebook`` marker; fails
-        # loudly if any cell of the published Colab raises.
+      - name: Execute Colab quickstart end-to-end (workspace)
         run: uv run pytest -m notebook -v --tb=short
+
+  notebook-pypi-equivalent:
+    name: Notebook smoke (clean venv + PyPI deps - real Colab path)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # The whole point of this job is to mirror what Colab does:
+      # plain ``python -m venv`` (no uv, no workspace), build the OBSL
+      # wheel from the PR's source, install side packages from PyPI
+      # (not the local drivers/* checkouts). If we used uv sync here
+      # we would mask the same class of regression that v2.7.7 and
+      # v2.7.8 both shipped.
+      - name: Create clean venv (no uv, no workspace)
+        run: |
+          python -m venv /tmp/colab-venv
+          /tmp/colab-venv/bin/pip install --upgrade pip
+
+      - name: Install build tools
+        run: |
+          /tmp/colab-venv/bin/pip install build
+
+      - name: Build OBSL wheel from PR source
+        run: |
+          /tmp/colab-venv/bin/python -m build --wheel --outdir /tmp/wheels .
+
+      - name: Install OBSL wheel + Colab notebook deps from PyPI
+        # Mirror exactly what examples/quickstart_colab.ipynb installs.
+        # Pull ob-driver-core / ob-duckdb / ob-flight-extension from
+        # PyPI (NOT the local drivers/* paths) so any contract drift
+        # between OBSL and the published side packages surfaces here.
+        run: |
+          /tmp/colab-venv/bin/pip install /tmp/wheels/orionbelt_semantic_layer-*.whl
+          /tmp/colab-venv/bin/pip install \
+                ob-flight-extension ob-driver-core ob-duckdb \
+                duckdb pyarrow pygments sqlparse pyyaml \
+                nbclient nbformat ipykernel
+
+      - name: Confirm clean-venv state matches Colab
+        # Sanity check: every package must come from PyPI, not a local
+        # editable workspace install. ``pip show`` should not report
+        # "Editable project location" for any of these.
+        run: |
+          for pkg in orionbelt-semantic-layer ob-flight-extension \
+                    ob-driver-core ob-duckdb; do
+            echo "=== $pkg ==="
+            /tmp/colab-venv/bin/pip show "$pkg" | head -3
+            if /tmp/colab-venv/bin/pip show "$pkg" | grep -q "Editable project location"; then
+              echo "FAIL: $pkg is installed editably; this job must use plain PyPI installs"
+              exit 1
+            fi
+          done
+
+      - name: Execute notebook end-to-end and assert every cell passes
+        # nbclient runs the notebook with allow_errors=True so we can
+        # collect every failing cell rather than stopping at the first.
+        # We then assert zero cell errors and PRINT the assert payload
+        # if it fires so the GH Actions log carries the cell number,
+        # ename, evalue, and traceback tail.
+        run: |
+          /tmp/colab-venv/bin/python - <<'PYEOF'
+          import json, sys
+          from pathlib import Path
+          import nbformat, nbclient
+
+          notebook_path = Path("examples/quickstart_colab.ipynb")
+          nb = nbformat.read(str(notebook_path), as_version=4)
+          client = nbclient.NotebookClient(
+              nb,
+              timeout=600,
+              kernel_name="python3",
+              # Colab uses a fresh working directory; mirror that.
+              resources={"metadata": {"path": "/tmp"}},
+              allow_errors=True,
+          )
+          client.execute()
+
+          code_cells = [c for c in nb.cells if c.get("cell_type") == "code"]
+          fails = []
+          for idx, cell in enumerate(nb.cells):
+              if cell.get("cell_type") != "code":
+                  continue
+              for out in cell.get("outputs", []):
+                  if out.get("output_type") == "error":
+                      tb = "\n".join(out.get("traceback", []))
+                      fails.append({
+                          "cell": idx,
+                          "ename": out.get("ename"),
+                          "evalue": out.get("evalue"),
+                          "traceback_tail": tb[-1500:],
+                      })
+                      break
+
+          if fails:
+              # Mermaid.ink is the only external dependency the notebook
+              # uses and is occasionally flaky (transient 503). All
+              # other cell failures are real regressions and must fail
+              # the workflow.
+              non_mermaid = [
+                  f for f in fails
+                  if "mermaid.ink" not in f["traceback_tail"]
+                  and "show_mermaid" not in f["traceback_tail"]
+              ]
+              print(f"\n{'='*70}")
+              print(f"NOTEBOOK EXEC RESULT: {len(fails)} cell(s) errored out of {len(code_cells)}")
+              print(f"  (non-mermaid failures: {len(non_mermaid)})")
+              print('='*70)
+              for f in fails:
+                  print(f"\n--- cell #{f['cell']}: {f['ename']}: {f['evalue']}")
+                  print(f["traceback_tail"])
+              if non_mermaid:
+                  print(f"\nFAIL: {len(non_mermaid)} non-mermaid cell error(s) - notebook regression.")
+                  sys.exit(1)
+              print(f"\nPASS: all real failures are transient mermaid.ink calls; notebook is OK")
+          else:
+              print(f"PASS: all {len(code_cells)} code cells executed cleanly")
+          PYEOF

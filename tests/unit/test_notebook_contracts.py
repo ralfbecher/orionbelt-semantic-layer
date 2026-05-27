@@ -190,38 +190,41 @@ def test_colab_install_cell_is_idempotent() -> None:
     )
 
 
-def test_colab_required_map_excludes_ob_flight() -> None:
-    """The Colab install cell's ``_REQUIRED`` map must NOT include
-    ob-flight-extension. The Colab quickstart only queries via the REST
-    API; it never opens a Flight SQL connection. Including it forces
-    every Colab run to ``pip install ob-flight-extension``, which has
-    historically pulled a PyPI version that lags behind OBSL's call
-    site and crashes the API lifespan with a kwarg-mismatch TypeError
-    (issue #96 in v2.7.7 - PyPI 2.1.0 lacks the ``cache=`` kwarg
-    OBSL has passed since v2.4.0). With ob-flight-extension absent the
-    lifespan's ``find_spec("ob_flight")`` check returns False and
-    Flight startup is correctly skipped.
+def test_colab_required_map_includes_ob_flight() -> None:
+    """The Colab install cell's ``_REQUIRED`` map MUST include
+    ob-flight-extension. v2.7.8 wrongly removed it on the assumption
+    that the notebook only queries via REST, but
+    ``src/orionbelt/service/db_executor.py`` imports
+    ``ob_flight.db_router.get_credentials`` unconditionally for every
+    dialect - including DuckDB. Without ob-flight installed, every
+    call to ``/v1/query/execute`` returns HTTP 503 "ob-flight-extension
+    package is not installed".
 
-    The earlier import-name fix from #94 (``ob_flight`` not
-    ``ob_flight_extension``) still applies to any other notebook or
-    integration that does need Flight SQL - it's just out of scope for
-    the published Colab quickstart.
+    v2.7.9 restores it. PyPI now has ob-flight-extension 2.6.1 with
+    the ``cache=`` kwarg the API expects (we published 2.6.1 in the
+    v2.7.8 release cycle), so the install resolves cleanly.
+
+    Must use the IMPORT name ``ob_flight`` (not the distribution name
+    ``ob_flight_extension``) so ``find_spec`` resolves correctly (#94).
     """
     path = _ROOT / "examples" / "quickstart_colab.ipynb"
     if not path.exists():
         pytest.skip(f"{path} not present")
     text = _file_text(path)
-    assert '"ob_flight":' not in text, (
-        "_REQUIRED map must not pin ob-flight-extension - the Colab "
-        "quickstart doesn't use Flight SQL and the PyPI version has "
-        "lagged OBSL's API. See #96."
+    assert '"ob_flight":' in text, (
+        "_REQUIRED map must pin ob-flight-extension via its IMPORT "
+        "name ``ob_flight``. v2.7.8 removed it but the execute path "
+        "in db_executor.py requires it for credential routing - every "
+        "/v1/query/execute call returned HTTP 503 on Colab. See v2.7.9."
+    )
+    assert '"ob_flight": "ob-flight-extension"' in text, (
+        "_REQUIRED entry must map ``ob_flight`` -> "
+        "``ob-flight-extension`` (the distribution name on PyPI)."
     )
     assert '"ob_flight_extension":' not in text, (
-        "_REQUIRED map must not pin ob-flight-extension under any spelling. See #96."
-    )
-    assert "ob-flight-extension" not in text or "intentionally NOT" in text, (
-        "Any reference to ob-flight-extension in the notebook must be "
-        "a comment explaining why it is intentionally excluded. See #96."
+        "_REQUIRED must not pin ob-flight-extension under the wrong "
+        "key ``ob_flight_extension`` (the distribution name) - "
+        "find_spec would always miss. See #94."
     )
 
 
