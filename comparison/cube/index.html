@@ -2842,7 +2842,7 @@
 <h3 id="35-caching-different-goals-different-shapes">3.5 Caching: different goals, different shapes<a class="headerlink" href="#35-caching-different-goals-different-shapes" title="Permanent link">&para;</a></h3>
 <p>Both projects have caching, but they're solving adjacent problems with different primitives.</p>
 <p><strong>Cube</strong> has a tiered caching architecture aimed at high-throughput dashboard serving: in-memory query cache, optional Redis, and <strong>Cube Store</strong> (its purpose-built rollup store backing pre-aggregations). TTL is configured on each cube/measure as a refresh-key SQL or interval — the model author decides when entries are stale, and Cube's scheduler refreshes pre-aggs in the background. This is built for embedded-analytics workloads serving thousands of requests per second.</p>
-<p><strong>OBSL</strong> has a <strong>freshness-driven result cache</strong> (<code>CACHE_BACKEND=file</code>, off by default). The structural difference is where the freshness contract lives:</p>
+<p><strong>OBSL</strong> has a <strong>result cache based on freshness inheritance</strong> (<code>CACHE_BACKEND=file</code>, off by default). The structural difference is where the freshness contract lives:</p>
 <ul>
 <li><strong>Cube</strong>: TTL is attached to the <em>abstraction</em> (cube / pre-agg / measure). Two cubes reading the same physical table each declare their own TTL — and they can drift.</li>
 <li><strong>OBSL</strong>: TTL is derived from the <code>refresh:</code> contract on each touched physical <code>dataObject</code>. The minimum contribution wins. Two <code>dataObject</code> entries on the same warehouse table inherit the same contract automatically. One ETL <code>POST /v1/heartbeat</code> invalidates every cached query that depends on the refreshed table — across every dataObject and every session, in one call.</li>
@@ -3190,7 +3190,7 @@
 </tr>
 </tbody>
 </table>
-<p>For a small embedded-analytics use case OBSL is operationally simpler. For high-throughput multi-tenant production with heavy caching across replicas, Cube's architecture is purpose-built and Cube Cloud provides the managed experience. OBSL's freshness-driven file cache (v2.2.0) covers single-replica result-caching workloads — agents, dev/staging, modest production — without standing up Redis or a rollup store.</p>
+<p>For a small embedded-analytics use case OBSL is operationally simpler. For high-throughput multi-tenant production with heavy caching across replicas, Cube's architecture is purpose-built and Cube Cloud provides the managed experience. OBSL's file cache based on freshness inheritance (v2.2.0) covers single-replica result-caching workloads — agents, dev/staging, modest production — without standing up Redis or a rollup store.</p>
 <hr />
 <h2 id="10-other-distinctives">10. Other distinctives<a class="headerlink" href="#10-other-distinctives" title="Permanent link">&para;</a></h2>
 <table>
@@ -3331,7 +3331,7 @@
 <li>Your consumers are <strong>agents/LLMs</strong> primarily — both projects expose MCP, but OBSL's smaller surface is easier to point an agent at without query-shape ambiguity.</li>
 </ul>
 <h3 id="they-could-coexist">They could coexist<a class="headerlink" href="#they-could-coexist" title="Permanent link">&para;</a></h3>
-<p>A workable hybrid: use Cube as the production query gateway with pre-aggregations and a SQL API for BI tools, and OBSL as a complementary modeling/governance surface (RDF graph, OSI export, richer topology modeling, freshness-driven result cache for agent workloads) that you can keep authoritative and mirror into Cube definitions. Two semantic surfaces is operationally heavier, but it's defensible if you need both Cube's pre-aggs and OBSL's modeling primitives.</p>
+<p>A workable hybrid: use Cube as the production query gateway with pre-aggregations and a SQL API for BI tools, and OBSL as a complementary modeling/governance surface (RDF graph, OSI export, richer topology modeling, result cache based on freshness inheritance for agent workloads) that you can keep authoritative and mirror into Cube definitions. Two semantic surfaces is operationally heavier, but it's defensible if you need both Cube's pre-aggs and OBSL's modeling primitives.</p>
 <hr />
 <h2 id="12-gap-analysis">12. Gap analysis<a class="headerlink" href="#12-gap-analysis" title="Permanent link">&para;</a></h2>
 <h3 id="to-match-cube-obsl-would-need">To match Cube, OBSL would need:<a class="headerlink" href="#to-match-cube-obsl-would-need" title="Permanent link">&para;</a></h3>

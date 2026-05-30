@@ -2805,7 +2805,7 @@ Grains for grain-to-date: <code>year</code>, <code>quarter</code>, <code>month</
 </tr>
 <tr>
 <td>Caching</td>
-<td>Freshness-driven result cache (file backend, off by default): TTL derived from per-<code>dataObject</code> <code>refresh:</code> contract; ETL <code>POST /v1/heartbeat</code> invalidates dependent entries by physical table</td>
+<td>Result cache based on freshness inheritance (file backend, off by default): TTL derived from per-<code>dataObject</code> <code>refresh:</code> contract; ETL <code>POST /v1/heartbeat</code> invalidates dependent entries by physical table</td>
 <td>dbt Cloud query cache</td>
 </tr>
 <tr>

@@ -92,7 +92,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#freshness-driven-result-cache" class="md-skip">
+        <a href="#result-cache-based-on-freshness-inheritance" class="md-skip">
           Skip to content
         </a>
       
@@ -2313,12 +2313,12 @@
   
 
 
-<h1 id="freshness-driven-result-cache">Freshness-driven result cache<a class="headerlink" href="#freshness-driven-result-cache" title="Permanent link">&para;</a></h1>
-<p>OrionBelt's result cache is <strong>freshness-driven</strong>: instead of asking callers to pick a TTL, the cache derives one from the refresh contracts of the <strong>physical source tables</strong> a query touched. A heartbeat from the warehouse invalidates every cached query that depends on that table, regardless of how many semantic facets the model split it into.</p>
+<h1 id="result-cache-based-on-freshness-inheritance">Result cache based on freshness inheritance<a class="headerlink" href="#result-cache-based-on-freshness-inheritance" title="Permanent link">&para;</a></h1>
+<p>OrionBelt's result cache is <strong>based on freshness inheritance</strong>: instead of asking callers to pick a TTL, the cache derives one from the refresh contracts of the <strong>physical source tables</strong> a query touched. A heartbeat from the warehouse invalidates every cached query that depends on that table, regardless of how many semantic facets the model split it into.</p>
 <p>This page explains how it works and how to enable it. For the underlying design, see <code>design/PLAN_freshness_driven_cache.md</code>.</p>
 <div class="admonition note">
 <p class="admonition-title">Not 'semantic caching'</p>
-<p>The phrase "semantic cache" in AI/LLM contexts means embedding-based similarity matching of natural-language queries — a completely unrelated concept. OBSL uses <strong>freshness-driven cache</strong> or <strong>source-aware result cache</strong>.</p>
+<p>The phrase "semantic cache" in AI/LLM contexts means embedding-based similarity matching of natural-language queries — a completely unrelated concept. OBSL uses a <strong>cache based on freshness inheritance</strong> or <strong>source-aware result cache</strong>.</p>
 </div>
 <h2 id="why-source-level">Why source-level<a class="headerlink" href="#why-source-level" title="Permanent link">&para;</a></h2>
 <p>Most semantic layers attach freshness to the abstraction (a cube, an Explore, a saved query). When two cubes read the same physical table, each declares its own TTL — and they can drift. OBSL flips that: the contract lives on the <code>dataObject</code> that maps to the table, declared once. Two <code>dataObject</code> entries on the same table inherit the same contract automatically. One ETL heartbeat to the table invalidates every dependent cached query in one stroke.</p>
