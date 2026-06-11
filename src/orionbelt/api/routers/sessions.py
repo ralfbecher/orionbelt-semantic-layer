@@ -1375,7 +1375,12 @@ async def _run_with_cache(
     except ExecutionError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from None
 
-    effective_locale = locale if locale is not None else get_default_locale()
+    # Locale resolution order: request ?locale= -> model settings.defaultLocale
+    # -> DEFAULT_LOCALE env. Drives result value-formatting separators.
+    model_default_locale = model.settings.default_locale if model.settings else None
+    effective_locale = (
+        locale if locale is not None else (model_default_locale or get_default_locale())
+    )
     response = _build_execute_response(
         compile_result=compile_result,
         exec_result=exec_result,
