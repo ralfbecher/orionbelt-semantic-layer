@@ -230,7 +230,7 @@ assert result.valid
 
 ## 6. Example: TPC-DS Roundtrip
 
-The converter is validated against the official [TPC-DS example](https://github.com/open-semantic-interchange/OSI/blob/main/examples/tpcds_semantic_model.yaml) from the OSI repository.
+The converter is validated against the official [TPC-DS example](https://github.com/open-semantic-interchange/OSI/blob/main/examples/tpcds_semantic_model.yaml) from the OSI repository. That file is vendored at `tests/fixtures/tpcds_semantic_model.yaml` and exercised by `tests/test_osi_tpcds_baseline.py`, which runs the OSI converters guide's [conceptual conversion flow](https://github.com/open-semantic-interchange/OSI/blob/main/converters/index.md#example-conceptual-conversion-flow) end to end: OSI to OBML to OSI, asserting validity at each step and that the example's `SALESFORCE` and `DBT` custom extensions survive the round-trip (step 7).
 
 ### OSI → OBML
 
