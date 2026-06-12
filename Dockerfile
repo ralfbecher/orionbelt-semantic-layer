@@ -17,19 +17,17 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 #     Snowflake). Required for integration tests that execute against a
 #     non-DuckDB backend (e.g. the Dremio Stage-2 suite).
 #
-# The vendor driver workspace members live under drivers/, so we copy
-# their pyproject.toml manifests before the sync so uv can resolve the
-# workspace graph. The actual driver source is copied alongside src/
-# below.
+# Copy the workspace members (drivers/ and packages/) before the sync so uv
+# can resolve the workspace graph. The flight* extras pull the osi-orionbelt
+# member under packages/, so it must be present at this first sync.
 ARG OB_EXTRA=flight-duckdb-only
 COPY pyproject.toml uv.lock README.md ./
 COPY drivers/ drivers/
 COPY packages/ packages/
 RUN uv sync --no-dev --no-install-project --frozen --extra ${OB_EXTRA}
 
-# Copy source and install the project itself. schema/ is copied before the
-# build so the osi-orionbelt workspace member can force-include the canonical
-# obml-schema.json into its wheel.
+# Copy source and install the project itself (osi-orionbelt vendors its own
+# schemas; schema/ here is for the main package's reference endpoints).
 COPY src/ src/
 COPY schema/ schema/
 RUN uv sync --no-dev --no-editable --frozen --extra ${OB_EXTRA}

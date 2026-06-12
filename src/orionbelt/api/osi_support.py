@@ -34,7 +34,13 @@ def get_converter_module() -> types.ModuleType:
     """
     try:
         return importlib.import_module("osi_orionbelt")
-    except ImportError as exc:
+    except ModuleNotFoundError as exc:
+        # Only treat a missing top-level converter package as "not installed".
+        # A ModuleNotFoundError for some other name means the package IS present
+        # but has a broken/missing transitive import — surface that as a real
+        # 500 rather than masking it as an install problem.
+        if exc.name != "osi_orionbelt":
+            raise
         raise HTTPException(
             status_code=503,
             detail=(

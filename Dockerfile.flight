@@ -7,18 +7,17 @@ WORKDIR /app
 
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
-# Copy workspace package metadata first (cached layer)
+# Copy workspace members first (cached layer). The flight extra depends on the
+# osi-orionbelt workspace member under packages/, so it must be present before
+# the first sync resolves that extra.
 COPY pyproject.toml uv.lock README.md ./
 COPY drivers/ drivers/
+COPY packages/ packages/
 RUN uv sync --no-dev --no-install-project --extra flight --frozen
 
-# Copy source and install everything. packages/ carries the osi-orionbelt
-# workspace member (the OBML <-> OSI converter, a normal dependency now);
-# schema/ must precede the build because that member force-includes the
-# canonical obml-schema.json into its wheel.
+# Copy source and install everything (osi-orionbelt vendors its own schemas).
 COPY src/ src/
 COPY schema/ schema/
-COPY packages/ packages/
 RUN uv sync --no-dev --no-editable --extra flight --frozen
 
 # --- Runtime stage: minimal image ---

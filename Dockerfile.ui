@@ -11,13 +11,11 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 COPY pyproject.toml uv.lock README.md ./
 RUN uv sync --no-dev --extra ui --no-install-project --frozen
 
-# Copy source and install the project itself. packages/ carries the
-# osi-orionbelt workspace member (the OBML <-> OSI converter, a normal
-# dependency now); schema/ must precede the build because that member
-# force-includes the canonical obml-schema.json into its wheel.
+# Copy source and install the project itself. The UI proxies OSI conversion to
+# the API and the `ui` extra excludes osi-orionbelt, so the converter member
+# under packages/ is not needed in this image.
 COPY src/ src/
 COPY schema/ schema/
-COPY packages/ packages/
 COPY examples/ examples/
 RUN uv sync --no-dev --extra ui --no-editable --frozen
 
