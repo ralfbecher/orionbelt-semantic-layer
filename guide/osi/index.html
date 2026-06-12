@@ -1276,7 +1276,7 @@
 </nav>
 <div class="obml-version-badge">
   OBML v1.0<br>
-  OrionBelt v2.9.0
+  OrionBelt v2.10.0
 </div>
       
     </li>
@@ -2096,7 +2096,7 @@
 </nav>
 <div class="obml-version-badge">
   OBML v1.0<br>
-  OrionBelt v2.9.0
+  OrionBelt v2.10.0
 </div>
                   </div>
                 </div>
@@ -2118,8 +2118,9 @@
 <h1 id="osi-interoperability">OSI Interoperability<a class="headerlink" href="#osi-interoperability" title="Permanent link">&para;</a></h1>
 <p><strong>OSI (Open Semantic Interchange)</strong> is an open standard for portable semantic models, founded with the goal of letting metric and dimension definitions move between BI tools, semantic layers, and data platforms without rewriting. See <a href="https://open-semantic-interchange.org/">open-semantic-interchange.org</a> for the specification and contributor list.</p>
 <p>OrionBelt includes a bidirectional converter between OBML and the <a href="https://github.com/open-semantic-interchange/OSI">OSI specification</a> format. The converter handles structural differences between the two formats — including metric decomposition, relationship restructuring, and lossless <code>ai_context</code> preservation via <code>customExtensions</code> — with built-in validation for both directions.</p>
+<p>The converter ships as a standalone <code>osi-orionbelt</code> package. It is an <strong>optional</strong> dependency: install it with <code>pip install 'orionbelt-semantic-layer[osi]'</code> (or standalone via <code>pip install osi-orionbelt</code>). The published API Docker images bundle it, so the <code>/convert</code>, <code>/models/from-osi</code>, and <code>/osi</code> endpoints work out of the box; on a bare install without the extra, those endpoints return a <code>503</code>.</p>
 <h2 id="spec-version">Spec version<a class="headerlink" href="#spec-version" title="Permanent link">&para;</a></h2>
-<p>OBSL v2.6 emits <strong>OSI v0.2.0.dev0</strong> (the latest draft in the upstream <code>core-spec/</code> at release time). The vendored schema lives at <code>osi-obml/osi-schema.json</code>; refresh it with <code>scripts/refresh-osi-schema.sh</code> when upstream advances.</p>
+<p>OBSL v2.6 emits <strong>OSI v0.2.0.dev0</strong> (the latest draft in the upstream <code>core-spec/</code> at release time). The vendored schema lives at <code>packages/osi-orionbelt/src/osi_orionbelt/schemas/osi-schema.json</code>; refresh it with <code>scripts/refresh-osi-schema.sh</code> when upstream advances.</p>
 <p><strong>Breaking change vs. OBSL v2.5</strong> — the previous release emitted OSI v0.1.1. Downstream consumers pinning to v0.1 will reject v2.6 output. The converter still <strong>reads</strong> v0.1.x inputs via the legacy shim <code>_normalize_legacy_v01()</code>, which promotes pre-v0.2 <code>custom_extensions</code> payloads (<code>obml_primary_key</code>, <code>obml_unique_keys</code>) into the v0.2 first-class fields before parsing.</p>
 <p>What's new in v0.2 that OBSL now round-trips:</p>
 <table>
@@ -2189,7 +2190,7 @@
 <h2 id="gradio-ui">Gradio UI<a class="headerlink" href="#gradio-ui" title="Permanent link">&para;</a></h2>
 <p>The Gradio UI provides <strong>Import OSI</strong> / <strong>Export to OSI</strong> buttons that use these API endpoints, with validation feedback for both directions.</p>
 <h2 id="mapping-reference">Mapping Reference<a class="headerlink" href="#mapping-reference" title="Permanent link">&para;</a></h2>
-<p>See the <a href="https://github.com/ralfbecher/orionbelt-semantic-layer/blob/main/osi-obml/osi_obml_mapping_analysis.md">OSI - OBML Mapping Analysis</a> for the core-spec mapping, and the <a href="https://github.com/ralfbecher/orionbelt-semantic-layer/blob/main/osi-obml/osi_obml_ontology_mapping_analysis.md">OBML -&gt; OSI Ontology Mapping Analysis</a> for the ontology-layer mapping and its documented gaps.</p>
+<p>See the <a href="https://github.com/ralfbecher/orionbelt-semantic-layer/blob/main/packages/osi-orionbelt/osi_obml_mapping_analysis.md">OSI - OBML Mapping Analysis</a> for the core-spec mapping, and the <a href="https://github.com/ralfbecher/orionbelt-semantic-layer/blob/main/packages/osi-orionbelt/osi_obml_ontology_mapping_analysis.md">OBML -&gt; OSI Ontology Mapping Analysis</a> for the ontology-layer mapping and its documented gaps.</p>
 
 
 
@@ -2212,7 +2213,7 @@
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-iso_date" title="June 11, 2026 09:23:04 UTC">2026-06-11</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-iso_date" title="June 12, 2026 16:43:46 UTC">2026-06-12</span>
   </span>
 
     
