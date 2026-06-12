@@ -66,8 +66,10 @@ OSI `custom_extensions` carry vendor-tagged payloads. This converter:
   labels, leftover `ai_context`) under the **`OSI`** vendor when going OSI to
   OBML, restoring them to first-class OSI fields on the way back;
 - **preserves third-party vendor extensions verbatim** (e.g. `SNOWFLAKE`,
-  `DBT`, `SALESFORCE`, `GOODDATA`) at the model, dataset, and field levels, so a
-  full OSI to OBML to OSI roundtrip keeps the original vendor and data.
+  `DBT`, `SALESFORCE`, `GOODDATA`) at the model, dataset, field, and
+  measure/metric levels, so a full OSI to OBML to OSI roundtrip keeps the
+  original vendor and data. OSI has no separate dimension entity, so an OBML
+  dimension's foreign extensions surface on its OSI field.
 
 Legacy `COMMON` / `OBSL` tags from earlier converter versions are still accepted
 on read.
@@ -84,9 +86,6 @@ OBML, but are not interpreted by other OSI consumers:
   pair of objects are an OBML-specific topology feature.
 - **Measures / metrics and column-level value concepts in the ontology layer** -
   see `osi_obml_ontology_mapping_analysis.md` for the full mapping analysis.
-- **Third-party vendor extensions at metric / dimension level** - foreign-vendor
-  `custom_extensions` are preserved at the model, dataset, and field levels;
-  metric- and dimension-level passthrough is not yet implemented.
 
 OSI v0.1.x inputs are accepted on read via a legacy normalization shim; output
 targets the current OSI version.

@@ -762,6 +762,13 @@ class OSItoOBML:
             else:
                 self.warnings.append(f"Metric '{name}' has unparseable expression: {expr_text}")
 
+        # Preserve third-party vendor extensions, carrying them into whichever
+        # OBML entity (measure or metric) the OSI metric became.
+        for m in osi_metrics:
+            target = metrics.get(m["name"]) or measures.get(m["name"])
+            if target is not None:
+                self._carry_foreign_extensions(m.get("custom_extensions"), target)
+
         return measures, metrics
 
     @staticmethod
@@ -1455,8 +1462,10 @@ class OBMLtoOSI:
         if col_obj.get("owner"):
             ext_data["obml_owner"] = col_obj["owner"]
         # Preserve OBML-only dimension properties (timeGrain, format, resultType, etc.)
+        matched_dim: dict[str, Any] | None = None
         for _dim_name, dim_obj in obml_dimensions.items():
             if dim_obj.get("dataObject") == do_name and dim_obj.get("column") == col_name:
+                matched_dim = dim_obj
                 if dim_obj.get("timeGrain"):
                     ext_data["obml_time_grain"] = dim_obj["timeGrain"]
                 if dim_obj.get("format"):
@@ -1477,8 +1486,14 @@ class OBMLtoOSI:
             }
         ]
 
-        # Re-emit third-party vendor extensions verbatim
+        # Re-emit third-party vendor extensions verbatim. OSI has no separate
+        # dimension entity, so a matched dimension's foreign extensions surface
+        # on the field too (they re-import onto the column).
         self._emit_foreign_extensions(col_obj.get("customExtensions"), field["custom_extensions"])
+        if matched_dim is not None:
+            self._emit_foreign_extensions(
+                matched_dim.get("customExtensions"), field["custom_extensions"]
+            )
 
         return field
 
@@ -1547,6 +1562,7 @@ class OBMLtoOSI:
         for measure_name, measure_obj in obml_measures.items():
             osi_metric = self._convert_measure(measure_name, measure_obj, data_objects)
             if osi_metric:
+                self._carry_foreign_to_osi_metric(measure_obj, osi_metric)
                 osi_metrics.append(osi_metric)
 
         # Convert OBML metrics (which reference measures) to OSI metrics
@@ -1568,9 +1584,19 @@ class OBMLtoOSI:
                     metric_name, metric_obj, obml_measures, data_objects
                 )
             if osi_metric:
+                self._carry_foreign_to_osi_metric(metric_obj, osi_metric)
                 osi_metrics.append(osi_metric)
 
         return osi_metrics
+
+    def _carry_foreign_to_osi_metric(self, obml_obj: dict, osi_metric: dict) -> None:
+        """Re-emit third-party vendor extensions on an OBML measure/metric to
+        the OSI metric, dropping the key again if nothing foreign was added."""
+        self._emit_foreign_extensions(
+            obml_obj.get("customExtensions"), osi_metric.setdefault("custom_extensions", [])
+        )
+        if not osi_metric["custom_extensions"]:
+            del osi_metric["custom_extensions"]
 
     def _convert_measure(self, name: str, measure: dict, data_objects: dict) -> dict | None:
         """Convert an OBML measure to an OSI metric."""

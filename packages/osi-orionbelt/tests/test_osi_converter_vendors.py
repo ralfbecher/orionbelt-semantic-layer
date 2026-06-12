@@ -132,6 +132,79 @@ class TestForeignVendorRoundtrip:
         for v in ("DBT", "SALESFORCE", "GOODDATA", "ORIONBELT"):
             assert v in osi["vendors"]
 
+    def test_foreign_metric_roundtrip(self) -> None:
+        osi_in = {
+            "version": "0.2.0.dev0",
+            "semantic_model": [
+                {
+                    "name": "demo",
+                    "datasets": [
+                        {
+                            "name": "Sales",
+                            "source": "WH.PUB.sales",
+                            "fields": [_osi_field("amount")],
+                        }
+                    ],
+                    "metrics": [
+                        {
+                            "name": "Total",
+                            "data_type": "number",
+                            "description": "d",
+                            "custom_extensions": [
+                                {"vendor_name": "LOOKER", "data": json.dumps({"view": "sales"})}
+                            ],
+                            "expression": {
+                                "dialects": [
+                                    {"dialect": "ANSI_SQL", "expression": "SUM(sales.amount)"}
+                                ]
+                            },
+                        }
+                    ],
+                }
+            ],
+        }
+        obml = conv.OSItoOBML(osi_in).convert()
+        target = (obml.get("measures") or {}).get("Total") or (obml.get("metrics") or {}).get(
+            "Total"
+        )
+        assert {"vendor": "LOOKER", "data": json.dumps({"view": "sales"})} in target[
+            "customExtensions"
+        ]
+        osi_out = conv.OBMLtoOSI(obml, "demo").convert()
+        metric = osi_out["semantic_model"][0]["metrics"][0]
+        assert any(e["vendor_name"] == "LOOKER" for e in metric["custom_extensions"])
+        assert "LOOKER" in osi_out["vendors"]
+
+    def test_foreign_dimension_emitted_to_field(self) -> None:
+        # OSI has no separate dimension entity, so an OBML dimension's foreign
+        # extensions surface on the corresponding OSI field.
+        obml = {
+            "version": 1.0,
+            "dataObjects": {
+                "Orders": {
+                    "code": "orders",
+                    "database": "WH",
+                    "schema": "PUBLIC",
+                    "columns": {"Status": {"code": "status", "abstractType": "string"}},
+                }
+            },
+            "dimensions": {
+                "Status": {
+                    "dataObject": "Orders",
+                    "column": "Status",
+                    "customExtensions": [
+                        {"vendor": "TABLEAU", "data": json.dumps({"role": "dimension"})}
+                    ],
+                }
+            },
+        }
+        osi = conv.OBMLtoOSI(obml).convert()
+        field = next(
+            f for f in osi["semantic_model"][0]["datasets"][0]["fields"] if f["name"] == "status"
+        )
+        assert any(e["vendor_name"] == "TABLEAU" for e in field["custom_extensions"])
+        assert "TABLEAU" in osi["vendors"]
+
 
 class TestLegacyBackCompat:
     def test_legacy_common_and_obsl_still_read(self) -> None:
