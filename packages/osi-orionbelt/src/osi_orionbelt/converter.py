@@ -50,6 +50,10 @@ _VENDOR_OBML = "ORIONBELT"
 _VENDOR_OSI = "OSI"
 _OBML_VENDOR_READ = ("ORIONBELT", "COMMON")
 _OSI_VENDOR_READ = ("OSI", "OBSL")
+# Vendors the converter handles internally (its own payloads + native-field
+# stashes). Any custom_extension from a vendor outside this set is third-party
+# and is carried through verbatim in both directions, never relabelled.
+_INTERNAL_VENDORS = frozenset({"ORIONBELT", "COMMON", "OSI", "OBSL"})
 
 # ─── Type mapping ───────────────────────────────────────────────────────────
 
@@ -217,7 +221,25 @@ class OSItoOBML:
                     pass
                 break
 
+        # Preserve third-party vendor extensions verbatim
+        self._carry_foreign_extensions(model.get("custom_extensions"), obml)
+
         return obml
+
+    @staticmethod
+    def _carry_foreign_extensions(osi_exts: list[dict] | None, obml_target: dict[str, Any]) -> None:
+        """Carry third-party OSI custom_extensions verbatim into OBML.
+
+        Our own payloads and OSI-native stashes are reconstructed elsewhere;
+        any other vendor's extension is preserved unchanged on the OBML side
+        so a full OSI -> OBML -> OSI roundtrip keeps the original vendor.
+        """
+        for ext in osi_exts or []:
+            vendor = ext.get("vendor_name")
+            if vendor and vendor not in _INTERNAL_VENDORS:
+                obml_target.setdefault("customExtensions", []).append(
+                    {"vendor": vendor, "data": ext.get("data", "")}
+                )
 
     def _parse_source(self, source: str) -> tuple[str, str, str]:
         """Parse 'database.schema.table' into parts."""
@@ -337,6 +359,9 @@ class OSItoOBML:
                 }
             )
 
+        # Preserve third-party vendor extensions verbatim
+        self._carry_foreign_extensions(ds.get("custom_extensions"), do)
+
         return name, do
 
     def _convert_field(self, field: dict) -> tuple[str, dict]:
@@ -423,6 +448,9 @@ class OSItoOBML:
                     "data": json.dumps({"obml_field_label": field["label"]}),
                 }
             )
+
+        # Preserve third-party vendor extensions verbatim
+        self._carry_foreign_extensions(field.get("custom_extensions"), col)
 
         return name, col
 
@@ -1154,6 +1182,10 @@ class OBMLtoOSI:
                 "data": json.dumps(roundtrip_data),
             }
         ]
+        # Re-emit third-party model-level vendor extensions verbatim
+        self._emit_foreign_extensions(
+            self.obml.get("customExtensions"), sem_model["custom_extensions"]
+        )
 
         osi["semantic_model"] = [sem_model]
 
@@ -1170,6 +1202,19 @@ class OBMLtoOSI:
         """Record a vendor seen during emission; populates the top-level
         ``vendors`` informational array. Safe to call repeatedly."""
         self._used_vendors.add(vendor_name)
+
+    def _emit_foreign_extensions(self, obml_exts: list[dict] | None, osi_exts: list[dict]) -> None:
+        """Re-emit third-party OBML customExtensions as OSI custom_extensions.
+
+        Mirrors ``OSItoOBML._carry_foreign_extensions``: extensions from a
+        vendor we do not handle internally are passed back to OSI under their
+        original vendor name, completing the roundtrip.
+        """
+        for ext in obml_exts or []:
+            vendor = ext.get("vendor")
+            if vendor and vendor not in _INTERNAL_VENDORS:
+                osi_exts.append({"vendor_name": vendor, "data": ext.get("data", "")})
+                self._record_vendor(vendor)
 
     def _convert_data_object(
         self, do_name: str, do_obj: dict, obml_dimensions: dict
@@ -1286,6 +1331,13 @@ class OBMLtoOSI:
                     "data": json.dumps(do_extras),
                 }
             )
+
+        # Re-emit third-party vendor extensions verbatim
+        self._emit_foreign_extensions(
+            do_obj.get("customExtensions"), dataset.setdefault("custom_extensions", [])
+        )
+        if not dataset["custom_extensions"]:
+            del dataset["custom_extensions"]
 
         return dataset, relationships
 
@@ -1424,6 +1476,9 @@ class OBMLtoOSI:
                 "data": json.dumps(ext_data),
             }
         ]
+
+        # Re-emit third-party vendor extensions verbatim
+        self._emit_foreign_extensions(col_obj.get("customExtensions"), field["custom_extensions"])
 
         return field
 

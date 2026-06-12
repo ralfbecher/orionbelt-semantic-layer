@@ -56,6 +56,22 @@ assert result.valid
 obml_again = OSItoOBML(osi).convert()
 ```
 
+## Vendor extensions
+
+OSI `custom_extensions` carry vendor-tagged payloads. This converter:
+
+- emits OrionBelt/OBML-proprietary data under the **`ORIONBELT`** vendor on OBML
+  to OSI (OBML-only filters, settings, owner, refresh, type info, etc.);
+- stashes OSI-native fields that OBML can't represent (unique keys, field
+  labels, leftover `ai_context`) under the **`OSI`** vendor when going OSI to
+  OBML, restoring them to first-class OSI fields on the way back;
+- **preserves third-party vendor extensions verbatim** (e.g. `SNOWFLAKE`,
+  `DBT`, `SALESFORCE`, `GOODDATA`) at the model, dataset, and field levels, so a
+  full OSI to OBML to OSI roundtrip keeps the original vendor and data.
+
+Legacy `COMMON` / `OBSL` tags from earlier converter versions are still accepted
+on read.
+
 ## Limitations / unsupported constructs
 
 Some OBML constructs have no native OSI equivalent and are carried in vendor
@@ -68,6 +84,9 @@ OBML, but are not interpreted by other OSI consumers:
   pair of objects are an OBML-specific topology feature.
 - **Measures / metrics and column-level value concepts in the ontology layer** -
   see `osi_obml_ontology_mapping_analysis.md` for the full mapping analysis.
+- **Third-party vendor extensions at metric / dimension level** - foreign-vendor
+  `custom_extensions` are preserved at the model, dataset, and field levels;
+  metric- and dimension-level passthrough is not yet implemented.
 
 OSI v0.1.x inputs are accepted on read via a legacy normalization shim; output
 targets the current OSI version.
