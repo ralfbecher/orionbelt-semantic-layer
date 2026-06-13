@@ -122,6 +122,35 @@ def _stub_execute_two_rows() -> ExecutionResult:
     )
 
 
+def test_execution_result_from_cache_envelope() -> None:
+    """A cached envelope rebuilds into an ExecutionResult for wire encoding."""
+    from types import SimpleNamespace
+
+    from orionbelt.api.query_cache import _obml_type_to_hint, execution_result_from_envelope
+
+    # Stored OBML/SQL column types map back to coarse pgwire hints.
+    assert _obml_type_to_hint("decimal(18, 2)") == "number"
+    assert _obml_type_to_hint("bigint") == "number"
+    assert _obml_type_to_hint("timestamp") == "datetime"
+    assert _obml_type_to_hint("string") == "string"
+
+    envelope = SimpleNamespace(
+        columns=[
+            {"name": "Country", "type": "string", "format": None},
+            {"name": "Total Sales", "type": "decimal(18, 2)", "format": "#,##0.00"},
+        ],
+        rows=[["DE", 1234.5], ["US", 9876.0]],
+        row_count=2,
+        execution_time_ms=0.0,
+    )
+    result = execution_result_from_envelope(envelope)
+    assert [c.name for c in result.columns] == ["Country", "Total Sales"]
+    assert [c.type_hint for c in result.columns] == ["string", "number"]
+    assert result.columns[1].default_format == "#,##0.00"
+    assert result.rows == [["DE", 1234.5], ["US", 9876.0]]
+    assert result.row_count == 2
+
+
 def test_semantic_query_round_trips_to_data_rows(monkeypatch: pytest.MonkeyPatch) -> None:
     mgr, _ = _make_manager_with_model()
     router = SemanticRouter(session_manager=mgr, default_dialect="duckdb")

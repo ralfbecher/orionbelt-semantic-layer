@@ -72,7 +72,7 @@ async def cached_client(tmp_path: Path):
 
     transport = ASGITransport(app=app)
     with (
-        patch("orionbelt.api.routers.sessions.execute_sql", return_value=_stub_exec_result()),
+        patch("orionbelt.api.query_cache.execute_sql", return_value=_stub_exec_result()),
         patch("orionbelt.api.routers.oneshot.execute_sql", return_value=_stub_exec_result()),
     ):
         async with AsyncClient(transport=transport, base_url="http://test") as c:

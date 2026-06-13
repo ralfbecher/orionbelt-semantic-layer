@@ -920,7 +920,7 @@ class TestAPIExecuteEndpoint:
         init_session_manager(mgr, query_execute_enabled=True, db_vendor="duckdb")
         try:
             mock_exec = _make_execute_sql(api_duckdb)
-            with patch("orionbelt.api.routers.sessions.execute_sql", mock_exec):
+            with patch("orionbelt.api.query_cache.execute_sql", mock_exec):
                 transport = ASGITransport(app=app)
                 async with AsyncClient(transport=transport, base_url="http://test") as c:
                     sid = (await c.post("/v1/sessions")).json()["session_id"]
@@ -976,9 +976,9 @@ class TestAPIExecuteEndpoint:
         )
         try:
             mock_exec = _make_execute_sql(api_duckdb)
-            # Only sessions.execute_sql needs patching now; the shortcut
-            # delegates to _run_with_cache → sessions.execute_sql.
-            with patch("orionbelt.api.routers.sessions.execute_sql", mock_exec):
+            # Only query_cache.execute_sql needs patching now; the shortcut
+            # delegates to _run_with_cache → query_cache.execute_sql.
+            with patch("orionbelt.api.query_cache.execute_sql", mock_exec):
                 transport = ASGITransport(app=app)
                 async with AsyncClient(transport=transport, base_url="http://test") as c:
                     # Load a single model into a session so the shortcut has
@@ -1026,7 +1026,7 @@ class TestAPIExecuteEndpoint:
         init_session_manager(mgr, query_execute_enabled=True, db_vendor="duckdb")
         try:
             mock_exec = _make_execute_sql(api_duckdb)
-            with patch("orionbelt.api.routers.sessions.execute_sql", mock_exec):
+            with patch("orionbelt.api.query_cache.execute_sql", mock_exec):
                 transport = ASGITransport(app=app)
                 async with AsyncClient(transport=transport, base_url="http://test") as c:
                     sid = (await c.post("/v1/sessions")).json()["session_id"]
@@ -1079,7 +1079,7 @@ class TestAPIExecuteEndpoint:
         )
         try:
             mock_exec = _make_execute_sql(api_duckdb)
-            with patch("orionbelt.api.routers.sessions.execute_sql", mock_exec):
+            with patch("orionbelt.api.query_cache.execute_sql", mock_exec):
                 transport = ASGITransport(app=app)
                 async with AsyncClient(transport=transport, base_url="http://test") as c:
                     sid = (await c.post("/v1/sessions")).json()["session_id"]
@@ -1129,7 +1129,7 @@ class TestAPIExecuteEndpoint:
         init_session_manager(mgr, query_execute_enabled=True, db_vendor="duckdb")
         try:
             mock_exec = _make_execute_sql(api_duckdb)
-            with patch("orionbelt.api.routers.sessions.execute_sql", mock_exec):
+            with patch("orionbelt.api.query_cache.execute_sql", mock_exec):
                 transport = ASGITransport(app=app)
                 async with AsyncClient(transport=transport, base_url="http://test") as c:
                     sid = (await c.post("/v1/sessions")).json()["session_id"]
@@ -1173,7 +1173,7 @@ class TestAPIExecuteEndpoint:
         init_session_manager(mgr, query_execute_enabled=True, db_vendor="duckdb")
         try:
             mock_exec = _make_execute_sql(api_duckdb)
-            with patch("orionbelt.api.routers.sessions.execute_sql", mock_exec):
+            with patch("orionbelt.api.query_cache.execute_sql", mock_exec):
                 transport = ASGITransport(app=app)
                 async with AsyncClient(transport=transport, base_url="http://test") as c:
                     sid = (await c.post("/v1/sessions")).json()["session_id"]
@@ -1229,7 +1229,7 @@ class TestAPIExecuteEndpoint:
         init_session_manager(mgr, query_execute_enabled=True, db_vendor="duckdb")
         try:
             mock_exec = _make_execute_sql(api_duckdb)
-            with patch("orionbelt.api.routers.sessions.execute_sql", mock_exec):
+            with patch("orionbelt.api.query_cache.execute_sql", mock_exec):
                 transport = ASGITransport(app=app)
                 async with AsyncClient(transport=transport, base_url="http://test") as c:
                     sid = (await c.post("/v1/sessions")).json()["session_id"]
@@ -1280,7 +1280,7 @@ class TestAPIExecuteEndpoint:
         init_session_manager(mgr, query_execute_enabled=True, db_vendor="duckdb")
         try:
             mock_exec = _make_execute_sql(api_duckdb)
-            with patch("orionbelt.api.routers.sessions.execute_sql", mock_exec):
+            with patch("orionbelt.api.query_cache.execute_sql", mock_exec):
                 transport = ASGITransport(app=app)
                 async with AsyncClient(transport=transport, base_url="http://test") as c:
                     sid = (await c.post("/v1/sessions")).json()["session_id"]
@@ -1337,7 +1337,7 @@ class TestAPIExecuteEndpoint:
         init_session_manager(mgr, query_execute_enabled=True, db_vendor="postgres")
         try:
             mock_exec = _make_execute_sql(api_duckdb)
-            with patch("orionbelt.api.routers.sessions.execute_sql", mock_exec):
+            with patch("orionbelt.api.query_cache.execute_sql", mock_exec):
                 transport = ASGITransport(app=app)
                 async with AsyncClient(transport=transport, base_url="http://test") as c:
                     sid = (await c.post("/v1/sessions")).json()["session_id"]
@@ -1378,7 +1378,7 @@ class TestAPIExecuteEndpoint:
         )
         try:
             mock_exec = _make_execute_sql(api_duckdb)
-            with patch("orionbelt.api.routers.sessions.execute_sql", mock_exec):
+            with patch("orionbelt.api.query_cache.execute_sql", mock_exec):
                 transport = ASGITransport(app=app)
                 async with AsyncClient(transport=transport, base_url="http://test") as c:
                     sid = (await c.post("/v1/sessions")).json()["session_id"]

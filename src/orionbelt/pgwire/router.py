@@ -27,6 +27,10 @@ from typing import Any
 import sqlglot
 import sqlglot.expressions as exp
 
+from orionbelt.api.query_cache import (
+    execute_query_with_cache,
+    execution_result_from_envelope,
+)
 from orionbelt.compiler.fanout import FanoutError
 from orionbelt.compiler.resolution import ResolutionError
 from orionbelt.compiler.sql_translator import SQLTranslationError, translate_sql_to_query
@@ -123,10 +127,17 @@ class SemanticRouter:
         session_manager: SessionManager,
         default_dialect: str,
         catalog: CatalogEmulator | None = None,
+        cache: Any = None,
+        cache_config: Any = None,
     ) -> None:
         self._sessions = session_manager
         self._default_dialect = default_dialect
         self._catalog = catalog if catalog is not None else CatalogEmulator()
+        # When a result cache is supplied, semantic queries route through the
+        # shared cached-execution service (the same one REST uses). Catalog /
+        # metadata probes never reach that path, so they are never cached.
+        self._cache = cache
+        self._cache_config = cache_config
 
     async def handle(
         self,
@@ -261,7 +272,26 @@ class SemanticRouter:
         logger.info("pgwire compiled SQL (dialect=%s):\n%s", dialect, compile_result.sql)
 
         try:
-            result = execute_sql(compile_result.sql, dialect=dialect)
+            if self._cache is not None:
+                cached = await execute_query_with_cache(
+                    store=target.store,
+                    model=target.model,
+                    compile_result=compile_result,
+                    query=query,
+                    session_id=database or target.model_id,
+                    model_id=target.model_id,
+                    dialect=dialect,
+                    cache=self._cache,
+                    cache_config=self._cache_config,
+                    cacheable=getattr(self._cache, "backend_name", "noop") != "noop",
+                )
+                if cached.cached:
+                    result = execution_result_from_envelope(cached.envelope)
+                else:
+                    assert cached.exec_result is not None  # a miss always executed
+                    result = cached.exec_result
+            else:
+                result = execute_sql(compile_result.sql, dialect=dialect)
         except ExecutionUnavailableError as exc:
             return protocol.build_error_response(
                 severity="ERROR",
