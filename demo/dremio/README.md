@@ -186,7 +186,10 @@ OrionBelt reaches Dremio via Flight using the `DREMIO_HOST` / `DREMIO_PORT` /
   paths, fan-trap handling, and dialect translation are the engine's job.
 - **8 dialects, one model.** The exact same model runs on Snowflake, BigQuery,
   Databricks, Postgres, etc. - here it's Dremio.
-- **Freshness-driven result cache.** Repeated queries are served from OrionBelt's
-  file cache instead of re-hitting Dremio. Run a query twice, then
-  `curl localhost:18080/v1/cache/stats` to show the hit. (Enabled in the demo
-  via `CACHE_BACKEND=file`.)
+- **Freshness-driven result cache (REST / playground path).** Enabled via
+  `CACHE_BACKEND=file`. Repeated queries through the REST API and the Gradio
+  playground are served from cache; run one twice, then
+  `curl localhost:18080/v1/cache/stats` to show the hit. Note: the cache is
+  currently wired into the REST query endpoints only - the **pgwire / Flight
+  surfaces bypass it**, so queries federated from Dremio do not yet hit the
+  cache (tracked separately).
