@@ -346,18 +346,24 @@ async def execute_query_with_cache(
                 cache_config=cache_config,
                 physical_tables=compile_result.physical_tables,
             )
-            t0 = time.monotonic()
-            envelope = await try_cache_get(cache, cache_key)
-            if envelope is not None:
-                return CachedExecution(
-                    cached=True,
-                    cache_key=cache_key,
-                    ttl_outcome=ttl_outcome,
-                    exec_result=None,
-                    columns=None,
-                    envelope=envelope,
-                    fetch_elapsed_ms=round((time.monotonic() - t0) * 1000, 2),
-                )
+            # A "no cache" TTL (unknown freshness, missing heartbeat, below-min)
+            # must block reads as well as writes: serving an entry written
+            # during an earlier cacheable window would defeat the freshness
+            # policy. Writes are already gated on ttl below, so only read when
+            # the current TTL says the query is cacheable.
+            if ttl_outcome.ttl is not None:
+                t0 = time.monotonic()
+                envelope = await try_cache_get(cache, cache_key)
+                if envelope is not None:
+                    return CachedExecution(
+                        cached=True,
+                        cache_key=cache_key,
+                        ttl_outcome=ttl_outcome,
+                        exec_result=None,
+                        columns=None,
+                        envelope=envelope,
+                        fetch_elapsed_ms=round((time.monotonic() - t0) * 1000, 2),
+                    )
 
     exec_result = await asyncio.to_thread(
         execute_sql,

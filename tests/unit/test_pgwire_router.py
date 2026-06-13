@@ -582,6 +582,10 @@ def test_flatten_federation_subquery_collapses_dremio_wrapper() -> None:
     assert '"commerce"."model"' in flat
     # The outer WHERE / ORDER BY survive the collapse.
     assert "WHERE" in flat.upper() and "ORDER BY" in flat.upper()
+    # Re-rendering must NOT inject an explicit null ordering the client never
+    # sent (the postgres generator adds ``NULLS LAST`` to a plain DESC, which
+    # the translator would capture and change top-N for nullable measures).
+    assert "NULLS" not in flat.upper()
 
 
 def test_flatten_then_normalize_is_translatable() -> None:

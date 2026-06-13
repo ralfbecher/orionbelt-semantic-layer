@@ -836,12 +836,13 @@ def _iter_loaded_models(session_manager: SessionManager) -> Iterator[tuple[str, 
 
     candidate_ids: list[str] = []
     candidate_ids.extend(session_manager.list_protected_session_ids())
-    candidate_ids.append("__default__")
-    # In admin-curated mode the catalog is the set of curated models only.
-    # Transient user/scratch sessions (REST clients, the Gradio playground)
-    # are seeded with the protected model but must not surface as extra
-    # schemas in BI tools — skip them so the catalog stays clean.
+    # In admin-curated mode the catalog is the set of curated (protected)
+    # models only. The legacy ``__default__`` (MCP stdio) session and transient
+    # user/scratch sessions (REST clients, the Gradio playground) must not
+    # surface as extra schemas in BI tools — skip them so the catalog stays
+    # clean. In dynamic mode they ARE the catalog.
     if not session_manager.is_single_model_mode:
+        candidate_ids.append("__default__")
         candidate_ids.extend(s.session_id for s in session_manager.list_sessions())
 
     seen_names: set[str] = set()

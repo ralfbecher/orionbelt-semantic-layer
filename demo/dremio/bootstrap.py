@@ -90,13 +90,53 @@ def _headers(token: str) -> dict[str, str]:
     return {"Authorization": f"_dremio{token}"}
 
 
-def _ensure_s3_source(client: httpx.Client, token: str) -> None:
-    if (
-        client.get(f"/api/v3/catalog/by-path/{LAKE_SOURCE}", headers=_headers(token)).status_code
-        == 200
-    ):
-        print(f"  S3 source '{LAKE_SOURCE}' already exists")
+def _existing_source_state(client: httpx.Client, token: str, name: str, checks: dict) -> str | None:
+    """Return 'match', 'drift', or None (absent) for an existing source.
+
+    ``checks`` maps config keys to expected values; the special key
+    ``propertyList`` maps property names to expected values. Secrets that
+    Dremio does not echo back (passwords, secret keys) must not be in ``checks``.
+    A stale Dremio (e.g. a source left over with the wrong host/endpoint) would
+    otherwise pass a name-only check and fail later with missing-schema errors.
+    """
+    ent = client.get(f"/api/v3/catalog/by-path/{name}", headers=_headers(token), timeout=10.0)
+    if ent.status_code != 200:
+        return None
+    cfg = ent.json().get("config", {}) or {}
+    for key, expected in checks.items():
+        if key == "propertyList":
+            props = {p.get("name"): p.get("value") for p in cfg.get("propertyList", [])}
+            if any(str(props.get(pk)) != str(pv) for pk, pv in expected.items()):
+                return "drift"
+        elif str(cfg.get(key)) != str(expected):
+            return "drift"
+    return "match"
+
+
+def _delete_source(client: httpx.Client, token: str, name: str) -> None:
+    ent = client.get(f"/api/v3/catalog/by-path/{name}", headers=_headers(token), timeout=10.0)
+    if ent.status_code != 200:
         return
+    sid = ent.json().get("id")
+    if sid:
+        client.delete(
+            f"/api/v3/catalog/{quote(sid, safe='')}", headers=_headers(token), timeout=30.0
+        )
+
+
+def _ensure_s3_source(client: httpx.Client, token: str) -> None:
+    state = _existing_source_state(
+        client,
+        token,
+        LAKE_SOURCE,
+        {"propertyList": {"fs.s3a.endpoint": MINIO_ENDPOINT}},
+    )
+    if state == "match":
+        print(f"  S3 source '{LAKE_SOURCE}' already exists (config matches)")
+        return
+    if state == "drift":
+        print(f"  S3 source '{LAKE_SOURCE}' config drifted -> recreating")
+        _delete_source(client, token, LAKE_SOURCE)
     body = {
         "entityType": "source",
         "name": LAKE_SOURCE,
@@ -152,12 +192,18 @@ def _promote_dataset(client: httpx.Client, token: str, table: str) -> str:
 
 
 def _ensure_pg_source(client: httpx.Client, token: str) -> None:
-    if (
-        client.get(f"/api/v3/catalog/by-path/{PG_SOURCE}", headers=_headers(token)).status_code
-        == 200
-    ):
-        print(f"  pgwire source '{PG_SOURCE}' already exists")
+    state = _existing_source_state(
+        client,
+        token,
+        PG_SOURCE,
+        {"hostname": PG_HOST, "port": PG_PORT, "databaseName": PG_DATABASE},
+    )
+    if state == "match":
+        print(f"  pgwire source '{PG_SOURCE}' already exists (config matches)")
         return
+    if state == "drift":
+        print(f"  pgwire source '{PG_SOURCE}' config drifted -> recreating")
+        _delete_source(client, token, PG_SOURCE)
     body = {
         "entityType": "source",
         "name": PG_SOURCE,

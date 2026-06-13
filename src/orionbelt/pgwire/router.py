@@ -726,7 +726,12 @@ def _flatten_federation_subquery(sql: str) -> str:
 
     flat = ast.copy()
     flat.set("from", inner_from.copy())
-    return flat.sql(dialect="postgres")
+    # Render with sqlglot's default generator, NOT dialect="postgres": the
+    # postgres generator makes the default null ordering explicit (injects
+    # ``NULLS LAST`` into a plain ``ORDER BY ... DESC``), which the OBSQL
+    # translator would then capture and bake into the compiled SQL — changing
+    # top-N results for nullable measures versus what the client actually sent.
+    return flat.sql()
 
 
 def _normalize_for_obsql(sql: str) -> str:
