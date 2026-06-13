@@ -73,6 +73,14 @@ services:
       PGWIRE_PORT: "5432"
       PGWIRE_AUTH_MODE: trust
       QUERY_EXECUTE: "true"
+      # Result cache: freshness-driven file cache so repeated queries are served
+      # from cache (see GET /v1/cache/stats). The commerce data is static, so
+      # default_ttl lets every query cache rather than skipping unknown-freshness
+      # objects. Cache state is wiped on startup; no volume needed for the demo.
+      CACHE_BACKEND: file
+      CACHE_DIR: /tmp/obsl_cache
+      CACHE_UNKNOWN_FRESHNESS_POLICY: default_ttl
+      CACHE_UNKNOWN_FRESHNESS_DEFAULT_TTL: "300"
       # Single-model mode: one Dremio-dialect model -> read-only UI that still
       # compiles AND executes. Addressing name resolves to the OBML `name:` ("commerce").
       DB_VENDOR: dremio
