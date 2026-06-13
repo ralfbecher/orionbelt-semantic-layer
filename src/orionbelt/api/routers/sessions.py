@@ -650,8 +650,11 @@ def _build_execute_response(
             fmt_map[c.name] = c.default_format
     column_names = [c.name for c in exec_result.columns]
     # Canonical column shape (also what the result cache persists) — built via
-    # the shared helper so REST, the cache payload, and pgwire all agree.
-    columns_meta = build_result_columns(model, exec_result)
+    # the shared helper so REST, the cache payload, and pgwire all agree. Reuse
+    # the maps already built above instead of rebuilding them.
+    columns_meta = build_result_columns(
+        model, exec_result, type_map=model_type_map, fmt_map=fmt_map
+    )
     # Merge the executor's type_hint as a fallback for columns that aren't
     # exposed via the dimension/measure/metric layer — notably raw-mode
     # ``select.fields`` projections, which reference physical columns the
@@ -966,7 +969,6 @@ async def execute_query(
         store=store,
         model=model,
         compile_result=result,
-        query=query,
         session_id=session_id,
         model_id=body.model_id,
         dialect=dialect,
@@ -1182,7 +1184,6 @@ async def execute_semantic_ql(
         store=store,
         model=model,
         compile_result=result,
-        query=query,
         session_id=session_id,
         model_id=body.model_id,
         dialect=dialect,
@@ -1203,7 +1204,6 @@ async def _run_with_cache(
     store: ModelStore,
     model: Any,
     compile_result: Any,
-    query: Any,
     session_id: str,
     model_id: str,
     dialect: str,
@@ -1229,15 +1229,20 @@ async def _run_with_cache(
     tz = resolve_timezone(default_timezone=timezone_override or model_default_tz)
 
     # TSV and value-formatted JSON skip caching (locale-keyed proliferation);
-    # only the canonical JSON shape is cached.
-    cacheable = response_format == "json" and not format_values
+    # only the canonical JSON shape is cached. Skip the whole cache machinery
+    # (key + freshness TTL + get) when the backend is a no-op, so the default
+    # deployment doesn't pay a per-query model scan for a cache that never hits.
+    cacheable = (
+        response_format == "json"
+        and not format_values
+        and getattr(cache, "backend_name", "noop") != "noop"
+    )
 
     try:
         cached = await execute_query_with_cache(
             store=store,
             model=model,
             compile_result=compile_result,
-            query=query,
             session_id=session_id,
             model_id=model_id,
             dialect=dialect,

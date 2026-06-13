@@ -277,8 +277,11 @@ class SemanticRouter:
                     store=target.store,
                     model=target.model,
                     compile_result=compile_result,
-                    query=query,
-                    session_id=database or target.model_id,
+                    # Key on the stable model_id, not the connection's
+                    # ``database`` alias, so every pgwire connection to the same
+                    # model shares cache entries regardless of which alias
+                    # (model name vs brand database) it connected with.
+                    session_id=target.model_id,
                     model_id=target.model_id,
                     dialect=dialect,
                     cache=self._cache,
@@ -378,9 +381,16 @@ class SemanticRouter:
         names: set[str] = set()
         with contextlib.suppress(Exception):
             names.update(n.lower() for n in self._sessions.list_protected_session_ids())
-        with contextlib.suppress(Exception):
-            for s in self._sessions.list_sessions():
-                names.add(s.session_id.lower())
+        # In admin-curated mode the catalog exposes only curated models (see
+        # CatalogEmulator._iter_loaded_models), so transient user/scratch
+        # sessions must NOT be treated as catalog schemas here either —
+        # otherwise a ``FROM <scratch_session>.measures`` reference would route
+        # to the catalog, which never built that schema. Keep them in dynamic
+        # mode, where user sessions ARE the catalog.
+        if not getattr(self._sessions, "is_single_model_mode", False):
+            with contextlib.suppress(Exception):
+                for s in self._sessions.list_sessions():
+                    names.add(s.session_id.lower())
         return names
 
     def _resolve_model_alias(self, sql: str, database: str) -> str:
@@ -691,25 +701,13 @@ def _flatten_federation_subquery(sql: str) -> str:
     inner = src.this
     if not isinstance(inner, exp.Select):
         return sql
-    # The inner derived table must be a pure projection: no clause that would
-    # change the row set or grain relative to the bare model table.
-    if any(
-        inner.args.get(k)
-        for k in (
-            "where",
-            "group",
-            "having",
-            "distinct",
-            "laterals",
-            "joins",
-            "qualify",
-            "with",
-            "order",
-            "limit",
-            "offset",
-            "window",
-        )
-    ):
+    # The inner derived table must be a pure projection: only a SELECT list and
+    # a FROM, nothing that changes the row set or grain (WHERE / GROUP / JOIN /
+    # DISTINCT / ORDER / LIMIT / QUALIFY / WINDOW / CTE / …). Allowlist rather
+    # than denylist so a future sqlglot clause can't slip a non-trivial wrapper
+    # through — anything we don't recognise falls back to the translator's
+    # rejection path.
+    if any(v for k, v in inner.args.items() if k not in ("expressions", "from")):
         return sql
     inner_from = inner.args.get("from")
     if inner_from is None or not isinstance(inner_from.this, exp.Table):

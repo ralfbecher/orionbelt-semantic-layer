@@ -38,6 +38,7 @@ from orionbelt.service.db_executor import (
     ColumnMeta,
     ExecutionResult,
     ExecutionUnavailableError,
+    coarse_hint_from_type_name,
     execute_sql,
 )
 
@@ -106,14 +107,22 @@ def build_format_map(model: Any) -> dict[str, str | None]:
     return fmt
 
 
-def build_result_columns(model: Any, exec_result: ExecutionResult) -> list[ColumnMetadata]:
+def build_result_columns(
+    model: Any,
+    exec_result: ExecutionResult,
+    *,
+    type_map: dict[str, str] | None = None,
+    fmt_map: dict[str, str | None] | None = None,
+) -> list[ColumnMetadata]:
     """Decorate executor columns with model-declared types and formats.
 
     This is the canonical column shape persisted in the cache and surfaced by
     REST, so both cache writers (REST and pgwire) agree on the stored payload.
+    Callers that already built the type/format maps (the REST response builder)
+    can pass them in to avoid rebuilding.
     """
-    model_type_map = build_type_map(model)
-    fmt_map = build_format_map(model)
+    model_type_map = type_map if type_map is not None else build_type_map(model)
+    fmt_map = fmt_map if fmt_map is not None else build_format_map(model)
     for c in exec_result.columns:
         if fmt_map.get(c.name) is None and getattr(c, "default_format", None):
             fmt_map[c.name] = c.default_format
@@ -297,7 +306,6 @@ async def execute_query_with_cache(
     store: Any,
     model: Any,
     compile_result: Any,
-    query: Any,
     session_id: str,
     model_id: str,
     dialect: str,
@@ -405,18 +413,12 @@ async def execute_query_with_cache(
 
 
 def _obml_type_to_hint(type_str: str) -> str:
-    """Map a stored OBML/SQL column type to a pgwire coarse hint."""
-    lowered = (type_str or "").lower()
-    if any(
-        t in lowered
-        for t in ("int", "float", "decimal", "numeric", "double", "real", "money", "number")
-    ):
-        return "number"
-    if any(t in lowered for t in ("timestamp", "date", "time")):
-        return "datetime"
-    if "bytea" in lowered or "binary" in lowered:
-        return "binary"
-    return "string"
+    """Map a stored OBML/SQL column type to a pgwire coarse hint.
+
+    Delegates to the single shared classifier so the cache-hit pgwire path and
+    the live-execution path agree on number/datetime/binary/string.
+    """
+    return coarse_hint_from_type_name(type_str)
 
 
 def execution_result_from_envelope(envelope: Any) -> ExecutionResult:

@@ -151,6 +151,38 @@ def test_execution_result_from_cache_envelope() -> None:
     assert result.row_count == 2
 
 
+def test_loaded_model_names_excludes_transient_sessions_in_single_model_mode() -> None:
+    """In admin-curated mode the router must not treat scratch sessions as
+    catalog schemas — the catalog (CatalogEmulator) hides them, so routing a
+    `FROM <scratch>.measures` reference to the catalog would 'table not found'.
+    """
+    from orionbelt.pgwire.catalog import CatalogEmulator
+
+    # Curated mode: a protected model + a transient scratch session.
+    mgr = SessionManager(is_single_model_mode=True)
+    mgr.get_or_create_named("commerce").load_model(SAMPLE_MODEL_YAML)
+    scratch = mgr.create_session()
+    mgr.get_store(scratch.session_id).load_model(SAMPLE_MODEL_YAML)
+    router = SemanticRouter(
+        session_manager=mgr, default_dialect="duckdb", catalog=CatalogEmulator()
+    )
+    names = router._loaded_model_names()
+    assert "commerce" in names
+    assert scratch.session_id.lower() not in names
+    # The router agrees with the catalog: a scratch-session schema ref is NOT
+    # routed to the catalog in curated mode.
+    assert router._references_model_schema(f'SELECT * FROM {scratch.session_id}.measures') is False
+
+    # Dynamic mode still surfaces user sessions as catalog schemas.
+    dyn = SessionManager(is_single_model_mode=False)
+    s = dyn.create_session()
+    dyn.get_store(s.session_id).load_model(SAMPLE_MODEL_YAML)
+    dyn_router = SemanticRouter(
+        session_manager=dyn, default_dialect="duckdb", catalog=CatalogEmulator()
+    )
+    assert s.session_id.lower() in dyn_router._loaded_model_names()
+
+
 def test_semantic_query_round_trips_to_data_rows(monkeypatch: pytest.MonkeyPatch) -> None:
     mgr, _ = _make_manager_with_model()
     router = SemanticRouter(session_manager=mgr, default_dialect="duckdb")

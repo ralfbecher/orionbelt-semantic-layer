@@ -598,7 +598,6 @@ async def shortcut_execute_query(
         store=store,
         model=model,
         compile_result=result,
-        query=query,
         session_id=session_id,
         model_id=model_id,
         dialect=dialect,
