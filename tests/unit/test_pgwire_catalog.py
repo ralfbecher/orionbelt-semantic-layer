@@ -117,6 +117,24 @@ def test_dynamic_mode_surfaces_user_sessions() -> None:
     assert result.rows[0][0] == 1
 
 
+def test_metrics_metadata_exposes_formula(manager_with_model: SessionManager) -> None:
+    """The ``_metrics_metadata`` view must surface a derived metric's expression.
+
+    Regression: the builder read a non-existent ``formula`` attribute (the field
+    was renamed to ``expression``), so the column came back empty for every
+    metric.
+    """
+
+    emu = CatalogEmulator()
+    emu.refresh(manager_with_model)
+    result = emu.execute(
+        "SELECT name, formula FROM \"commerce\".\"_metrics_metadata\" "
+        "WHERE name = 'Revenue per Order'"
+    )
+    assert result.rows, "expected a row for the derived metric"
+    assert result.rows[0][1] == "{[Total Revenue]} / {[Order Count]}"
+
+
 def test_psql_dt_style_query_returns_rows(manager_with_model: SessionManager) -> None:
     """\\dt's actual SQL must surface the model table at <model>.model."""
 
