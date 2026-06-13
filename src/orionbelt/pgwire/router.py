@@ -27,6 +27,10 @@ from typing import Any
 import sqlglot
 import sqlglot.expressions as exp
 
+from orionbelt.api.query_cache import (
+    execute_query_with_cache,
+    execution_result_from_envelope,
+)
 from orionbelt.compiler.fanout import FanoutError
 from orionbelt.compiler.resolution import ResolutionError
 from orionbelt.compiler.sql_translator import SQLTranslationError, translate_sql_to_query
@@ -123,10 +127,17 @@ class SemanticRouter:
         session_manager: SessionManager,
         default_dialect: str,
         catalog: CatalogEmulator | None = None,
+        cache: Any = None,
+        cache_config: Any = None,
     ) -> None:
         self._sessions = session_manager
         self._default_dialect = default_dialect
         self._catalog = catalog if catalog is not None else CatalogEmulator()
+        # When a result cache is supplied, semantic queries route through the
+        # shared cached-execution service (the same one REST uses). Catalog /
+        # metadata probes never reach that path, so they are never cached.
+        self._cache = cache
+        self._cache_config = cache_config
 
     async def handle(
         self,
@@ -261,7 +272,29 @@ class SemanticRouter:
         logger.info("pgwire compiled SQL (dialect=%s):\n%s", dialect, compile_result.sql)
 
         try:
-            result = execute_sql(compile_result.sql, dialect=dialect)
+            if self._cache is not None:
+                cached = await execute_query_with_cache(
+                    store=target.store,
+                    model=target.model,
+                    compile_result=compile_result,
+                    # Key on the stable model_id, not the connection's
+                    # ``database`` alias, so every pgwire connection to the same
+                    # model shares cache entries regardless of which alias
+                    # (model name vs brand database) it connected with.
+                    session_id=target.model_id,
+                    model_id=target.model_id,
+                    dialect=dialect,
+                    cache=self._cache,
+                    cache_config=self._cache_config,
+                    cacheable=getattr(self._cache, "backend_name", "noop") != "noop",
+                )
+                if cached.cached:
+                    result = execution_result_from_envelope(cached.envelope)
+                else:
+                    assert cached.exec_result is not None  # a miss always executed
+                    result = cached.exec_result
+            else:
+                result = execute_sql(compile_result.sql, dialect=dialect)
         except ExecutionUnavailableError as exc:
             return protocol.build_error_response(
                 severity="ERROR",
@@ -348,9 +381,16 @@ class SemanticRouter:
         names: set[str] = set()
         with contextlib.suppress(Exception):
             names.update(n.lower() for n in self._sessions.list_protected_session_ids())
-        with contextlib.suppress(Exception):
-            for s in self._sessions.list_sessions():
-                names.add(s.session_id.lower())
+        # In admin-curated mode the catalog exposes only curated models (see
+        # CatalogEmulator._iter_loaded_models), so transient user/scratch
+        # sessions must NOT be treated as catalog schemas here either —
+        # otherwise a ``FROM <scratch_session>.measures`` reference would route
+        # to the catalog, which never built that schema. Keep them in dynamic
+        # mode, where user sessions ARE the catalog.
+        if not getattr(self._sessions, "is_single_model_mode", False):
+            with contextlib.suppress(Exception):
+                for s in self._sessions.list_sessions():
+                    names.add(s.session_id.lower())
         return names
 
     def _resolve_model_alias(self, sql: str, database: str) -> str:
@@ -623,10 +663,83 @@ def _rewrite_fetch_to_limit(sql: str) -> str:
     return sql
 
 
+def _flatten_federation_subquery(sql: str) -> str:
+    """Collapse Dremio's federation pushdown wrapper into a flat OBSQL SELECT.
+
+    Dremio's Postgres-source connector wraps the virtual ``model`` table in a
+    trivial derived table and lifts ``WHERE`` / ``ORDER BY`` / ``FETCH`` to the
+    outer query::
+
+        SELECT "Country Name", "Total Sales"
+        FROM (SELECT "model"."Country Name" COLLATE "C", "model"."Total Sales"
+              FROM "commerce"."model") AS "model"
+        WHERE ("Total Sales" > 1000000)
+        ORDER BY "Total Sales" DESC FETCH NEXT 5 ROWS ONLY
+
+    The inner derived table is a pure projection over ``model`` (no WHERE /
+    GROUP / JOIN / aggregate), so it carries no semantics the outer query
+    doesn't already state. We rebuild the outer SELECT directly over the model
+    table, which the OBSQL translator accepts after the regular qualifier /
+    COLLATE / FETCH normalizations run.
+
+    Returns the SQL unchanged when the shape doesn't match, so a genuinely
+    unsupported subquery still reaches the translator's rejection path.
+    """
+
+    try:
+        ast = sqlglot.parse_one(sql)
+    except Exception:
+        return sql
+    if not isinstance(ast, exp.Select) or ast.args.get("joins"):
+        return sql
+    from_ = ast.args.get("from")
+    if from_ is None:
+        return sql
+    src = from_.this
+    if not isinstance(src, exp.Subquery):
+        return sql
+    inner = src.this
+    if not isinstance(inner, exp.Select):
+        return sql
+    # The inner derived table must be a pure projection: only a SELECT list and
+    # a FROM, nothing that changes the row set or grain (WHERE / GROUP / JOIN /
+    # DISTINCT / ORDER / LIMIT / QUALIFY / WINDOW / CTE / …). Allowlist rather
+    # than denylist so a future sqlglot clause can't slip a non-trivial wrapper
+    # through — anything we don't recognise falls back to the translator's
+    # rejection path.
+    if any(v for k, v in inner.args.items() if k not in ("expressions", "from")):
+        return sql
+    inner_from = inner.args.get("from")
+    if inner_from is None or not isinstance(inner_from.this, exp.Table):
+        return sql
+    # Only collapse a wrapper over OUR virtual table, never an unrelated one.
+    if inner_from.this.name.lower() != "model":
+        return sql
+    # Inner projections must be plain column refs (optionally COLLATE-annotated);
+    # any function/aggregate means the derived table is doing real work.
+    for proj in inner.expressions:
+        col = proj.this if isinstance(proj, exp.Alias) else proj
+        if isinstance(col, exp.Collate):
+            col = col.this
+        if not isinstance(col, exp.Column):
+            return sql
+
+    flat = ast.copy()
+    flat.set("from", inner_from.copy())
+    # Render with sqlglot's default generator, NOT dialect="postgres": the
+    # postgres generator makes the default null ordering explicit (injects
+    # ``NULLS LAST`` into a plain ``ORDER BY ... DESC``), which the OBSQL
+    # translator would then capture and bake into the compiled SQL — changing
+    # top-N results for nullable measures versus what the client actually sent.
+    return flat.sql()
+
+
 def _normalize_for_obsql(sql: str) -> str:
     """Apply pgjdbc-pushdown normalizations before OBSQL translation."""
 
-    return _rewrite_fetch_to_limit(_strip_collate_annotations(_unwrap_model_qualifier(sql)))
+    return _rewrite_fetch_to_limit(
+        _strip_collate_annotations(_unwrap_model_qualifier(_flatten_federation_subquery(sql)))
+    )
 
 
 # When OBSL exposes a model as ``"<model>"."model"`` (v2.5.0 catalog

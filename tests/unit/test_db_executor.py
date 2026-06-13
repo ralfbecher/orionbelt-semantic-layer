@@ -313,3 +313,20 @@ class TestExecutionResult:
     def test_empty_result(self) -> None:
         result = ExecutionResult(columns=[], row_count=0)
         assert result.rows == []
+
+
+def test_coarse_hint_from_type_name() -> None:
+    """Shared coarse classifier: datetime/binary checked before number so a
+    temporal type whose name contains a numeric substring (interval -> int)
+    is not misclassified as a number."""
+    from orionbelt.service.db_executor import coarse_hint_from_type_name
+
+    assert coarse_hint_from_type_name("bigint") == "number"
+    assert coarse_hint_from_type_name("decimal(18, 2)") == "number"
+    assert coarse_hint_from_type_name("double precision") == "number"
+    assert coarse_hint_from_type_name("timestamp with time zone") == "datetime"
+    assert coarse_hint_from_type_name("date") == "datetime"
+    assert coarse_hint_from_type_name("interval") == "datetime"  # contains "int"
+    assert coarse_hint_from_type_name("bytea") == "binary"
+    assert coarse_hint_from_type_name("varchar") == "string"
+    assert coarse_hint_from_type_name("") == "string"

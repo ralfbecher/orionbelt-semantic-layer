@@ -10,6 +10,8 @@ import pytest
 
 from orionbelt.pgwire.router import (
     SemanticRouter,
+    _flatten_federation_subquery,
+    _normalize_for_obsql,
     _rewrite_fetch_to_limit,
     _strip_collate_annotations,
     _unwrap_model_qualifier,
@@ -118,6 +120,67 @@ def _stub_execute_two_rows() -> ExecutionResult:
         raw_rows=[["DE", 1234.5], ["US", 9876]],
         row_count=2,
     )
+
+
+def test_execution_result_from_cache_envelope() -> None:
+    """A cached envelope rebuilds into an ExecutionResult for wire encoding."""
+    from types import SimpleNamespace
+
+    from orionbelt.api.query_cache import _obml_type_to_hint, execution_result_from_envelope
+
+    # Stored OBML/SQL column types map back to coarse pgwire hints.
+    assert _obml_type_to_hint("decimal(18, 2)") == "number"
+    assert _obml_type_to_hint("bigint") == "number"
+    assert _obml_type_to_hint("timestamp") == "datetime"
+    assert _obml_type_to_hint("string") == "string"
+
+    envelope = SimpleNamespace(
+        columns=[
+            {"name": "Country", "type": "string", "format": None},
+            {"name": "Total Sales", "type": "decimal(18, 2)", "format": "#,##0.00"},
+        ],
+        rows=[["DE", 1234.5], ["US", 9876.0]],
+        row_count=2,
+        execution_time_ms=0.0,
+    )
+    result = execution_result_from_envelope(envelope)
+    assert [c.name for c in result.columns] == ["Country", "Total Sales"]
+    assert [c.type_hint for c in result.columns] == ["string", "number"]
+    assert result.columns[1].default_format == "#,##0.00"
+    assert result.rows == [["DE", 1234.5], ["US", 9876.0]]
+    assert result.row_count == 2
+
+
+def test_loaded_model_names_excludes_transient_sessions_in_single_model_mode() -> None:
+    """In admin-curated mode the router must not treat scratch sessions as
+    catalog schemas — the catalog (CatalogEmulator) hides them, so routing a
+    `FROM <scratch>.measures` reference to the catalog would 'table not found'.
+    """
+    from orionbelt.pgwire.catalog import CatalogEmulator
+
+    # Curated mode: a protected model + a transient scratch session.
+    mgr = SessionManager(is_single_model_mode=True)
+    mgr.get_or_create_named("commerce").load_model(SAMPLE_MODEL_YAML)
+    scratch = mgr.create_session()
+    mgr.get_store(scratch.session_id).load_model(SAMPLE_MODEL_YAML)
+    router = SemanticRouter(
+        session_manager=mgr, default_dialect="duckdb", catalog=CatalogEmulator()
+    )
+    names = router._loaded_model_names()
+    assert "commerce" in names
+    assert scratch.session_id.lower() not in names
+    # The router agrees with the catalog: a scratch-session schema ref is NOT
+    # routed to the catalog in curated mode.
+    assert router._references_model_schema(f"SELECT * FROM {scratch.session_id}.measures") is False
+
+    # Dynamic mode still surfaces user sessions as catalog schemas.
+    dyn = SessionManager(is_single_model_mode=False)
+    s = dyn.create_session()
+    dyn.get_store(s.session_id).load_model(SAMPLE_MODEL_YAML)
+    dyn_router = SemanticRouter(
+        session_manager=dyn, default_dialect="duckdb", catalog=CatalogEmulator()
+    )
+    assert s.session_id.lower() in dyn_router._loaded_model_names()
 
 
 def test_semantic_query_round_trips_to_data_rows(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -497,3 +560,55 @@ def test_rewrite_fetch_to_limit(input_sql: str, expected: str) -> None:
 )
 def test_unwrap_model_qualifier(input_sql: str, expected: str) -> None:
     assert _unwrap_model_qualifier(input_sql) == expected
+
+
+# Dremio's Postgres-source connector wraps the virtual ``model`` table in a
+# trivial derived table and lifts WHERE / ORDER BY / FETCH to the outer query.
+# _flatten_federation_subquery must collapse that wrapper so the OBSQL
+# translator (which rejects subqueries) accepts the flattened result.
+_DREMIO_PUSHDOWN = (
+    'SELECT "Country Name", "Total Sales" '
+    'FROM (SELECT "model"."Country Name" COLLATE "C", "model"."Total Sales" '
+    'FROM "commerce"."model") AS "model" '
+    'WHERE ("Total Sales" > 1000000) '
+    'ORDER BY "Total Sales" DESC FETCH NEXT 5 ROWS ONLY'
+)
+
+
+def test_flatten_federation_subquery_collapses_dremio_wrapper() -> None:
+    flat = _flatten_federation_subquery(_DREMIO_PUSHDOWN)
+    # No derived table survives; the model table is the direct FROM target.
+    assert "FROM (" not in flat.upper()
+    assert '"commerce"."model"' in flat
+    # The outer WHERE / ORDER BY survive the collapse.
+    assert "WHERE" in flat.upper() and "ORDER BY" in flat.upper()
+    # Re-rendering must NOT inject an explicit null ordering the client never
+    # sent (the postgres generator adds ``NULLS LAST`` to a plain DESC, which
+    # the translator would capture and change top-N for nullable measures).
+    assert "NULLS" not in flat.upper()
+
+
+def test_flatten_then_normalize_is_translatable() -> None:
+    """The fully normalized Dremio pushdown is plain OBSQL the translator takes."""
+
+    norm = _normalize_for_obsql(_DREMIO_PUSHDOWN)
+    assert "FROM (" not in norm.upper()
+    assert "COLLATE" not in norm.upper()
+    assert "FETCH" not in norm.upper()
+    assert "LIMIT 5" in norm.upper()
+
+
+@pytest.mark.parametrize(
+    "sql",
+    [
+        # Plain semantic query — no wrapper, must pass through untouched.
+        'SELECT "Region", "Sales" FROM "commerce" LIMIT 10',
+        # Genuinely nested subquery that is NOT our pushdown shape — must be
+        # left alone so the translator still rejects it.
+        "SELECT x FROM (SELECT y FROM (SELECT 1)) t",
+        # Derived table whose base is not the ``model`` table — not ours.
+        'SELECT a FROM (SELECT a FROM "other"."table") t',
+    ],
+)
+def test_flatten_federation_subquery_leaves_non_matching_sql_unchanged(sql: str) -> None:
+    assert _flatten_federation_subquery(sql) == sql

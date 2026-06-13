@@ -419,7 +419,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     if settings.pgwire_enabled:
         from orionbelt.pgwire.startup import start_pgwire
 
-        pgwire_runtime = await start_pgwire(settings, session_manager=mgr)
+        pgwire_runtime = await start_pgwire(
+            settings,
+            session_manager=mgr,
+            cache=cache,
+            cache_config=cache_config,
+        )
 
     try:
         yield

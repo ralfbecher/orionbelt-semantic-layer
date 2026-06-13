@@ -5,9 +5,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
-import time
 from dataclasses import asdict
-from datetime import datetime
 from typing import Any, Literal, cast
 
 import yaml
@@ -26,6 +24,13 @@ from orionbelt.api.deps import (
     is_single_model_mode,
 )
 from orionbelt.api.osi_support import get_converter_module, parse_yaml, run_validation
+from orionbelt.api.query_cache import (
+    build_explain_response,
+    build_format_map,
+    build_result_columns,
+    build_type_map,
+    execute_query_with_cache,
+)
 from orionbelt.api.schemas import (
     ColumnMetadata,
     ConvertResponse,
@@ -62,10 +67,7 @@ from orionbelt.api.warnings_adapter import (
     health_summary_to_response,
     semantic_error_to_warning,
 )
-from orionbelt.cache import build_cache_key, compute_effective_ttl, is_nondeterministic_sql
-from orionbelt.cache.parquet_codec import decode as cache_decode
 from orionbelt.cache.protocol import Cache
-from orionbelt.cache.ttl import NoCacheReason, TtlResult
 from orionbelt.compiler.fanout import FanoutError
 from orionbelt.compiler.resolution import ResolutionError
 from orionbelt.compiler.sql_translator import SQLTranslationError, translate_sql_to_query
@@ -75,7 +77,6 @@ from orionbelt.dialect.registry import UnsupportedDialectError
 from orionbelt.service.db_executor import (
     ExecutionError,
     ExecutionUnavailableError,
-    execute_sql,
     explain_sql,
     resolve_timezone,
 )
@@ -595,64 +596,12 @@ async def compile_query(
     )
 
 
-_RESULT_TYPE_TO_HINT: dict[str, str] = {
-    "string": "string",
-    "json": "string",
-    "int": "number",
-    "float": "number",
-    "date": "datetime",
-    "time": "datetime",
-    "time_tz": "datetime",
-    "timestamp": "datetime",
-    "timestamp_tz": "datetime",
-    "boolean": "string",
-}
-
-
-def _build_type_map(model: Any) -> dict[str, str]:
-    """Build a column-name → type-hint map from model definitions.
-
-    Uses ``dataType`` when available (e.g. ``decimal(18, 2)``),
-    then falls back to ``settings.defaultNumericDataType`` for numeric
-    measures/metrics, otherwise maps ``resultType`` to a simple hint.
-    """
-    default_num = None
-    if model.settings and model.settings.default_numeric_data_type:
-        default_num = model.settings.default_numeric_data_type
-
-    types: dict[str, str] = {}
-    for label, dim in model.dimensions.items():
-        types[label] = _RESULT_TYPE_TO_HINT.get(str(dim.result_type), "string")
-    for label, measure in model.measures.items():
-        if measure.data_type:
-            types[label] = measure.data_type
-        elif default_num:
-            types[label] = default_num
-        else:
-            types[label] = _RESULT_TYPE_TO_HINT.get(str(measure.result_type), "number")
-    for label, metric in model.metrics.items():
-        if metric.data_type:
-            types[label] = metric.data_type
-        elif default_num:
-            types[label] = default_num
-        else:
-            types[label] = "number"
-    return types
-
-
-def _build_format_map(model: Any) -> dict[str, str | None]:
-    """Build a column-name → format-string map from model measures/metrics."""
-    fmt: dict[str, str | None] = {}
-    for label, dim in model.dimensions.items():
-        if dim.format:
-            fmt[label] = dim.format
-    for label, measure in model.measures.items():
-        if measure.format:
-            fmt[label] = measure.format
-    for label, metric in model.metrics.items():
-        if metric.format:
-            fmt[label] = metric.format
-    return fmt
+# Column type/format helpers live in orionbelt.api.query_cache (shared with the
+# pgwire/Flight cache path). Re-exported here under their historical private
+# names for existing importers (value_formatting, oneshot).
+_build_type_map = build_type_map
+_build_format_map = build_format_map
+_build_explain_response = build_explain_response
 
 
 def _resolve_dialect(
@@ -700,14 +649,12 @@ def _build_execute_response(
         if fmt_map.get(c.name) is None and getattr(c, "default_format", None):
             fmt_map[c.name] = c.default_format
     column_names = [c.name for c in exec_result.columns]
-    columns_meta = [
-        ColumnMetadata(
-            name=c.name,
-            type=model_type_map.get(c.name, c.type_hint),
-            format=fmt_map.get(c.name),
-        )
-        for c in exec_result.columns
-    ]
+    # Canonical column shape (also what the result cache persists) — built via
+    # the shared helper so REST, the cache payload, and pgwire all agree. Reuse
+    # the maps already built above instead of rebuilding them.
+    columns_meta = build_result_columns(
+        model, exec_result, type_map=model_type_map, fmt_map=fmt_map
+    )
     # Merge the executor's type_hint as a fallback for columns that aren't
     # exposed via the dimension/measure/metric layer — notably raw-mode
     # ``select.fields`` projections, which reference physical columns the
@@ -766,40 +713,6 @@ def _build_execute_response(
         sql_valid=compile_result.sql_valid,
         explain=_build_explain_response(compile_result),
         physical_tables=list(compile_result.physical_tables),
-    )
-
-
-def _build_explain_response(result: Any) -> ExplainPlanResponse | None:
-    """Build an ExplainPlanResponse from a CompilationResult, if explain exists."""
-    if not result.explain:
-        return None
-    return ExplainPlanResponse(
-        planner=result.explain.planner,
-        planner_reason=result.explain.planner_reason,
-        base_object=result.explain.base_object,
-        base_object_reason=result.explain.base_object_reason,
-        joins=[
-            ExplainJoinResponse(
-                from_object=j.from_object,
-                to_object=j.to_object,
-                join_columns=j.join_columns,
-                reason=j.reason,
-            )
-            for j in result.explain.joins
-        ],
-        where_filter_count=result.explain.where_filter_count,
-        having_filter_count=result.explain.having_filter_count,
-        has_totals=result.explain.has_totals,
-        cfl_legs=[
-            ExplainCflLegResponse(
-                measure_source=leg.measure_source,
-                common_root=leg.common_root,
-                reason=leg.reason,
-                measures=leg.measures,
-                joins=leg.joins,
-            )
-            for leg in result.explain.cfl_legs
-        ],
     )
 
 
@@ -1056,7 +969,6 @@ async def execute_query(
         store=store,
         model=model,
         compile_result=result,
-        query=query,
         session_id=session_id,
         model_id=body.model_id,
         dialect=dialect,
@@ -1272,7 +1184,6 @@ async def execute_semantic_ql(
         store=store,
         model=model,
         compile_result=result,
-        query=query,
         session_id=session_id,
         model_id=body.model_id,
         dialect=dialect,
@@ -1293,7 +1204,6 @@ async def _run_with_cache(
     store: ModelStore,
     model: Any,
     compile_result: Any,
-    query: Any,
     session_id: str,
     model_id: str,
     dialect: str,
@@ -1318,62 +1228,45 @@ async def _run_with_cache(
         override_db_tz = model.settings.override_database_timezone
     tz = resolve_timezone(default_timezone=timezone_override or model_default_tz)
 
-    cacheable = response_format == "json" and not format_values
-    cache_key: str | None = None
-    ttl_outcome = None
-    if cacheable:
-        # Non-deterministic SQL (RAND, NOW, CURRENT_DATE, TABLESAMPLE, ...) must
-        # bypass the cache — same SQL, different answer per run. The cache key
-        # is the compiled SQL hash, so caching would freeze one stale slice
-        # forever. See ``cache/determinism.py``.
-        nondet, name = is_nondeterministic_sql(compile_result.sql)
-        if nondet:
-            logger.info(
-                "cache skipped for %s/%s: non-deterministic SQL (%s)",
-                session_id,
-                model_id,
-                name,
-            )
-            ttl_outcome = TtlResult(
-                ttl=None,
-                no_cache_reason=NoCacheReason.NON_DETERMINISTIC_SQL,
-            )
-        else:
-            cache_key = build_cache_key(
-                session_id=session_id,
-                model_id=model_id,
-                dialect=dialect,
-                sql=compile_result.sql,
-            )
-            ttl_outcome = _resolve_ttl(
-                store=store,
-                model_id=model_id,
-                cache=cache,
-                cache_config=cache_config,
-                physical_tables=compile_result.physical_tables,
-            )
-            _cache_t0 = time.monotonic()
-            cached_envelope = await _try_cache_get(cache, cache_key)
-            if cached_envelope is not None:
-                return _build_cached_response(
-                    envelope=cached_envelope,
-                    cache_key=cache_key,
-                    ttl_outcome=ttl_outcome,
-                    fetch_elapsed_ms=round((time.monotonic() - _cache_t0) * 1000, 2),
-                )
+    # TSV and value-formatted JSON skip caching (locale-keyed proliferation);
+    # only the canonical JSON shape is cached. Skip the whole cache machinery
+    # (key + freshness TTL + get) when the backend is a no-op, so the default
+    # deployment doesn't pay a per-query model scan for a cache that never hits.
+    cacheable = (
+        response_format == "json"
+        and not format_values
+        and getattr(cache, "backend_name", "noop") != "noop"
+    )
 
     try:
-        exec_result = await asyncio.to_thread(
-            execute_sql,
-            compile_result.sql,
+        cached = await execute_query_with_cache(
+            store=store,
+            model=model,
+            compile_result=compile_result,
+            session_id=session_id,
+            model_id=model_id,
             dialect=dialect,
+            cache=cache,
+            cache_config=cache_config,
             tz=tz,
             override_db_tz=override_db_tz,
+            cacheable=cacheable,
         )
     except ExecutionUnavailableError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from None
     except ExecutionError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from None
+
+    if cached.cached:
+        # A cache hit always carries a key and a fetch time.
+        assert cached.cache_key is not None
+        assert cached.fetch_elapsed_ms is not None
+        return _build_cached_response(
+            envelope=cached.envelope,
+            cache_key=cached.cache_key,
+            ttl_outcome=cached.ttl_outcome,
+            fetch_elapsed_ms=cached.fetch_elapsed_ms,
+        )
 
     # Locale resolution order: request ?locale= -> model settings.defaultLocale
     # -> DEFAULT_LOCALE env. Drives result value-formatting separators.
@@ -1383,136 +1276,23 @@ async def _run_with_cache(
     )
     response = _build_execute_response(
         compile_result=compile_result,
-        exec_result=exec_result,
+        exec_result=cached.exec_result,
         model=model,
         response_format=response_format,
         format_values=format_values,
         locale=effective_locale,
     )
+    ttl_outcome = cached.ttl_outcome
     if (
         cacheable
-        and cache_key is not None
         and ttl_outcome is not None
         and ttl_outcome.ttl is not None
         and isinstance(response, QueryExecuteResponse)
     ):
         _apply_ttl_metadata(response, ttl_outcome)
-        await _try_cache_set(
-            cache=cache,
-            key=cache_key,
-            response=response,
-            ttl_seconds=ttl_outcome.ttl.seconds,
-            session_id=session_id,
-            model_id=model_id,
-            dialect=dialect,
-            query=query,
-        )
     elif cacheable and ttl_outcome is not None and isinstance(response, QueryExecuteResponse):
         _apply_no_cache_metadata(response, ttl_outcome)
     return response
-
-
-def _resolve_ttl(
-    *,
-    store: ModelStore,
-    model_id: str,
-    cache: Cache,
-    cache_config: CacheRuntimeConfig,
-    physical_tables: list[str],
-) -> Any:
-    """Compose the effective TTL for a query, merging contracts + heartbeats."""
-    contracts = {}
-    try:
-        contracts = store.refresh_contracts(model_id)
-    except Exception:
-        logger.debug("refresh_contracts failed", exc_info=True)
-    heartbeats: dict[str, datetime] = {}
-    snapshot = getattr(cache, "heartbeats_snapshot", None)
-    if callable(snapshot):
-        try:
-            heartbeats = snapshot()
-        except Exception:
-            heartbeats = {}
-    return compute_effective_ttl(
-        physical_tables=physical_tables,
-        contracts=contracts,
-        heartbeats=heartbeats,
-        min_ttl_seconds=cache_config.min_ttl_seconds,
-        max_ttl_seconds=cache_config.max_ttl_seconds,
-        unknown_policy=cache_config.unknown_policy,
-        unknown_default_ttl_seconds=cache_config.unknown_default_ttl_seconds,
-    )
-
-
-async def _try_cache_get(cache: Cache, key: str) -> Any:
-    """Best-effort cache lookup; failures degrade to a miss.
-
-    Returns the decoded envelope with ``cached_at_iso`` attached, or None.
-    """
-    try:
-        result = await cache.get(key)
-    except Exception:
-        logger.debug("cache.get error", exc_info=True)
-        return None
-    if result is None:
-        return None
-    try:
-        envelope = cache_decode(result.payload)
-    except Exception:
-        logger.debug("cache decode failed", exc_info=True)
-        return None
-    # Canonical Z suffix for UTC, matching /v1/settings.timezone.now and
-    # /v1/cache/stats. datetime.isoformat() defaults to "+00:00".
-    envelope.cached_at_iso = result.cached_at.isoformat().replace("+00:00", "Z")
-    return envelope
-
-
-async def _try_cache_set(
-    *,
-    cache: Cache,
-    key: str,
-    response: QueryExecuteResponse,
-    ttl_seconds: int,
-    session_id: str,
-    model_id: str,
-    dialect: str,
-    query: Any,
-) -> None:
-    """Encode and store a response payload. Failures are logged and ignored."""
-    from orionbelt.cache import key as cache_key_mod
-    from orionbelt.cache import parquet_codec
-
-    try:
-        payload = parquet_codec.encode(
-            columns=[c.model_dump() for c in response.columns],
-            rows=response.rows,
-            sql=response.sql,
-            dialect=response.dialect,
-            explain=response.explain.model_dump() if response.explain else None,
-            warnings=[w.model_dump() for w in response.warnings],
-            sql_valid=response.sql_valid,
-            execution_time_ms=response.execution_time_ms,
-            timezone=response.timezone,
-            resolved=response.resolved.model_dump(),
-            physical_tables=list(response.physical_tables),
-        )
-    except Exception:
-        logger.debug("cache encode failed", exc_info=True)
-        return
-    try:
-        await cache.set(
-            key,
-            payload,
-            ttl_seconds=ttl_seconds,
-            physical_tables=list(response.physical_tables),
-            session_id=session_id,
-            model_id=model_id,
-            query_hash=cache_key_mod.query_hash(sql=response.sql),
-            dialect=dialect,
-            row_count=response.row_count,
-        )
-    except Exception:
-        logger.debug("cache.set error", exc_info=True)
 
 
 def _apply_ttl_metadata(response: QueryExecuteResponse, ttl_outcome: Any) -> None:

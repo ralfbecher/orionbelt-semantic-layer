@@ -291,8 +291,11 @@ async def _run_query(
                 cache_config=cache_config,
                 physical_tables=physical_tables,
             )
-            _cache_t0 = time.monotonic()
-            cached_hit = await _try_oneshot_cache_get(cache, cache_key)
+            # A "no cache" TTL must block reads as well as writes — only serve
+            # from cache when the current freshness says the query is cacheable.
+            if ttl_outcome.ttl is not None:
+                _cache_t0 = time.monotonic()
+                cached_hit = await _try_oneshot_cache_get(cache, cache_key)
         if cached_hit is not None:
             envelope, cached_at_iso = cached_hit
             fetch_elapsed_ms = round((time.monotonic() - _cache_t0) * 1000, 2)

@@ -40,6 +40,8 @@ async def start_pgwire(
     *,
     session_manager: SessionManager | None = None,
     query_handler: QueryHandler | None = None,
+    cache: object | None = None,
+    cache_config: object | None = None,
 ) -> PgWireRuntime | None:
     """Bind the pgwire TCP socket and spawn the ``serve_forever`` task.
 
@@ -58,6 +60,8 @@ async def start_pgwire(
         router = SemanticRouter(
             session_manager=session_manager,
             default_dialect=settings.db_vendor,
+            cache=cache,
+            cache_config=cache_config,
         )
         handler = router.handle
 

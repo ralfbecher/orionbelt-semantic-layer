@@ -2,6 +2,25 @@
 
 All notable changes to OrionBelt Semantic Layer are documented here.
 
+## [2.11.0] - 2026-06-13
+
+### Added
+
+- **Filter pushdown through Postgres-federation BI tools (Dremio).** When a tool like Dremio federates into OrionBelt's pgwire surface, its connector wraps the virtual `model` table in a trivial derived table and lifts the predicate to the outer query (`SELECT ... FROM (SELECT ... FROM model) WHERE ...`). The pgwire translator now detects and flattens that wrapper, so dimension filters (`WHERE`) and measure filters (`HAVING`) execute through federation instead of being rejected as unsupported subqueries. SQL that is not this exact shape is left untouched, so genuinely unsupported subqueries still reject.
+- **Result cache now serves the pgwire surface.** The freshness-driven result cache used to be wired only into the REST query handlers, so BI tools querying over pgwire (Dremio federation, DBeaver, Tableau) always bypassed it. The compile -> cache key -> freshness TTL -> get -> on-miss execute -> set pipeline is extracted into a shared `orionbelt.api.query_cache` service that REST and pgwire both use, so repeated pgwire queries are served from cache (`GET /v1/cache/stats`). Catalog / metadata probes never reach the semantic execute path and are never cached. Arrow Flight has a separate streaming execution path and is still pending (issue #117).
+- **Period-over-period: multiple comparison offsets per query.** One query can now combine PoP metrics with different offsets (e.g. month-over-month and year-over-year). They share a single date spine (same time dimension and base grain), and each distinct offset gets its own prior-period self-join. Previously all PoP metrics in a query silently reused the first metric's offset, producing wrong results for the others; a query mixing different base grains now raises a clear error instead.
+- **Dremio "semantic sidecar" demo (`demo/dremio/`).** A one-command, self-contained stack (MinIO + Dremio OSS + OrionBelt in single-model mode + the Gradio playground) that shows Dremio federating into OrionBelt over pgwire while OrionBelt compiles to the Dremio dialect and pushes execution back into Dremio over Arrow Flight. Includes a built-in raw-Parquet-vs-governed comparison, a runbook, and asset builders (DuckDB seed to Parquet, plus a Dremio-dialect model generated from the canonical commerce model).
+
+### Fixed
+
+- **`_metrics_metadata` catalog view exposes each metric's formula again.** The pgwire/BI metadata view read a non-existent `formula` attribute (the metric field is `expression`), so the `formula` column came back empty for every metric in every client (DBeaver, Tableau, Dremio, psql). It now shows the derived metric's expression and a synthesized formula for cumulative (e.g. `avg(Total Sales) rolling 30 over Sales Date`) and period-over-period (e.g. `percentChange({[Total Sales]}, -1 year)`) metrics. Not dialect-specific.
+- **Cross-fact metrics no longer leak component-measure columns.** A CFL (multi-fact) query that selected a derived/ratio metric (e.g. `Return Rate`, `Gross Margin`) projected the metric's underlying component measures (e.g. `Total Returns`, `Total Purchases`) as extra result columns the caller never requested. The outer SELECT now projects only the requested dimensions, measures, and metrics (the components are still aggregated internally to feed the metric expression). Direct Postgres clients tolerated the extra columns, but Postgres-federation engines that pin a dataset's column set (Dremio) rejected them with `INVALID_DATASET_METADATA`; cross-fact metrics now work through Dremio federation.
+- **Period-over-period metrics on Dremio.** The PoP wrapper self-joined the base CTE under the alias `prev`, which is a reserved word in Dremio and rejected as an unquoted table alias (`Encountered "- prev"`). The alias is now `pop_prev`, so period-over-period metrics (e.g. `Sales MoM Change`) compile and execute on the Dremio dialect, including through Dremio's pgwire federation.
+
+### Changed
+
+- **Cleaner federated catalog in admin-curated mode.** With `MODEL_FILES` set, the pgwire/BI catalog now exposes only the curated models. Transient user/scratch sessions (REST clients, the Gradio playground) are no longer surfaced as one schema per session id under the source, so BI-tool schema browsers stay uncluttered. Dynamic (non-curated) mode still lights up REST-loaded sessions as before.
+
 ## [2.10.0] - 2026-06-12
 
 ### Added

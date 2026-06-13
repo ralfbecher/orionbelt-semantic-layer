@@ -212,6 +212,28 @@ def _default_format_for_duckdb_type(type_obj: Any) -> str | None:
     return None
 
 
+def coarse_hint_from_type_name(name: str) -> str:
+    """Map a SQL / Arrow type *name* string to a coarse hint.
+
+    Single source of truth for the substring classification used by the Arrow
+    OpaqueType fallback below and by the pgwire cache's column-type recovery
+    (orionbelt.api.query_cache). Datetime / binary are matched *before* number
+    so a temporal type whose name contains a numeric substring (e.g.
+    ``interval`` contains ``int``) is not misclassified as a number.
+    """
+    lowered = (name or "").lower()
+    if any(t in lowered for t in ("timestamp", "date", "time", "interval")):
+        return "datetime"
+    if "bytea" in lowered or "binary" in lowered:
+        return "binary"
+    if any(
+        t in lowered
+        for t in ("int", "float", "double", "real", "decimal", "numeric", "money", "number")
+    ):
+        return "number"
+    return "string"
+
+
 def _arrow_type_to_hint(arrow_type: Any) -> str:
     """Map a PyArrow type to a simple type hint string.
 
@@ -248,13 +270,7 @@ def _arrow_type_to_hint(arrow_type: Any) -> str:
         pass
     type_name = getattr(arrow_type, "type_name", None)
     if isinstance(type_name, str):
-        lowered = type_name.lower()
-        if any(n in lowered for n in ("numeric", "decimal", "money")):
-            return "number"
-        if any(n in lowered for n in ("timestamp", "date", "time", "interval")):
-            return "datetime"
-        if "bytea" in lowered or "binary" in lowered:
-            return "binary"
+        return coarse_hint_from_type_name(type_name)
     return "string"
 
 

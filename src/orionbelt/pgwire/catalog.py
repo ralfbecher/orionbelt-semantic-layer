@@ -836,8 +836,14 @@ def _iter_loaded_models(session_manager: SessionManager) -> Iterator[tuple[str, 
 
     candidate_ids: list[str] = []
     candidate_ids.extend(session_manager.list_protected_session_ids())
-    candidate_ids.append("__default__")
-    candidate_ids.extend(s.session_id for s in session_manager.list_sessions())
+    # In admin-curated mode the catalog is the set of curated (protected)
+    # models only. The legacy ``__default__`` (MCP stdio) session and transient
+    # user/scratch sessions (REST clients, the Gradio playground) must not
+    # surface as extra schemas in BI tools — skip them so the catalog stays
+    # clean. In dynamic mode they ARE the catalog.
+    if not session_manager.is_single_model_mode:
+        candidate_ids.append("__default__")
+        candidate_ids.extend(s.session_id for s in session_manager.list_sessions())
 
     seen_names: set[str] = set()
     for session_id in candidate_ids:
@@ -1000,6 +1006,48 @@ def _build_measure_metadata_views(qdb: str, schema: str, model: SemanticModel) -
     )
 
 
+def _metric_formula(metric: object) -> str:
+    """Human-readable definition for a metric, shaped per metric type.
+
+    Derived metrics carry an ``expression``; cumulative and period-over-period
+    metrics don't, so we synthesize a readable formula from their config (the
+    ``formula`` column was previously empty for every non-derived metric, and
+    for derived ones too because it read a non-existent ``formula`` attribute).
+    """
+
+    mtype = str(getattr(metric, "type", "") or "derived")
+    expression = getattr(metric, "expression", None)
+
+    if mtype == "cumulative":
+        agg = str(getattr(metric, "cumulative_type", "") or "sum")
+        base = getattr(metric, "measure", "") or ""
+        window = getattr(metric, "window", None)
+        grain_to_date = getattr(metric, "grain_to_date", None)
+        time_dim = getattr(metric, "time_dimension", "") or ""
+        if window:
+            qualifier = f" rolling {window}"
+        elif grain_to_date:
+            qualifier = f" {grain_to_date!s}-to-date"
+        else:
+            qualifier = " running"
+        formula = f"{agg}({base}){qualifier}"
+        if time_dim:
+            formula += f" over {time_dim}"
+        return formula
+
+    if mtype == "period_over_period":
+        pop = getattr(metric, "period_over_period", None)
+        base = expression or (getattr(metric, "measure", "") or "")
+        if pop is not None:
+            comparison = str(getattr(pop, "comparison", "") or "")
+            offset = getattr(pop, "offset", "")
+            offset_grain = str(getattr(pop, "offset_grain", "") or "")
+            return f"{comparison}({base}, {offset} {offset_grain})"
+        return base or ""
+
+    return expression or ""
+
+
 def _build_metric_metadata_views(qdb: str, schema: str, model: SemanticModel) -> Iterator[str]:
     """``metrics`` and ``_metrics_metadata`` per model."""
 
@@ -1007,7 +1055,7 @@ def _build_metric_metadata_views(qdb: str, schema: str, model: SemanticModel) ->
     rows_full: list[str] = []
     for label, metric in model.metrics.items():
         metric_type = str(getattr(metric, "type", "") or "derived")
-        formula = (getattr(metric, "formula", "") or "").replace("'", "''")
+        formula = _metric_formula(metric).replace("'", "''")
         safe_label = label.replace("'", "''")
         rows_basic.append(f"('{safe_label}', '{metric_type}')")
         rows_full.append(f"('{safe_label}', '{metric_type}', '{formula}')")
