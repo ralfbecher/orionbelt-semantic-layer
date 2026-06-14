@@ -113,6 +113,10 @@ class Settings(BaseSettings):
     pgwire_auth_mode: str = "trust"  # "trust" (Step 1) | "password" | "scram-sha-256" (Step 6)
     pgwire_max_connections: int = 64
     pgwire_query_timeout_seconds: int = 60
+    # Hard deadline for the pre-auth handshake (startup + password/SCRAM
+    # exchange). Bounds how long an unauthenticated client can hold a
+    # connection slot, preventing slot-exhaustion DoS.
+    pgwire_auth_timeout_seconds: int = 10
 
     # One-shot batch endpoint (POST /v1/oneshot/batch). See PLAN_oneshot_batch.md.
     oneshot_batch_max_queries: int = 50

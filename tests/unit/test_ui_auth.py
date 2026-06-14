@@ -71,3 +71,37 @@ def test_unreachable_api_does_not_warn(capsys) -> None:
     with patch.object(ui_app.httpx, "get", side_effect=httpx.ConnectError("down")):
         ui_app._warn_if_auth_required_without_key("http://api", None)
     assert capsys.readouterr().out == ""
+
+
+# --- embedded UI must NOT auto-inject the server's API key (security) ---
+
+
+def _create_app_with_auth(monkeypatch, obsl_api_key):
+    """create_app in api_key mode with OBSL_API_KEY set or unset."""
+    from orionbelt.api.app import create_app
+    from orionbelt.settings import Settings
+
+    if obsl_api_key is None:
+        monkeypatch.delenv("OBSL_API_KEY", raising=False)
+    else:
+        monkeypatch.setenv("OBSL_API_KEY", obsl_api_key)
+    settings = Settings(
+        auth_mode="api_key",
+        api_keys="obsl_pat_server_key_0123456789abcdef",
+        session_ttl_seconds=3600,
+        session_cleanup_interval=9999,
+    )
+    create_app(settings=settings)
+
+
+def test_embedded_ui_does_not_autoinject_server_key(monkeypatch) -> None:
+    # With auth on and no OBSL_API_KEY, the embedded UI must NOT silently load
+    # the server's API key (that would make /ui an open privileged proxy).
+    _create_app_with_auth(monkeypatch, obsl_api_key=None)
+    assert "obsl_pat_server_key_0123456789abcdef" not in ui_app._API_HEADERS.values()
+    assert "X-API-Key" not in ui_app._API_HEADERS
+
+
+def test_embedded_ui_uses_explicit_obsl_api_key(monkeypatch) -> None:
+    _create_app_with_auth(monkeypatch, obsl_api_key="obsl_pat_ui_key_0123456789abcdef")
+    assert ui_app._API_HEADERS.get("X-API-Key") == "obsl_pat_ui_key_0123456789abcdef"

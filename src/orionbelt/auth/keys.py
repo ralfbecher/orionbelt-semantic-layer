@@ -10,8 +10,14 @@ from __future__ import annotations
 
 import secrets
 
-# Reject keys with less entropy than this at startup (see §1 validation rules).
+# Reject keys shorter than this at startup (see §1 validation rules).
 MIN_KEY_LENGTH = 16
+# Below this length, or with too few distinct characters, a key is accepted but
+# flagged as weak: SCRAM transcripts can be attacked offline if captured, so
+# low-entropy keys are a real risk. The recommended format is a 40-hex-char
+# random token (~160 bits).
+RECOMMENDED_KEY_LENGTH = 32
+_MIN_DISTINCT_CHARS = 10
 
 
 def parse_keys(raw: str) -> frozenset[str]:
@@ -30,6 +36,20 @@ def find_weak_keys(keys: frozenset[str]) -> list[str]:
     full key.
     """
     return [f"{k[:4]}..." for k in sorted(keys) if len(k) < MIN_KEY_LENGTH]
+
+
+def find_low_strength_keys(keys: frozenset[str]) -> list[str]:
+    """Return masked prefixes of keys that pass the hard floor but are weak.
+
+    A key is flagged when it is shorter than ``RECOMMENDED_KEY_LENGTH`` or uses
+    fewer than ``_MIN_DISTINCT_CHARS`` distinct characters (low entropy). These
+    are accepted but warned about at startup.
+    """
+    return [
+        f"{k[:4]}..."
+        for k in sorted(keys)
+        if len(k) < RECOMMENDED_KEY_LENGTH or len(set(k)) < _MIN_DISTINCT_CHARS
+    ]
 
 
 class KeyStore:

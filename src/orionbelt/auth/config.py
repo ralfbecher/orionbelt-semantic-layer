@@ -17,7 +17,7 @@ from orionbelt.auth.errors import (
     AuthInvalidError,
     AuthRequiredError,
 )
-from orionbelt.auth.keys import KeyStore, find_weak_keys, parse_keys
+from orionbelt.auth.keys import KeyStore, find_low_strength_keys, find_weak_keys, parse_keys
 from orionbelt.auth.principal import ANONYMOUS, API_KEY_PRINCIPAL, Principal
 
 logger = logging.getLogger("orionbelt.auth")
@@ -82,6 +82,15 @@ def init_auth(
             raise AuthConfigError(
                 f"API keys must be at least 16 characters. Found {len(weak)} weak key(s): "
                 f"{', '.join(weak)}."
+            )
+        weak_strength = find_low_strength_keys(keys)
+        if weak_strength:
+            logger.warning(
+                "Auth: %d API key(s) are low-strength (%s) - short or low-entropy keys "
+                "are vulnerable to offline attack on captured SCRAM transcripts. Use a "
+                'random token, e.g. python3 -c "import secrets; print(secrets.token_hex(20))".',
+                len(weak_strength),
+                ", ".join(weak_strength),
             )
         _key_store = KeyStore(keys)
         logger.info("Auth: api_key mode; %d key(s) loaded", len(keys))

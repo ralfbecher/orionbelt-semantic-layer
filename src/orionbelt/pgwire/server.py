@@ -94,12 +94,14 @@ class PgWireServer:
         auth_mode: str = "trust",
         max_connections: int = 64,
         query_timeout_seconds: float = 60.0,
+        auth_timeout_seconds: float = 10.0,
         query_handler: QueryHandler | None = None,
     ) -> None:
         self.host = host
         self.port = port
         self.auth_mode = auth_mode
         self.query_timeout = query_timeout_seconds
+        self.auth_timeout = auth_timeout_seconds
         self._semaphore = asyncio.Semaphore(max_connections)
         self._handler: QueryHandler = query_handler or _hello_world_handler
         self._server: asyncio.base_events.Server | None = None
@@ -164,6 +166,30 @@ class PgWireServer:
         writer.write(protocol.build_error_response(severity="FATAL", code=code, message=message))
         await self._drain(writer)
 
+    async def _handshake(
+        self,
+        reader: asyncio.StreamReader,
+        writer: asyncio.StreamWriter,
+    ) -> protocol.StartupMessage | None:
+        """Read the StartupMessage (handling SSLRequest) and authenticate.
+
+        Returns the StartupMessage on success, or ``None`` when auth was
+        rejected (a FATAL ErrorResponse has already been written). Run under a
+        wait_for deadline by the caller so a stalled client cannot pin a slot.
+        """
+        startup = await protocol.read_startup_message(reader.readexactly)
+        if startup is None:
+            # SSLRequest — reject (no in-process TLS), then read the real one.
+            writer.write(b"N")
+            await self._drain(writer)
+            startup = await protocol.read_startup_message(reader.readexactly)
+            if startup is None:
+                raise protocol.ProtocolError("Repeated SSLRequest on same socket")
+
+        if not await self._authenticate(reader, writer, startup):
+            return None
+        return startup
+
     async def _authenticate(
         self,
         reader: asyncio.StreamReader,
@@ -193,7 +219,9 @@ class PgWireServer:
     ) -> bool:
         writer.write(protocol.build_authentication_cleartext_password())
         await self._drain(writer)
-        tag, body = await protocol.read_message(reader.readexactly)
+        tag, body = await protocol.read_message(
+            reader.readexactly, max_length=protocol.MAX_AUTH_FRAME_SIZE
+        )
         if tag != b"p":
             await self._send_fatal(writer, code="08P01", message="expected PasswordMessage")
             return False
@@ -215,7 +243,9 @@ class PgWireServer:
         await self._drain(writer)
 
         # 2. SASLInitialResponse: mechanism selection + client-first-message.
-        tag, body = await protocol.read_message(reader.readexactly)
+        tag, body = await protocol.read_message(
+            reader.readexactly, max_length=protocol.MAX_AUTH_FRAME_SIZE
+        )
         if tag != b"p":
             await self._send_fatal(writer, code="08P01", message="expected SASLInitialResponse")
             return False
@@ -234,7 +264,9 @@ class PgWireServer:
         await self._drain(writer)
 
         # 3. SASLResponse: client-final-message with the proof.
-        tag, body = await protocol.read_message(reader.readexactly)
+        tag, body = await protocol.read_message(
+            reader.readexactly, max_length=protocol.MAX_AUTH_FRAME_SIZE
+        )
         if tag != b"p":
             await self._send_fatal(writer, code="08P01", message="expected SASLResponse")
             return False
@@ -293,20 +325,26 @@ class PgWireServer:
         writer: asyncio.StreamWriter,
         peer: object,
     ) -> None:
-        startup = await protocol.read_startup_message(reader.readexactly)
+        # Bound the entire pre-auth handshake (startup read + credential
+        # exchange) with a hard deadline. An unauthenticated client that
+        # opens a socket and stalls would otherwise hold a connection slot
+        # forever; with PGWIRE_MAX_CONNECTIONS such clients could exhaust
+        # all slots and lock out legitimate users.
+        try:
+            startup = await asyncio.wait_for(
+                self._handshake(reader, writer),
+                timeout=self.auth_timeout,
+            )
+        except TimeoutError:
+            logger.info("pgwire auth handshake timed out for %s", peer)
+            await self._safe_send_error(
+                writer,
+                code="08006",  # connection_failure
+                message="authentication handshake timed out",
+            )
+            return
         if startup is None:
-            # SSLRequest — reject (Step 1 has no TLS in-process), then
-            # read the real StartupMessage on the same socket.
-            writer.write(b"N")
-            await self._drain(writer)
-            startup = await protocol.read_startup_message(reader.readexactly)
-            if startup is None:
-                raise protocol.ProtocolError("Repeated SSLRequest on same socket")
-
-        # When the shared auth mode requires a credential, run the configured
-        # mechanism (SCRAM by default, cleartext on opt-in). The credential is
-        # the OBSL API key; the StartupMessage user field is ignored.
-        if not await self._authenticate(reader, writer, startup):
+            # SSLRequest loop exhausted or auth rejected — error already sent.
             return
 
         # Handshake complete: AuthOk + a small set of ParameterStatus

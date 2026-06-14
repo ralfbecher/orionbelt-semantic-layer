@@ -15,7 +15,12 @@ from orionbelt.auth import (
     reset_auth,
     resolve_mode,
 )
-from orionbelt.auth.keys import KeyStore, find_weak_keys, parse_keys
+from orionbelt.auth.keys import (
+    KeyStore,
+    find_low_strength_keys,
+    find_weak_keys,
+    parse_keys,
+)
 
 VALID_KEY = "obsl_pat_0123456789abcdef0123"  # >= 16 chars
 
@@ -42,6 +47,17 @@ class TestKeyStore:
     def test_find_weak_keys_masks_prefix(self) -> None:
         weak = find_weak_keys(frozenset({"short", VALID_KEY}))
         assert weak == ["shor..."]  # only the <16 char key, masked
+
+    def test_find_low_strength_flags_short(self) -> None:
+        # 20 chars: passes the 16 hard floor but below the 32 recommendation.
+        strong = "obsl_pat_" + "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0"  # 49 chars, diverse
+        low = find_low_strength_keys(frozenset({"0123456789abcdef0123", strong}))
+        assert low == ["0123..."]  # only the short key flagged; the 49-char one passes
+
+    def test_find_low_strength_flags_low_entropy(self) -> None:
+        # Long but only one distinct character -> low entropy.
+        low = find_low_strength_keys(frozenset({"a" * 40}))
+        assert low == ["aaaa..."]
 
     def test_validate_matches(self) -> None:
         store = KeyStore(frozenset({VALID_KEY, "another_long_key_here"}))

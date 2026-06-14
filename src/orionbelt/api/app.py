@@ -368,6 +368,20 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
                 from ob_flight.auth import build_shared_key_handler
 
                 flight_auth_handler = build_shared_key_handler()
+            elif not os.environ.get("FLIGHT_API_TOKEN"):
+                # No shared auth and no legacy token -> the Flight listener
+                # binds 0.0.0.0 and accepts every client (NoopAuthHandler). It
+                # can also auto-start merely because ob-flight is installed.
+                # Warn loudly so an operator does not unknowingly expose an
+                # unauthenticated SQL surface on the network.
+                started_by = "FLIGHT_ENABLED" if settings.flight_enabled else "package auto-detect"
+                logger.warning(
+                    "Flight SQL is starting WITHOUT authentication on 0.0.0.0:%d "
+                    "(started by %s). Anyone who can reach this port can query. "
+                    "Set AUTH_MODE=api_key to require a key, or restrict network access.",
+                    settings.flight_port,
+                    started_by,
+                )
 
             flight_thread = start_flight_background(
                 session_manager=mgr,
@@ -565,8 +579,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     v1.include_router(models_router.router, tags=["models"])
     v1.include_router(settings_router.router, tags=["settings"])
     v1.include_router(cache_stats.router, prefix="/cache", tags=["cache"])
-    v1.include_router(heartbeat.router, tags=["cache"])
     app.include_router(v1)
+
+    # Heartbeat is included OUTSIDE the auth-bearing v1 router: it carries its
+    # own auth (Authorization: Bearer <HEARTBEAT_AUTH_TOKEN>, and 404 when the
+    # token is unset). Routing it through global API-key auth would collide,
+    # because that auth also treats `Authorization: Bearer` as an API key, so a
+    # valid heartbeat token would be rejected as an invalid API key before the
+    # handler runs. It keeps the same /v1/heartbeat path.
+    app.include_router(heartbeat.router, prefix="/v1", tags=["cache"])
 
     # Root-level endpoints (no version prefix — used by load balancers, crawlers)
     @app.get("/health", response_model=HealthResponse, tags=["health"])
@@ -588,12 +609,29 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         from orionbelt.auth import MODE_API_KEY, resolve_mode
         from orionbelt.ui.app import create_blocks, set_api_credentials
 
-        # The embedded UI calls the same /v1 routes over localhost, so when
-        # auth is on it must present a valid key too. Resolve from Settings
-        # directly (init_auth runs later in lifespan). Pick the first key.
+        # The embedded UI is a server-side proxy that holds an API key and can
+        # act on /v1 (create sessions, load models, run queries, clear cache).
+        # /ui is intentionally NOT behind require_auth (browsers can't send the
+        # key on navigation), so injecting the server's key here would turn /ui
+        # into an open, privileged proxy: anyone who can reach /ui acts as the
+        # key holder. We therefore do NOT auto-pull a key from API_KEYS. The
+        # operator must opt in explicitly by setting OBSL_API_KEY, which signals
+        # they accept /ui as a key-holding surface and will network-protect it.
         if resolve_mode(settings.auth_mode, settings.auth_enabled) == MODE_API_KEY:
-            first_key = next((k.strip() for k in settings.api_keys.split(",") if k.strip()), None)
-            set_api_credentials(first_key, settings.api_key_header)
+            ui_key = os.environ.get("OBSL_API_KEY") or None
+            if ui_key:
+                set_api_credentials(ui_key, settings.api_key_header)
+                logger.warning(
+                    "Embedded UI is configured with OBSL_API_KEY and acts as an "
+                    "authenticated proxy to /v1. /ui is NOT itself behind API-key "
+                    "auth - restrict network access to it (reverse proxy / firewall)."
+                )
+            else:
+                logger.warning(
+                    "AUTH_MODE=api_key but OBSL_API_KEY is not set: the embedded UI "
+                    "cannot call /v1 and will surface auth errors. Set OBSL_API_KEY to "
+                    "enable it (and protect /ui), or run the UI as a separate service."
+                )
 
         api_url = f"http://localhost:{settings.effective_port}"
         # Resolve from Settings directly: the UI is mounted in create_app(), which

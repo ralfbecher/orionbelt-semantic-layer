@@ -101,6 +101,14 @@ options = flight.FlightCallOptions(headers=[token])
 The legacy `FLIGHT_AUTH_MODE=token` / `FLIGHT_API_TOKEN` still works for one
 release with a deprecation warning. Migrate to `AUTH_MODE=api_key` + `API_KEYS`.
 
+!!! warning "Flight can start unauthenticated"
+    The Flight server binds `0.0.0.0` and can auto-start when the
+    `ob-flight-extension` package is present. If neither `AUTH_MODE=api_key` nor
+    `FLIGHT_API_TOKEN` is set, it accepts every client. The server logs a loud
+    warning in that case. For any non-local deployment, set `AUTH_MODE=api_key`
+    (Flight then validates against the shared key store) or restrict access to
+    the Flight port at the network layer.
+
 ### Postgres wire (psql, Tableau, Power BI, Metabase, DBeaver)
 
 When `AUTH_MODE=api_key`, pgwire requires a password (the API key). The
@@ -126,8 +134,16 @@ uv run orionbelt-ui
 ```
 
 If `OBSL_API_KEY` is unset while the API enforces auth, the UI logs a clear
-startup error (rather than surfacing cryptic 401s in the browser). When the UI
-is co-hosted inside the API process, it picks up the key automatically.
+startup error (rather than surfacing cryptic 401s in the browser).
+
+!!! warning "The UI is a privileged proxy"
+    The UI holds an API key and can act on `/v1` (create sessions, load models,
+    run queries, clear cache). `/ui` itself is **not** behind API-key auth
+    (browsers cannot send the key on navigation), so anyone who can reach `/ui`
+    acts as the key holder. For this reason the **embedded** (co-hosted) UI does
+    **not** auto-adopt a key from `API_KEYS` - you must set `OBSL_API_KEY`
+    explicitly, and when you do, restrict network access to `/ui` (reverse proxy
+    / firewall / private network).
 
 ### MCP server
 

@@ -6,11 +6,12 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from orionbelt.api.app import create_app
-from orionbelt.api.deps import init_session_manager, reset_session_manager
+from orionbelt.api.deps import CacheRuntimeConfig, init_session_manager, reset_session_manager
 from orionbelt.service.session_manager import SessionManager
 from orionbelt.settings import Settings
 
 TEST_KEY = "obsl_pat_test_key_0123456789abcdef"
+HEARTBEAT_TOKEN = "hb-secret-token-0123456789"
 
 
 def _make_manager(settings: Settings) -> SessionManager:
@@ -108,3 +109,49 @@ class TestStartupValidation:
         with pytest.raises(Exception, match="API_KEYS is empty"):
             init_session_manager(_make_manager(settings), auth_mode="api_key", api_keys="")
         reset_session_manager()
+
+
+class TestHeartbeatExemptFromGlobalAuth:
+    """Heartbeat keeps its own Bearer-token auth and is not gated by API-key auth.
+
+    The global API auth treats Authorization: Bearer as an API-key fallback, so
+    routing heartbeat through it would reject the heartbeat token as an invalid
+    API key (403). Heartbeat is included outside the auth-bearing router.
+    """
+
+    @pytest.fixture
+    async def hb_client(self):
+        settings = Settings(session_ttl_seconds=3600, session_cleanup_interval=9999)
+        app = create_app(settings=settings)
+        init_session_manager(
+            _make_manager(settings),
+            auth_mode="api_key",
+            api_keys=TEST_KEY,
+            cache_config=CacheRuntimeConfig(heartbeat_auth_token=HEARTBEAT_TOKEN),
+        )
+        try:
+            transport = ASGITransport(app=app)
+            async with AsyncClient(transport=transport, base_url="http://test") as c:
+                yield c
+        finally:
+            reset_session_manager()
+
+    async def test_heartbeat_token_reaches_handler(self, hb_client: AsyncClient) -> None:
+        resp = await hb_client.post(
+            "/v1/heartbeat",
+            headers={"Authorization": f"Bearer {HEARTBEAT_TOKEN}"},
+            json={"database": "db", "schema": "public", "table": "orders"},
+        )
+        # Not blocked by global API-key auth (would be 403 AUTH_INVALID); the
+        # heartbeat handler runs and accepts its own token.
+        assert resp.status_code == 200
+
+    async def test_heartbeat_uses_own_auth_not_global_key(self, hb_client: AsyncClient) -> None:
+        # Sending the global API key but no heartbeat Bearer hits the heartbeat
+        # handler's own check (401 missing Authorization), not global auth.
+        resp = await hb_client.post(
+            "/v1/heartbeat",
+            headers={"X-API-Key": TEST_KEY},
+            json={"database": "db", "schema": "public", "table": "orders"},
+        )
+        assert resp.status_code == 401

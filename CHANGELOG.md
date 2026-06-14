@@ -9,12 +9,20 @@ All notable changes to OrionBelt Semantic Layer are documented here.
 - **Unified authentication across every surface.** A single `AUTH_MODE` selector (`none` / `api_key` / `oidc`) governs REST, Arrow Flight SQL, the Postgres wire protocol, the Gradio UI, and the MCP server. Off by default (`AUTH_MODE=none`), so the public demo and local dev are unchanged; production turns it on with `AUTH_MODE=api_key` + `API_KEYS` (comma-separated keys, rotated by overlap). Startup fails fast on an empty key list or a key under 16 characters. `oidc` is reserved for a later release and is rejected loudly until then. See the new `docs/guide/authentication.md`.
 - **REST API-key auth.** Every `/v1` endpoint requires a valid key when auth is on; `X-API-Key` (configurable via `API_KEY_HEADER`) and `Authorization: Bearer` are both accepted. Missing credentials return `401` with `WWW-Authenticate`, invalid ones `403`. `/health`, `/robots.txt`, `/docs`, `/redoc`, `/openapi.json`, and `/ui` stay open, and `/health` now reports `auth_mode` so clients can detect the requirement without a key.
 - **Flight + pgwire auth on the shared key store.** Arrow Flight validates the handshake credential (the API key) against the same store. The Postgres wire surface requires the key as a password, defaulting to **SCRAM-SHA-256** (which never sends the key on the wire); operators can opt into cleartext with `PGWIRE_AUTH_MODE=password`. The legacy `FLIGHT_AUTH_MODE=token` / `FLIGHT_API_TOKEN` path keeps working for one release with a deprecation warning.
-- **UI credential forwarding.** The Gradio UI reads `OBSL_API_KEY` and forwards it on every REST call; browser users never see it. It logs a clear startup error when the API requires auth but no key is set, and the co-hosted UI picks up the key automatically.
+- **UI credential forwarding.** The Gradio UI reads `OBSL_API_KEY` and forwards it on every REST call; browser users never see it. It logs a clear startup error when the API requires auth but no key is set. The co-hosted (embedded) UI also requires `OBSL_API_KEY` to be set explicitly (see Security).
 
 ### Changed
 
 - **`AUTH_ENABLED` is deprecated.** It now acts as an alias for `AUTH_MODE=api_key` and logs a startup warning. Migrate to `AUTH_MODE`.
 - **FastAPI 0.137 compatibility.** FastAPI 0.137 rejects empty-string route paths supplied via `include_router(prefix=...)` ("Prefix and path cannot be both empty"). The five affected routers (sessions, models, settings, dialects, reference) now declare their prefix on the `APIRouter()` constructor instead, which keeps their root routes at the same URLs with no trailing slash. No version cap needed.
+
+### Security
+
+- **Embedded UI no longer auto-loads the server's API key.** `/ui` is a server-side proxy that can act on `/v1`, and it is not itself behind API-key auth. Previously, with `AUTH_MODE=api_key` the embedded UI silently adopted the first configured key, turning `/ui` into an open privileged proxy. It now injects a key only when `OBSL_API_KEY` is set explicitly, and logs a warning that `/ui` must be network-protected when it is.
+- **pgwire pre-auth DoS hardening.** The startup + password/SCRAM handshake now runs under a hard deadline (`PGWIRE_AUTH_TIMEOUT_SECONDS`, default 10s) so a stalled unauthenticated client cannot pin a connection slot. Post-startup frames are capped at 16 MB, and auth (password/SASL) frames at 64 KB, so a client cannot advertise a huge frame to exhaust memory before authenticating.
+- **Heartbeat is exempt from global API-key auth.** `POST /v1/heartbeat` keeps its own `Authorization: Bearer <HEARTBEAT_AUTH_TOKEN>` auth and is included outside the auth-bearing router, so its token is no longer rejected by the global auth's Bearer-as-API-key fallback.
+- **Weak API keys are flagged at startup.** Keys that pass the 16-char floor but are short (< 32 chars) or low-entropy are now warned about, since SCRAM transcripts can be attacked offline if captured.
+- **Unauthenticated Flight startup warns loudly.** When Flight starts without auth (no `AUTH_MODE=api_key`, no `FLIGHT_API_TOKEN`) it now logs a prominent warning that it is exposing an unauthenticated SQL surface on `0.0.0.0`.
 
 ## [2.11.0] - 2026-06-13
 

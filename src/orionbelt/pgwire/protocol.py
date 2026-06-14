@@ -107,12 +107,26 @@ async def read_startup_message(reader_read_exactly: ReadExactly) -> StartupMessa
     return StartupMessage(protocol_version=code, parameters=params)
 
 
-async def read_message(reader_read_exactly: ReadExactly) -> tuple[bytes, bytes]:
+# Frame-size caps. Without a ceiling a client can advertise an enormous
+# length and force the server to allocate/await that many bytes — a cheap
+# memory/resource DoS, reachable even before authentication during the
+# password/SASL exchange. Auth frames are tiny, so they get a much stricter
+# cap than ordinary post-auth frames (which carry SQL text).
+MAX_FRAME_SIZE = 16 * 1024 * 1024  # 16 MB — generous for any SELECT text
+MAX_AUTH_FRAME_SIZE = 64 * 1024  # 64 KB — password / SASL frames are tiny
+
+
+async def read_message(
+    reader_read_exactly: ReadExactly,
+    *,
+    max_length: int = MAX_FRAME_SIZE,
+) -> tuple[bytes, bytes]:
     """Read a single tagged message frame.
 
     Returns ``(tag, body)`` where ``tag`` is the 1-byte message type and
     ``body`` excludes the 4-byte length prefix.  Caller dispatches on
-    ``tag``.
+    ``tag``. ``max_length`` bounds the body size; oversized frames raise
+    ``ProtocolError`` before any large read is attempted.
     """
 
     tag = await reader_read_exactly(1)
@@ -120,7 +134,10 @@ async def read_message(reader_read_exactly: ReadExactly) -> tuple[bytes, bytes]:
     (length,) = struct.unpack("!I", length_bytes)
     if length < 4:
         raise ProtocolError(f"Message length too small: {length}")
-    body = await reader_read_exactly(length - 4) if length > 4 else b""
+    body_len = length - 4
+    if body_len > max_length:
+        raise ProtocolError(f"Message length {length} exceeds cap {max_length + 4}")
+    body = await reader_read_exactly(body_len) if body_len else b""
     return tag, body
 
 

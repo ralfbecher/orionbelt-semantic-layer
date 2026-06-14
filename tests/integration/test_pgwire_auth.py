@@ -237,6 +237,41 @@ async def test_scram_valid_key() -> None:
             await writer.wait_closed()
 
 
+# --- DoS hardening: auth timeout + frame-size cap ---
+
+
+async def test_auth_handshake_timeout_closes_stalled_client() -> None:
+    """A client that connects but never sends a startup packet is dropped."""
+    server = PgWireServer(host="127.0.0.1", port=0, auth_timeout_seconds=0.3, max_connections=8)
+    await server.start()
+    async with _running(server):
+        reader, writer = await asyncio.open_connection("127.0.0.1", server.bound_port)
+        try:
+            # Send nothing. The server must give up within the auth deadline and
+            # either send a FATAL error or close the socket, freeing the slot.
+            tag = await asyncio.wait_for(reader.read(1), timeout=3.0)
+            # Either an ErrorResponse frame ('E') or EOF (b"") is acceptable.
+            assert tag in (b"E", b"")
+        finally:
+            writer.close()
+            with contextlib.suppress(Exception):
+                await writer.wait_closed()
+
+
+async def test_read_message_rejects_oversized_frame() -> None:
+    """read_message raises before reading an over-cap body."""
+
+    async def fake_read(n: int) -> bytes:
+        if n == 1:
+            return b"p"
+        if n == 4:
+            return struct.pack("!I", protocol.MAX_AUTH_FRAME_SIZE + 100)  # length field
+        raise AssertionError("must not attempt to read the oversized body")
+
+    with pytest.raises(protocol.ProtocolError, match="exceeds cap"):
+        await protocol.read_message(fake_read, max_length=protocol.MAX_AUTH_FRAME_SIZE)
+
+
 async def test_scram_wrong_key() -> None:
     init_auth(auth_mode="api_key", api_keys=API_KEY)
     server = await _make_server()
