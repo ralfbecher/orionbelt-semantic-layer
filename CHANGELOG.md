@@ -2,6 +2,19 @@
 
 All notable changes to OrionBelt Semantic Layer are documented here.
 
+## [2.12.0] - 2026-06-14
+
+### Added
+
+- **Unified authentication across every surface.** A single `AUTH_MODE` selector (`none` / `api_key` / `oidc`) governs REST, Arrow Flight SQL, the Postgres wire protocol, the Gradio UI, and the MCP server. Off by default (`AUTH_MODE=none`), so the public demo and local dev are unchanged; production turns it on with `AUTH_MODE=api_key` + `API_KEYS` (comma-separated keys, rotated by overlap). Startup fails fast on an empty key list or a key under 16 characters. `oidc` is reserved for a later release and is rejected loudly until then. See the new `docs/guide/authentication.md`.
+- **REST API-key auth.** Every `/v1` endpoint requires a valid key when auth is on; `X-API-Key` (configurable via `API_KEY_HEADER`) and `Authorization: Bearer` are both accepted. Missing credentials return `401` with `WWW-Authenticate`, invalid ones `403`. `/health`, `/robots.txt`, `/docs`, `/redoc`, `/openapi.json`, and `/ui` stay open, and `/health` now reports `auth_mode` so clients can detect the requirement without a key.
+- **Flight + pgwire auth on the shared key store.** Arrow Flight validates the handshake credential (the API key) against the same store. The Postgres wire surface requires the key as a password, defaulting to **SCRAM-SHA-256** (which never sends the key on the wire); operators can opt into cleartext with `PGWIRE_AUTH_MODE=password`. The legacy `FLIGHT_AUTH_MODE=token` / `FLIGHT_API_TOKEN` path keeps working for one release with a deprecation warning.
+- **UI credential forwarding.** The Gradio UI reads `OBSL_API_KEY` and forwards it on every REST call; browser users never see it. It logs a clear startup error when the API requires auth but no key is set, and the co-hosted UI picks up the key automatically.
+
+### Changed
+
+- **`AUTH_ENABLED` is deprecated.** It now acts as an alias for `AUTH_MODE=api_key` and logs a startup warning. Migrate to `AUTH_MODE`.
+
 ## [2.11.0] - 2026-06-13
 
 ### Added
