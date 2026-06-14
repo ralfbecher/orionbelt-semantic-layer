@@ -549,16 +549,21 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     # root-level endpoints (/health, /robots.txt, /docs, /openapi.json, /ui)
     # stay exempt by virtue of living outside this router.
     v1 = APIRouter(prefix="/v1", dependencies=[Depends(require_auth)])
-    v1.include_router(sessions.router, prefix="/sessions", tags=["sessions"])
+    # Routers whose prefix lives on their APIRouter() constructor (so their
+    # root routes keep an empty path and resolve with no trailing slash under
+    # FastAPI 0.137+) are included without a prefix here: sessions, dialects,
+    # reference, models, settings. model_api/graph share the /sessions space
+    # but have no empty-path routes, so they keep the include-time prefix.
+    v1.include_router(sessions.router, tags=["sessions"])
     v1.include_router(model_api.router, prefix="/sessions", tags=["model-discovery"])
     v1.include_router(graph.router, prefix="/sessions", tags=["graph"])
     v1.include_router(shortcuts.router, tags=["model-discovery"])
     v1.include_router(convert.router, prefix="/convert", tags=["convert"])
-    v1.include_router(dialects.router, prefix="/dialects", tags=["dialects"])
+    v1.include_router(dialects.router, tags=["dialects"])
     v1.include_router(oneshot.router, prefix="/oneshot", tags=["oneshot"])
-    v1.include_router(reference.router, prefix="/reference", tags=["reference"])
-    v1.include_router(models_router.router, prefix="/models", tags=["models"])
-    v1.include_router(settings_router.router, prefix="/settings", tags=["settings"])
+    v1.include_router(reference.router, tags=["reference"])
+    v1.include_router(models_router.router, tags=["models"])
+    v1.include_router(settings_router.router, tags=["settings"])
     v1.include_router(cache_stats.router, prefix="/cache", tags=["cache"])
     v1.include_router(heartbeat.router, tags=["cache"])
     app.include_router(v1)
