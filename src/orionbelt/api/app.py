@@ -11,12 +11,13 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 import uvicorn
-from fastapi import APIRouter, FastAPI, Request
+from fastapi import APIRouter, Depends, FastAPI, Request
 from fastapi.exception_handlers import request_validation_exception_handler
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, Response
 
 from orionbelt import __version__
+from orionbelt.api.auth import require_auth
 from orionbelt.api.deps import (
     CacheRuntimeConfig,
     OneshotBatchConfig,
@@ -343,6 +344,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
         ),
         cache=cache,
         cache_config=cache_config,
+        auth_mode=settings.auth_mode,
+        api_keys=settings.api_keys,
+        api_key_header=settings.api_key_header,
+        auth_enabled=settings.auth_enabled,
     )
 
     # Start Arrow Flight SQL server if ob-flight-extension is installed
@@ -353,9 +358,21 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
         try:
             from ob_flight.startup import start_flight_background
 
+            # When shared auth is in api_key mode, validate Flight handshakes
+            # against the same key store as REST/pgwire. Otherwise fall back to
+            # the legacy FLIGHT_* env path inside start_flight_background.
+            flight_auth_handler = None
+            from orionbelt.auth import MODE_API_KEY, get_mode
+
+            if get_mode() == MODE_API_KEY:
+                from ob_flight.auth import build_shared_key_handler
+
+                flight_auth_handler = build_shared_key_handler()
+
             flight_thread = start_flight_background(
                 session_manager=mgr,
                 port=settings.flight_port,
+                auth_handler=flight_auth_handler,
                 default_dialect=settings.db_vendor,
                 cache=cache,
                 cache_config=cache_config,
@@ -527,8 +544,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     app.add_middleware(RequestIdMiddleware)
 
-    # Versioned API routes under /v1
-    v1 = APIRouter(prefix="/v1")
+    # Versioned API routes under /v1. The auth dependency is applied at the
+    # router level so every /v1/* endpoint is protected when AUTH_MODE != none;
+    # root-level endpoints (/health, /robots.txt, /docs, /openapi.json, /ui)
+    # stay exempt by virtue of living outside this router.
+    v1 = APIRouter(prefix="/v1", dependencies=[Depends(require_auth)])
     v1.include_router(sessions.router, prefix="/sessions", tags=["sessions"])
     v1.include_router(model_api.router, prefix="/sessions", tags=["model-discovery"])
     v1.include_router(graph.router, prefix="/sessions", tags=["graph"])
@@ -546,7 +566,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     # Root-level endpoints (no version prefix — used by load balancers, crawlers)
     @app.get("/health", response_model=HealthResponse, tags=["health"])
     async def health() -> HealthResponse:
-        return HealthResponse(status="ok", version=__version__)
+        # auth_mode is exposed here (unauthenticated) so clients can detect
+        # whether a credential is required before hitting any /v1 endpoint.
+        from orionbelt.auth import get_mode
+
+        return HealthResponse(status="ok", version=__version__, auth_mode=get_mode())
 
     @app.get("/robots.txt", include_in_schema=False)
     async def robots_txt() -> Response:

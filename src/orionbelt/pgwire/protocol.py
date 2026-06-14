@@ -303,6 +303,70 @@ def build_authentication_ok() -> bytes:
     return _frame(b"R", struct.pack("!I", 0))
 
 
+def build_authentication_cleartext_password() -> bytes:
+    """AuthenticationCleartextPassword — ask the client for a password.
+
+    The client replies with a ``PasswordMessage`` (tag ``p``) carrying the
+    password as a NUL-terminated string. Used when AUTH_MODE=api_key: the
+    "password" is the OBSL API key. See design/PLAN_authentication.md §3.3.
+    """
+    return _frame(b"R", struct.pack("!I", 3))
+
+
+def parse_password_message(body: bytes) -> str:
+    """Parse the body of a ``PasswordMessage`` (``p``) frame.
+
+    The body is a single NUL-terminated string (the cleartext password).
+    """
+    if body.endswith(b"\x00"):
+        body = body[:-1]
+    return body.decode("utf-8", errors="replace")
+
+
+def build_authentication_sasl(mechanisms: list[str]) -> bytes:
+    """AuthenticationSASL — advertise supported SASL mechanisms (int 10).
+
+    Payload: ``int32(10)`` then each mechanism name as a NUL-terminated
+    string, ended by an extra NUL. See design/PLAN_authentication.md §3.3.
+    """
+    payload = struct.pack("!I", 10)
+    for mech in mechanisms:
+        payload += mech.encode("ascii") + b"\x00"
+    payload += b"\x00"
+    return _frame(b"R", payload)
+
+
+def build_authentication_sasl_continue(data: bytes) -> bytes:
+    """AuthenticationSASLContinue (int 11) carrying the server-first-message."""
+    return _frame(b"R", struct.pack("!I", 11) + data)
+
+
+def build_authentication_sasl_final(data: bytes) -> bytes:
+    """AuthenticationSASLFinal (int 12) carrying the server-final-message."""
+    return _frame(b"R", struct.pack("!I", 12) + data)
+
+
+def parse_sasl_initial_response(body: bytes) -> tuple[str, str]:
+    """Parse a ``SASLInitialResponse`` (``p``) frame.
+
+    Body: mechanism name (NUL-terminated) + int32 response length + response
+    bytes. A length of -1 means no initial response. Returns
+    ``(mechanism, initial_response_text)``.
+    """
+    nul = body.index(b"\x00")
+    mechanism = body[:nul].decode("ascii", errors="replace")
+    rest = body[nul + 1 :]
+    (length,) = struct.unpack("!i", rest[:4])
+    if length < 0:
+        return mechanism, ""
+    return mechanism, rest[4 : 4 + length].decode("utf-8", errors="replace")
+
+
+def parse_sasl_response(body: bytes) -> str:
+    """Parse a ``SASLResponse`` (``p``) frame — the whole body is the message."""
+    return body.decode("utf-8", errors="replace")
+
+
 def build_parameter_status(name: str, value: str) -> bytes:
     payload = name.encode("utf-8") + b"\x00" + value.encode("utf-8") + b"\x00"
     return _frame(b"S", payload)

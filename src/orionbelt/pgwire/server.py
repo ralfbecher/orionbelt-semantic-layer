@@ -23,8 +23,15 @@ import struct
 from collections.abc import Awaitable, Callable
 
 from orionbelt.pgwire import protocol
-from orionbelt.pgwire.auth import authenticate
+from orionbelt.pgwire.auth import (
+    MECH_CLEARTEXT,
+    auth_required,
+    authenticate,
+    scram_candidate_keys,
+    select_mechanism,
+)
 from orionbelt.pgwire.extended import ExtendedSession
+from orionbelt.pgwire.scram import SCRAM_SHA_256, ScramError, ScramServerExchange
 
 logger = logging.getLogger(__name__)
 
@@ -152,6 +159,97 @@ class PgWireServer:
         except TimeoutError as exc:
             raise ConnectionError("pgwire write drain timed out") from exc
 
+    async def _send_fatal(self, writer: asyncio.StreamWriter, *, code: str, message: str) -> None:
+        """Write a FATAL ErrorResponse and flush it."""
+        writer.write(protocol.build_error_response(severity="FATAL", code=code, message=message))
+        await self._drain(writer)
+
+    async def _authenticate(
+        self,
+        reader: asyncio.StreamReader,
+        writer: asyncio.StreamWriter,
+        startup: protocol.StartupMessage,
+    ) -> bool:
+        """Run the auth handshake for the connection.
+
+        Returns True when the connection is authenticated (and AuthenticationOk
+        has NOT yet been written — the caller emits it). Returns False after
+        writing a FATAL ErrorResponse on rejection.
+        """
+        if not auth_required():
+            # trust mode — validate (always ok) for symmetry, no exchange.
+            return authenticate(startup=startup, password=None).ok
+
+        mechanism = select_mechanism(self.auth_mode)
+        if mechanism == MECH_CLEARTEXT:
+            return await self._run_cleartext(reader, writer, startup)
+        return await self._run_scram(reader, writer)
+
+    async def _run_cleartext(
+        self,
+        reader: asyncio.StreamReader,
+        writer: asyncio.StreamWriter,
+        startup: protocol.StartupMessage,
+    ) -> bool:
+        writer.write(protocol.build_authentication_cleartext_password())
+        await self._drain(writer)
+        tag, body = await protocol.read_message(reader.readexactly)
+        if tag != b"p":
+            await self._send_fatal(writer, code="08P01", message="expected PasswordMessage")
+            return False
+        password = protocol.parse_password_message(body)
+        result = authenticate(startup=startup, password=password)
+        if not result.ok:
+            await self._send_fatal(
+                writer, code="28P01", message=result.error_message or "authentication failed"
+            )
+            return False
+        return True
+
+    async def _run_scram(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> bool:
+        """Drive the server side of a SCRAM-SHA-256 SASL exchange."""
+        exchange = ScramServerExchange(scram_candidate_keys())
+
+        # 1. Advertise the mechanism.
+        writer.write(protocol.build_authentication_sasl([SCRAM_SHA_256]))
+        await self._drain(writer)
+
+        # 2. SASLInitialResponse: mechanism selection + client-first-message.
+        tag, body = await protocol.read_message(reader.readexactly)
+        if tag != b"p":
+            await self._send_fatal(writer, code="08P01", message="expected SASLInitialResponse")
+            return False
+        mechanism, client_first = protocol.parse_sasl_initial_response(body)
+        if mechanism != SCRAM_SHA_256:
+            await self._send_fatal(
+                writer, code="28P01", message=f"unsupported SASL mechanism: {mechanism}"
+            )
+            return False
+        try:
+            server_first = exchange.handle_client_first(client_first)
+        except ScramError:
+            await self._send_fatal(writer, code="08P01", message="malformed SCRAM client-first")
+            return False
+        writer.write(protocol.build_authentication_sasl_continue(server_first.encode("utf-8")))
+        await self._drain(writer)
+
+        # 3. SASLResponse: client-final-message with the proof.
+        tag, body = await protocol.read_message(reader.readexactly)
+        if tag != b"p":
+            await self._send_fatal(writer, code="08P01", message="expected SASLResponse")
+            return False
+        client_final = protocol.parse_sasl_response(body)
+        try:
+            server_final = exchange.handle_client_final(client_final)
+        except ScramError:
+            await self._send_fatal(writer, code="28P01", message="SCRAM authentication failed")
+            return False
+
+        # 4. SASLFinal with the server signature; AuthenticationOk follows.
+        writer.write(protocol.build_authentication_sasl_final(server_final.encode("utf-8")))
+        await self._drain(writer)
+        return True
+
     async def _handle_connection(
         self,
         reader: asyncio.StreamReader,
@@ -205,16 +303,10 @@ class PgWireServer:
             if startup is None:
                 raise protocol.ProtocolError("Repeated SSLRequest on same socket")
 
-        auth = authenticate(auth_mode=self.auth_mode, startup=startup)
-        if not auth.ok:
-            writer.write(
-                protocol.build_error_response(
-                    severity="FATAL",
-                    code="28P01",  # invalid_password
-                    message=auth.error_message or "authentication failed",
-                )
-            )
-            await self._drain(writer)
+        # When the shared auth mode requires a credential, run the configured
+        # mechanism (SCRAM by default, cleartext on opt-in). The credential is
+        # the OBSL API key; the StartupMessage user field is ignored.
+        if not await self._authenticate(reader, writer, startup):
             return
 
         # Handshake complete: AuthOk + a small set of ParameterStatus
