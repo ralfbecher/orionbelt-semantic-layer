@@ -22,7 +22,8 @@ All notable changes to OrionBelt Semantic Layer are documented here.
 - **pgwire pre-auth DoS hardening.** The startup + password/SCRAM handshake now runs under a hard deadline (`PGWIRE_AUTH_TIMEOUT_SECONDS`, default 10s) so a stalled unauthenticated client cannot pin a connection slot. Post-startup frames are capped at 16 MB, and auth (password/SASL) frames at 64 KB, so a client cannot advertise a huge frame to exhaust memory before authenticating.
 - **Heartbeat is exempt from global API-key auth.** `POST /v1/heartbeat` keeps its own `Authorization: Bearer <HEARTBEAT_AUTH_TOKEN>` auth and is included outside the auth-bearing router, so its token is no longer rejected by the global auth's Bearer-as-API-key fallback.
 - **Weak API keys are flagged at startup.** Keys that pass the 16-char floor but are short (< 32 chars) or low-entropy are now warned about, since SCRAM transcripts can be attacked offline if captured.
-- **Unauthenticated Flight startup warns loudly.** When Flight starts without auth (no `AUTH_MODE=api_key`, no `FLIGHT_API_TOKEN`) it now logs a prominent warning that it is exposing an unauthenticated SQL surface on `0.0.0.0`.
+- **Flight requires explicit `FLIGHT_ENABLED`.** The Arrow Flight SQL server no longer auto-starts merely because `ob-flight-extension` is installed; it starts only when `FLIGHT_ENABLED=true`. This prevents silently exposing a SQL surface on `0.0.0.0` by package presence alone. When the package is present but the flag is off, startup logs a hint. (Deployments that relied on auto-start must now set `FLIGHT_ENABLED=true`.)
+- **Unauthenticated Flight startup warns loudly.** When Flight is enabled but starts without auth (no `AUTH_MODE=api_key`, no `FLIGHT_API_TOKEN`) it now logs a prominent warning that it is exposing an unauthenticated SQL surface on `0.0.0.0`.
 
 ## [2.11.0] - 2026-06-13
 

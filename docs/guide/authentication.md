@@ -101,13 +101,14 @@ options = flight.FlightCallOptions(headers=[token])
 The legacy `FLIGHT_AUTH_MODE=token` / `FLIGHT_API_TOKEN` still works for one
 release with a deprecation warning. Migrate to `AUTH_MODE=api_key` + `API_KEYS`.
 
-!!! warning "Flight can start unauthenticated"
-    The Flight server binds `0.0.0.0` and can auto-start when the
-    `ob-flight-extension` package is present. If neither `AUTH_MODE=api_key` nor
-    `FLIGHT_API_TOKEN` is set, it accepts every client. The server logs a loud
-    warning in that case. For any non-local deployment, set `AUTH_MODE=api_key`
-    (Flight then validates against the shared key store) or restrict access to
-    the Flight port at the network layer.
+!!! warning "Flight can run unauthenticated"
+    The Flight server is opt-in: it starts only when `FLIGHT_ENABLED=true` (it
+    does not auto-start just because `ob-flight-extension` is installed). Once
+    enabled it binds `0.0.0.0`, and if neither `AUTH_MODE=api_key` nor
+    `FLIGHT_API_TOKEN` is set it accepts every client (the server logs a loud
+    warning). For any non-local deployment, set `AUTH_MODE=api_key` (Flight then
+    validates against the shared key store) or restrict access to the Flight port
+    at the network layer.
 
 ### Postgres wire (psql, Tableau, Power BI, Metabase, DBeaver)
 

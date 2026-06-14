@@ -350,11 +350,18 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
         auth_enabled=settings.auth_enabled,
     )
 
-    # Start Arrow Flight SQL server if ob-flight-extension is installed
-    # (auto-detected) or FLIGHT_ENABLED=true is set explicitly.
+    # Start Arrow Flight SQL server only when FLIGHT_ENABLED=true. It is an
+    # extra network surface (binds 0.0.0.0), so it must be opted into
+    # explicitly rather than auto-started merely because ob-flight-extension is
+    # installed (which would silently expose a SQL surface). When the package is
+    # present but the flag is off, log a hint.
     flight_thread = None
-    flight_available = importlib.util.find_spec("ob_flight") is not None
-    if settings.flight_enabled or flight_available:
+    if not settings.flight_enabled and importlib.util.find_spec("ob_flight") is not None:
+        logger.info(
+            "ob-flight-extension is installed but FLIGHT_ENABLED is not set; "
+            "Arrow Flight SQL is disabled. Set FLIGHT_ENABLED=true to enable it."
+        )
+    if settings.flight_enabled:
         try:
             from ob_flight.startup import start_flight_background
 
@@ -370,17 +377,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
                 flight_auth_handler = build_shared_key_handler()
             elif not os.environ.get("FLIGHT_API_TOKEN"):
                 # No shared auth and no legacy token -> the Flight listener
-                # binds 0.0.0.0 and accepts every client (NoopAuthHandler). It
-                # can also auto-start merely because ob-flight is installed.
+                # binds 0.0.0.0 and accepts every client (NoopAuthHandler).
                 # Warn loudly so an operator does not unknowingly expose an
                 # unauthenticated SQL surface on the network.
-                started_by = "FLIGHT_ENABLED" if settings.flight_enabled else "package auto-detect"
                 logger.warning(
-                    "Flight SQL is starting WITHOUT authentication on 0.0.0.0:%d "
-                    "(started by %s). Anyone who can reach this port can query. "
-                    "Set AUTH_MODE=api_key to require a key, or restrict network access.",
+                    "Flight SQL is starting WITHOUT authentication on 0.0.0.0:%d. "
+                    "Anyone who can reach this port can query. Set AUTH_MODE=api_key "
+                    "to require a key, or restrict network access.",
                     settings.flight_port,
-                    started_by,
                 )
 
             flight_thread = start_flight_background(
