@@ -74,8 +74,8 @@ def init_auth(
         keys = parse_keys(api_keys)
         if not keys:
             raise AuthConfigError(
-                "AUTH_MODE=api_key but API_KEYS is empty. "
-                "Set API_KEYS to a comma-separated list of keys (>=16 chars each)."
+                "AUTH_MODE=api_key but API_KEYS is empty. Set API_KEYS to a "
+                "comma-separated list of strong keys (>=32 chars, high-entropy)."
             )
         weak = find_weak_keys(keys)
         if weak:
@@ -85,12 +85,11 @@ def init_auth(
             )
         weak_strength = find_low_strength_keys(keys)
         if weak_strength:
-            logger.warning(
-                "Auth: %d API key(s) are low-strength (%s) - short or low-entropy keys "
-                "are vulnerable to offline attack on captured SCRAM transcripts. Use a "
-                'random token, e.g. python3 -c "import secrets; print(secrets.token_hex(20))".',
-                len(weak_strength),
-                ", ".join(weak_strength),
+            raise AuthConfigError(
+                f"{len(weak_strength)} API key(s) are too weak ({', '.join(weak_strength)}): "
+                "keys must be at least 32 characters and high-entropy (short / low-entropy keys "
+                "are vulnerable to offline attack on captured SCRAM transcripts). Generate one "
+                "with: python3 -c \"import secrets; print(f'obsl_pat_{secrets.token_hex(20)}')\"."
             )
         _key_store = KeyStore(keys)
         logger.info("Auth: api_key mode; %d key(s) loaded", len(keys))

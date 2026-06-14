@@ -36,7 +36,7 @@ with a comma-separated second key.
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `AUTH_MODE` | `none` | `none`, `api_key`, or `oidc`. |
-| `API_KEYS` | — | Comma-separated valid keys (≥16 chars each). Required when `AUTH_MODE=api_key`. |
+| `API_KEYS` | — | Comma-separated valid keys (≥32 chars, high-entropy). Required when `AUTH_MODE=api_key`. |
 | `API_KEY_HEADER` | `X-API-Key` | REST header name. `Authorization: Bearer` is always accepted as a fallback. |
 | `AUTH_ENABLED` | `false` | Deprecated alias for `AUTH_MODE=api_key` (honoured one release with a startup warning). |
 
@@ -55,9 +55,11 @@ python3 -c "import secrets; print(f'obsl_pat_{secrets.token_hex(20)}')"
 echo "obsl_pat_$(openssl rand -hex 20)"
 ```
 
-The `obsl_pat_` prefix is a convention, not a constraint — the validator
-accepts any string of at least 16 characters. The prefix makes a leaked key
-easy to spot in code scanners and log alerting.
+The `obsl_pat_` prefix is a convention, not a constraint. Keys must be **at
+least 32 characters and high-entropy** — the server refuses to start on a short
+or low-entropy key (these are vulnerable to offline attack on captured SCRAM
+transcripts). The recommended 40-hex-char token easily satisfies this. The
+prefix makes a leaked key easy to spot in code scanners and log alerting.
 
 ## Detecting whether auth is required
 

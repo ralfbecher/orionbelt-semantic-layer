@@ -220,7 +220,7 @@ Environment variables or `.env` file (via pydantic-settings):
 | `EXPOSE_API_DOCS` | `true` | Serve Swagger UI at `/docs` and ReDoc at `/redoc` (hide on non-demo deploys) |
 | `EXPOSE_OPENAPI_SCHEMA` | `true` | Serve OpenAPI schema at `/openapi.json` (independent of `EXPOSE_API_DOCS`) |
 | `AUTH_MODE` | `none` | Auth for all `/v1` endpoints: `none`, `api_key`, or `oidc` (oidc = Phase 4, not yet implemented). See `design/PLAN_authentication.md`. |
-| `API_KEYS` | — | Comma-separated API keys (≥16 chars each). Required when `AUTH_MODE=api_key`. |
+| `API_KEYS` | — | Comma-separated API keys (≥32 chars, high-entropy). Required when `AUTH_MODE=api_key`. |
 | `API_KEY_HEADER` | `X-API-Key` | REST header for the key (`Authorization: Bearer` always accepted as fallback). |
 | `AUTH_ENABLED` | `false` | Deprecated alias for `AUTH_MODE=api_key` (honoured one release with a startup warning). |
 | `DEFAULT_LOCALE` | — | BCP-47 locale used by `/v1/query/execute?format_values=true` when no `locale` query param is supplied |

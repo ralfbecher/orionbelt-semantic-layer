@@ -365,21 +365,35 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
         try:
             from ob_flight.startup import start_flight_background
 
-            # When shared auth is in api_key mode, validate Flight handshakes
-            # against the same key store as REST/pgwire. Otherwise fall back to
-            # the legacy FLIGHT_* env path inside start_flight_background.
-            flight_auth_handler = None
+            # Decide the Flight auth handler here, from Settings, and always
+            # pass it explicitly so the handler matches what we report and so
+            # ob_flight never re-reads the environment (which could diverge from
+            # Settings / .env). Three cases:
+            #   1. shared api_key mode  -> validate against the shared key store
+            #   2. legacy token mode    -> static FLIGHT_API_TOKEN (deprecated)
+            #   3. otherwise            -> no auth (NoopAuthHandler) + warning
             from orionbelt.auth import MODE_API_KEY, get_mode
 
             if get_mode() == MODE_API_KEY:
                 from ob_flight.auth import build_shared_key_handler
 
                 flight_auth_handler = build_shared_key_handler()
-            elif not os.environ.get("FLIGHT_API_TOKEN"):
-                # No shared auth and no legacy token -> the Flight listener
-                # binds 0.0.0.0 and accepts every client (NoopAuthHandler).
-                # Warn loudly so an operator does not unknowingly expose an
-                # unauthenticated SQL surface on the network.
+            elif settings.flight_auth_mode == "token" and settings.flight_api_token:
+                from ob_flight.auth import TokenAuthHandler
+
+                flight_auth_handler = TokenAuthHandler(settings.flight_api_token)
+                logger.warning(
+                    "FLIGHT_AUTH_MODE=token / FLIGHT_API_TOKEN is deprecated. Migrate to "
+                    "AUTH_MODE=api_key + API_KEYS (one key store across REST, Flight, pgwire)."
+                )
+            else:
+                # No shared auth and no usable legacy token -> the Flight
+                # listener binds 0.0.0.0 and accepts every client. Note this
+                # also covers FLIGHT_API_TOKEN set WITHOUT FLIGHT_AUTH_MODE=token,
+                # which the handler would otherwise ignore (still no auth).
+                from ob_flight.auth import NoopAuthHandler
+
+                flight_auth_handler = NoopAuthHandler()
                 logger.warning(
                     "Flight SQL is starting WITHOUT authentication on 0.0.0.0:%d. "
                     "Anyone who can reach this port can query. Set AUTH_MODE=api_key "

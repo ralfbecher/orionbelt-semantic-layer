@@ -22,7 +22,7 @@ from orionbelt.auth.keys import (
     parse_keys,
 )
 
-VALID_KEY = "obsl_pat_0123456789abcdef0123"  # >= 16 chars
+VALID_KEY = "obsl_pat_a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0"  # 49 chars, high entropy
 
 
 @pytest.fixture(autouse=True)
@@ -111,6 +111,15 @@ class TestInitAuth:
         with pytest.raises(AuthConfigError, match="at least 16 characters"):
             init_auth(auth_mode="api_key", api_keys="tooshort")
 
+    def test_api_key_low_strength_rejected(self) -> None:
+        # Passes the 16-char floor but < 32 chars -> hard error, not just a warning.
+        with pytest.raises(AuthConfigError, match="too weak"):
+            init_auth(auth_mode="api_key", api_keys="0123456789abcdef0123")  # 20 chars
+
+    def test_api_key_low_entropy_rejected(self) -> None:
+        with pytest.raises(AuthConfigError, match="too weak"):
+            init_auth(auth_mode="api_key", api_keys="a" * 40)  # long but 1 distinct char
+
     def test_weak_key_error_does_not_leak_full_key(self) -> None:
         secret = "supersecretbutshort"[:10]  # 10 chars
         with pytest.raises(AuthConfigError) as exc:
@@ -162,7 +171,7 @@ class TestAuthenticate:
             authenticate("wrong-key-1234567890")
 
     def test_multiple_keys_each_valid(self) -> None:
-        k2 = "second_long_api_key_value_xyz"
+        k2 = "obsl_pat_f0e1d2c3b4a5968778695a4b3c2d1e0f9a8b7c6d"  # 49 chars, strong
         init_auth(auth_mode="api_key", api_keys=f"{VALID_KEY},{k2}")
         assert authenticate(VALID_KEY).kind == "api_key"
         assert authenticate(k2).kind == "api_key"
