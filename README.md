@@ -94,7 +94,7 @@ API explorer: [Swagger UI](https://orionbelt.ralforion.com/docs) | [ReDoc](https
 > docker stop orionbelt-demo
 > ```
 >
-> The container ships with `PGWIRE_AUTH_MODE=trust` (default), so it's safe for `localhost` but **not** safe to expose to the public internet — SCRAM/password auth is on the roadmap before that becomes the recommended pattern.
+> The container ships with `PGWIRE_AUTH_MODE=trust` (default), so it's safe for `localhost` but **not** safe to expose to the public internet. For exposed deployments, set `AUTH_MODE=api_key` (shipped in v2.12.0): pgwire then negotiates SCRAM-SHA-256 (or cleartext over TLS) against the shared key store.
 
 ### Option B: Google Colab (no install)
 
@@ -501,9 +501,8 @@ API_BASE_URL=http://remote-api:8080 orionbelt-ui           # point UI to a remot
 
 | Status | Area |
 |--------|------|
-| Shipped | 8 SQL dialects, REST API, MCP server, Gradio UI, DB-API drivers, Flight SQL, **PostgreSQL wire protocol (v2.5.0+)** — Tableau / DBeaver / Superset / Power BI / `psql` / **Dremio as a federated Postgres source**, OBSL/SPARQL, **OSI v0.2 interop** with bidirectional schema validation, AI integrations (LangChain, CrewAI, ADK, etc.), model inheritance & extends, data types & numerical precision, timezone settings, grain & filter context overrides, **Trend Analysis** — partitioned rolling windows, `MetricType.WINDOW` for rank/lag/lead/ntile, 9 statistical aggregates (CORR, COVAR_*, REGR_*, STDDEV_*, VAR_*) |
-| In progress | Additional dialects, CLI tool, pgwire SCRAM/password auth (unified auth subsystem) |
-| Planned | Authentication & API tokens, CLI for automation & CI/CD, DDL view generation (CREATE VIEW from queries), additional BI tool integrations, pre-aggregation / materialization layer |
+| Shipped | 8 SQL dialects, REST API, MCP server, Gradio UI, DB-API drivers, Flight SQL, **PostgreSQL wire protocol (v2.5.0+)** — Tableau / DBeaver / Superset / Power BI / `psql` / **Dremio as a federated Postgres source**, OBSL/SPARQL, **OSI v0.2 interop** with bidirectional schema validation, AI integrations (LangChain, CrewAI, ADK, etc.), model inheritance & extends, data types & numerical precision, timezone settings, grain & filter context overrides, **Trend Analysis** — partitioned rolling windows, `MetricType.WINDOW` for rank/lag/lead/ntile, 9 statistical aggregates (CORR, COVAR_*, REGR_*, STDDEV_*, VAR_*), **Unified authentication (v2.12.0)** across REST / Flight / pgwire / UI — `AUTH_MODE=api_key` with shared key store, pgwire SCRAM-SHA-256 + cleartext |
+| Planned | OIDC / SSO authentication & per-token authorization scopes, CLI for automation & CI/CD, DDL view generation (CREATE VIEW from queries), additional dialects, additional BI tool integrations, pre-aggregation / materialization layer |
 
 ---
 
