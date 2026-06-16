@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://ralforion.com/orionbelt-semantic-layer/guide/ui/">
+        <link rel="canonical" href="https://ralforion.com/orionbelt-semantic-layer/guide/composability/">
       
       
-        <link rel="prev" href="../result-cache/">
+        <link rel="prev" href="../query-language/">
       
       
-        <link rel="next" href="../integrations/">
+        <link rel="next" href="../dialects/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>Gradio UI - OrionBelt Semantic Layer</title>
+        <title>Composability (ACR) - OrionBelt Semantic Layer</title>
       
     
     
@@ -92,7 +92,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#gradio-ui" class="md-skip">
+        <a href="#artefacts-composability-resolution-acr" class="md-skip">
           Skip to content
         </a>
       
@@ -144,7 +144,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Gradio UI
+              Composability (ACR)
             
           </span>
         </div>
@@ -818,10 +818,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../composability/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Composability (ACR)
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -837,6 +864,113 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#how-it-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How it works
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-composables-endpoint" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The composables endpoint
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The composables endpoint">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#query-as-the-anchor-recommended" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Query as the anchor (recommended)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#named-anchors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Named anchors
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#top-level-shortcut" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Top-level shortcut
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#relationship-to-other-safety-models" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Relationship to other safety models
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#in-the-ui" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        In the UI
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+<div class="obml-version-badge">
+  OBML v1.0<br>
+  OrionBelt v2.14.0
+</div>
+      
     </li>
   
 
@@ -1098,37 +1232,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Gradio UI
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../ui/" class="md-nav__link">
         
   
   
@@ -1144,74 +1251,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#features" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Features
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#local-development" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Local Development
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#standalone-mode" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Standalone Mode
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#live-demo" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Live Demo
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-<div class="obml-version-badge">
-  OBML v1.0<br>
-  OrionBelt v2.14.0
-</div>
-      
     </li>
   
 
@@ -2082,10 +2121,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#features" class="md-nav__link">
+  <a href="#how-it-works" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Features
+        How it works
       
     </span>
   </a>
@@ -2093,10 +2132,60 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#local-development" class="md-nav__link">
+  <a href="#the-composables-endpoint" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Local Development
+        The composables endpoint
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The composables endpoint">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#query-as-the-anchor-recommended" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Query as the anchor (recommended)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#named-anchors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Named anchors
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#top-level-shortcut" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Top-level shortcut
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#relationship-to-other-safety-models" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Relationship to other safety models
       
     </span>
   </a>
@@ -2104,21 +2193,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#standalone-mode" class="md-nav__link">
+  <a href="#in-the-ui" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Standalone Mode
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#live-demo" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Live Demo
+        In the UI
       
     </span>
   </a>
@@ -2149,44 +2227,113 @@
   
 
 
-<h1 id="gradio-ui">Gradio UI<a class="headerlink" href="#gradio-ui" title="Permanent link">&para;</a></h1>
-<p>OrionBelt includes an interactive web UI built with <a href="https://www.gradio.app/">Gradio</a> for exploring and testing the compilation pipeline visually.</p>
-<h2 id="features">Features<a class="headerlink" href="#features" title="Permanent link">&para;</a></h2>
+<h1 id="artefacts-composability-resolution-acr">Artefacts Composability Resolution (ACR)<a class="headerlink" href="#artefacts-composability-resolution-acr" title="Permanent link">&para;</a></h1>
+<p><strong>Artefacts Composability Resolution (ACR)</strong> is a feature of the engine in OrionBelt Semantic
+Layer that answers a single, practical question while you build a query: given what you have
+selected so far, which other artefacts can you still add and get a valid result?</p>
+<p>A semantic model is a graph of data objects connected by joins, with dimensions, measures, and
+metrics defined on top. Not every combination of these is valid: combining the wrong artefacts
+can multiply rows (<a href="../compilation/">fanout</a>) or simply have no join path. ACR walks the model's
+join graph from your current selection (the <em>anchor</em>) and resolves the exact set of artefacts
+that remain composable with it:</p>
 <ul>
-<li><strong>Side-by-side editors</strong> — OBML model (YAML) and query (YAML) with syntax highlighting</li>
-<li><strong>Dialect selector</strong> — Switch between all 8 supported SQL dialects</li>
-<li><strong>One-click compilation</strong> — Compile button generates formatted SQL output</li>
-<li><strong>SQL validation feedback</strong> — Warnings and validation errors from sqlglot are displayed as comments above the generated SQL</li>
-<li><strong>Query execution</strong> — Execute compiled queries against a connected database with locale-aware number formatting, right-aligned numeric columns, TSV download, and clipboard copy</li>
-<li><strong>Response metadata</strong> — Collapsible panel showing execution metadata as YAML: dialect, row count, timing, timezone, column types and format patterns, and resolved query plan (fact tables, dimensions, measures)</li>
-<li><strong>ER Diagram tab</strong> — Visualize the semantic model as a Mermaid ER diagram with left-to-right layout, FK annotations, dotted lines for secondary joins, and an adjustable zoom slider</li>
-<li><strong>OSI Import / Export</strong> — Import OSI format models (converted to OBML) and export OBML models to OSI format, with validation feedback</li>
-<li><strong>Dark / light mode</strong> — Toggle via the header button; all inputs and UI state are persisted across mode switches</li>
+<li><strong>Dimensions</strong> you can group by, reachable through fanout-safe joins.</li>
+<li><strong>Measures and metrics</strong> you can aggregate, drawn from the facts your selection belongs to.</li>
+<li><strong>Cross-fact measures</strong> that are still combinable through the
+  <a href="../compilation/#cfl-planner-composite-fact-layer">Composite Fact Layer (CFL)</a>, the UNION ALL
+  planner for independent fact tables, surfaced separately so you know they join at a higher
+  level.</li>
 </ul>
-<p>The bundled example model (<code>examples/sem-layer.obml.yml</code>) is loaded automatically on startup.</p>
-<p><img alt="SQL Compiler" src="../../assets/ui-sqlcompiler-dark.png" /></p>
-<p><img alt="ER Diagram" src="../../assets/ui-er-diagram-dark.png" /></p>
-<p>The ER diagram is also available as download (MD or PNG) or via the REST API.</p>
-<h2 id="local-development">Local Development<a class="headerlink" href="#local-development" title="Permanent link">&para;</a></h2>
-<p>For local development, the Gradio UI is automatically mounted at <code>/ui</code> on the REST API server:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>uv<span class="w"> </span>sync
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>uv<span class="w"> </span>run<span class="w"> </span>orionbelt-api
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="c1"># -&gt; API at http://localhost:8000</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># -&gt; UI  at http://localhost:8000/ui</span>
+<p>The result is the <em>composable set</em>: a precise, deterministic list, not a guess. Because ACR is
+driven by the same join logic the compiler uses, anything it offers is guaranteed to compile.</p>
+<p>ACR is an API capability first. The <code>composables</code> endpoint is the product: AI agents, BI tools,
+and custom applications call it to turn query construction into safe artefact composition,
+selecting from named artefacts known to combine instead of reasoning about table relationships
+and risking invalid SQL. The <a href="../ui/">Gradio playground</a> is just one consumer of that endpoint:
+it highlights composable artefacts in its pickers, but any frontend built on the API gets the
+same guarantees.</p>
+<h2 id="how-it-works">How it works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h2>
+<p>Join edges are directed from the <strong>source</strong> data object to its <code>joinTo</code> target, and a fact
+declares a <code>many-to-one</code> join to each of its dimension tables, so edges point <strong>fact -&gt;
+dimension</strong>. ACR classifies artefacts by reachability from the query's grain:</p>
+<table>
+<thead>
+<tr>
+<th>Direction from the anchor</th>
+<th>Yields</th>
+<th>Why it is safe</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Descendants (the dimension side)</td>
+<td><strong>dimensions</strong> to group by</td>
+<td>reached via many-to-one joins, so no row multiplication</td>
+</tr>
+<tr>
+<td>Ancestors (the fact side)</td>
+<td><strong>measures</strong> and <strong>metrics</strong></td>
+<td>the anchor is a dimension of those facts</td>
+</tr>
+</tbody>
+</table>
+<p>An artefact is <strong>directly composable</strong> when it shares a single fanout-safe common root with the
+current anchor (a star query). A measure or metric whose fact is independent is <strong>CFL-composable</strong>
+when that fact still reaches the current grouping dimensions; it can then join as a separate
+UNION ALL leg. ACR reports the two groups separately.</p>
+<h2 id="the-composables-endpoint">The <code>composables</code> endpoint<a class="headerlink" href="#the-composables-endpoint" title="Permanent link">&para;</a></h2>
+<p>Two ways to supply the anchor; both return the same response shape.</p>
+<h3 id="query-as-the-anchor-recommended">Query as the anchor (recommended)<a class="headerlink" href="#query-as-the-anchor-recommended" title="Permanent link">&para;</a></h3>
+<p>Post the in-progress query. Its <code>select.dimensions</code> and <code>select.measures</code> (measures and metrics)
+form the anchor; the response lists what you can still add.</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$API</span><span class="s2">/v1/sessions/</span><span class="nv">$SID</span><span class="s2">/models/</span><span class="nv">$MID</span><span class="s2">/composables&quot;</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Content-Type: application/json&quot;</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span>-d<span class="w"> </span><span class="s1">&#39;{ &quot;select&quot;: { &quot;dimensions&quot;: [&quot;Customer Country&quot;], &quot;measures&quot;: [&quot;Revenue&quot;] } }&#39;</span>
 </span></code></pre></div>
-<h2 id="standalone-mode">Standalone Mode<a class="headerlink" href="#standalone-mode" title="Permanent link">&para;</a></h2>
-<p>The UI can also run as a separate process, connecting to the API via <code>API_BASE_URL</code>:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>uv<span class="w"> </span>sync
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>uv<span class="w"> </span>run<span class="w"> </span>orionbelt-api<span class="w">                                    </span><span class="c1"># API on :8000</span>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>uv<span class="w"> </span>run<span class="w"> </span>orionbelt-ui<span class="w">                                     </span><span class="c1"># UI on :7860</span>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="nv">API_BASE_URL</span><span class="o">=</span>http://remote-api:8080<span class="w"> </span>uv<span class="w"> </span>run<span class="w"> </span>orionbelt-ui<span class="w"> </span><span class="c1"># point to remote API</span>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="p">{</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">&quot;anchorObjects&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Customers&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Orders&quot;</span><span class="p">],</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span><span class="nt">&quot;dimensions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Customer Country&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Order Date&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Product Category&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Product Name&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Customer Segment&quot;</span><span class="p">],</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">  </span><span class="nt">&quot;measures&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Order Count&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Average Order Value&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Grand Total Revenue&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;US Revenue&quot;</span><span class="p">],</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">  </span><span class="nt">&quot;metrics&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Revenue per Order&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Revenue Share&quot;</span><span class="p">],</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">  </span><span class="nt">&quot;cflMeasures&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">  </span><span class="nt">&quot;cflMetrics&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="p">}</span>
 </span></code></pre></div>
-<h2 id="live-demo">Live Demo<a class="headerlink" href="#live-demo" title="Permanent link">&para;</a></h2>
-<p>The hosted demo is available at:</p>
-<blockquote>
-<p><strong><a href="https://orionbelt.ralforion.com/ui/?__theme=dark">https://orionbelt.ralforion.com/ui</a></strong></p>
-</blockquote>
-<p>API endpoint: <code>https://orionbelt.ralforion.com</code> — Interactive docs: <a href="https://orionbelt.ralforion.com/docs">Swagger UI</a> | <a href="https://orionbelt.ralforion.com/redoc">ReDoc</a></p>
+<p><code>dimensions</code> / <code>measures</code> / <code>metrics</code> are directly composable. <code>cflMeasures</code> / <code>cflMetrics</code> are
+composable only via the Composite Fact Layer (an independent fact, unioned at the shared grain).</p>
+<h3 id="named-anchors">Named anchors<a class="headerlink" href="#named-anchors" title="Permanent link">&para;</a></h3>
+<p>Pass one or more <code>anchor</code> names (a dimension, measure, metric, or data object). Repeated anchors
+are intersected:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>curl<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$API</span><span class="s2">/v1/sessions/</span><span class="nv">$SID</span><span class="s2">/models/</span><span class="nv">$MID</span><span class="s2">/composables?anchor=Customer%20Country&quot;</span>
+</span></code></pre></div>
+<p>An empty anchor (an empty query, or no <code>anchor</code> parameter) means a fresh query: everything is
+composable.</p>
+<h3 id="top-level-shortcut">Top-level shortcut<a class="headerlink" href="#top-level-shortcut" title="Permanent link">&para;</a></h3>
+<p>When exactly one model is loaded, the session/model path can be omitted:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>curl<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$API</span><span class="s2">/v1/composables?anchor=Revenue&quot;</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$API</span><span class="s2">/v1/composables&quot;</span><span class="w"> </span>-d<span class="w"> </span><span class="s1">&#39;{ &quot;select&quot;: { &quot;measures&quot;: [&quot;Revenue&quot;] } }&#39;</span>
+</span></code></pre></div>
+<h2 id="relationship-to-other-safety-models">Relationship to other safety models<a class="headerlink" href="#relationship-to-other-safety-models" title="Permanent link">&para;</a></h2>
+<p>ACR is <em>advisory</em>. It tells you what composes and lets the compiler do the rest; it never blocks
+a selection. The UI highlights rather than hides, and cross-fact measures stay available as CFL
+candidates. That sets it apart from two other approaches semantic layers take:</p>
+<ul>
+<li><strong>OLAP restriction</strong> (for example AtScale): valid combinations are implicit in the cube's
+  conformed dimensions, and incompatible members are simply not offered.</li>
+<li><strong>Compute-correct generation</strong> (for example Malloy): rather than guiding the selection, the
+  compiler accepts the query and emits path-safe SQL using join-grain declarations
+  (<code>join_one</code> / <code>join_many</code>) and <strong>symmetric aggregates</strong>, so fanout never corrupts a sum.
+  OrionBelt instead keeps measures fanout-free by construction and unions independent facts
+  through the <a href="../compilation/#cfl-planner-composite-fact-layer">CFL</a>.</li>
+</ul>
+<p>ACR is complementary to correctness, not a substitute: it shapes what a consumer composes, while
+the compiler still guarantees the SQL. See the <a href="../../comparison/">comparison matrix</a> for
+how each tool exposes (or does not expose) composability discovery.</p>
+<h2 id="in-the-ui">In the UI<a class="headerlink" href="#in-the-ui" title="Permanent link">&para;</a></h2>
+<p>The <a href="../ui/">Gradio playground</a> marks composable artefacts in the Dimensions and
+Measures / Metrics pickers as you edit the query: a check mark for directly composable artefacts,
+and <code>(via CFL)</code> for cross-fact candidates. Highlighting never hides artefacts, so you can still
+start an independent (CFL) analysis at any time; the compiler remains the final validator.</p>
 
 
 
@@ -2209,7 +2356,7 @@
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-iso_date" title="May 4, 2026 16:45:22 UTC">2026-05-04</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-iso_date" title="June 16, 2026 08:44:10 UTC">2026-06-16</span>
   </span>
 
     
@@ -2219,7 +2366,7 @@
     <span class="md-icon" title="Created">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M14.47 15.08 11 13V7h1.5v5.25l3.08 1.83c-.41.28-.79.62-1.11 1m-1.39 4.84c-.36.05-.71.08-1.08.08-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8c0 .37-.03.72-.08 1.08.69.1 1.33.32 1.92.64.1-.56.16-1.13.16-1.72 0-5.5-4.5-10-10-10S2 6.5 2 12s4.47 10 10 10c.59 0 1.16-.06 1.72-.16-.32-.59-.54-1.23-.64-1.92M18 15v3h-3v2h3v3h2v-3h3v-2h-3v-3z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-iso_date" title="April 14, 2026 20:02:32 UTC">2026-04-14</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-iso_date" title="June 16, 2026 08:44:10 UTC">2026-06-16</span>
   </span>
 
     

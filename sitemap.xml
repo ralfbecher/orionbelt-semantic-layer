@@ -2,7 +2,7 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://ralforion.com/orionbelt-semantic-layer/</loc>
-         <lastmod>2026-05-27</lastmod>
+         <lastmod>2026-06-16</lastmod>
     </url>
     <url>
          <loc>https://ralforion.com/orionbelt-semantic-layer/drivers/</loc>
@@ -22,7 +22,7 @@
     </url>
     <url>
          <loc>https://ralforion.com/orionbelt-semantic-layer/comparison/</loc>
-         <lastmod>2026-06-11</lastmod>
+         <lastmod>2026-06-16</lastmod>
     </url>
     <url>
          <loc>https://ralforion.com/orionbelt-semantic-layer/comparison/atscale/</loc>
@@ -83,6 +83,10 @@
     <url>
          <loc>https://ralforion.com/orionbelt-semantic-layer/guide/compilation/</loc>
          <lastmod>2026-04-22</lastmod>
+    </url>
+    <url>
+         <loc>https://ralforion.com/orionbelt-semantic-layer/guide/composability/</loc>
+         <lastmod>2026-06-16</lastmod>
     </url>
     <url>
          <loc>https://ralforion.com/orionbelt-semantic-layer/guide/correctness-and-drift-tests/</loc>
