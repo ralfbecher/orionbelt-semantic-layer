@@ -438,6 +438,72 @@ _CSS = """\
   .header-bar .header-links { gap: 8px; }
   .header-bar .header-title { font-size: 18px; }
 }
+
+/* ── Responsive: phones — stack columns, drop fixed heights/min-widths ──
+   On phones the side-by-side editor/picker columns collapse and the fixed
+   viewport-relative (dvh) row heights squash the dropdowns to nothing. Stack
+   everything vertically with explicit heights, and let inputs fill the row
+   instead of overflowing (the desktop 360px min-width pushed fields off-screen). */
+@media (max-width: 768px) {
+  .gradio-container { padding: 4px 8px !important; overflow-x: hidden !important; }
+
+  /* Header: give the brand/links block the full row so the theme button drops
+     to its own line and the links wrap cleanly instead of being clipped. */
+  .header-row { flex-wrap: wrap !important; row-gap: 8px !important; }
+  .header-row > *:first-child { flex: 1 1 100% !important; width: 100% !important; }
+  .header-bar {
+    flex-direction: column !important; align-items: flex-start !important; gap: 6px !important;
+  }
+  .header-bar img.logo-dark,
+  .header-bar img.logo-light { height: 26px !important; }
+  .header-bar .header-brand { align-items: center !important; }
+  .header-bar .header-title { white-space: normal !important; }
+  .header-bar .header-links {
+    margin-left: 0 !important; flex-wrap: wrap !important; white-space: normal !important;
+    gap: 12px !important;
+  }
+
+  /* Settings: one control per row, full width (no 360px overflow) */
+  .settings-row { flex-wrap: wrap !important; }
+  .settings-pair { width: 100% !important; flex-wrap: wrap !important; }
+  .settings-pair input,
+  .settings-pair textarea { min-width: 0 !important; width: 100% !important; }
+  .settings-pair .secondary-wrap,
+  .settings-pair .options { min-width: 0 !important; width: 100% !important; }
+  .settings-spacer { display: none !important; }
+
+  /* Main editors + pickers: stack vertically with real heights so CodeMirror
+     and the Dimensions/Measures/Columns dropdowns get usable space. */
+  .editor-row, .output-row {
+    height: auto !important; max-height: none !important; flex-direction: column !important;
+  }
+  .editor-row > *, .output-row > * { width: 100% !important; min-width: 0 !important; }
+  .editor-row > .code-editor { height: 300px !important; min-height: 300px !important; }
+  .output-row .code-editor { height: 240px !important; min-height: 240px !important; }
+  .picker-col { height: auto !important; }
+  .picker-col > .code-editor {
+    height: 240px !important; min-height: 240px !important; flex: 0 0 auto !important;
+  }
+  .picker-row { flex-wrap: wrap !important; }
+  .picker-dropdown { width: 100% !important; min-width: 0 !important; }
+
+  /* Diagram/graph canvases: fit the smaller viewport */
+  #er-diagram { height: 60dvh !important; min-height: 300px !important; }
+
+  /* Smaller type on phones to fit more on screen */
+  .gradio-container { font-size: 13px !important; }
+  .header-bar .header-title { font-size: 16px !important; }
+  .header-bar .header-version,
+  .header-bar .header-links a { font-size: 12px !important; }
+  .cm-editor { font-size: 12px !important; }
+  /* Results table is the worst offender — shrink cells + padding */
+  .result-table table { font-size: 11px !important; }
+  .result-table th button,
+  .result-table th span,
+  .result-table td { font-size: 11px !important; }
+  .result-table th,
+  .result-table td { padding: 2px 6px !important; }
+}
 """
 
 # Inline SVG search-glass for the .picker-dropdown CSS rule. Defined here
@@ -2398,8 +2464,12 @@ def create_blocks(
         saved_query = gr.BrowserState("", storage_key="ob_query_yaml")
         saved_api = gr.BrowserState(api_base, storage_key="ob_api_url")
         saved_dialect = gr.BrowserState(default_dialect, storage_key="ob_dialect")
-        saved_zoom = gr.BrowserState(80, storage_key="ob_zoom")
+        # 0 = "user has not set a zoom yet" → fall back to a device-aware default
+        # (60% on desktop, 20% on phones) computed at load time.
+        saved_zoom = gr.BrowserState(0, storage_key="ob_zoom")
         saved_sql = gr.BrowserState("", storage_key="ob_sql_output")
+        # Carries viewport width class into _restore (set by the load JS).
+        is_mobile = gr.Number(value=0, visible=False)
 
         # ── Stateful API session (avoids re-creating per compile) ──
         session_state = gr.State(None)  # {"session_id": str, "api_url": str}
@@ -2415,7 +2485,7 @@ def create_blocks(
                 f' src="{_LOGO_LIGHT_URI}"'
                 f' style="height:34px;width:auto" alt="OrionBelt">'
                 f'<span class="header-title">'
-                f"Semantic Layer</span></span>"
+                f"Semantic Layer and Sidecar</span></span>"
                 f'<span class="header-links">'
                 f'<span class="header-version">'
                 f"v{__version__}</span>"
@@ -2917,7 +2987,7 @@ def create_blocks(
                     zoom_slider = gr.Slider(
                         minimum=10,
                         maximum=200,
-                        value=80,
+                        value=60,
                         step=10,
                         label="Zoom %",
                         scale=1,
@@ -3353,15 +3423,25 @@ def create_blocks(
         )
 
         # ── On page load: restore from BrowserState → visible components ──
-        def _restore(sm, sq, sa, sd, sz, ss):  # type: ignore[no-untyped-def]
+        def _restore(sm, sq, sa, sd, sz, ss, im):  # type: ignore[no-untyped-def]
+            # No saved zoom yet → device-aware default: 20% on phones, 60% on desktop.
+            zoom = sz if sz else (20 if im else 60)
             return (
                 example_model if single_model else (sm if sm else example_model),
                 sq if sq else _DEFAULT_QUERY,
                 sa if sa else api_base,
                 sd if sd else default_dialect,
-                sz if sz else 100,
+                zoom,
                 ss if ss else "",
             )
+
+        # Frontend shim: pass the BrowserState values straight through, appending
+        # a mobile flag from the live viewport width so _restore can pick the
+        # device-aware default zoom.
+        _restore_js = (
+            "(sm, sq, sa, sd, sz, ss, im) => "
+            "[sm, sq, sa, sd, sz, ss, (window.innerWidth <= 768 ? 1 : 0)]"
+        )
 
         # In single-model mode, skip injecting the file upload button for the
         # model editor (it's read-only).  The query upload button still applies.
@@ -3374,8 +3454,17 @@ def create_blocks(
 
         demo.load(
             fn=_restore,
-            inputs=[saved_model, saved_query, saved_api, saved_dialect, saved_zoom, saved_sql],
+            inputs=[
+                saved_model,
+                saved_query,
+                saved_api,
+                saved_dialect,
+                saved_zoom,
+                saved_sql,
+                is_mobile,
+            ],
             outputs=[model_input, query_input, api_url, dialect, zoom_slider, sql_output],
+            js=_restore_js,
         ).then(
             # Re-fetch settings against the restored api_url so the Execute
             # Query button and the dialect dropdown reflect the live API,
