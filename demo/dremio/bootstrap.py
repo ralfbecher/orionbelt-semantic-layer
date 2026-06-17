@@ -301,7 +301,7 @@ _M = f"{PG_SOURCE}.{PG_DATABASE}.model"
 _LAKE = f"{LAKE_SOURCE}.{BUCKET}"
 DEMO_VIEWS: tuple[tuple[str, str], ...] = (
     (
-        "raw_top_countries",  # A1 - raw lakehouse SQL (no OrionBelt)
+        "a1_raw_top_countries",  # A1 - raw lakehouse SQL (no OrionBelt)
         f"SELECT co.countryname AS country, "
         f"CAST(SUM(s.salesamount) AS DECIMAL(18,2)) AS total_sales "
         f"FROM {_LAKE}.sales s "
@@ -310,36 +310,36 @@ DEMO_VIEWS: tuple[tuple[str, str], ...] = (
         f"GROUP BY co.countryname ORDER BY total_sales DESC LIMIT 5",
     ),
     (
-        "top_countries_by_sales",  # A2 - same answer, governed
+        "a2_top_countries_by_sales",  # A2 - same answer, governed
         f'SELECT "Country Name", "Total Sales" FROM {_M} ORDER BY "Total Sales" DESC LIMIT 5',
     ),
     (
-        "clients_in_singapore",  # A3a - dimension filter -> WHERE
+        "a3a_clients_in_singapore",  # A3a - dimension filter -> WHERE
         f'SELECT "Client Name", "Total Sales" FROM {_M} '
         'WHERE "Country Name" = \'Singapore\' ORDER BY "Total Sales" DESC LIMIT 5',
     ),
     (
-        "countries_over_1m",  # A3b - measure filter -> HAVING
+        "a3b_countries_over_1m",  # A3b - measure filter -> HAVING
         f'SELECT "Country Name", "Total Sales" FROM {_M} '
         'WHERE "Total Sales" > 1000000 ORDER BY "Total Sales" DESC LIMIT 5',
     ),
     (
-        "sales_vs_shipments",  # A4 - cross-fact, Composite Fact Layer
+        "a4_sales_vs_shipments",  # A4 - cross-fact, Composite Fact Layer
         f'SELECT "Year Month", "Total Sales", "Total Shipments" FROM {_M} '
         'ORDER BY "Year Month" LIMIT 12',
     ),
     (
-        "avg_sale_by_channel",  # A5 - governed metric
+        "a5_avg_sale_by_channel",  # A5 - governed metric
         f'SELECT "Channel Name", "Total Sales", "Average Sale" FROM {_M} '
         'ORDER BY "Total Sales" DESC',
     ),
     (
-        "sales_period_over_period",  # A6 - MoM + YoY window metrics
+        "a6_sales_period_over_period",  # A6 - MoM + YoY window metrics
         f'SELECT "Sales Month", "Total Sales", "Sales MoM Change", "Sales YoY Growth" '
         f'FROM {_M} ORDER BY "Sales Month" LIMIT 15',
     ),
     (
-        "category_margin",  # A7 - cross-fact derived metrics
+        "a7_category_margin",  # A7 - cross-fact derived metrics
         f'SELECT "Product Category", "Total Sales", "Return Rate", "Gross Margin" '
         f'FROM {_M} ORDER BY "Total Sales" DESC LIMIT 5',
     ),

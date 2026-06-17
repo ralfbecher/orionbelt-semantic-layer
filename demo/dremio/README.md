@@ -170,20 +170,20 @@ flat semantic query before compiling.
 
 | View (`governed.…`) | Maps to | Shows |
 |---|---|---|
-| `raw_top_countries` | A1 | raw lakehouse SQL over `lake` (no OrionBelt) |
-| `top_countries_by_sales` | A2 | same answer, governed |
-| `clients_in_singapore` | A3a | dimension filter -> `WHERE` |
-| `countries_over_1m` | A3b | measure filter -> `HAVING` |
-| `sales_vs_shipments` | A4 | cross-fact, Composite Fact Layer |
-| `avg_sale_by_channel` | A5 | governed metric |
-| `sales_period_over_period` | A6 | MoM + YoY window metrics |
-| `category_margin` | A7 | cross-fact derived metrics |
+| `a1_raw_top_countries` | A1 | raw lakehouse SQL over `lake` (no OrionBelt) |
+| `a2_top_countries_by_sales` | A2 | same answer, governed |
+| `a3a_clients_in_singapore` | A3a | dimension filter -> `WHERE` |
+| `a3b_countries_over_1m` | A3b | measure filter -> `HAVING` |
+| `a4_sales_vs_shipments` | A4 | cross-fact, Composite Fact Layer |
+| `a5_avg_sale_by_channel` | A5 | governed metric |
+| `a6_sales_period_over_period` | A6 | MoM + YoY window metrics |
+| `a7_category_margin` | A7 | cross-fact derived metrics |
 
 (Eight views for seven curated queries: A3 keeps both filter variants - `WHERE`
 on a dimension and `HAVING` on a measure.) Try one:
 
 ```sql
-SELECT * FROM governed.category_margin;
+SELECT * FROM governed.a7_category_margin;
 ```
 
 ## The OrionBelt playground (http://localhost:17860)
