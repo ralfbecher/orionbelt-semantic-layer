@@ -2553,7 +2553,7 @@ def create_blocks(
                         min_width=100,
                         visible=not single_model,
                     )
-                    export_osi_btn = gr.Button("⬇ Export as OSI", size="sm", scale=0, min_width=140)
+                    export_osi_btn = gr.Button("↓ Export as OSI", size="sm", scale=0, min_width=140)
                     download_obsl_btn = gr.Button("\u2193 OBSL", size="sm", scale=0, min_width=80)
 
                 init_dims, init_meas, init_fields = _extract_model_items(example_model)
@@ -2853,20 +2853,22 @@ def create_blocks(
                         lines=1,
                         max_lines=1,
                     )
-                    copy_data_btn = gr.Button(
-                        "Copy Data",
-                        visible=False,
-                        variant="secondary",
-                        scale=0,
-                        min_width=120,
-                    )
-                    tsv_download = gr.DownloadButton(
-                        "Download TSV",
-                        visible=False,
-                        variant="secondary",
-                        scale=0,
-                        min_width=140,
-                    )
+                    # Stack the two actions in a compact column so Download sits
+                    # directly under Copy Data (instead of wrapping to its own
+                    # row on narrow screens).
+                    with gr.Column(scale=0, min_width=130):
+                        copy_data_btn = gr.Button(
+                            "Copy Data",
+                            visible=False,
+                            variant="secondary",
+                            size="sm",
+                        )
+                        tsv_download = gr.DownloadButton(
+                            "↓ TSV",
+                            visible=False,
+                            variant="secondary",
+                            size="sm",
+                        )
                 result_table = gr.Dataframe(
                     label="Query Results",
                     interactive=False,
