@@ -983,12 +983,18 @@ def _build_table_ddl(schema: str, model: SemanticModel) -> str | None:
 
 
 def _model_columns(model: SemanticModel) -> Iterator[tuple[str, str]]:
+    # Mirror build_type_map: a numeric measure/metric with no explicit dataType
+    # falls back to settings.defaultNumericDataType, so the catalog's column type
+    # agrees with the RowDescription / compiler (issue #116).
+    default_num = None
+    if model.settings is not None and model.settings.default_numeric_data_type:
+        default_num = model.settings.default_numeric_data_type
     for label, dim in model.dimensions.items():
         yield label, _dim_sql_type(dim)
     for label, measure in model.measures.items():
-        yield label, _measure_sql_type(measure)
+        yield label, _measure_sql_type(measure, default_num)
     for label, metric in model.metrics.items():
-        yield label, _metric_sql_type(metric)
+        yield label, _metric_sql_type(metric, default_num)
 
 
 def _build_metadata_views(schema: str, model: SemanticModel) -> Iterator[str]:
@@ -1180,16 +1186,16 @@ def _decimal_duckdb_type(data_type: str | None) -> str | None:
     return f"DECIMAL({precision}, {scale})"
 
 
-def _measure_sql_type(measure: Measure) -> str:
-    return _decimal_duckdb_type(measure.data_type) or _DATATYPE_TO_DUCKDB.get(
+def _measure_sql_type(measure: Measure, default_num: str | None = None) -> str:
+    return _decimal_duckdb_type(measure.data_type or default_num) or _DATATYPE_TO_DUCKDB.get(
         measure.result_type, "DOUBLE"
     )
 
 
-def _metric_sql_type(metric: Metric) -> str:
+def _metric_sql_type(metric: Metric, default_num: str | None = None) -> str:
     # A decimal-typed metric (e.g. Gross Margin: decimal(18,2)) reports NUMERIC;
     # otherwise float is the safe default the OBSL compiler also uses.
-    return _decimal_duckdb_type(metric.data_type) or "DOUBLE"
+    return _decimal_duckdb_type(metric.data_type or default_num) or "DOUBLE"
 
 
 def _duckdb_desc_to_hint(description_row: tuple[Any, ...]) -> str:

@@ -294,3 +294,23 @@ def test_pg_expandarray_resolves_for_jdbc_get_primary_keys(
     result = emu.execute("SELECT (information_schema._pg_expandarray(ARRAY[1,2,3])).n AS key_seq")
     # Stub returns a STRUCT with NULL fields — only needs to resolve.
     assert list(result.rows[0]) == [None]
+
+
+def test_catalog_type_uses_default_numeric_data_type() -> None:
+    """A numeric measure/metric with no explicit dataType falls back to
+    settings.defaultNumericDataType for its catalog column type, matching the
+    RowDescription / compiler (issue #116)."""
+
+    from types import SimpleNamespace
+
+    from orionbelt.models.semantic import DataType
+    from orionbelt.pgwire.catalog import _measure_sql_type, _metric_sql_type
+
+    no_dt = SimpleNamespace(data_type=None, result_type=DataType.FLOAT)
+    assert _measure_sql_type(no_dt, "decimal(18, 2)") == "DECIMAL(18, 2)"
+    assert _metric_sql_type(no_dt, "decimal(18, 2)") == "DECIMAL(18, 2)"
+    # Explicit dataType wins over the default.
+    explicit = SimpleNamespace(data_type="decimal(10, 4)", result_type=DataType.FLOAT)
+    assert _measure_sql_type(explicit, "decimal(18, 2)") == "DECIMAL(10, 4)"
+    # No default + no dataType -> coarse DOUBLE.
+    assert _measure_sql_type(no_dt, None) == "DOUBLE"

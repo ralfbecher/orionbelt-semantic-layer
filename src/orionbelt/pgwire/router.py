@@ -325,10 +325,13 @@ class SemanticRouter:
         # up its alias in the ResultSet, doesn't find it, and renders
         # the cell as NULL. Recover the aliases by re-parsing the
         # original SQL and rewriting ``result.columns[i].name``.
-        result = _apply_user_aliases(sql, result)
+        #
         # Report governed DECIMAL columns as NUMERIC(precision, scale) rather
-        # than FLOAT8, from the model's declared types (issue #116).
+        # than FLOAT8 (issue #116) BEFORE aliasing — the model lookup keys on
+        # the artefact label (``Total Sales``), which a user alias
+        # (``sum:Total Sales:ok``) would otherwise hide.
         _decorate_decimal_columns(result, target.model)
+        result = _apply_user_aliases(sql, result)
 
         return _encode_result(result, result_formats)
 
@@ -774,16 +777,22 @@ def _flatten_federation_subquery(sql: str) -> str:
 
     outer_projs = ast.expressions
     wheres: list[exp.Expression] = []
+    where_depths: list[int] = []
     order = ast.args.get("order")
+    order_depth = 0 if order is not None else None
     limit = ast.args.get("limit")
+    limit_depth = 0 if limit is not None else None
     if ast.args.get("where"):
         wheres.append(ast.args["where"].this)
+        where_depths.append(0)
 
     # Walk down the chain of single-source derived tables to the model table,
-    # accumulating WHERE (combinable) and a single ORDER BY / LIMIT.
+    # accumulating WHERE (combinable) and a single ORDER BY / LIMIT. ``depth``
+    # increases inward (0 = outermost) so the LIMIT barrier below can tell which
+    # clauses sit outside an inner row cap.
     node: exp.Select = ast
     base: exp.Table | None = None
-    for _ in range(_FLATTEN_MAX_DEPTH):
+    for depth in range(1, _FLATTEN_MAX_DEPTH + 1):
         from_ = node.args.get("from")
         if from_ is None:
             return sql
@@ -807,17 +816,32 @@ def _flatten_federation_subquery(sql: str) -> str:
             return sql
         if inner.args.get("where"):
             wheres.append(inner.args["where"].this)
+            where_depths.append(depth)
         if inner.args.get("order"):
             if order is not None:
                 return sql
             order = inner.args["order"]
+            order_depth = depth
         if inner.args.get("limit"):
             if limit is not None:
                 return sql
             limit = inner.args["limit"]
+            limit_depth = depth
         node = inner
     if base is None or base.name.lower() != "model":
         return sql
+
+    # LIMIT barrier: an inner LIMIT/FETCH caps rows before any OUTER (shallower)
+    # WHERE/ORDER would apply. Collapsing to one flat SELECT (WHERE -> ORDER ->
+    # LIMIT) would filter / re-order BEFORE that cap, changing results — e.g.
+    # ``SELECT * FROM <top-5 view> WHERE region = 'X'`` must filter the 5 rows,
+    # not take the top 5 of the filtered set. Bail (the translator then rejects
+    # the genuine subquery) rather than return wrong rows.
+    if limit_depth is not None:
+        if any(d < limit_depth for d in where_depths):
+            return sql
+        if order_depth is not None and order_depth < limit_depth:
+            return sql
 
     # Resolve the outermost projections: a column (optionally CAST/COLLATE
     # wrapped) collapses to the bare column under its output alias — the OBSQL

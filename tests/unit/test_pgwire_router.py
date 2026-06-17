@@ -703,6 +703,30 @@ def test_flatten_collapses_cast_projections() -> None:
     assert "LIMIT 5" in norm.upper()
 
 
+def test_flatten_bails_outer_filter_over_inner_limit() -> None:
+    """An outer WHERE/ORDER over an inner LIMIT (e.g. filtering a top-N view's
+    output) must NOT be hoisted below the limit — that would change results.
+    The flattener bails so the translator rejects the genuine subquery."""
+
+    # Outer WHERE over a top-5 view body.
+    where_over_limit = (
+        'SELECT "Country Name", "Total Sales" '
+        'FROM (SELECT "model"."Country Name", "model"."Total Sales" '
+        'FROM "commerce"."model" ORDER BY "model"."Total Sales" DESC FETCH NEXT 5 ROWS ONLY) '
+        'AS "model" WHERE ("Country Name" = \'Singapore\')'
+    )
+    assert _flatten_federation_subquery(where_over_limit) == where_over_limit
+
+    # Outer ORDER over a top-5 view body.
+    order_over_limit = (
+        'SELECT "Country Name", "Total Sales" '
+        'FROM (SELECT "model"."Country Name", "model"."Total Sales" '
+        'FROM "commerce"."model" FETCH NEXT 5 ROWS ONLY) AS "model" '
+        'ORDER BY "Country Name"'
+    )
+    assert _flatten_federation_subquery(order_over_limit) == order_over_limit
+
+
 def test_flatten_bails_when_inner_and_outer_both_order() -> None:
     """If the outer ALSO orders/limits, merging would change results — bail."""
 
