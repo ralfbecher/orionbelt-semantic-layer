@@ -91,7 +91,7 @@ LIMIT 5;
 
 ```sql
 SELECT "Country Name", "Total Sales"
-FROM obsl.commerce.model
+FROM orionbelt.commerce.model
 ORDER BY "Total Sales" DESC
 LIMIT 5;
 ```
@@ -108,7 +108,7 @@ Ask for two measures from two different fact tables at once:
 
 ```sql
 SELECT "Year Month", "Total Sales", "Total Shipments"
-FROM obsl.commerce.model
+FROM orionbelt.commerce.model
 ORDER BY "Year Month"
 LIMIT 12;
 ```
@@ -123,7 +123,7 @@ SQL in the OrionBelt playground (`Compile SQL`) to make the point.
 
 ```sql
 SELECT "Channel Name", "Total Sales", "Average Sale"
-FROM obsl.commerce.model
+FROM orionbelt.commerce.model
 ORDER BY "Total Sales" DESC;
 ```
 
@@ -135,7 +135,7 @@ through Dremio's federation.
 
 ```sql
 SELECT "Client Name", "Total Sales"
-FROM obsl.commerce.model
+FROM orionbelt.commerce.model
 WHERE "Country Name" = 'Singapore'
 ORDER BY "Total Sales" DESC LIMIT 5;
 ```
@@ -149,7 +149,7 @@ filters (`WHERE`) and measure filters (`HAVING`) both work through federation.
 
 ```sql
 SELECT "Sales Month", "Total Sales", "Sales MoM Change"
-FROM obsl.commerce.model
+FROM orionbelt.commerce.model
 ORDER BY "Sales Month" LIMIT 12;
 ```
 
@@ -162,7 +162,7 @@ prior-period join (they just have to share the time dimension and base grain).
 
 ```sql
 SELECT "Product Category", "Total Sales", "Return Rate", "Gross Margin"
-FROM obsl.commerce.model
+FROM orionbelt.commerce.model
 ORDER BY "Total Sales" DESC LIMIT 5;
 ```
 
@@ -176,9 +176,9 @@ definition, no hand-written multi-fact SQL.
 The bootstrap also saves each curated query as a **Dremio view** in a Space
 called `governed`, so you can browse and query them by name instead of pasting
 SQL. A note on *where* they live: Dremio forbids creating a view inside a
-source (`CREATE VIEW obsl.commerce.…` fails with *"Cannot create view in …"*) -
+source (`CREATE VIEW orionbelt.commerce.…` fails with *"Cannot create view in …"*) -
 views are virtual datasets and belong in a **Space** or a user's home. So the
-demo puts them in the `governed` Space, each referencing `obsl.commerce.model`.
+demo puts them in the `governed` Space, each referencing `orionbelt.commerce.model`.
 
 When you `SELECT` from a governed view, Dremio wraps the view body in a
 derived table and pushes it down to OrionBelt (including any inner

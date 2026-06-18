@@ -9,10 +9,10 @@ Steps:
   1. Bootstrap Dremio's first admin user (no-op on re-run).
   2. Register MinIO as an S3 source named ``lake`` (S3 compatibility mode).
   3. Promote every ``lake.commerce.<table>`` Parquet folder as a dataset.
-  4. Register ONE Postgres source ``obsl`` -> the OrionBelt pgwire surface.
+  4. Register ONE Postgres source ``orionbelt`` -> the OrionBelt pgwire surface.
   5. Run the same business question two ways and print them side by side:
        * RAW    : hand-written GROUP BY over the Parquet datasets
-       * GOVERNED: SELECT dim, measure FROM obsl.commerce.model  (federated
+       * GOVERNED: SELECT dim, measure FROM orionbelt.commerce.model  (federated
                    into OrionBelt, which compiles Dremio SQL and pushes it
                    back into Dremio via Arrow Flight)
 """
@@ -59,13 +59,13 @@ TABLES = [
 # Postgres source -> OrionBelt pgwire. ``databaseName`` is the OrionBelt brand
 # catalog ("orionbelt", what pg_database advertises); each model is a SCHEMA
 # inside it (here ``commerce``), exposing the single virtual table ``model``.
-# So the Dremio path is ``obsl.commerce.model`` (source.schema.table).
-PG_SOURCE = "obsl"
+# So the Dremio path is ``orionbelt.commerce.model`` (source.schema.table).
+PG_SOURCE = "orionbelt"  # Dremio source name (display label)
 PG_DATABASE = "orionbelt"  # the source's databaseName = OBSL brand catalog
 # The model surfaces as a SCHEMA (named after the OBML model) inside that
-# catalog, so the Dremio query path is ``obsl.commerce.model``.
+# catalog, so the Dremio query path is ``orionbelt.commerce.model``.
 MODEL_SCHEMA = "commerce"
-PG_HOST = "obsl"
+PG_HOST = "obsl"  # docker service / network alias of the OrionBelt container
 PG_PORT = "5432"
 
 
