@@ -39,51 +39,15 @@ Code changes are reviewed with **OpenAI Codex**. Write clean, well-structured co
 
 ## Architecture — Compilation Pipeline
 
-```
-QueryObject + SemanticModel
-        │
-        ▼
-  ┌─────────────┐
-  │  Resolution  │  compiler/resolution.py — selects base object (fact table),
-  │              │  resolves refs, determines join paths, classifies filters,
-  │              │  sets requires_cfl=True only when measures span truly
-  │              │  independent facts (directed reachability check via JoinGraph)
-  └──────┬──────┘
-         │
-         ▼
-  ┌─────────────┐
-  │   Fanout    │  compiler/fanout.py — raises FanoutError if reversed
-  │  Detection  │  many-to-one joins would cause row multiplication
-  └──────┬──────┘
-         │
-         ▼
-  ┌─────────────┐
-  │   Planner   │  compiler/star.py — single-fact star schema (LEFT JOINs)
-  │             │  compiler/cfl.py  — multi-fact CFL (UNION ALL + NULL padding)
-  │             │  CFL uses common root per leg via JoinGraph.find_common_root()
-  └──────┬──────┘
-         │
-         ▼
-  ┌─────────────┐
-  │ Total Wrap  │  compiler/total_wrap.py — AGG(x) OVER () window CTEs
-  │  (optional) │  for measures with total=True
-  └──────┬──────┘
-         │
-         ▼
-    SQL AST (frozen dataclasses in ast/nodes.py)
-         │
-         ▼
-  ┌─────────────┐
-  │  Codegen    │  compiler/codegen.py + dialect/*.py — AST → SQL string
-  └──────┬──────┘
-         │
-         ▼
-  ┌─────────────┐
-  │  Validate   │  compiler/validator.py — sqlglot post-gen check (non-blocking)
-  └─────────────┘
-```
+`QueryObject + SemanticModel` flow through these stages, orchestrated by `CompilationPipeline` in `compiler/pipeline.py`:
 
-The pipeline is orchestrated by `CompilationPipeline` in `compiler/pipeline.py`.
+1. **Resolution** (`compiler/resolution.py`) — selects base object (fact table), resolves refs, determines join paths, classifies filters; sets `requires_cfl=True` only when measures span truly independent facts (directed reachability check via JoinGraph).
+2. **Fanout detection** (`compiler/fanout.py`) — raises `FanoutError` if reversed many-to-one joins would multiply rows.
+3. **Planner** — `compiler/star.py` (single-fact star schema, LEFT JOINs) or `compiler/cfl.py` (multi-fact CFL, UNION ALL + NULL padding; common root per leg via `JoinGraph.find_common_root()`).
+4. **Total wrap** (optional, `compiler/total_wrap.py`) — `AGG(x) OVER ()` window CTEs for measures with `total=True`.
+5. → **SQL AST** (frozen dataclasses in `ast/nodes.py`).
+6. **Codegen** (`compiler/codegen.py` + `dialect/*.py`) — AST → SQL string.
+7. **Validate** (`compiler/validator.py`) — sqlglot post-gen check (non-blocking).
 
 ## Key Subsystems
 
