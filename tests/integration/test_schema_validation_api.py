@@ -144,6 +144,29 @@ async def test_oneshot_batch_model_yaml_validated(client: AsyncClient) -> None:
     assert resp.json()["detail"]["errors"][0]["code"] == "SCHEMA_VALIDATION"
 
 
+async def test_validate_endpoint_reports_schema_errors(client: AsyncClient) -> None:
+    """The /validate endpoint reports schema violations (not a 422).
+
+    This keeps the UI's Validate button consistent with the schema-guarded
+    load/run path: a snake_case model is reported invalid rather than being
+    silently coerced and called valid.
+    """
+    sid = await _new_session(client)
+    bad = _VALID_MODEL.replace("abstractType:", "abstract_type:")
+    resp = await client.post(f"/v1/sessions/{sid}/validate", json={"model_yaml": bad})
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["valid"] is False
+    assert any(e["code"] == "SCHEMA_VALIDATION" for e in body["errors"])
+
+
+async def test_validate_endpoint_accepts_valid_model(client: AsyncClient) -> None:
+    sid = await _new_session(client)
+    resp = await client.post(f"/v1/sessions/{sid}/validate", json={"model_yaml": _VALID_MODEL})
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["valid"] is True
+
+
 async def test_model_files_preload_validates_at_startup(tmp_path) -> None:
     """A MODEL_FILES entry that violates the schema fails app startup.
 
@@ -159,7 +182,9 @@ async def test_model_files_preload_validates_at_startup(tmp_path) -> None:
     )
     app = create_app(settings=settings)
     try:
-        with pytest.raises(RuntimeError, match="JSON Schema"):
+        # The preload validates each file via ``store.validate`` (schema-aware)
+        # and fails startup with a clear message on a contract violation.
+        with pytest.raises(ValueError, match="model file validation failed"):
             async with app.router.lifespan_context(app):
                 pass
     finally:

@@ -22,7 +22,6 @@ from pathlib import Path
 from typing import Any
 
 import jsonschema
-import yaml
 
 from orionbelt.models.errors import SemanticError
 
@@ -75,11 +74,24 @@ def _format_path(error: jsonschema.ValidationError) -> str:
     return ".".join(parts) if parts else "(root)"
 
 
+def _json_native(obj: object) -> object:
+    """Coerce a parsed structure to JSON-native types.
+
+    ruamel/PyYAML parse ISO dates and timestamps into Python ``date`` /
+    ``datetime`` objects (and ruamel uses ``CommentedMap`` etc.), which JSON
+    Schema cannot validate directly. A JSON round-trip (``default=str``)
+    renders them as the strings JSON Schema expects, matching how the same
+    document is transmitted as JSON.
+    """
+    return json.loads(json.dumps(obj, default=str))
+
+
 def _validate(name: str, document: object) -> list[SemanticError]:
     validator = _validator(name)
     if validator is None:  # pragma: no cover - only if schema is unpackaged
         return []
-    errors = sorted(validator.iter_errors(document), key=lambda e: list(e.absolute_path))
+    native = _json_native(document)
+    errors = sorted(validator.iter_errors(native), key=lambda e: list(e.absolute_path))
     return [
         SemanticError(
             code=SCHEMA_VALIDATION_CODE,
@@ -101,29 +113,25 @@ def validate_query_document(document: object) -> list[SemanticError]:
     return _validate("query", document)
 
 
-def _json_native(obj: object) -> object:
-    """Coerce a YAML-parsed structure to JSON-native types.
-
-    ruamel/PyYAML parse ISO dates and timestamps into Python ``date`` /
-    ``datetime`` objects, which JSON Schema cannot validate. A JSON
-    round-trip (``default=str``) renders them as strings, matching how the
-    same document is transmitted as JSON.
-    """
-    return json.loads(json.dumps(obj, default=str))
-
-
 def validate_obml_yaml(text: str) -> list[SemanticError]:
     """Validate an OBML model YAML string against ``obml-schema.json``.
 
-    Returns no schema errors when the text is not parseable YAML or not a
-    mapping; the normal loader reports those with precise source positions.
+    Parses through the safety-checked :class:`TrackedLoader` (not plain
+    ``yaml.safe_load``) so a malicious document — billion-laughs aliases,
+    oversized input — never expands here on the untrusted ingestion path.
+    Returns no schema errors when the text is unsafe, unparseable, or not a
+    mapping; the normal loader then reports those with precise positions.
     Merger-injected private keys (``_extends_sources`` etc.) are stripped.
     """
+    # Local import avoids a module-load cycle (loader is lower-level).
+    from orionbelt.parser.loader import TrackedLoader
+
     try:
-        document = yaml.safe_load(text)
-    except yaml.YAMLError:
+        document, _source_map = TrackedLoader().load_string(text)
+    except Exception:
+        # Unsafe or unparseable input — defer the precise error to the loader.
         return []
     if not isinstance(document, dict):
         return []
     public = {k: v for k, v in document.items() if not str(k).startswith("_")}
-    return validate_obml_document(_json_native(public))
+    return validate_obml_document(public)
