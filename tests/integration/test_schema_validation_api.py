@@ -9,6 +9,8 @@ payloads that Pydantic would otherwise coerce or accept are rejected.
 
 from __future__ import annotations
 
+import json
+
 import pytest
 from httpx import ASGITransport, AsyncClient
 
@@ -81,6 +83,58 @@ async def test_snake_case_field_rejected(client: AsyncClient) -> None:
     bad = _VALID_MODEL.replace("abstractType:", "abstract_type:")
     resp = await client.post(f"/v1/sessions/{sid}/models", json={"model_yaml": bad})
     assert resp.status_code == 422
+
+
+_VALID_MODEL_JSON: dict = {
+    "version": 1.0,
+    "dataObjects": {
+        "Orders": {
+            "code": "orders",
+            "database": "db",
+            "schema": "public",
+            "columns": {"Amount": {"code": "amount", "abstractType": "float"}},
+        }
+    },
+    "measures": {
+        "Revenue": {
+            "columns": [{"dataObject": "Orders", "column": "Amount"}],
+            "resultType": "float",
+            "aggregation": "sum",
+        }
+    },
+}
+
+
+def _invalid_model_json() -> dict:
+    bad = json.loads(json.dumps(_VALID_MODEL_JSON))
+    col = bad["dataObjects"]["Orders"]["columns"]["Amount"]
+    col["abstract_type"] = col.pop("abstractType")  # snake_case violates the schema
+    return bad
+
+
+async def test_model_json_snake_case_rejected(client: AsyncClient) -> None:
+    sid = await _new_session(client)
+    resp = await client.post(
+        f"/v1/sessions/{sid}/models", json={"model_json": _invalid_model_json()}
+    )
+    assert resp.status_code == 422
+    assert resp.json()["detail"]["errors"][0]["code"] == "SCHEMA_VALIDATION"
+
+
+async def test_model_json_string_form_rejected(client: AsyncClient) -> None:
+    sid = await _new_session(client)
+    resp = await client.post(
+        f"/v1/sessions/{sid}/models",
+        json={"model_json": json.dumps(_invalid_model_json())},
+    )
+    assert resp.status_code == 422
+    assert resp.json()["detail"]["errors"][0]["code"] == "SCHEMA_VALIDATION"
+
+
+async def test_model_json_valid_loads(client: AsyncClient) -> None:
+    sid = await _new_session(client)
+    resp = await client.post(f"/v1/sessions/{sid}/models", json={"model_json": _VALID_MODEL_JSON})
+    assert resp.status_code == 201, resp.text
 
 
 async def test_valid_query_compiles(client: AsyncClient) -> None:

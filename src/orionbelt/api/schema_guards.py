@@ -14,12 +14,17 @@ the Pydantic validation FastAPI already performs.
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from fastapi import HTTPException, Request
 
 from orionbelt.models.errors import SemanticError
-from orionbelt.parser.schema_validation import validate_obml_yaml, validate_query_document
+from orionbelt.parser.schema_validation import (
+    validate_obml_document,
+    validate_obml_yaml,
+    validate_query_document,
+)
 
 
 async def _json_body(request: Request) -> Any:
@@ -61,16 +66,37 @@ async def validate_query_body(request: Request) -> None:
             _raise_422(errors)
 
 
+def _model_json_errors(model_json: object) -> list[SemanticError]:
+    """Schema errors for a ``model_json`` payload (dict or JSON string)."""
+    document = model_json
+    if isinstance(document, str):
+        try:
+            document = json.loads(document)
+        except ValueError:
+            return []  # malformed JSON — let the loader report it precisely
+    if not isinstance(document, dict):
+        return []
+    public = {k: v for k, v in document.items() if not str(k).startswith("_")}
+    return validate_obml_document(public)
+
+
 async def validate_model_body(request: Request) -> None:
-    """Validate a request's ``model_yaml`` against ``obml-schema.json``."""
+    """Validate a request's ``model_yaml`` / ``model_json`` against the schema.
+
+    Both forms reach the same load path, so both must be gated: ``model_json``
+    may be a JSON object or an auto-parsed JSON string.
+    """
     raw = await _json_body(request)
     if not isinstance(raw, dict):
         return
+    errors: list[SemanticError] = []
     text = raw.get("model_yaml")
     if isinstance(text, str) and text.strip():
-        errors = validate_obml_yaml(text)
-        if errors:
-            _raise_422(errors)
+        errors.extend(validate_obml_yaml(text))
+    if raw.get("model_json") is not None:
+        errors.extend(_model_json_errors(raw.get("model_json")))
+    if errors:
+        _raise_422(errors)
 
 
 def _prefix_path(error: SemanticError, prefix: str) -> SemanticError:
