@@ -184,9 +184,15 @@ def evaluate_compatibility(
     # Rule 1 (advisory only): ROLLUP/CUBE wraps the base CTE inside the
     # total/PoP/cumulative/window wrappers, but the outer wrapper SELECTs by
     # dim/measure name, so GROUPING() flag columns won't survive. Warn but
-    # still run the wrappers.
+    # still run the wrappers. The window check uses the pass predicate, not
+    # ``has_window``, so a derived metric that transitively references a
+    # window metric (which still runs the window pass) also triggers the
+    # advisory.
     if resolved.grouping is not None and (
-        resolved.has_totals or resolved.has_pop or resolved.has_cumulative or resolved.has_window
+        resolved.has_totals
+        or resolved.has_pop
+        or resolved.has_cumulative
+        or window_pass_applies(resolved)
     ):
         warnings.append(
             warning(

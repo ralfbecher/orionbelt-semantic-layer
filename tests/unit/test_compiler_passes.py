@@ -36,16 +36,24 @@ def _resolved(**attrs: object) -> ResolvedQuery:
 
     Accepts ``grouping`` (str or None), ``having_only_measures`` (set), and
     the ``has_*`` feature flags (bool). Anything unset defaults to off.
+
+    ``has_window=True`` also seeds a window measure so the window pass's
+    predicate (``window_pass_applies``, which inspects ``measures`` /
+    ``metric_components``) sees it.
     """
     grouping = attrs.get("grouping")
+    has_window = bool(attrs.get("has_window", False))
+    measures = [SimpleNamespace(is_window=True, component_measures=[])] if has_window else []
     ns = SimpleNamespace(
         grouping=SimpleNamespace(value=grouping) if grouping is not None else None,
         has_totals=attrs.get("has_totals", False),
         has_pop=attrs.get("has_pop", False),
         has_cumulative=attrs.get("has_cumulative", False),
-        has_window=attrs.get("has_window", False),
+        has_window=has_window,
         has_filter_context=attrs.get("has_filter_context", False),
         having_only_measures=attrs.get("having_only_measures") or set(),
+        measures=measures,
+        metric_components={},
     )
     return cast(ResolvedQuery, ns)
 
