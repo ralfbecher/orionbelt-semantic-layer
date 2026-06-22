@@ -51,6 +51,7 @@ from orionbelt.api.routers import (
 from orionbelt.api.routers import settings as settings_router
 from orionbelt.api.schemas import HealthResponse
 from orionbelt.cache.factory import build_cache
+from orionbelt.parser.schema_validation import validate_obml_yaml
 from orionbelt.service.session_manager import SessionManager
 from orionbelt.settings import Settings
 
@@ -235,7 +236,19 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     query_execute_enabled = settings.query_execute or settings.flight_enabled
 
     # Each MODEL_FILES entry goes into its own protected named session.
+    # Validate against the published JSON Schema first so an operator's
+    # model file is held to the same camelCase contract as REST uploads;
+    # fail fast on a violation rather than silently coercing it.
     for name, yaml_str in named_preloads:
+        schema_errors = validate_obml_yaml(yaml_str)
+        if schema_errors:
+            detail = "; ".join(
+                f"[{e.code}] {e.message}" + (f" (at {e.path})" if e.path else "")
+                for e in schema_errors
+            )
+            raise RuntimeError(
+                f"MODEL_FILES model '{name}' failed JSON Schema validation: {detail}"
+            )
         store = mgr.get_or_create_named(name)
         store.load_model(yaml_str)
         logger.info("Loaded model '%s' into protected session", name)

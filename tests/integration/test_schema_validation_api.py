@@ -104,3 +104,42 @@ async def test_query_unknown_key_rejected(client: AsyncClient) -> None:
     )
     assert resp.status_code == 422
     assert resp.json()["detail"]["errors"][0]["code"] == "SCHEMA_VALIDATION"
+
+
+async def test_model_files_preload_validates_at_startup(tmp_path) -> None:
+    """A MODEL_FILES entry that violates the schema fails app startup.
+
+    The preload runs in the FastAPI lifespan, so the failure surfaces when
+    the lifespan context is entered (i.e. at real server startup).
+    """
+    bad = tmp_path / "bad.yaml"
+    bad.write_text(_VALID_MODEL.replace("abstractType:", "abstract_type:"), encoding="utf-8")
+    settings = Settings(
+        model_files=str(bad),
+        session_ttl_seconds=3600,
+        session_cleanup_interval=9999,
+    )
+    app = create_app(settings=settings)
+    try:
+        with pytest.raises(RuntimeError, match="JSON Schema"):
+            async with app.router.lifespan_context(app):
+                pass
+    finally:
+        reset_session_manager()
+
+
+async def test_model_files_preload_accepts_valid_model(tmp_path) -> None:
+    """A canonical (camelCase) MODEL_FILES entry preloads cleanly."""
+    good = tmp_path / "good.yaml"
+    good.write_text(_VALID_MODEL, encoding="utf-8")
+    settings = Settings(
+        model_files=str(good),
+        session_ttl_seconds=3600,
+        session_cleanup_interval=9999,
+    )
+    app = create_app(settings=settings)
+    try:
+        async with app.router.lifespan_context(app):
+            pass
+    finally:
+        reset_session_manager()
