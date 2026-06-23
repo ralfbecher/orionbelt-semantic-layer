@@ -175,6 +175,16 @@ markers = [
     "notebook: heavy end-to-end notebook execution (Colab quickstart); needs nbclient + ipykernel + duckdb; run with: pytest -m notebook",
 ]
 
+[tool.coverage.report]
+# Lines that should never count against coverage (defensive / type-only).
+exclude_also = [
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "@(abc\\.)?abstractmethod",
+    "if __name__ == .__main__.:",
+    "\\.\\.\\.",  # ellipsis bodies (Protocols / overloads)
+]
+
 [tool.mypy]
 python_version = "3.12"
 strict = true
