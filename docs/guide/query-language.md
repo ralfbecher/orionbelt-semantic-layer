@@ -55,7 +55,7 @@ query = QueryObject(
     having=[
         QueryFilter(field="Revenue", op=FilterOperator.GT, value=10000),
     ],
-    orderBy=[QueryOrderBy(field="Revenue", direction=SortDirection.DESC)],
+    order_by=[QueryOrderBy(field="Revenue", direction=SortDirection.DESC)],
     limit=1000,
 )
 ```
