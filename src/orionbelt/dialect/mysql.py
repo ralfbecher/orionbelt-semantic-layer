@@ -178,6 +178,9 @@ class MySQLDialect(Dialect):
             from orionbelt.ast.nodes import RawSQL
 
             col_sql = self.compile_expr(column)
+            # RawSQL: MySQL quarter truncation via nested DATE_ADD/MAKEDATE/QUARTER
+            # date arithmetic — no single typed FunctionCall expresses it. Covered
+            # by dialect drift snapshots. See tests/architecture/test_rawsql_guard.py.
             return RawSQL(
                 sql=(
                     f"DATE_ADD(MAKEDATE(YEAR({col_sql}), 1), "
