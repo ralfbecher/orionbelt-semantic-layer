@@ -148,6 +148,8 @@ def wrap_with_pop(
     date_range_sql = _build_date_range_sql(
         resolved, model, dialect, qualify_table, grain, time_dim_name
     )
+    # RawSQL: dialect-specific date aggregation/casts the SQL AST does not model.
+    # Covered by the PoP drift snapshots. See tests/architecture/test_rawsql_guard.py.
     date_range_cte = CTE(name="date_range", query=RawSQL(sql=date_range_sql))
 
     # --- CTE 2: date_spine ---
@@ -160,6 +162,8 @@ def wrap_with_pop(
         offset=offset,
         offset_grain=offset_grain,
     )
+    # RawSQL: per-dialect date-spine generator (recursive CTE / generate_series /
+    # sequence) — not expressible as a typed Select. Covered by PoP drift snapshots.
     date_spine_cte = CTE(name="date_spine", query=RawSQL(sql=spine_sql))
 
     # --- CTE 3: pop_base ---
@@ -168,10 +172,14 @@ def wrap_with_pop(
     pop_base_sql = _build_pop_base_sql(
         ast, resolved, model, dialect, qualify_table, grain, time_obj_name, time_source_col
     )
+    # RawSQL: restructured join tree anchored on the date spine with dialect date
+    # arithmetic; not the planner's Select shape. Covered by PoP drift snapshots.
     pop_base_cte = CTE(name="pop_base", query=RawSQL(sql=pop_base_sql))
 
     # --- CTE 4: pop_compare ---
     pop_compare_sql = _build_pop_compare_sql(resolved, dialect, pop_measures)
+    # RawSQL: dynamic self-joins (one per distinct PoP offset) with inline date
+    # arithmetic; not a fixed typed Select. Covered by PoP drift snapshots.
     pop_compare_cte = CTE(name="pop_compare", query=RawSQL(sql=pop_compare_sql))
 
     # --- Final SELECT from pop_compare ---
