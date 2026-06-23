@@ -334,7 +334,7 @@ paths:
                     - field: Country
                       op: "="
                       value: "Germany"
-                  order_by:
+                  orderBy:
                     - field: Revenue
                       direction: desc
                   limit: 50
@@ -621,7 +621,7 @@ components:
                 enum: ["=", "!=", ">", "<", ">=", "<="]
               value:
                 description: Filter value (number)
-        order_by:
+        orderBy:
           type: array
           description: ORDER BY clauses
           items:

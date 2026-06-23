@@ -12,6 +12,7 @@ All notable changes to OrionBelt Semantic Layer are documented here.
 
 ### Changed
 
+- **Breaking: the query field `order_by` is now `orderBy`.** It was the only snake_case key in the query contract; it is now camelCase like `usePathNames` and `dimensionsExclude`. The query JSON schema (`additionalProperties: false`) rejects `order_by`, so update query payloads to `orderBy`. The Python field name stays `order_by` (snake_case field names, camelCase aliases, as elsewhere), so Python `QueryObject(order_by=...)` is unchanged. Docs, examples, and integration tool definitions were updated.
 - **OBML payloads are held to the camelCase contract.** The JSON schema is now camelCase-only (the duplicate snake_case `max_staleness` and `intent_tags` spellings were removed). Payloads that previously relied on lenient coercion (snake_case keys, a string `version`, or uppercase enum values) are now rejected at the API; send canonical camelCase. The vendored schema in the OSI converter was refreshed to match.
 - **Internal hardening, no SQL or endpoint behavior change.** The compiler wrapper stage is now an explicit pass pipeline; `sessions.py` delegates to an `api/services/` layer; the app owns its runtime explicitly with per-request isolation; and five large modules (`compiler/resolution`, `compiler/cfl`, `ui/app`, the OSI converter, and the Flight server) were split into focused submodules. All compiler drift snapshots are byte-identical.
 
