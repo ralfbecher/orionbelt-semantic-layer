@@ -3,7 +3,7 @@ name = "orionbelt-semantic-layer"
 version = "2.16.0"
 description = "OrionBelt Semantic Layer - Compiles and executes YAML semantic models as analytical SQL"
 license = {text = "BSL-1.1"}
-authors = [{name = "Ralf Becher, RALFORION d.o.o.", email = "ralf.becher@web.de"}]
+authors = [{name = "Ralf Becher, RALFORION d.o.o.", email = "info@ralforion.com"}]
 requires-python = ">=3.12"
 readme = "README.md"
 keywords = [
