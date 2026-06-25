@@ -62,6 +62,18 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      # On a release the version comes from the git tag (type=semver). A manual
+      # workflow_dispatch has no version tag, so derive it from pyproject.toml
+      # and publish the same semver set + latest. Lets a manual run seed the
+      # image repos with a proper versioned baseline (not just a floating tag).
+      - name: Read project version
+        id: ver
+        run: |
+          V=$(grep '^version' pyproject.toml | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
+          echo "v=$V"           >> "$GITHUB_OUTPUT"
+          echo "mm=${V%.*}"     >> "$GITHUB_OUTPUT"
+          echo "m=${V%%.*}"     >> "$GITHUB_OUTPUT"
+
       - name: Extract metadata (tags, labels)
         id: meta
         uses: docker/metadata-action@v5
@@ -71,9 +83,10 @@ jobs:
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
-            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
-            type=raw,value=edge,enable=${{ github.event_name == 'workflow_dispatch' }}
-            type=sha,prefix=sha-,enable=${{ github.event_name == 'workflow_dispatch' }}
+            type=raw,value=${{ steps.ver.outputs.v }},enable=${{ github.event_name == 'workflow_dispatch' }}
+            type=raw,value=${{ steps.ver.outputs.mm }},enable=${{ github.event_name == 'workflow_dispatch' }}
+            type=raw,value=${{ steps.ver.outputs.m }},enable=${{ github.event_name == 'workflow_dispatch' }}
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch' }}
           labels: |
             org.opencontainers.image.title=${{ matrix.title }}
             org.opencontainers.image.description=${{ matrix.description }}
