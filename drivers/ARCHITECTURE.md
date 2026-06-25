@@ -121,8 +121,8 @@ JSON response: { columns, rows, row_count, sql, ... }
 Single image, single container, two ports:
 
 ```bash
-docker build -f Dockerfile.flight -t orionbelt-flight .
-docker run -p 8080:8080 -p 8815:8815 --env-file .env orionbelt-flight
+docker build -f Dockerfile.flight -t orionbelt-semantic-layer-flight .
+docker run -p 8080:8080 -p 8815:8815 --env-file .env orionbelt-semantic-layer-flight
 ```
 
 The container makes **outbound** connections to the database — no extra

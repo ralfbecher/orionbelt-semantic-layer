@@ -61,7 +61,7 @@ services:
       args:
         # ob_dremio lives in the full `flight` extra (all 8 vendor drivers).
         OB_EXTRA: flight
-    image: orionbelt-api:dremio-demo
+    image: orionbelt-semantic-layer-api:dremio-demo
     environment:
       LOG_LEVEL: INFO
       LOG_FORMAT: console
@@ -106,7 +106,7 @@ services:
     build:
       context: ../..
       dockerfile: Dockerfile.ui
-    image: orionbelt-ui:dremio-demo
+    image: orionbelt-semantic-layer-ui:dremio-demo
     environment:
       PORT: "7860"
       API_BASE_URL: http://obsl:8080

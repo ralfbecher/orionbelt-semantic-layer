@@ -22,7 +22,7 @@ MODEL_FILE=path/to/your/model.yaml uv run orionbelt-api
 Or via Docker:
 
 ```bash
-docker run -p 8080:8080 -e MODEL_FILE=/models/model.yaml -v ./models:/models orionbelt-api
+docker run -p 8080:8080 -e MODEL_FILE=/models/model.yaml -v ./models:/models orionbelt-semantic-layer-api
 ```
 
 The API must be reachable over **HTTPS** (required by OpenAI). Use a cloud deployment, ngrok for testing, or any reverse proxy with TLS.

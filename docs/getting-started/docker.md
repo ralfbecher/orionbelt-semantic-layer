@@ -6,18 +6,18 @@ Pre-built multi-platform images (linux/amd64, linux/arm64) are available on [Doc
 
 ```bash
 # API-only (REST API on :8080)
-docker pull ralforion/orionbelt-api
-docker run -p 8080:8080 ralforion/orionbelt-api
+docker pull ralforion/orionbelt-semantic-layer-api
+docker run -p 8080:8080 ralforion/orionbelt-semantic-layer-api
 
 # API + Arrow Flight SQL (REST on :8080, Flight on :8815)
-docker pull ralforion/orionbelt-flight
-docker run -p 8080:8080 -p 8815:8815 --env-file .env ralforion/orionbelt-flight
+docker pull ralforion/orionbelt-semantic-layer-flight
+docker run -p 8080:8080 -p 8815:8815 --env-file .env ralforion/orionbelt-semantic-layer-flight
 
 # UI (Gradio on :7860, connects to API)
-docker pull ralforion/orionbelt-ui
+docker pull ralforion/orionbelt-semantic-layer-ui
 docker run -p 7860:7860 \
   -e API_BASE_URL=http://host.docker.internal:8080 \
-  ralforion/orionbelt-ui
+  ralforion/orionbelt-semantic-layer-ui
 ```
 
 See [Drivers & Flight SQL](../drivers.md) for Flight SQL configuration and BI tool setup (DBeaver, Tableau, Power BI).
@@ -28,14 +28,14 @@ Two separate images — API-only (fast) and UI (with Gradio):
 
 ```bash
 # API image (no Gradio, fast cold starts)
-docker build -t orionbelt-api .
-docker run -p 8080:8080 orionbelt-api
+docker build -t orionbelt-semantic-layer-api .
+docker run -p 8080:8080 orionbelt-semantic-layer-api
 
 # UI image (Gradio, connects to API)
-docker build -f Dockerfile.ui -t orionbelt-ui .
+docker build -f Dockerfile.ui -t orionbelt-semantic-layer-ui .
 docker run -p 7860:7860 \
   -e API_BASE_URL=http://host.docker.internal:8080 \
-  orionbelt-ui
+  orionbelt-semantic-layer-ui
 ```
 
 The API is available at `http://localhost:8080`. The UI is at `http://localhost:7860`. Sessions are ephemeral (in-memory, lost on container restart).

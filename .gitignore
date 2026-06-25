@@ -27,7 +27,7 @@ htmlcov/
 security/
 infra/
 site/
-scripts/
+scripts-infra
 .mcpregistry_github_token
 .mcpregistry_registry_token
 _*/

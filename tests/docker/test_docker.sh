@@ -7,7 +7,7 @@
 
 set -euo pipefail
 
-IMAGE_NAME="orionbelt-api"
+IMAGE_NAME="orionbelt-semantic-layer-api"
 CONTAINER_NAME="orionbelt-docker-test"
 HOST_PORT=18080
 MAX_WAIT=30  # seconds to wait for startup

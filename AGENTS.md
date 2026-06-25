@@ -25,10 +25,11 @@ uv run mypy src/                  # type check
 uv sync --extra docs && uv run mkdocs serve  # docs on :8080
 
 # Docker: two separate images (API + UI)
-docker build -t orionbelt-api .                  # API-only image
-docker build -f Dockerfile.ui -t orionbelt-ui .  # UI image (Gradio)
+docker build -t orionbelt-semantic-layer-api .                  # API-only image
+docker build -f Dockerfile.ui -t orionbelt-semantic-layer-ui .  # UI image (Gradio)
 
-./scripts/deploy-gcloud.sh                        # Cloud Run deploy (both services)
+./scripts/release.sh                              # public release (PyPI + docs + tag-triggered Docker publish)
+./scripts-infra/deploy-gcloud.sh                  # Cloud Run deploy (both services; infra repo, maintainer-only)
 ./tests/docker/test_docker.sh                     # 15 local Docker tests
 ./tests/cloudrun/test_cloudrun.sh <CLOUD_RUN_URL> # 30 live API tests
 ```

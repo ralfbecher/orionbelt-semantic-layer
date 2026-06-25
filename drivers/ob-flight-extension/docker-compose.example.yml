@@ -1,9 +1,9 @@
-# docker-compose.yml — add to your existing orionbelt-api service
+# docker-compose.yml — add to your existing orionbelt-semantic-layer-api service
 # Only two lines change: expose port 8815 and add FLIGHT_ENABLED=true
 
 services:
   orionbelt:
-    image: orionbelt-api:latest
+    image: orionbelt-semantic-layer-api:latest
     build: .
     ports:
       - "8000:8000"    # REST API (existing)
