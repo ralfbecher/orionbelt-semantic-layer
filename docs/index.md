@@ -88,7 +88,7 @@ docker run --rm -d --name orionbelt-demo \
   -p 8080:8080 -p 5432:5432 -p 8815:8815 \
   -e PGWIRE_ENABLED=true \
   -e FLIGHT_ENABLED=true \
-  ralforion/orionbelt-api:latest
+  ralforion/orionbelt-semantic-layer-api:latest
 
 # REST + Gradio UI:
 #   http://localhost:8080/ui

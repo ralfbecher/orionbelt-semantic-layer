@@ -314,13 +314,13 @@ Use `Dockerfile.flight` for on-premise deployments with Flight SQL enabled:
 
 ```bash
 # Build
-docker build -f Dockerfile.flight -t orionbelt-flight .
+docker build -f Dockerfile.flight -t orionbelt-semantic-layer-flight .
 
 # Run with .env file
 docker run -p 8080:8080 -p 8815:8815 \
   --env-file .env \
   -v ./models:/models:ro \
-  orionbelt-flight
+  orionbelt-semantic-layer-flight
 ```
 
 Or with explicit environment variables:
@@ -337,7 +337,7 @@ docker run -p 8080:8080 -p 8815:8815 \
   -e SNOWFLAKE_SCHEMA=PUBLIC \
   -e SNOWFLAKE_WAREHOUSE=COMPUTE_WH \
   -v ./models:/models:ro \
-  orionbelt-flight
+  orionbelt-semantic-layer-flight
 ```
 
 The container makes **outbound** connections to the database — no extra port mapping needed for that. Works with cloud databases (Snowflake, Databricks, etc.) out of the box.

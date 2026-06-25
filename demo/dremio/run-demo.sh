@@ -22,6 +22,14 @@ if [[ -n "${DOWN:-}" ]]; then
     exit 0
 fi
 
+# build_assets.py reads the commerce DuckDB seed to derive the Parquet. The
+# seed is gitignored; regenerate it on demand (reproducible synthetic data) so
+# a fresh clone can run the demo without any out-of-band setup.
+if [[ ! -f "$REPO_ROOT/examples/orionbelt_1_commerce.duckdb" ]]; then
+    echo "[0/4] Generating demo DuckDB seed (examples/orionbelt_1_commerce.duckdb)..."
+    uv run python "$REPO_ROOT/scripts/build_demo_duckdb.py"
+fi
+
 echo "[1/4] Building demo assets (Parquet + Dremio-dialect model)..."
 uv run python "$SCRIPT_DIR/build_assets.py"
 

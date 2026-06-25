@@ -2,6 +2,18 @@
 
 All notable changes to OrionBelt Semantic Layer are documented here.
 
+## [Unreleased]
+
+### Added
+
+- **Docker Hub publish workflow (`.github/workflows/docker-publish.yml`).** Version tags (`vX.Y.Z`) and manual dispatch now build and push all three images to Docker Hub: multi-platform (amd64/arm64), semver-tagged, with the Docker Hub overview synced from the README. The release flow no longer publishes images locally; pushing the release tag triggers the workflow. Requires the `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` repository secrets.
+- **Public build/release tooling under `scripts/`.** `scripts/build_demo_duckdb.py` (the reproducible demo dataset generator) and a public `scripts/release.sh` (everything except the Cloud Run deploy) now live in the repository, so a clean clone can build the demo seed and cut a release without the private infra repo.
+
+### Changed
+
+- **Breaking: Docker Hub images renamed to `orionbelt-semantic-layer-{api,ui,flight}`.** Previously `orionbelt-{api,ui,flight}`. Update any `docker pull` / compose references. The Cloud Run service names are unchanged.
+- **Published images no longer bake the demo DuckDB dataset by default.** The API image still bakes it when the seed is present in the build context (Cloud Run, and the publish workflow, which regenerates it), so the documented one-command local demo keeps working; the seed COPY is now optional so a seedless build still succeeds.
+
 ## [2.16.0] - 2026-06-23
 
 ### Added
