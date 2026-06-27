@@ -59,8 +59,9 @@ obsl validate model.yaml -f json   # machine-readable result
 ```
 
 ```yaml
-# .github/workflows/ci.yml
-- run: obsl validate models/*.yaml
+# .github/workflows/ci.yml — validate every model, fail on the first invalid one
+- run: |
+    for m in models/*.yaml; do obsl validate "$m" || exit 1; done
 ```
 
 ## Compile

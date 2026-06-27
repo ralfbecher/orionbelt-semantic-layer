@@ -220,11 +220,12 @@ def compile(  # noqa: A001 — "compile" is the natural verb for this command
     from orionbelt.cli._local import CliError
 
     payload: dict[str, Any]
-    if server:
+    if server and not model:
+        # Remote only when no local model is given: a provided MODEL is
+        # authoritative (compiled locally), so an ambient OBSL_SERVER never
+        # silently redirects an explicit `obsl compile model.yaml`.
         from orionbelt.cli._remote import RemoteClient
 
-        if model:
-            _render.note("--server set: querying the server's curated model; MODEL ignored")
         client = RemoteClient(server, api_key)
         try:
             if sql:
@@ -247,7 +248,12 @@ def compile(  # noqa: A001 — "compile" is the natural verb for this command
         from orionbelt.service.model_store import ModelValidationError
 
         if not model:
-            raise _fail("MODEL is required for local compile (or pass --server to query a model).")
+            raise _fail(
+                "MODEL is required for local compile "
+                "(or omit MODEL with --server to query the deployed model)."
+            )
+        if server:
+            _render.note("MODEL provided: compiling locally; --server ignored.")
         model_yaml = _io.read_text(model)
         try:
             if sql:
@@ -296,8 +302,13 @@ def execute(
     model: ModelArgOpt = None,
     dialect: DialectOpt = None,
     limit: Annotated[
-        int, typer.Option("--limit", help="Default row limit when the query has none.")
-    ] = 1000,
+        int | None,
+        typer.Option(
+            "--limit",
+            help="Default row limit when the query has none (default 1000). "
+            "Applies to -q queries and local --sql; not to remote --sql (put LIMIT in the SQL).",
+        ),
+    ] = None,
     fmt: FormatOpt = OutputFormat.table,
     server: ServerOpt = None,
     api_key: ApiKeyOpt = None,
@@ -308,17 +319,21 @@ def execute(
     --server the query runs against the server's curated model and warehouse.
     """
     _require_one_query_input(query, sql)
+    effective_limit = 1000 if limit is None else limit
     q = _io.load_query(query) if query else None
     if q is not None and q.limit is None:
-        q = q.model_copy(update={"limit": limit})
+        q = q.model_copy(update={"limit": effective_limit})
 
     from orionbelt.cli._local import CliError
 
-    if server:
+    if server and not model:
         from orionbelt.cli._remote import RemoteClient
 
-        if model:
-            _render.note("--server set: querying the server's curated model; MODEL ignored")
+        if sql and limit is not None:
+            _render.warn(
+                "--limit cannot be applied to --sql in remote mode; include LIMIT in the "
+                "query (the server applies its own default row limit otherwise)."
+            )
         client = RemoteClient(server, api_key)
         try:
             if sql:
@@ -342,14 +357,23 @@ def execute(
         from orionbelt.service.model_store import ModelValidationError
 
         if not model:
-            raise _fail("MODEL is required for local execute (or pass --server to run remotely).")
+            raise _fail(
+                "MODEL is required for local execute "
+                "(or omit MODEL with --server to run against the deployed model)."
+            )
+        if server:
+            _render.note("MODEL provided: executing locally; --server ignored.")
         model_yaml = _io.read_text(model)
         try:
             if sql:
-                compiled, executed = _local.execute_obsql(model_yaml, sql, dialect, limit=limit)
+                compiled, executed = _local.execute_obsql(
+                    model_yaml, sql, dialect, limit=effective_limit
+                )
             else:
                 assert q is not None  # guaranteed by _require_one_query_input
-                compiled, executed = _local.execute_query(model_yaml, q, dialect, limit=limit)
+                compiled, executed = _local.execute_query(
+                    model_yaml, q, dialect, limit=effective_limit
+                )
         except ModelValidationError as exc:
             raise _model_invalid(exc) from None
         except (ExecutionUnavailableError, ExecutionError, CliError) as exc:

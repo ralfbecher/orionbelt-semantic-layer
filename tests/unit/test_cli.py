@@ -18,6 +18,18 @@ from tests.conftest import SAMPLE_MODEL_YAML
 runner = CliRunner()
 
 
+@pytest.fixture(autouse=True)
+def _isolate_env(monkeypatch):
+    """Keep the CLI tests hermetic.
+
+    ``--server`` / ``--api-key`` are env-backed (OBSL_SERVER / OBSL_API_KEY).
+    A developer with either exported would otherwise flip the local command
+    paths into remote mode. Clear them for every test.
+    """
+    monkeypatch.delenv("OBSL_SERVER", raising=False)
+    monkeypatch.delenv("OBSL_API_KEY", raising=False)
+
+
 @pytest.fixture
 def model_file(tmp_path):
     """Write the shared sample model to a temp file and return its path."""
@@ -262,6 +274,40 @@ def test_compile_local_requires_model(query_file):
     """Without --server, MODEL is required."""
     result = runner.invoke(app, ["compile", "-q", query_file])
     assert result.exit_code != 0
+
+
+def test_explicit_model_overrides_env_server(monkeypatch, model_file, query_file):
+    """An ambient OBSL_SERVER must not silently redirect an explicit local compile.
+
+    No RemoteClient is mocked here: if the command went remote it would attempt
+    a real HTTP call to the bogus URL and fail. A successful local compile proves
+    the provided MODEL takes precedence.
+    """
+    monkeypatch.setenv("OBSL_SERVER", "http://should-not-be-used.invalid")
+    result = runner.invoke(app, ["compile", model_file, "-q", query_file, "-d", "duckdb"])
+    assert result.exit_code == 0
+    assert "SELECT" in result.stdout
+
+
+def test_execute_remote_sql_limit_warns(monkeypatch, query_file):
+    """--limit can't be honored for remote --sql; the CLI warns instead of lying."""
+    from orionbelt.cli import _remote
+
+    def fake_execute_obsql(self, sql, dialect):
+        return {
+            "columns": [{"name": "x"}],
+            "rows": [[1]],
+            "row_count": 1,
+            "execution_time_ms": 1.0,
+            "dialect": "duckdb",
+        }
+
+    monkeypatch.setattr(_remote.RemoteClient, "execute_obsql", fake_execute_obsql)
+    result = runner.invoke(
+        app, ["execute", "--sql", "SELECT x FROM m", "-s", "http://example", "--limit", "5"]
+    )
+    assert result.exit_code == 0
+    assert "limit" in result.output.lower()
 
 
 def test_validate_remote(monkeypatch, model_file):
