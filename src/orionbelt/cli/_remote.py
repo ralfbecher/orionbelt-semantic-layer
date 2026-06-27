@@ -91,6 +91,25 @@ class RemoteClient:
             "dict[str, Any]", self._post("/query/execute", self._query_body(query), params=params)
         )
 
+    def _obsql_body(self, sql: str, dialect: str | None) -> dict[str, Any]:
+        body: dict[str, Any] = {"sql": sql}
+        if dialect:
+            body["dialect"] = dialect
+        return body
+
+    def compile_obsql(self, sql: str, dialect: str | None) -> dict[str, Any]:
+        """Compile an OBSQL string against the server's curated model."""
+        return cast(
+            "dict[str, Any]",
+            self._post("/query/semantic-ql/compile", self._obsql_body(sql, dialect)),
+        )
+
+    def execute_obsql(self, sql: str, dialect: str | None) -> dict[str, Any]:
+        """Execute an OBSQL string against the server's curated model."""
+        return cast(
+            "dict[str, Any]", self._post("/query/semantic-ql", self._obsql_body(sql, dialect))
+        )
+
     def convert_osi_to_obml(self, input_yaml: str) -> dict[str, Any]:
         return cast(
             "dict[str, Any]", self._post("/convert/osi-to-obml", {"input_yaml": input_yaml})

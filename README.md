@@ -186,6 +186,7 @@ PGWIRE_ENABLED=true uv run orionbelt-api   # API + PostgreSQL wire on :5432 (Tab
 ```bash
 obsl validate model.yaml                                  # lint a model (exit 1 on error, CI-friendly)
 obsl compile model.yaml -q query.json -d snowflake        # print the generated SQL
+obsl compile model.yaml --sql 'SELECT "Region", "Sales" FROM model'  # ... or from an OBSQL string
 obsl describe model.yaml                                   # overview of data objects + artefacts
 obsl diagram model.yaml                                    # Mermaid ER diagram
 obsl convert obml-to-osi model.yaml                        # OBML -> OSI (and osi-to-obml)

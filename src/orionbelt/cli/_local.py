@@ -91,16 +91,69 @@ def _load(model_yaml: str) -> tuple[ModelStore, str, SemanticModel]:
     return store, result.model_id, store.get_model(result.model_id)
 
 
-def compile_query(
-    model_yaml: str, query: QueryObject, dialect: str | None, *, pretty: bool = True
+def _translate(model: SemanticModel, sql: str) -> QueryObject:
+    """Translate an OBSQL string to a QueryObject, mapping failures to CliError."""
+    from orionbelt.compiler.sql_translator import SQLTranslationError, translate_sql_to_query
+
+    try:
+        return translate_sql_to_query(sql, model)
+    except SQLTranslationError as exc:
+        details = "; ".join(f"[{e.code}] {e.message}" for e in exc.errors)
+        raise CliError(f"OBSQL translation failed: {details}") from None
+
+
+def _compile_loaded(
+    store: ModelStore,
+    model_id: str,
+    model: SemanticModel,
+    query: QueryObject,
+    dialect: str | None,
+    *,
+    pretty: bool,
 ) -> CompilationResult:
-    """Compile a query against a model and return the compilation result."""
-    store, model_id, model = _load(model_yaml)
     resolved_dialect = resolve_dialect(model, dialect)
     result = _compile(store, model_id, query, resolved_dialect)
     if pretty:
         result.sql = format_sql(result.sql, result.dialect)
     return result
+
+
+def _execute_loaded(
+    store: ModelStore,
+    model_id: str,
+    model: SemanticModel,
+    query: QueryObject,
+    dialect: str | None,
+    *,
+    limit: int | None,
+) -> tuple[CompilationResult, ExecutionResult]:
+    if query.limit is None and limit is not None:
+        query = query.model_copy(update={"limit": limit})
+    resolved_dialect = resolve_dialect(model, dialect)
+    compiled = _compile(store, model_id, query, resolved_dialect)
+    settings = getattr(model, "settings", None)
+    tz = resolve_timezone(
+        default_timezone=getattr(settings, "default_timezone", None) if settings else None
+    )
+    override = bool(getattr(settings, "override_database_timezone", False)) if settings else False
+    executed = execute_sql(compiled.sql, dialect=resolved_dialect, tz=tz, override_db_tz=override)
+    return compiled, executed
+
+
+def compile_query(
+    model_yaml: str, query: QueryObject, dialect: str | None, *, pretty: bool = True
+) -> CompilationResult:
+    """Compile a query against a model and return the compilation result."""
+    store, model_id, model = _load(model_yaml)
+    return _compile_loaded(store, model_id, model, query, dialect, pretty=pretty)
+
+
+def compile_obsql(
+    model_yaml: str, sql: str, dialect: str | None, *, pretty: bool = True
+) -> CompilationResult:
+    """Compile an OBSQL string against a model (translated locally first)."""
+    store, model_id, model = _load(model_yaml)
+    return _compile_loaded(store, model_id, model, _translate(model, sql), dialect, pretty=pretty)
 
 
 def execute_query(
@@ -117,17 +170,19 @@ def execute_query(
     unbounded result set by accident.
     """
     store, model_id, model = _load(model_yaml)
-    if query.limit is None and limit is not None:
-        query = query.model_copy(update={"limit": limit})
-    resolved_dialect = resolve_dialect(model, dialect)
-    compiled = _compile(store, model_id, query, resolved_dialect)
-    settings = getattr(model, "settings", None)
-    tz = resolve_timezone(
-        default_timezone=getattr(settings, "default_timezone", None) if settings else None
-    )
-    override = bool(getattr(settings, "override_database_timezone", False)) if settings else False
-    executed = execute_sql(compiled.sql, dialect=resolved_dialect, tz=tz, override_db_tz=override)
-    return compiled, executed
+    return _execute_loaded(store, model_id, model, query, dialect, limit=limit)
+
+
+def execute_obsql(
+    model_yaml: str,
+    sql: str,
+    dialect: str | None,
+    *,
+    limit: int | None = None,
+) -> tuple[CompilationResult, ExecutionResult]:
+    """Translate an OBSQL string and execute it against the warehouse."""
+    store, model_id, model = _load(model_yaml)
+    return _execute_loaded(store, model_id, model, _translate(model, sql), dialect, limit=limit)
 
 
 def describe(model_yaml: str) -> ModelDescription:

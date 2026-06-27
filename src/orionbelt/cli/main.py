@@ -45,8 +45,15 @@ ModelArgOpt = Annotated[
     ),
 ]
 QueryOpt = Annotated[
-    str,
+    str | None,
     typer.Option("--query", "-q", help="Path to a query document (JSON or YAML; '-' for stdin)."),
+]
+SqlOpt = Annotated[
+    str | None,
+    typer.Option(
+        "--sql",
+        help='OrionBelt Semantic QL string, e.g. \'SELECT "Dim", "Measure" FROM model LIMIT 5\'.',
+    ),
 ]
 DialectOpt = Annotated[
     str | None,
@@ -110,6 +117,14 @@ def _main(
 def _fail(message: str) -> typer.Exit:
     _render.error(message)
     return typer.Exit(1)
+
+
+def _require_one_query_input(query: str | None, sql: str | None) -> None:
+    """Ensure exactly one of --query / --sql was given."""
+    if bool(query) == bool(sql):
+        raise _fail(
+            "Provide exactly one of --query/-q (a query document) or --sql (an OBSQL string)."
+        )
 
 
 def _emit_warnings(warnings: list[Any]) -> None:
@@ -180,7 +195,8 @@ def _fmt_issue(issue: dict[str, Any]) -> str:
 
 @app.command()
 def compile(  # noqa: A001 — "compile" is the natural verb for this command
-    query: QueryOpt,
+    query: QueryOpt = None,
+    sql: SqlOpt = None,
     model: ModelArgOpt = None,
     dialect: DialectOpt = None,
     explain: Annotated[
@@ -193,12 +209,13 @@ def compile(  # noqa: A001 — "compile" is the natural verb for this command
     server: ServerOpt = None,
     api_key: ApiKeyOpt = None,
 ) -> None:
-    """Compile a query to SQL.
+    """Compile a query to SQL from a query document (-q) or an OBSQL string (--sql).
 
     Locally, MODEL is required. With --server the query runs against the
     server's curated model, so MODEL may be omitted.
     """
-    q = _io.load_query(query)
+    _require_one_query_input(query, sql)
+    q = _io.load_query(query) if query else None
 
     from orionbelt.cli._local import CliError
 
@@ -208,8 +225,13 @@ def compile(  # noqa: A001 — "compile" is the natural verb for this command
 
         if model:
             _render.note("--server set: querying the server's curated model; MODEL ignored")
+        client = RemoteClient(server, api_key)
         try:
-            item = RemoteClient(server, api_key).compile(q, dialect)
+            if sql:
+                item = client.compile_obsql(sql, dialect)
+            else:
+                assert q is not None  # guaranteed by _require_one_query_input
+                item = client.compile(q, dialect)
         except CliError as exc:
             raise _fail(str(exc)) from None
         payload = {
@@ -228,7 +250,11 @@ def compile(  # noqa: A001 — "compile" is the natural verb for this command
             raise _fail("MODEL is required for local compile (or pass --server to query a model).")
         model_yaml = _io.read_text(model)
         try:
-            result = _local.compile_query(model_yaml, q, dialect, pretty=pretty)
+            if sql:
+                result = _local.compile_obsql(model_yaml, sql, dialect, pretty=pretty)
+            else:
+                assert q is not None  # guaranteed by _require_one_query_input
+                result = _local.compile_query(model_yaml, q, dialect, pretty=pretty)
         except ModelValidationError as exc:
             raise _model_invalid(exc) from None
         except CliError as exc:
@@ -265,7 +291,8 @@ def _print_explain(plan: dict[str, Any]) -> None:
 
 @app.command()
 def execute(
-    query: QueryOpt,
+    query: QueryOpt = None,
+    sql: SqlOpt = None,
     model: ModelArgOpt = None,
     dialect: DialectOpt = None,
     limit: Annotated[
@@ -275,13 +302,14 @@ def execute(
     server: ServerOpt = None,
     api_key: ApiKeyOpt = None,
 ) -> None:
-    """Compile and execute a query against the configured warehouse.
+    """Execute a query (from -q or --sql) against the configured warehouse.
 
     Locally, MODEL is required and a database must be configured. With
     --server the query runs against the server's curated model and warehouse.
     """
-    q = _io.load_query(query)
-    if q.limit is None:
+    _require_one_query_input(query, sql)
+    q = _io.load_query(query) if query else None
+    if q is not None and q.limit is None:
         q = q.model_copy(update={"limit": limit})
 
     from orionbelt.cli._local import CliError
@@ -291,8 +319,13 @@ def execute(
 
         if model:
             _render.note("--server set: querying the server's curated model; MODEL ignored")
+        client = RemoteClient(server, api_key)
         try:
-            item = RemoteClient(server, api_key).execute(q, dialect)
+            if sql:
+                item = client.execute_obsql(sql, dialect)
+            else:
+                assert q is not None  # guaranteed by _require_one_query_input
+                item = client.execute(q, dialect)
         except CliError as exc:
             raise _fail(str(exc)) from None
         columns = [c.get("name", "") for c in (item.get("columns") or [])]
@@ -312,7 +345,11 @@ def execute(
             raise _fail("MODEL is required for local execute (or pass --server to run remotely).")
         model_yaml = _io.read_text(model)
         try:
-            compiled, executed = _local.execute_query(model_yaml, q, dialect, limit=limit)
+            if sql:
+                compiled, executed = _local.execute_obsql(model_yaml, sql, dialect, limit=limit)
+            else:
+                assert q is not None  # guaranteed by _require_one_query_input
+                compiled, executed = _local.execute_query(model_yaml, q, dialect, limit=limit)
         except ModelValidationError as exc:
             raise _model_invalid(exc) from None
         except (ExecutionUnavailableError, ExecutionError, CliError) as exc:

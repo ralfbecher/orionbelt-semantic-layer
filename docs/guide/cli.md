@@ -38,8 +38,13 @@ obsl --version
 | `obsl dialects` | List supported SQL dialects | local or `--server` |
 
 `MODEL` and `INPUT` accept a file path, or `-` to read from standard input.
-Query documents (`-q`) may be JSON or YAML and use snake_case or camelCase
-field names.
+
+For `compile` and `execute` you supply the query one of two ways (exactly one):
+
+- `-q / --query` — a query **document** (JSON or YAML; snake_case or camelCase fields)
+- `--sql` — an **OrionBelt Semantic QL (OBSQL)** string, BI-style SQL against the
+  model's virtual table: `SELECT <dim/measure labels> FROM <model> [WHERE ...]
+  [ORDER BY ...] [LIMIT n]`
 
 ## Validate
 
@@ -62,6 +67,8 @@ obsl validate model.yaml -f json   # machine-readable result
 
 ```bash
 obsl compile model.yaml -q query.json --dialect snowflake
+# or with an OBSQL string instead of a query document:
+obsl compile model.yaml --sql 'SELECT "Customer Country", "Revenue" FROM model LIMIT 5'
 ```
 
 Add `--explain` to print the planner's decisions (chosen planner, base object,
@@ -139,7 +146,7 @@ are respected. `validate` and `convert` operate on the model you pass.
 ```bash
 export OBSL_SERVER=https://your-host
 export OBSL_API_KEY=sk-...
-obsl compile -q query.json               # compiles against the deployed model
-obsl execute -q query.json               # runs against the deployed warehouse
-obsl validate model.yaml                  # validates the model you pass
+obsl compile -q query.json                                  # query document
+obsl execute --sql 'SELECT "Region", "Sales" FROM model'    # OBSQL string
+obsl validate model.yaml                                     # validates the model you pass
 ```

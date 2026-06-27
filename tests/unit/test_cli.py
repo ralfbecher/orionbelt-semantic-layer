@@ -109,6 +109,44 @@ def test_compile_explain(model_file, query_file):
     assert "planner" in result.output
 
 
+# -- OBSQL (--sql) ----------------------------------------------------------
+
+
+def test_compile_obsql_local(model_file):
+    result = runner.invoke(
+        app,
+        ["compile", model_file, "--sql", 'SELECT "Customer Country", "Total Revenue" FROM model'],
+    )
+    assert result.exit_code == 0
+    assert "SELECT" in result.stdout
+    assert "Customer Country" in result.stdout
+
+
+def test_compile_requires_exactly_one_query_input(model_file, query_file):
+    # both -q and --sql → error
+    both = runner.invoke(
+        app, ["compile", model_file, "-q", query_file, "--sql", "SELECT x FROM model"]
+    )
+    assert both.exit_code != 0
+    # neither → error
+    neither = runner.invoke(app, ["compile", model_file])
+    assert neither.exit_code != 0
+
+
+def test_compile_obsql_remote(monkeypatch, model_file):
+    from orionbelt.cli import _remote
+
+    def fake_compile_obsql(self, sql, dialect):
+        return {"sql": f"-- {sql}", "dialect": dialect or "postgres", "sql_valid": True}
+
+    monkeypatch.setattr(_remote.RemoteClient, "compile_obsql", fake_compile_obsql)
+    result = runner.invoke(
+        app, ["compile", "--sql", "SELECT a FROM m", "-s", "http://example", "-d", "mysql"]
+    )
+    assert result.exit_code == 0
+    assert "SELECT a FROM m" in result.stdout
+
+
 # -- describe / diagram / graph --------------------------------------------
 
 
