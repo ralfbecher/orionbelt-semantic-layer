@@ -116,6 +116,19 @@ def test_decode_table_reads_encode_output() -> None:
     ]
 
 
+def test_read_envelope_extracts_slots() -> None:
+    """``read_envelope`` recovers the full envelope from a decoded stream's
+    schema metadata (what a self-describing Arrow client / the UI reads)."""
+    payload = result_codec.encode(**_SAMPLE)
+    table = result_codec.decode_table(payload)
+    env = result_codec.read_envelope(table)
+    assert env["sql"] == _SAMPLE["sql"]
+    assert env["dialect"] == "duckdb"
+    assert env["columns"] == _SAMPLE["columns"]
+    assert env["physical_tables"] == ["WH.PUBLIC.SALES"]
+    assert env["row_count"] == 2
+
+
 def test_decode_survives_missing_metadata() -> None:
     """A bare IPC stream (no obsl_ envelope) decodes to sensible defaults."""
     table = result_codec.build_result_table(["x"], [[1]])

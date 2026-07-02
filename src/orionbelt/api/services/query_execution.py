@@ -78,27 +78,49 @@ def _negotiate_content_encoding(accept_encoding: str | None) -> str:
 
 def _build_arrow_response(
     *,
-    column_names: list[str],
-    rows: list[list[Any]],
+    envelope: dict[str, Any],
     accept_encoding: str | None,
 ) -> Response:
-    """Serialize a result as an Arrow IPC stream, gzip'd via ``Content-Encoding``.
+    """Serialize a result as one self-contained Arrow IPC blob.
 
-    The Arrow buffers stay uncompressed (universally readable by pyarrow,
-    arrow-js, DuckDB); compression is applied at the HTTP layer and advertised
-    via ``Content-Encoding`` so the client's HTTP stack transparently decodes it
-    before handing uncompressed IPC to its Arrow reader (PLAN_arrow_cache.md §2).
+    ``envelope`` is the full response envelope (``result_codec.encode`` kwargs:
+    columns, rows, sql, dialect, explain, warnings, …). The columnar data is an
+    uncompressed Arrow IPC stream and the envelope rides in its schema metadata,
+    so a single stream restores everything the JSON response carries — the exact
+    same blob the cache stores. Compression is applied at the HTTP layer and
+    advertised via ``Content-Encoding`` so the client's HTTP stack transparently
+    decodes it before handing uncompressed IPC to its Arrow reader
+    (PLAN_arrow_cache.md §2/§3).
     """
-    from orionbelt.cache.result_codec import build_result_table, to_ipc_stream
+    from orionbelt.cache import result_codec
 
-    raw = to_ipc_stream(build_result_table(column_names, rows))
-    headers: dict[str, str] = {}
+    blob = result_codec.encode(**envelope)  # gzip'd, self-contained (data + envelope)
     if _negotiate_content_encoding(accept_encoding) == "gzip":
-        body = gzip.compress(raw, 6)
-        headers["Content-Encoding"] = "gzip"
-    else:
-        body = raw
-    return Response(content=body, media_type=ARROW_STREAM_MEDIA_TYPE, headers=headers)
+        return Response(
+            content=blob,
+            media_type=ARROW_STREAM_MEDIA_TYPE,
+            headers={"Content-Encoding": "gzip"},
+        )
+    return Response(content=gzip.decompress(blob), media_type=ARROW_STREAM_MEDIA_TYPE)
+
+
+def _arrow_envelope_from_cache(env: Any) -> dict[str, Any]:
+    """Build ``result_codec.encode`` kwargs from a decoded cache envelope."""
+    return {
+        "columns": env.columns,
+        "rows": env.rows,
+        "sql": env.sql,
+        "dialect": env.dialect,
+        "explain": env.explain,
+        "warnings": env.warnings,
+        "sql_valid": env.sql_valid,
+        "execution_time_ms": env.execution_time_ms,
+        "timezone": env.timezone,
+        "resolved": env.resolved,
+        "physical_tables": env.physical_tables,
+        "cached": True,
+        "cached_at": getattr(env, "cached_at_iso", None),
+    }
 
 
 def _physical_tables_for(model: Any, result: Any) -> list[str]:
@@ -153,16 +175,6 @@ def _build_execute_response(
             fmt_map[c.name] = c.default_format
     column_names = [c.name for c in exec_result.columns]
 
-    # Arrow passes the typed, locale-neutral values through untouched (no
-    # locale/format rendering — that's a JSON/TSV presentation concern), so it
-    # short-circuits before the display-format machinery below.
-    if response_format == "arrow":
-        return _build_arrow_response(
-            column_names=column_names,
-            rows=exec_result.rows,
-            accept_encoding=accept_encoding,
-        )
-
     # Canonical column shape (also what the result cache persists) — built via
     # the shared helper so REST, the cache payload, and pgwire all agree. Reuse
     # the maps already built above instead of rebuilding them.
@@ -178,6 +190,34 @@ def _build_execute_response(
     type_map: dict[str, str] = {
         c.name: model_type_map.get(c.name, c.type_hint or "") for c in exec_result.columns
     }
+
+    # Arrow: one self-contained IPC blob (typed, locale-neutral rows + the full
+    # envelope in schema metadata). No locale/format rendering — that stays a
+    # JSON/TSV presentation concern.
+    if response_format == "arrow":
+        explain_resp = _build_explain_response(compile_result)
+        return _build_arrow_response(
+            envelope={
+                "columns": [c.model_dump() for c in columns_meta],
+                "rows": exec_result.rows,
+                "sql": format_sql(compile_result.sql, compile_result.dialect),
+                "dialect": compile_result.dialect,
+                "explain": explain_resp.model_dump() if explain_resp else None,
+                "warnings": [
+                    semantic_error_to_warning(w).model_dump() for w in compile_result.warnings
+                ],
+                "sql_valid": compile_result.sql_valid,
+                "execution_time_ms": exec_result.execution_time_ms,
+                "timezone": exec_result.timezone,
+                "resolved": ResolvedInfoResponse(
+                    fact_tables=compile_result.resolved.fact_tables,
+                    dimensions=compile_result.resolved.dimensions,
+                    measures=compile_result.resolved.measures,
+                ).model_dump(),
+                "physical_tables": list(compile_result.physical_tables),
+            },
+            accept_encoding=accept_encoding,
+        )
 
     if response_format == "tsv":
         formatted = [
@@ -293,12 +333,13 @@ async def _run_with_cache(
         assert cached.cache_key is not None
         assert cached.fetch_elapsed_ms is not None
         if response_format == "arrow":
-            # Serve the cached typed rows as an Arrow stream — the envelope was
-            # written by the JSON path, but the rows are format-agnostic.
+            # Re-emit the cached entry as the same self-contained Arrow blob —
+            # the full envelope (sql, explain, warnings, …) is restored, not just
+            # the rows. (The cache entry is already this exact format, so this is
+            # a candidate for byte-passthrough later.)
             assert cached.envelope is not None
             return _build_arrow_response(
-                column_names=[str(c.get("name", "")) for c in cached.envelope.columns],
-                rows=cached.envelope.rows,
+                envelope=_arrow_envelope_from_cache(cached.envelope),
                 accept_encoding=accept_encoding,
             )
         return _build_cached_response(

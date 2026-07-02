@@ -118,8 +118,16 @@ def encode(
     timezone: str | None,
     resolved: dict[str, Any],
     physical_tables: list[str],
+    cached: bool = False,
+    cached_at: str | None = None,
 ) -> bytes:
-    """Serialize a query result envelope as a gzip'd Arrow IPC stream blob."""
+    """Serialize a query result envelope as a gzip'd Arrow IPC stream blob.
+
+    ``cached`` / ``cached_at`` are response-level flags: the cache-storage path
+    leaves them at their defaults (a stored blob is not itself "a cache hit"),
+    while the ``format=arrow`` wire response sets them so a self-describing Arrow
+    client (e.g. the UI) can tell a hit from a miss, matching the JSON response.
+    """
     column_names = [str(c.get("name", f"col_{i}")) for i, c in enumerate(columns)]
     table = build_result_table(column_names, rows)
 
@@ -135,6 +143,8 @@ def encode(
         "resolved": resolved,
         "physical_tables": physical_tables,
         "row_count": len(rows),
+        "cached": cached,
+        "cached_at": cached_at,
     }
     metadata: dict[bytes, bytes] = {
         f"{_METADATA_PREFIX}{k}".encode(): json.dumps(v, default=str).encode("utf-8")
@@ -142,6 +152,29 @@ def encode(
     }
     table = table.replace_schema_metadata(metadata)
     return gzip.compress(to_ipc_stream(table), _GZIP_LEVEL)
+
+
+def read_envelope(table: Any) -> dict[str, Any]:
+    """Extract the ``obsl_`` envelope (sql, columns, explain, …) from a decoded
+    table's schema metadata into a plain dict, stripping the key prefix.
+
+    Lets a client that read the Arrow stream itself (e.g. the Gradio UI over the
+    ``format=arrow`` endpoint) recover the same fields the JSON response carries,
+    without re-deriving the prefix/JSON handling. Unknown/undecodable keys are
+    skipped.
+    """
+    md = (table.schema.metadata or {}) if table.schema is not None else {}
+    prefix = _METADATA_PREFIX.encode()
+    out: dict[str, Any] = {}
+    for key, raw in md.items():
+        if not key.startswith(prefix):
+            continue
+        name = key[len(prefix) :].decode("utf-8", "ignore")
+        try:
+            out[name] = json.loads(raw.decode("utf-8"))
+        except Exception:
+            continue
+    return out
 
 
 def decode_table(payload: bytes) -> Any:

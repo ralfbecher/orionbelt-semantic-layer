@@ -157,6 +157,13 @@ class TestSessionExecuteCache:
             {"Customer Country": "US", "Total Revenue": 100.0},
             {"Customer Country": "UK", "Total Revenue": 200.0},
         ]
+        # Full envelope restored on the Arrow hit, not just the rows.
+        from orionbelt.cache.result_codec import read_envelope
+
+        env = read_envelope(table)
+        assert env["sql"] == first.json()["sql"]
+        assert env["dialect"] == "duckdb"
+        assert [c["name"] for c in env["columns"]] == ["Customer Country", "Total Revenue"]
 
 
 class TestShortcutExecuteCache:

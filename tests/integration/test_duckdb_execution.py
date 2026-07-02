@@ -1274,6 +1274,16 @@ class TestAPIExecuteEndpoint:
             assert table.to_pylist() == [
                 dict(zip(table.column_names, row, strict=True)) for row in data["rows"]
             ]
+
+            # Self-contained: the full envelope rides in the schema metadata, so
+            # sql / columns / dialect are restored from the one stream.
+            from orionbelt.cache.result_codec import read_envelope
+
+            env = read_envelope(table)
+            assert env["sql"] == data["sql"]
+            assert env["dialect"] == data["dialect"]
+            assert env["columns"] == data["columns"]
+            assert env["row_count"] == data["row_count"]
         finally:
             reset_session_manager()
 
