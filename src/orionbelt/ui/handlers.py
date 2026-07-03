@@ -497,6 +497,37 @@ def sort_and_execute(
     return (new_query, *result, filter_chip_update(new_query), sort_state_str(new_query))
 
 
+def model_jump_targets(model_yaml: str) -> object:
+    """Build the model-editor "Jump to" choices as ``(label, line#)`` pairs.
+
+    Two-level labels: each top-level section (``settings`` / ``dataObjects`` /
+    ``dimensions`` / ``measures`` / ``metrics`` / ``filters``) plus its named
+    children as ``"section / name"``. The value is the 1-based line number so the
+    editor JS can scroll there via ``.cm-scroller`` scrollTop.
+    """
+    import re
+
+    top = ("version", "settings", "dataObjects", "dimensions", "measures", "metrics", "filters")
+    named = {"dataObjects", "dimensions", "measures", "metrics", "filters"}
+    choices: list[tuple[str, str]] = []
+    section: str | None = None
+    for i, line in enumerate((model_yaml or "").split("\n"), start=1):
+        if not line.strip() or line.lstrip().startswith("#"):
+            continue
+        m = re.match(r"^([A-Za-z_]\w*):", line)
+        if m:
+            key = m.group(1)
+            if key in top:
+                choices.append((key, str(i)))
+                section = key if key in named else None
+            continue
+        if section:
+            m2 = re.match(r"^  (\S[^:]*):", line)  # exactly-2-space indented name
+            if m2:
+                choices.append((f"{section} / {m2.group(1).strip()}", str(i)))
+    return gr.update(choices=choices, value=None)
+
+
 def _resolve_execution_dialect(api_url: str, current: str) -> str:
     """Snap the SQL Dialect dropdown to the API's effective execution dialect.
 

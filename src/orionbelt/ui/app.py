@@ -51,6 +51,7 @@ from orionbelt.ui.handlers import (
     execute_query,
     filter_and_execute,
     filter_chip_update,
+    model_jump_targets,
     sort_and_execute,
     sort_state_str,
     validate_model,
@@ -568,6 +569,19 @@ _SEARCH_GLASS_SVG = (
     "</svg>"
 )
 _CSS = _CSS.replace("__SEARCH_GLASS_SVG__", _SEARCH_GLASS_SVG)
+
+_JUMP_TO_JS = """
+(line_str) => {
+    var line = parseInt(line_str, 10);
+    if (!line) return;
+    var scroller = document.querySelector('#ob-model .cm-scroller');
+    if (!scroller) return;
+    var lineEl = scroller.querySelector('.cm-line');
+    var lh = lineEl ? lineEl.getBoundingClientRect().height : 19;
+    // Land the target line at the very top of the editor.
+    scroller.scrollTo({ top: Math.max(0, (line - 1) * lh), behavior: 'smooth' });
+}
+"""
 
 _ALIGN_HEADERS_JS = """
 (indices_str) => {
@@ -1184,6 +1198,21 @@ def create_blocks(
                 with gr.Row(elem_classes=["settings-row"]):
                     with gr.Row(elem_classes=["settings-pair"]):
                         gr.HTML(
+                            '<span class="settings-label">Jump to</span>', padding=False
+                        )
+                        jump_dropdown = gr.Dropdown(
+                            choices=[],
+                            value=None,
+                            label="Jump to",
+                            show_label=False,
+                            container=False,
+                            scale=0,
+                            min_width=230,
+                            filterable=True,
+                            elem_classes=["jump-select"],
+                        )
+                    with gr.Row(elem_classes=["settings-pair"]):
+                        gr.HTML(
                             '<span class="settings-label">SQL Dialect</span>',
                             padding=False,
                         )
@@ -1388,6 +1417,13 @@ def create_blocks(
                     inputs=[model_input, dialect, query_input],
                     outputs=[dim_picker, meas_picker, field_picker, dialect],
                 )
+
+                # "Jump to" navigator for the (large) model YAML: refill targets when
+                # the model changes, and scroll the editor to the picked key on select.
+                model_input.change(
+                    fn=model_jump_targets, inputs=[model_input], outputs=[jump_dropdown]
+                )
+                jump_dropdown.input(fn=None, inputs=[jump_dropdown], js=_JUMP_TO_JS)
 
                 for picker, sec in (
                     (dim_picker, "dimensions"),
@@ -2281,6 +2317,11 @@ def create_blocks(
             fn=_highlight_pickers,
             inputs=[model_input, query_input],
             outputs=[dim_picker, meas_picker],
+        ).then(
+            # Populate the model "Jump to" navigator from the restored model.
+            fn=model_jump_targets,
+            inputs=[model_input],
+            outputs=[jump_dropdown],
         ).then(fn=None, js=inject_js)
 
         # Session cleanup: API sessions expire automatically via SESSION_TTL_SECONDS.
